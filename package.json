@@ -14,6 +14,7 @@
     "migrate:csv": "tsx scripts/migrate-csv.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@vercel/postgres": "^0.10.0",
     "csv-parse": "^6.1.0",
     "drizzle-orm": "^0.45.1",
