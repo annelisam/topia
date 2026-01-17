@@ -56,10 +56,10 @@ export default function ToolsList() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-12">
+    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Header with Category Filters */}
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-6 uppercase">
+      <div className="mb-8 sm:mb-12">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 uppercase">
           ALL TOOLS ({tools.length})
         </h1>
 
@@ -69,7 +69,7 @@ export default function ToolsList() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm transition lowercase ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm transition lowercase ${
                 selectedCategory === category
                   ? 'bg-black text-white'
                   : 'border border-black bg-white hover:bg-gray-100'
@@ -83,25 +83,25 @@ export default function ToolsList() {
 
       {/* Tools Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Loading tools...</p>
+        <div className="text-center py-8 sm:py-12">
+          <p className="text-gray-500 text-sm">Loading tools...</p>
         </div>
       ) : tools.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No tools found in this category.</p>
+        <div className="text-center py-8 sm:py-12">
+          <p className="text-gray-500 text-sm">No tools found in this category.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {tools.map((tool) => {
             const categories = parseCategories(tool.category);
 
             return (
               <div
                 key={tool.id}
-                className="bg-white border border-black rounded-lg p-6 hover:shadow-lg transition group"
+                className="bg-white border border-black rounded-lg p-5 sm:p-6 hover:shadow-lg transition group"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold uppercase group-hover:underline">
+                <div className="flex justify-between items-start mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-bold uppercase group-hover:underline">
                     {tool.name}
                   </h3>
                   {tool.url ? (
@@ -109,27 +109,27 @@ export default function ToolsList() {
                       href={tool.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-4 text-2xl hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
                     >
                       →
                     </a>
                   ) : (
                     <Link
                       href={`/resources/tools/${tool.slug}`}
-                      className="ml-4 text-2xl hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
                     >
                       →
                     </Link>
                   )}
                 </div>
                 {tool.description && (
-                  <p className="text-sm mb-4">{tool.description}</p>
+                  <p className="text-xs sm:text-sm mb-3 sm:mb-4">{tool.description}</p>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {categories.slice(0, 3).map((cat, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 border border-black rounded-full text-xs lowercase"
+                      className="px-2.5 sm:px-3 py-0.5 sm:py-1 border border-black rounded-full text-xs lowercase"
                     >
                       {cat}
                     </span>

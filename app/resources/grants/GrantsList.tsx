@@ -75,34 +75,34 @@ export default function GrantsList() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-12">
-      <div className="flex gap-12">
+    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
         {/* Sidebar - Search & Filters */}
-        <aside className="w-80 flex-shrink-0">
-          <div className="sticky top-6">
-            <h2 className="text-2xl font-bold mb-6 uppercase">SEARCH & FILTERS</h2>
+        <aside className="w-full lg:w-80 flex-shrink-0">
+          <div className="lg:sticky lg:top-6">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 uppercase">SEARCH & FILTERS</h2>
 
             {/* Search */}
-            <div className="mb-8">
-              <label className="block text-sm font-bold mb-3 uppercase">SEARCH</label>
+            <div className="mb-6 sm:mb-8">
+              <label className="block text-xs sm:text-sm font-bold mb-2 sm:mb-3 uppercase">SEARCH</label>
               <input
                 type="text"
                 placeholder="Search grants, orgs, tags..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-4 py-2 border border-black rounded-full focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-black rounded-full focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
 
             {/* Filter by Tag */}
-            <div className="mb-8">
-              <label className="block text-sm font-bold mb-3 uppercase">FILTER BY TAG</label>
+            <div className="mb-6 sm:mb-8">
+              <label className="block text-xs sm:text-sm font-bold mb-2 sm:mb-3 uppercase">FILTER BY TAG</label>
               <div className="flex flex-wrap gap-2">
                 {COMMON_TAGS.map((tag) => (
                   <button
                     key={tag}
                     onClick={() => setSelectedTag(tag)}
-                    className={`px-4 py-2 rounded-full text-sm transition lowercase ${
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm transition lowercase ${
                       selectedTag === tag
                         ? 'bg-black text-white'
                         : 'border border-black hover:bg-gray-100'
@@ -116,11 +116,11 @@ export default function GrantsList() {
 
             {/* Sort By */}
             <div>
-              <label className="block text-sm font-bold mb-3 uppercase">SORT BY</label>
+              <label className="block text-xs sm:text-sm font-bold mb-2 sm:mb-3 uppercase">SORT BY</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border border-black rounded-full focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-black rounded-full focus:outline-none focus:ring-2 focus:ring-black"
               >
                 <option value="deadline-asc">Deadline (soonest first)</option>
                 <option value="deadline-desc">Deadline (latest first)</option>
@@ -135,23 +135,23 @@ export default function GrantsList() {
 
         {/* Main Content - Grants List */}
         <main className="flex-1">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold uppercase">GRANTS</h1>
-            <p className="text-sm uppercase">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold uppercase">GRANTS</h1>
+            <p className="text-xs sm:text-sm uppercase">
               SHOWING {grants.length} GRANT{grants.length !== 1 ? 'S' : ''}
             </p>
           </div>
 
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Loading grants...</p>
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500 text-sm">Loading grants...</p>
             </div>
           ) : grants.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No grants found. Try adjusting your filters.</p>
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500 text-sm">No grants found. Try adjusting your filters.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {grants.map((grant) => {
                 const amount = formatAmount(grant);
                 const tags = parseTags(grant.tags);
@@ -159,32 +159,32 @@ export default function GrantsList() {
                 return (
                   <div
                     key={grant.id}
-                    className="border border-black rounded-lg p-6 hover:shadow-lg transition group"
+                    className="border border-black rounded-lg p-4 sm:p-6 hover:shadow-lg transition group"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold mb-2 uppercase group-hover:underline">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold mb-2 uppercase group-hover:underline">
                           {grant.grantName}
                         </h3>
                         {grant.shortDescription && (
-                          <p className="text-sm mb-3">{grant.shortDescription}</p>
+                          <p className="text-xs sm:text-sm mb-2 sm:mb-3">{grant.shortDescription}</p>
                         )}
-                        <p className="text-sm mb-4">
-                          {amount && <span>{amount} · </span>}
-                          {grant.orgName && <span>{grant.orgName} · </span>}
-                          {grant.region && <span>{grant.region} · </span>}
-                          {grant.deadlineDate && <span>DEADLINE: {grant.deadlineDate}</span>}
+                        <p className="text-xs sm:text-sm mb-3 sm:mb-4 text-gray-700">
+                          {amount && <span className="inline-block mr-1">{amount} ·</span>}
+                          {grant.orgName && <span className="inline-block mr-1">{grant.orgName} ·</span>}
+                          {grant.region && <span className="inline-block mr-1">{grant.region} ·</span>}
+                          {grant.deadlineDate && <span className="inline-block">DEADLINE: {grant.deadlineDate}</span>}
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {grant.status && (
-                            <span className="px-3 py-1 border border-black rounded-full text-xs lowercase">
+                            <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 border border-black rounded-full text-xs lowercase">
                               {grant.status}
                             </span>
                           )}
                           {tags.slice(0, 5).map((tag, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 border border-black rounded-full text-xs lowercase"
+                              className="px-2.5 sm:px-3 py-0.5 sm:py-1 border border-black rounded-full text-xs lowercase"
                             >
                               {tag}
                             </span>
@@ -193,7 +193,7 @@ export default function GrantsList() {
                       </div>
                       <Link
                         href={`/resources/grants/${grant.slug}`}
-                        className="ml-4 text-2xl hover:opacity-60 transition"
+                        className="flex-shrink-0 ml-2 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
                       >
                         →
                       </Link>
