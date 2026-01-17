@@ -69,7 +69,7 @@ export default function ToolsList() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm transition uppercase ${
+              className={`px-4 py-2 rounded-full text-sm transition lowercase ${
                 selectedCategory === category
                   ? 'bg-black text-white'
                   : 'border border-black bg-white hover:bg-gray-100'
@@ -126,15 +126,10 @@ export default function ToolsList() {
                   <p className="text-sm mb-4">{tool.description}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {tool.pricing && (
-                    <span className="px-3 py-1 border border-black rounded-full text-xs uppercase">
-                      {tool.pricing}
-                    </span>
-                  )}
                   {categories.slice(0, 3).map((cat, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 border border-black rounded-full text-xs"
+                      className="px-3 py-1 border border-black rounded-full text-xs lowercase"
                     >
                       {cat}
                     </span>

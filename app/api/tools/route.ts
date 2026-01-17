@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, tools } from '@/lib/db';
-import { like, or, asc, desc } from 'drizzle-orm';
+import { ilike, or, asc, desc, sql } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
@@ -15,15 +15,16 @@ export async function GET(request: Request) {
     let conditions = [];
 
     if (category && category !== 'all') {
-      conditions.push(like(tools.category, `%${category}%`));
+      // Case-insensitive search for category
+      conditions.push(ilike(tools.category, `%${category}%`));
     }
 
     if (search) {
       conditions.push(
         or(
-          like(tools.name, `%${search}%`),
-          like(tools.description, `%${search}%`),
-          like(tools.category, `%${search}%`)
+          ilike(tools.name, `%${search}%`),
+          ilike(tools.description, `%${search}%`),
+          ilike(tools.category, `%${search}%`)
         )
       );
     }

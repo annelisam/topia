@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, grants } from '@/lib/db';
 import { sql } from '@vercel/postgres';
-import { desc, asc, like, or } from 'drizzle-orm';
+import { desc, asc, ilike, or } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
@@ -19,16 +19,16 @@ export async function GET(request: Request) {
     if (search) {
       conditions.push(
         or(
-          like(grants.grantName, `%${search}%`),
-          like(grants.shortDescription, `%${search}%`),
-          like(grants.orgName, `%${search}%`),
-          like(grants.tags, `%${search}%`)
+          ilike(grants.grantName, `%${search}%`),
+          ilike(grants.shortDescription, `%${search}%`),
+          ilike(grants.orgName, `%${search}%`),
+          ilike(grants.tags, `%${search}%`)
         )
       );
     }
 
-    if (tag && tag !== 'all') {
-      conditions.push(like(grants.tags, `%${tag}%`));
+    if (tag && tag !== 'all' && tag !== 'all tags') {
+      conditions.push(ilike(grants.tags, `%${tag}%`));
     }
 
     // Apply sorting

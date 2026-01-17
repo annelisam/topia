@@ -102,7 +102,7 @@ export default function GrantsList() {
                   <button
                     key={tag}
                     onClick={() => setSelectedTag(tag)}
-                    className={`px-4 py-2 rounded-full text-sm transition ${
+                    className={`px-4 py-2 rounded-full text-sm transition lowercase ${
                       selectedTag === tag
                         ? 'bg-black text-white'
                         : 'border border-black hover:bg-gray-100'
@@ -177,14 +177,14 @@ export default function GrantsList() {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {grant.status && (
-                            <span className="px-3 py-1 border border-black rounded-full text-xs uppercase">
+                            <span className="px-3 py-1 border border-black rounded-full text-xs lowercase">
                               {grant.status}
                             </span>
                           )}
                           {tags.slice(0, 5).map((tag, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 border border-black rounded-full text-xs uppercase"
+                              className="px-3 py-1 border border-black rounded-full text-xs lowercase"
                             >
                               {tag}
                             </span>
