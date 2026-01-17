@@ -1,18 +1,50 @@
+'use client';
+
+import { useState } from 'react';
+
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/80 backdrop-blur-sm">
         <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">TOPIA</h1>
-          <ul className="flex gap-3 sm:gap-6 md:gap-8 text-xs sm:text-sm uppercase">
+
+          {/* Desktop Navigation */}
+          <ul className="hidden sm:flex gap-6 md:gap-8 text-sm uppercase">
             <li><a href="/" className="hover:text-white/60 transition">HOME</a></li>
             <li><a href="/about" className="hover:text-white/60 transition">ABOUT</a></li>
-            <li className="hidden sm:block"><a href="#explore" className="hover:text-white/60 transition">EXPLORE</a></li>
-            <li className="hidden sm:block"><a href="/resources" className="hover:text-white/60 transition">RESOURCES</a></li>
-            <li className="hidden sm:block"><a href="#contact" className="hover:text-white/60 transition">CONTACT</a></li>
+            <li><a href="#explore" className="hover:text-white/60 transition">EXPLORE</a></li>
+            <li><a href="/resources" className="hover:text-white/60 transition">RESOURCES</a></li>
+            <li><a href="#contact" className="hover:text-white/60 transition">CONTACT</a></li>
           </ul>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="sm:hidden flex flex-col gap-1.5 w-6 h-6 justify-center"
+            aria-label="Toggle menu"
+          >
+            <span className={`block h-0.5 w-full bg-white transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+            <span className={`block h-0.5 w-full bg-white transition-opacity ${mobileMenuOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block h-0.5 w-full bg-white transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+          </button>
         </nav>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-white/10 bg-black/95 backdrop-blur-sm">
+            <ul className="container mx-auto px-4 py-4 space-y-3 text-sm uppercase">
+              <li><a href="/" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">HOME</a></li>
+              <li><a href="/about" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">ABOUT</a></li>
+              <li><a href="#explore" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">EXPLORE</a></li>
+              <li><a href="/resources" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">RESOURCES</a></li>
+              <li><a href="#contact" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">CONTACT</a></li>
+            </ul>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -124,9 +156,9 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
             <div className="text-xl sm:text-2xl font-bold">TOPIA</div>
             <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Instagram</a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">LinkedIn</a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Twitter</a>
+              <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Instagram</a>
+              <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Twitter</a>
+              <a href="mailto:contact@topia.vision" className="hover:text-white/60 transition">Email</a>
             </div>
           </div>
           <div className="text-center mt-6 sm:mt-8 text-white/40 text-xs sm:text-sm">

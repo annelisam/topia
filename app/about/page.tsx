@@ -1,6 +1,11 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 
 export default function AboutPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const team = [
     {
       name: "Latashá",
@@ -45,14 +50,40 @@ export default function AboutPage() {
       <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/80 backdrop-blur-sm">
         <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <Link href="/" className="text-xl sm:text-2xl font-bold tracking-tight">TOPIA</Link>
-          <ul className="flex gap-3 sm:gap-6 md:gap-8 text-xs sm:text-sm uppercase">
+
+          {/* Desktop Navigation */}
+          <ul className="hidden sm:flex gap-6 md:gap-8 text-sm uppercase">
             <li><Link href="/" className="hover:text-white/60 transition">HOME</Link></li>
             <li><Link href="/about" className="hover:text-white/60 transition underline">ABOUT</Link></li>
-            <li className="hidden sm:block"><Link href="/explore" className="hover:text-white/60 transition">EXPLORE</Link></li>
-            <li className="hidden sm:block"><Link href="/resources" className="hover:text-white/60 transition">RESOURCES</Link></li>
-            <li className="hidden sm:block"><Link href="/contact" className="hover:text-white/60 transition">CONTACT</Link></li>
+            <li><Link href="/#explore" className="hover:text-white/60 transition">EXPLORE</Link></li>
+            <li><Link href="/resources" className="hover:text-white/60 transition">RESOURCES</Link></li>
+            <li><Link href="/#contact" className="hover:text-white/60 transition">CONTACT</Link></li>
           </ul>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="sm:hidden flex flex-col gap-1.5 w-6 h-6 justify-center"
+            aria-label="Toggle menu"
+          >
+            <span className={`block h-0.5 w-full bg-white transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+            <span className={`block h-0.5 w-full bg-white transition-opacity ${mobileMenuOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block h-0.5 w-full bg-white transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+          </button>
         </nav>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-white/10 bg-black/95 backdrop-blur-sm">
+            <ul className="container mx-auto px-4 py-4 space-y-3 text-sm uppercase">
+              <li><Link href="/" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">HOME</Link></li>
+              <li><Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition underline">ABOUT</Link></li>
+              <li><Link href="/#explore" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">EXPLORE</Link></li>
+              <li><Link href="/resources" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">RESOURCES</Link></li>
+              <li><Link href="/#contact" onClick={() => setMobileMenuOpen(false)} className="block py-2 hover:text-white/60 transition">CONTACT</Link></li>
+            </ul>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -148,13 +179,18 @@ export default function AboutPage() {
               <h3 className="text-xs sm:text-sm font-bold mb-3 sm:mb-4 uppercase">CONNECT</h3>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li>
-                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">
+                  <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">
                     Instagram
                   </a>
                 </li>
                 <li>
+                  <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">
+                    Twitter
+                  </a>
+                </li>
+                <li>
                   <a href="mailto:contact@topia.vision" className="hover:text-white/60 transition">
-                    EMAIL: contact@topia.vision
+                    Email
                   </a>
                 </li>
               </ul>
