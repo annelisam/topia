@@ -5,10 +5,11 @@ export default function Home() {
       <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/80 backdrop-blur-sm">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">TOPIA</h1>
-          <ul className="flex gap-8 text-sm">
+          <ul className="flex gap-8 text-sm uppercase">
+            <li><a href="/" className="hover:text-white/60 transition">HOME</a></li>
+            <li><a href="/about" className="hover:text-white/60 transition">ABOUT</a></li>
             <li><a href="#explore" className="hover:text-white/60 transition">EXPLORE</a></li>
-            <li><a href="#resources" className="hover:text-white/60 transition">RESOURCES</a></li>
-            <li><a href="#about" className="hover:text-white/60 transition">ABOUT</a></li>
+            <li><a href="/resources" className="hover:text-white/60 transition">RESOURCES</a></li>
             <li><a href="#contact" className="hover:text-white/60 transition">CONTACT</a></li>
           </ul>
         </nav>
@@ -16,36 +17,55 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
-        <div className="container mx-auto max-w-4xl text-center">
+        <div className="container mx-auto max-w-5xl text-center">
           <div className="mb-12">
             <div className="text-6xl md:text-8xl font-bold tracking-tight mb-6 animate-pulse">
-              TOPIA IS WHAT YOU MAKE IT
+              TOPIA IS WHAT YOU MAKE IT ~
             </div>
           </div>
 
-          <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            A breathing network for artists, audiences, and communities to create, explore, and sustain collaborative worlds.
+          <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed mb-8">
+            Our mission is to support the future of worldbuilders, visionaries and creative ecosystems for the people.
+            OPEN SOURCING RESOURCES, TOOLS, AND CONNECTION. culture before tech. depth before data.
           </p>
         </div>
       </section>
 
       {/* Manifesto Section */}
-      <section id="about" className="py-20 px-6 border-t border-white/10">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12">
+      <section id="manifesto" className="py-20 px-6 border-t border-white/10">
+        <div className="container mx-auto max-w-4xl">
+          <div className="space-y-12">
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold">Culture Before Tech</h2>
-              <p className="text-white/80 leading-relaxed">
-                We reject extractive systems in favor of collaborative, artist-led models.
-                TOPIA is a platform for creative reconstruction where the people lead the tech
-                and artists serve as leaders.
+              <h2 className="text-3xl font-bold">TOPIA Is What You Make It</h2>
+              <p className="text-white/80 leading-relaxed text-lg">
+                The creative world stands at a breaking point. The systems we were told to trust were built to profit
+                instead of strengthening humanity. Falling apart under their own weight: extraction over expression,
+                ownership over collaboration, data over depth. But creation has never belonged to those systems anyway.
+                It belongs to the people.
               </p>
             </div>
+
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold">Depth Before Data</h2>
-              <p className="text-white/80 leading-relaxed">
-                Building a new creative infrastructure that prioritizes meaningful connections
-                and sustainable collaboration over profit-driven extraction.
+              <h2 className="text-3xl font-bold">TOPIA exists to build a new</h2>
+              <p className="text-white/80 leading-relaxed text-lg">
+                A framework where artistry, technology, and humanity move in rhythm. Where the people lead the tech.
+                Where artists are the leaders they have always been. Where there is actual depth in the word 'culture.'
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold">This is about designing a new model</h2>
+              <p className="text-white/80 leading-relaxed text-lg">
+                A breathing network that empowers artists to create worlds, audiences to explore them, and communities
+                to sustain them. This is reconstruction, the result of collapse. Through our community, tools, and network,
+                we build the bridges the old world never intended to. We make space for purpose to have an address,
+                for collaboration to have infrastructure, for creative intention to have a comeback.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-white/90 leading-relaxed text-xl font-bold">
+                TOPIA is a protocol for world builders. A new architecture of creation. Built for and by the curious and creative.
               </p>
             </div>
           </div>
