@@ -86,7 +86,7 @@ async function migrateGrants() {
 async function migrateTools() {
   console.log('🛠️  Migrating tools...');
 
-  const toolsData = parseCSV('/Users/annelisamoody/Downloads/[MASTER] tools_full_db - tools_full_db.csv');
+  const toolsData = parseCSV('/Users/annelisamoody/Downloads/spreadsheets/[MASTER] tools_full_db - CORRECTED.csv');
 
   for (const row of toolsData) {
     try {
