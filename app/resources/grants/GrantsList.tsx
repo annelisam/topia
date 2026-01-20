@@ -75,7 +75,7 @@ export default function GrantsList() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 pt-24 sm:pt-28">
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
         {/* Sidebar - Search & Filters */}
         <aside className="w-full lg:w-80 flex-shrink-0">
