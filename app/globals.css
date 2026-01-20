@@ -1,21 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* TOPIA Base Colors */
+  --color-orange: #FF5C34;
+  --color-yellow: #E9F056;
+  --color-near-black: #171718;
+  --color-off-white: #FEFEFF;
+
+  /* TOPIA Support Colors */
+  --color-blue: #4F46FF;
+  --color-green: #00FF88;
+  --color-pink: #FF5BD7;
+
+  /* Theme Variables */
+  --background: #FEFEFF;
+  --foreground: #171718;
 }
 
 @theme inline {
+  /* TOPIA Brand Colors */
+  --color-orange: #FF5C34;
+  --color-yellow: #E9F056;
+  --color-blue: #4F46FF;
+  --color-green: #00FF88;
+  --color-pink: #FF5BD7;
+
+  /* Neutral Colors */
+  --color-near-black: #171718;
+  --color-off-white: #FEFEFF;
+
+  /* Background & Foreground */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #171718;
+    --foreground: #FEFEFF;
   }
 }
 

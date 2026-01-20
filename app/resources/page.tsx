@@ -1,21 +1,10 @@
 import Link from 'next/link';
+import Navigation from '../components/Navigation';
 
 export default function ResourcesPage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-black/80 backdrop-blur-sm">
-        <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold tracking-tight">TOPIA</Link>
-          <ul className="flex gap-8 text-sm">
-            <li><Link href="/" className="hover:text-white/60 transition">HOME</Link></li>
-            <li><Link href="#about" className="hover:text-white/60 transition">ABOUT</Link></li>
-            <li><Link href="#explore" className="hover:text-white/60 transition">EXPLORE</Link></li>
-            <li><Link href="/resources" className="hover:text-white/60 transition underline">RESOURCES</Link></li>
-            <li><Link href="#contact" className="hover:text-white/60 transition">CONTACT</Link></li>
-          </ul>
-        </nav>
-      </header>
+      <Navigation currentPage="resources" />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
@@ -89,9 +78,9 @@ export default function ResourcesPage() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-2xl font-bold">TOPIA</div>
             <div className="flex gap-6 text-sm">
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Instagram</a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">LinkedIn</a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Twitter</a>
+              <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Instagram</a>
+              <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:text-white/60 transition">Twitter</a>
+              <a href="mailto:contact@topia.vision" className="hover:text-white/60 transition">Email</a>
             </div>
           </div>
           <div className="text-center mt-8 text-white/40 text-sm">
