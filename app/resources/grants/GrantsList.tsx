@@ -17,6 +17,7 @@ interface Grant {
   orgName: string | null;
   region: string | null;
   status: string | null;
+  link: string | null;
 }
 
 const COMMON_TAGS = [
@@ -191,12 +192,23 @@ export default function GrantsList() {
                           ))}
                         </div>
                       </div>
-                      <Link
-                        href={`/resources/grants/${grant.slug}`}
-                        className="flex-shrink-0 ml-2 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
-                      >
-                        →
-                      </Link>
+                      {grant.link ? (
+                        <a
+                          href={grant.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 ml-2 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
+                        >
+                          →
+                        </a>
+                      ) : (
+                        <Link
+                          href={`/resources/grants/${grant.slug}`}
+                          className="flex-shrink-0 ml-2 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
+                        >
+                          →
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
