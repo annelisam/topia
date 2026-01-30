@@ -4,52 +4,78 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 interface NavigationProps {
-  currentPage?: 'home' | 'about' | 'resources';
+  currentPage?: 'home' | 'about' | 'worlds' | 'events' | 'grants' | 'tools' | 'contact';
 }
 
 export default function Navigation({ currentPage }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 w-full z-50 border-b border-yellow/20 bg-near-black/90 backdrop-blur-sm">
+    <header className="fixed top-0 w-full z-50">
       <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-        <Link href="/" className="text-xl sm:text-2xl font-bold tracking-tight text-yellow hover:text-yellow/80 transition">
+        <Link href="/" className="font-mono text-[11px] uppercase tracking-tight hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
           TOPIA
         </Link>
 
         {/* Desktop Navigation */}
-        <ul className="hidden sm:flex gap-6 md:gap-8 text-sm uppercase">
-          <li>
-            <Link
-              href="/"
-              className={`hover:text-green transition ${currentPage === 'home' ? 'text-green underline' : 'text-off-white'}`}
-            >
-              HOME
-            </Link>
-          </li>
+        <ul className="hidden sm:flex gap-6 md:gap-8 font-mono text-[11px] uppercase">
           <li>
             <Link
               href="/about"
-              className={`hover:text-blue transition ${currentPage === 'about' ? 'text-blue underline' : 'text-off-white'}`}
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
             >
+              {currentPage === 'about' && <span>■</span>}
               ABOUT
             </Link>
           </li>
           <li>
-            <Link href="/#explore" className="text-off-white hover:text-pink transition">
-              EXPLORE
+            <Link
+              href="/worlds"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
+            >
+              {currentPage === 'worlds' && <span>■</span>}
+              WORLDS
             </Link>
           </li>
           <li>
             <Link
-              href="/resources"
-              className={`hover:text-orange transition ${currentPage === 'resources' ? 'text-orange underline' : 'text-off-white'}`}
+              href="/#events"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
             >
-              RESOURCES
+              {currentPage === 'events' && <span>■</span>}
+              EVENTS
             </Link>
           </li>
           <li>
-            <Link href="/#contact" className="text-off-white hover:text-yellow transition">
+            <Link
+              href="/resources/grants"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
+            >
+              {currentPage === 'grants' && <span>■</span>}
+              GRANTS
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/resources/tools"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
+            >
+              {currentPage === 'tools' && <span>■</span>}
+              TOOLS
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/#contact"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: '#1a1a1a' }}
+            >
+              {currentPage === 'contact' && <span>■</span>}
               CONTACT
             </Link>
           </li>
@@ -62,69 +88,93 @@ export default function Navigation({ currentPage }: NavigationProps) {
           aria-label="Toggle menu"
         >
           <span
-            className={`block h-0.5 w-full bg-yellow transition-transform ${
+            className={`block h-0.5 w-full transition-transform ${
               mobileMenuOpen ? 'rotate-45 translate-y-2' : ''
             }`}
+            style={{ backgroundColor: '#1a1a1a' }}
           ></span>
           <span
-            className={`block h-0.5 w-full bg-yellow transition-opacity ${
+            className={`block h-0.5 w-full transition-opacity ${
               mobileMenuOpen ? 'opacity-0' : ''
             }`}
+            style={{ backgroundColor: '#1a1a1a' }}
           ></span>
           <span
-            className={`block h-0.5 w-full bg-yellow transition-transform ${
+            className={`block h-0.5 w-full transition-transform ${
               mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''
             }`}
+            style={{ backgroundColor: '#1a1a1a' }}
           ></span>
         </button>
       </nav>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="sm:hidden border-t border-yellow/20 bg-near-black/95 backdrop-blur-sm">
-          <ul className="container mx-auto px-4 py-4 space-y-3 text-sm uppercase">
-            <li>
-              <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block py-2 hover:text-green transition ${currentPage === 'home' ? 'text-green underline' : 'text-off-white'}`}
-              >
-                HOME
-              </Link>
-            </li>
+        <div className="sm:hidden" style={{ backgroundColor: '#f5f0e8' }}>
+          <ul className="container mx-auto px-4 py-4 space-y-3 font-mono text-[11px] uppercase">
             <li>
               <Link
                 href="/about"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block py-2 hover:text-blue transition ${currentPage === 'about' ? 'text-blue underline' : 'text-off-white'}`}
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
               >
+                {currentPage === 'about' && <span>■</span>}
                 ABOUT
               </Link>
             </li>
             <li>
               <Link
-                href="/#explore"
+                href="/worlds"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-off-white hover:text-pink transition"
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
               >
-                EXPLORE
+                {currentPage === 'worlds' && <span>■</span>}
+                WORLDS
               </Link>
             </li>
             <li>
               <Link
-                href="/resources"
+                href="/#events"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block py-2 hover:text-orange transition ${currentPage === 'resources' ? 'text-orange underline' : 'text-off-white'}`}
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
               >
-                RESOURCES
+                {currentPage === 'events' && <span>■</span>}
+                EVENTS
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/resources/grants"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
+              >
+                {currentPage === 'grants' && <span>■</span>}
+                GRANTS
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/resources/tools"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
+              >
+                {currentPage === 'tools' && <span>■</span>}
+                TOOLS
               </Link>
             </li>
             <li>
               <Link
                 href="/#contact"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-off-white hover:text-yellow transition"
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: '#1a1a1a' }}
               >
+                {currentPage === 'contact' && <span>■</span>}
                 CONTACT
               </Link>
             </li>

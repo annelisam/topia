@@ -59,7 +59,7 @@ export default function ToolsList() {
     <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 pt-24 sm:pt-28">
       {/* Header with Category Filters */}
       <div className="mb-8 sm:mb-12">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 uppercase">
+        <h1 className="font-mono text-[11px] mb-4 sm:mb-6 uppercase" style={{ color: '#1a1a1a' }}>
           ALL TOOLS ({tools.length})
         </h1>
 
@@ -69,11 +69,15 @@ export default function ToolsList() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm transition lowercase ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[11px] transition lowercase ${
                 selectedCategory === category
-                  ? 'bg-black text-white'
-                  : 'border border-black bg-white hover:bg-gray-100'
+                  ? ''
+                  : 'border hover:opacity-70'
               }`}
+              style={selectedCategory === category
+                ? { backgroundColor: '#1a1a1a', color: '#f5f0e8' }
+                : { borderColor: '#1a1a1a', backgroundColor: '#f5f0e8', color: '#1a1a1a' }
+              }
             >
               {category}
             </button>
@@ -84,11 +88,11 @@ export default function ToolsList() {
       {/* Tools Grid */}
       {loading ? (
         <div className="text-center py-8 sm:py-12">
-          <p className="text-gray-500 text-sm">Loading tools...</p>
+          <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>Loading tools...</p>
         </div>
       ) : tools.length === 0 ? (
         <div className="text-center py-8 sm:py-12">
-          <p className="text-gray-500 text-sm">No tools found in this category.</p>
+          <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>No tools found in this category.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -98,10 +102,11 @@ export default function ToolsList() {
             return (
               <div
                 key={tool.id}
-                className="bg-white border border-black rounded-lg p-5 sm:p-6 hover:shadow-lg transition group"
+                className="border p-5 sm:p-6 hover:opacity-70 transition group"
+                style={{ borderColor: '#1a1a1a', backgroundColor: '#f5f0e8' }}
               >
                 <div className="flex justify-between items-start mb-3 sm:mb-4">
-                  <h3 className="text-lg sm:text-xl font-bold uppercase group-hover:underline">
+                  <h3 className="font-mono text-[11px] uppercase group-hover:underline" style={{ color: '#1a1a1a' }}>
                     {tool.name}
                   </h3>
                   {tool.url ? (
@@ -109,27 +114,30 @@ export default function ToolsList() {
                       href={tool.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-3 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 font-mono text-[11px] hover:opacity-60 transition"
+                      style={{ color: '#1a1a1a' }}
                     >
                       →
                     </a>
                   ) : (
                     <Link
                       href={`/resources/tools/${tool.slug}`}
-                      className="ml-3 sm:ml-4 text-xl sm:text-2xl hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 font-mono text-[11px] hover:opacity-60 transition"
+                      style={{ color: '#1a1a1a' }}
                     >
                       →
                     </Link>
                   )}
                 </div>
                 {tool.description && (
-                  <p className="text-xs sm:text-sm mb-3 sm:mb-4">{tool.description}</p>
+                  <p className="font-mono text-[11px] mb-3 sm:mb-4" style={{ color: '#1a1a1a' }}>{tool.description}</p>
                 )}
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {categories.slice(0, 3).map((cat, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 sm:px-3 py-0.5 sm:py-1 border border-black rounded-full text-xs lowercase"
+                      className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[11px] lowercase"
+                      style={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}
                     >
                       {cat}
                     </span>

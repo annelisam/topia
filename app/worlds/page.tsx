@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Navigation from '../components/Navigation';
 
 interface World {
   id: string;
@@ -577,6 +578,8 @@ export default function WorldsPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex items-center justify-center relative" style={{ backgroundColor: '#f5f0e8' }}>
+      <Navigation currentPage="worlds" />
+
       {/* Loader */}
       <div
         className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center font-mono text-sm transition-opacity duration-300 ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
@@ -589,11 +592,13 @@ export default function WorldsPage() {
       {/* Galaxy container - expansive, nearly full screen */}
       <div
         ref={containerRef}
-        className={`relative select-none transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`relative select-none transition-opacity duration-500 touch-none ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
         style={{
           width: '100vw',
           height: '100vh',
           cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -610,7 +615,7 @@ export default function WorldsPage() {
         {/* Galaxy canvas - full container with GPU acceleration */}
         <canvas
           ref={canvasRef}
-          className="absolute inset-0"
+          className="absolute inset-0 touch-none"
           style={{ willChange: 'transform' }}
         />
 
@@ -632,7 +637,7 @@ export default function WorldsPage() {
                   rotateToWorld(world, timeRef.current);
                 }
               }}
-              className="absolute font-mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap cursor-pointer"
+              className="absolute font-mono text-[9px] sm:text-[10px] px-2 py-1 whitespace-nowrap cursor-pointer touch-manipulation"
               style={{
                 left: 0,
                 top: 0,
@@ -642,18 +647,7 @@ export default function WorldsPage() {
                 color: '#f5f0e8',
                 opacity: isSelected ? 1 : opacity,
                 zIndex: isSelected ? 500 : Math.floor((z + 1) * 100),
-                transition: 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease-out, background-color 0.15s ease-out',
-                willChange: 'transform, opacity',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = `translate3d(${x}px, ${y + 12}px, 0) translate(-50%, 0) scale(${displayScale * 1.15})`;
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.backgroundColor = '#1a1a1a';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = `translate3d(${x}px, ${y + 12}px, 0) translate(-50%, 0) scale(${displayScale})`;
-                e.currentTarget.style.opacity = String(isSelected ? 1 : opacity);
-                e.currentTarget.style.backgroundColor = isSelected ? '#1a1a1a' : 'rgba(26, 26, 26, 0.7)';
+                pointerEvents: 'auto',
               }}
             >
               {world.name}
@@ -662,28 +656,28 @@ export default function WorldsPage() {
         })}
       </div>
 
-      {/* Expanded world details - slide up/down animation, 50% height */}
+      {/* Expanded world details - slide up/down animation, responsive height */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-[#f5f0e8] border-t border-[#1a1a1a] transition-transform duration-500 ease-out"
+        className="absolute bottom-0 left-0 right-0 bg-[#f5f0e8] border-t border-[#1a1a1a] transition-transform duration-500 ease-out overflow-hidden"
         style={{
-          height: '50vh',
+          height: 'min(60vh, 500px)',
           transform: selectedWorldData ? 'translateY(0)' : 'translateY(100%)',
           zIndex: 1000,
         }}
       >
         {selectedWorldData && (
-          <div className="h-full p-4 sm:p-6 overflow-auto">
-            <div className="max-w-4xl mx-auto relative h-full">
+          <div className="h-full p-4 sm:p-6 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch">
+            <div className="max-w-4xl mx-auto relative">
               {/* Close button - repositioned for mobile */}
               <button
                 onClick={() => setSelectedWorld(null)}
-                className="absolute top-0 right-0 font-mono text-[11px] px-3 py-1.5 border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-[#f5f0e8] transition-colors z-10"
+                className="absolute top-0 right-0 font-mono text-[11px] px-3 py-1.5 border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-[#f5f0e8] transition-colors z-10 touch-manipulation"
                 style={{ backgroundColor: '#f5f0e8' }}
               >
                 CLOSE ×
               </button>
 
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-10 sm:pt-0">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-12 sm:pt-0">
                 <div className="w-full sm:w-48 h-32 sm:h-48 bg-[#1a1a1a]/10 flex-shrink-0 flex items-center justify-center font-mono text-[11px] text-[#1a1a1a]/50">
                   IMAGE
                 </div>
@@ -729,7 +723,7 @@ export default function WorldsPage() {
 
       {/* Controls Panel - hidden when detail panel is open */}
       <div
-        className={`fixed bottom-5 left-5 font-mono text-[11px] p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorld ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed bottom-5 left-5 font-mono text-[9px] sm:text-[11px] p-2 sm:p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorld ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ color: '#1a1a1a', backgroundColor: '#f5f0e8', borderColor: '#1a1a1a' }}
       >
         <label className="flex items-center justify-between gap-3 mb-2">
@@ -757,28 +751,6 @@ export default function WorldsPage() {
           />
         </label>
       </div>
-
-      {/* Back link */}
-      <Link
-        href="/home"
-        className="fixed top-5 left-5 font-mono text-[11px] px-4 py-2 border transition-colors hover:bg-[#1a1a1a] hover:text-[#f5f0e8]"
-        style={{
-          color: '#1a1a1a',
-          backgroundColor: '#f5f0e8',
-          borderColor: '#1a1a1a',
-          zIndex: 1001,
-        }}
-      >
-        ← BACK
-      </Link>
-
-      {/* Title */}
-      <h1
-        className="fixed top-5 right-5 font-mono text-[11px]"
-        style={{ color: '#1a1a1a', zIndex: 1001 }}
-      >
-        WORLDS
-      </h1>
     </div>
   );
 }
