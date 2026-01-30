@@ -50,3 +50,31 @@ body {
   color: var(--foreground);
   font-family: var(--font-space-mono), monospace;
 }
+
+/* Custom range slider styling for TypographicSphere controls */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 2px;
+  background: #1a1a1a;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background: #1a1a1a;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: #1a1a1a;
+  border: none;
+  cursor: pointer;
+}
