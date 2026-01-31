@@ -9,6 +9,7 @@ export default function DraggableStickyNote() {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [hasMoved, setHasMoved] = useState(false);
 
   // Detect mobile and center the note on initial load
   useEffect(() => {
@@ -30,6 +31,11 @@ export default function DraggableStickyNote() {
 
       const deltaX = clientX - dragStart.x;
       const deltaY = clientY - dragStart.y;
+
+      // Mark as moved if user dragged more than 5px
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        setHasMoved(true);
+      }
 
       setPosition(prev => {
         if (!prev) return prev;
@@ -57,6 +63,8 @@ export default function DraggableStickyNote() {
 
     const handleEnd = () => {
       setIsDragging(false);
+      // Reset hasMoved after a short delay to allow click detection
+      setTimeout(() => setHasMoved(false), 100);
     };
 
     if (isDragging) {
@@ -99,18 +107,26 @@ export default function DraggableStickyNote() {
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    setHasMoved(false);
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length > 0) {
+      setHasMoved(false);
       setIsDragging(true);
       setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     }
   };
 
-  const handleButtonClick = (e: React.MouseEvent, action: () => void) => {
+  const handleButtonClick = (e: React.MouseEvent | React.TouchEvent, action: () => void) => {
+    // Don't trigger button action if we just dragged
+    if (hasMoved) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
     e.stopPropagation();
     e.preventDefault();
     action();
@@ -125,14 +141,14 @@ export default function DraggableStickyNote() {
   };
 
   const handleMinimizedMouseDown = (e: React.MouseEvent) => {
-    // Only start dragging, don't open
+    setHasMoved(false);
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
   const handleMinimizedTouchStart = (e: React.TouchEvent) => {
-    // Only start dragging, don't open
     if (e.touches.length > 0) {
+      setHasMoved(false);
       setIsDragging(true);
       setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     }
