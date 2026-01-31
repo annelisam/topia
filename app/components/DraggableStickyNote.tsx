@@ -169,11 +169,17 @@ export default function DraggableStickyNote() {
         onMouseDown={handleMinimizedMouseDown}
         onTouchStart={handleMinimizedTouchStart}
       >
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start pointer-events-none">
           <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
           <button
-            onClick={(e) => handleButtonClick(e, handleReopen)}
-            className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer ${isMobile ? 'text-[10px]' : 'text-xs'}`}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleReopen();
+            }}
+            className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[10px]' : 'text-xs'}`}
             style={{ marginTop: '-2px' }}
           >
             OPEN ▢
@@ -202,17 +208,23 @@ export default function DraggableStickyNote() {
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex justify-between items-start mb-2 pointer-events-none">
         <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
         <button
-          onClick={(e) => handleButtonClick(e, handleClose)}
-          className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer ${isMobile ? 'text-[10px]' : 'text-xs'}`}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            handleClose();
+          }}
+          className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[10px]' : 'text-xs'}`}
           style={{ marginTop: '-2px' }}
         >
           CLOSE ×
         </button>
       </div>
-      <div className={`leading-relaxed whitespace-pre-line ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
+      <div className={`leading-relaxed whitespace-pre-line pointer-events-none ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
         {`TOPIA IS A CREATIVE EMPOWERMENT ENGINE AND NETWORK, BUILT FOR AND BY THE CURIOUS AND CREATIVE.
 
 IT BEGINS WITH THE QUESTION, "WHAT IF THE CREATIVE COMMUNITY BUILT ITS OWN OPEN SOURCE UNIVERSE, A CONSTELLATION OF WORLDS DESIGNED FOR CONNECTION, COLLABORATION, AND CREATIVE SOVEREIGNTY?"
