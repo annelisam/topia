@@ -70,14 +70,14 @@ export default function Navigation({ currentPage }: NavigationProps) {
             </Link>
           </li>
           <li>
-            <Link
-              href="/#contact"
+            <a
+              href="mailto:contact@topia.vision"
               className="hover:opacity-70 transition flex items-center gap-1"
               style={{ color: '#1a1a1a' }}
             >
               {currentPage === 'contact' && <span>■</span>}
               CONTACT
-            </Link>
+            </a>
           </li>
         </ul>
 
@@ -168,15 +168,15 @@ export default function Navigation({ currentPage }: NavigationProps) {
               </Link>
             </li>
             <li>
-              <Link
-                href="/#contact"
+              <a
+                href="mailto:contact@topia.vision"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 hover:opacity-70 transition flex items-center gap-1"
                 style={{ color: '#1a1a1a' }}
               >
                 {currentPage === 'contact' && <span>■</span>}
                 CONTACT
-              </Link>
+              </a>
             </li>
           </ul>
         </div>

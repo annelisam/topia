@@ -8,66 +8,88 @@ export default function DraggableStickyNote() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Center the note on initial load
+  // Detect mobile and center the note on initial load
   useEffect(() => {
+    const mobile = window.innerWidth < 640;
+    setIsMobile(mobile);
+    setIsMinimized(mobile); // Start minimized on mobile
+
     if (position === null) {
-      const centerX = (window.innerWidth - 500) / 2;
-      const centerY = (window.innerHeight - 400) / 2;
-      setPosition({ x: Math.max(20, centerX), y: Math.max(100, centerY) });
+      const noteWidth = mobile ? window.innerWidth - 40 : 500;
+      const centerX = (window.innerWidth - noteWidth) / 2;
+      const centerY = mobile ? 80 : (window.innerHeight - 400) / 2;
+      setPosition({ x: Math.max(20, centerX), y: Math.max(80, centerY) });
     }
   }, [position]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       if (!isDragging) return;
 
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+      const deltaX = clientX - dragStart.x;
+      const deltaY = clientY - dragStart.y;
 
       setPosition(prev => {
         if (!prev) return prev;
 
-        // Constrain to viewport bounds
-        const maxX = window.innerWidth - 500;
+        // Constrain to viewport bounds - responsive width
+        const noteWidth = isMobile ? window.innerWidth - 40 : 500;
+        const maxX = window.innerWidth - noteWidth;
         const maxY = window.innerHeight - 100;
 
         return {
-          x: Math.max(0, Math.min(maxX, prev.x + deltaX)),
-          y: Math.max(0, Math.min(maxY, prev.y + deltaY)),
+          x: Math.max(20, Math.min(maxX, prev.x + deltaX)),
+          y: Math.max(60, Math.min(maxY, prev.y + deltaY)),
         };
       });
 
-      setDragStart({ x: e.clientX, y: e.clientY });
+      setDragStart({ x: clientX, y: clientY });
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleEnd = () => {
       setIsDragging(false);
     };
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleEnd);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleEnd);
     };
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart, isMobile]);
 
-  // Handle window resize to keep note in bounds
+  // Handle window resize to keep note in bounds and update mobile state
   useEffect(() => {
     const handleResize = () => {
+      const mobile = window.innerWidth < 640;
+      setIsMobile(mobile);
+
       setPosition(prev => {
         if (!prev) return prev;
 
-        const maxX = window.innerWidth - 500;
+        const noteWidth = mobile ? window.innerWidth - 40 : 500;
+        const maxX = window.innerWidth - noteWidth;
         const maxY = window.innerHeight - 100;
 
         return {
           x: Math.max(20, Math.min(maxX, prev.x)),
-          y: Math.max(100, Math.min(maxY, prev.y)),
+          y: Math.max(60, Math.min(maxY, prev.y)),
         };
       });
     };
@@ -81,8 +103,16 @@ export default function DraggableStickyNote() {
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    }
+  };
+
   const handleButtonClick = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
+    e.preventDefault();
     action();
   };
 
@@ -94,25 +124,40 @@ export default function DraggableStickyNote() {
     setIsMinimized(false);
   };
 
+  const handleMinimizedMouseDown = (e: React.MouseEvent) => {
+    // Only start dragging, don't open
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMinimizedTouchStart = (e: React.TouchEvent) => {
+    // Only start dragging, don't open
+    if (e.touches.length > 0) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    }
+  };
+
   if (isMinimized && position) {
     return (
       <div
-        className="fixed z-50 p-4 shadow-lg cursor-move select-none"
+        className="fixed z-50 shadow-lg cursor-move select-none touch-manipulation"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
           backgroundColor: '#e4fe52',
           fontFamily: "'Space Mono', monospace",
-          width: '500px',
-          maxWidth: '90vw',
+          width: isMobile ? `${window.innerWidth - 40}px` : '500px',
+          padding: isMobile ? '12px' : '16px',
         }}
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleMinimizedMouseDown}
+        onTouchStart={handleMinimizedTouchStart}
       >
         <div className="flex justify-between items-start">
-          <div className="text-xs uppercase font-bold">TOPIA_NOTE_001</div>
+          <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
           <button
             onClick={(e) => handleButtonClick(e, handleReopen)}
-            className="text-xs uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer"
+            className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer ${isMobile ? 'text-[10px]' : 'text-xs'}`}
             style={{ marginTop: '-2px' }}
           >
             OPEN ▢
@@ -127,28 +172,31 @@ export default function DraggableStickyNote() {
   return (
     <div
       ref={noteRef}
-      className="fixed z-50 p-4 shadow-lg cursor-move select-none"
+      className="fixed z-50 shadow-lg cursor-move select-none touch-manipulation"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
         backgroundColor: '#e4fe52',
         fontFamily: "'Space Mono', monospace",
-        width: '500px',
-        maxWidth: '90vw',
+        width: isMobile ? `${window.innerWidth - 40}px` : '500px',
+        padding: isMobile ? '12px' : '16px',
+        maxHeight: isMobile ? '70vh' : 'auto',
+        overflowY: isMobile ? 'auto' : 'visible',
       }}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <div className="flex justify-between items-start mb-2">
-        <div className="text-xs uppercase font-bold">TOPIA_NOTE_001</div>
+        <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
         <button
           onClick={(e) => handleButtonClick(e, handleClose)}
-          className="text-xs uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer"
+          className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer ${isMobile ? 'text-[10px]' : 'text-xs'}`}
           style={{ marginTop: '-2px' }}
         >
           CLOSE ×
         </button>
       </div>
-      <div className="text-xs leading-relaxed whitespace-pre-line">
+      <div className={`leading-relaxed whitespace-pre-line ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
         {`TOPIA IS A CREATIVE EMPOWERMENT ENGINE AND NETWORK, BUILT FOR AND BY THE CURIOUS AND CREATIVE.
 
 IT BEGINS WITH THE QUESTION, "WHAT IF THE CREATIVE COMMUNITY BUILT ITS OWN OPEN SOURCE UNIVERSE, A CONSTELLATION OF WORLDS DESIGNED FOR CONNECTION, COLLABORATION, AND CREATIVE SOVEREIGNTY?"
