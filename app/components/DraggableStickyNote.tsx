@@ -141,6 +141,8 @@ export default function DraggableStickyNote() {
   };
 
   const handleMinimizedMouseDown = (e: React.MouseEvent) => {
+    // Prevent any clicks from bubbling
+    e.preventDefault();
     setHasMoved(false);
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
@@ -148,6 +150,8 @@ export default function DraggableStickyNote() {
 
   const handleMinimizedTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length > 0) {
+      // Prevent any clicks from bubbling
+      e.preventDefault();
       setHasMoved(false);
       setIsDragging(true);
       setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -172,9 +176,21 @@ export default function DraggableStickyNote() {
         <div className="flex justify-between items-start pointer-events-none">
           <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
           <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setHasMoved(false);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              setHasMoved(false);
+            }}
             onClick={(e) => {
+              // Only open if we didn't drag
+              if (hasMoved) {
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+              }
               e.stopPropagation();
               e.preventDefault();
               handleReopen();
@@ -211,9 +227,21 @@ export default function DraggableStickyNote() {
       <div className="flex justify-between items-start mb-2 pointer-events-none">
         <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
         <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setHasMoved(false);
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            setHasMoved(false);
+          }}
           onClick={(e) => {
+            // Only close if we didn't drag
+            if (hasMoved) {
+              e.stopPropagation();
+              e.preventDefault();
+              return;
+            }
             e.stopPropagation();
             e.preventDefault();
             handleClose();
