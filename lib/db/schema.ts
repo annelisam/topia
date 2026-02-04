@@ -10,6 +10,20 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Creators - people/studios who build worlds
+export const creators = pgTable('creators', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  websiteUrl: text('website_url'),
+  country: text('country'), // e.g. 'US', 'SE', 'DE'
+  published: boolean('published').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Worlds - artist-created spaces/projects
 export const worlds = pgTable('worlds', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -17,9 +31,16 @@ export const worlds = pgTable('worlds', {
   description: text('description'),
   slug: text('slug').notNull().unique(),
   artistId: uuid('artist_id').references(() => users.id),
+  creatorId: uuid('creator_id').references(() => creators.id),
+  category: text('category'), // e.g. 'Art', 'Music', 'Film'
   imageUrl: text('image_url'),
+  websiteUrl: text('website_url'),
+  country: text('country'), // e.g. 'US', 'SE'
+  tools: text('tools'), // Comma-separated tools
+  collaborators: text('collaborators'), // Comma-separated names
   content: jsonb('content'), // Flexible content structure
-  published: boolean('published').default(false),
+  dateAdded: text('date_added'), // Display date e.g. "Feb 01, 2026"
+  published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
