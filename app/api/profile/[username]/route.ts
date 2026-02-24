@@ -5,10 +5,10 @@ import { eq, inArray } from 'drizzle-orm';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ) {
   try {
-    const { username } = params;
+    const { username } = await params;
 
     if (!username) {
       return NextResponse.json({ error: 'Missing username' }, { status: 400 });
