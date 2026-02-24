@@ -17,8 +17,8 @@ export default function LoginButton() {
 
       const phone = user.phone?.number ?? null;
       const walletAddress = user.wallet?.address ?? null;
-      const name = user.google?.name ?? null;
 
+      // Only sync auth identifiers — never overwrite profile fields the user may have set
       fetch('/api/auth/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -27,7 +27,6 @@ export default function LoginButton() {
           email,
           phone,
           walletAddress,
-          name,
         }),
       }).catch(console.error);
     }

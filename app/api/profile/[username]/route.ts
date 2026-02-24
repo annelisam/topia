@@ -14,17 +14,22 @@ export async function GET(
       return NextResponse.json({ error: 'Missing username' }, { status: 400 });
     }
 
-    // Fetch core public fields using only guaranteed-to-exist columns
     const result = await db
       .select({
-        name:            users.name,
-        username:        users.username,
-        bio:             users.bio,
-        avatarUrl:       users.avatarUrl,
-        socialWebsite:   users.socialWebsite,
-        socialTwitter:   users.socialTwitter,
-        socialInstagram: users.socialInstagram,
-        createdAt:       users.createdAt,
+        name:             users.name,
+        username:         users.username,
+        bio:              users.bio,
+        avatarUrl:        users.avatarUrl,
+        socialWebsite:    users.socialWebsite,
+        socialTwitter:    users.socialTwitter,
+        socialInstagram:  users.socialInstagram,
+        socialSoundcloud: users.socialSoundcloud,
+        socialSpotify:    users.socialSpotify,
+        socialLinkedin:   users.socialLinkedin,
+        socialSubstack:   users.socialSubstack,
+        roleTags:         users.roleTags,
+        toolSlugs:        users.toolSlugs,
+        createdAt:        users.createdAt,
       })
       .from(users)
       .where(eq(users.username, username))
@@ -34,29 +39,12 @@ export async function GET(
       return NextResponse.json({ user: null }, { status: 404 });
     }
 
-    const user: Record<string, unknown> = { ...result[0], roleTags: null, toolSlugs: null };
-
-    // Try to fetch new columns — silently skips if migration hasn't run yet
-    try {
-      const extended = await db
-        .select({ roleTags: users.roleTags, toolSlugs: users.toolSlugs })
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-
-      if (extended[0]) {
-        user.roleTags  = extended[0].roleTags;
-        user.toolSlugs = extended[0].toolSlugs;
-      }
-    } catch {
-      // Columns not migrated yet — return profile without tags/tools
-    }
+    const user = result[0];
 
     // Resolve tool slugs → tool names/details for display
     let resolvedTools: { name: string; slug: string; category: string | null }[] = [];
-    const toolSlugs = user.toolSlugs as string | null;
-    if (toolSlugs) {
-      const slugList = toolSlugs.split(',').map((s) => s.trim()).filter(Boolean);
+    if (user.toolSlugs) {
+      const slugList = user.toolSlugs.split(',').map((s) => s.trim()).filter(Boolean);
       if (slugList.length > 0) {
         resolvedTools = await db
           .select({ name: tools.name, slug: tools.slug, category: tools.category })

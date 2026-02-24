@@ -14,6 +14,10 @@ export const users = pgTable('users', {
   socialWebsite: text('social_website'),
   socialTwitter: text('social_twitter'),
   socialInstagram: text('social_instagram'),
+  socialSoundcloud: text('social_soundcloud'),
+  socialSpotify: text('social_spotify'),
+  socialLinkedin: text('social_linkedin'),
+  socialSubstack: text('social_substack'),
   role: text('role').default('user'), // 'user', 'artist', 'admin'
   roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
   toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table
