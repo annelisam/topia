@@ -20,8 +20,8 @@ export default function DraggableStickyNote() {
     if (position === null) {
       const noteWidth = mobile ? window.innerWidth - 40 : 500;
       const centerX = (window.innerWidth - noteWidth) / 2;
-      const centerY = mobile ? 80 : (window.innerHeight - 400) / 2;
-      setPosition({ x: Math.max(20, centerX), y: Math.max(80, centerY) });
+      const centerY = mobile ? 80 : Math.max(80, window.innerHeight * 0.08);
+      setPosition({ x: Math.max(20, centerX), y: centerY });
     }
   }, [position]);
 
@@ -218,8 +218,8 @@ export default function DraggableStickyNote() {
         fontFamily: "'Space Mono', monospace",
         width: isMobile ? `${window.innerWidth - 40}px` : '500px',
         padding: isMobile ? '12px' : '16px',
-        maxHeight: isMobile ? '70vh' : 'auto',
-        overflowY: isMobile ? 'auto' : 'visible',
+        maxHeight: isMobile ? '70vh' : `calc(100vh - ${position.y}px - 20px)`,
+        overflowY: 'auto',
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
