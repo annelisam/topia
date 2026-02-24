@@ -18,7 +18,9 @@ export default function PrivyProviderWrapper({ children }: { children: React.Rea
         defaultChain: base,
         supportedChains: [base],
         embeddedWallets: {
-          createOnLogin: 'users-without-wallets', // auto-create wallet for email/phone/Google users
+          ethereum: {
+            createOnLogin: 'users-without-wallets',
+          },
         },
       }}
     >

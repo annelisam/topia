@@ -125,7 +125,7 @@ export default function ProfilePage() {
         } else {
           // New user — pre-fill from Privy's Google data if available
           const googleName   = user.google?.name;
-          const googleAvatar = user.google?.picture;
+          const googleAvatar = (user.google as any)?.picture ?? (user.google as any)?.photoUrl;
           if (googleName)   setName(googleName);
           if (googleAvatar) setAvatarUrl(googleAvatar);
         }
@@ -220,7 +220,7 @@ export default function ProfilePage() {
   };
 
   // Unlink helpers
-  const handleUnlink = async (type: string, fn: () => Promise<void>) => {
+  const handleUnlink = async (type: string, fn: () => Promise<unknown>) => {
     if (!canUnlink) return;
     setUnlinking(type);
     try { await fn(); } finally { setUnlinking(null); }
