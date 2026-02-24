@@ -115,7 +115,7 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-3">
-      <label className="block font-mono text-[10px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>{label}</label>
+      <label className="block font-mono text-[12px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>{label}</label>
       {children}
     </div>
   );
@@ -137,7 +137,7 @@ function CheckboxField({ label, checked, onChange }: { label: string; checked: b
     <Field label={label}>
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="w-4 h-4" style={{ accentColor: '#1a1a1a' }} />
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{checked ? 'Yes' : 'No'}</span>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{checked ? 'Yes' : 'No'}</span>
       </label>
     </Field>
   );
@@ -146,12 +146,12 @@ function CheckboxField({ label, checked, onChange }: { label: string; checked: b
 function ActionButtons({ onSave, onCancel, saving, error }: { onSave: () => void; onCancel: () => void; saving: boolean; error?: string }) {
   return (
     <div className="mt-5 pt-4 border-t border-[#1a1a1a]">
-      {error && <p className="font-mono text-[10px] mb-2" style={{ color: '#FF5C34' }}>{error}</p>}
+      {error && <p className="font-mono text-[12px] mb-2" style={{ color: '#FF5C34' }}>{error}</p>}
       <div className="flex gap-2">
-        <button onClick={onSave} disabled={saving} className="px-4 py-1.5 font-mono text-[11px] uppercase border border-[#1a1a1a] disabled:opacity-50" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+        <button onClick={onSave} disabled={saving} className="px-4 py-1.5 font-mono text-[13px] uppercase border border-[#1a1a1a] disabled:opacity-50" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
           {saving ? 'SAVING...' : 'SAVE'}
         </button>
-        <button onClick={onCancel} className="px-4 py-1.5 font-mono text-[11px] uppercase border border-[#1a1a1a] hover:bg-[#1a1a1a]/5" style={{ color: '#1a1a1a' }}>
+        <button onClick={onCancel} className="px-4 py-1.5 font-mono text-[13px] uppercase border border-[#1a1a1a] hover:bg-[#1a1a1a]/5" style={{ color: '#1a1a1a' }}>
           CANCEL
         </button>
       </div>
@@ -253,20 +253,20 @@ function WorldsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{items.length} worlds</span>
-        <button onClick={openCreate} className="px-3 py-1 font-mono text-[11px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} worlds</span>
+        <button onClick={openCreate} className="px-3 py-1 font-mono text-[13px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse font-mono text-[11px]" style={{ color: '#1a1a1a' }}>
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Title</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Slug</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Creator</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Category</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Status</th>
-              <th className="px-3 py-2 text-[10px]"></th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Title</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Slug</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Creator</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Category</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+              <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -279,14 +279,14 @@ function WorldsTab() {
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[10px] underline hover:opacity-60">EDIT</button>
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
                     {deleteConfirm === item.id ? (
                       <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[10px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[10px] underline hover:opacity-60">NO</button>
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
                       </span>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
                     )}
                   </div>
                 </td>
@@ -304,19 +304,19 @@ function WorldsTab() {
 
         <Field label="Image">
           <div className="flex items-center gap-3">
-            <label className="px-3 py-1.5 border border-[#1a1a1a] font-mono text-[11px] cursor-pointer hover:opacity-70" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+            <label className="px-3 py-1.5 border border-[#1a1a1a] font-mono text-[13px] cursor-pointer hover:opacity-70" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
               UPLOAD
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
             {form.imageUrl && (
               <div className="flex items-center gap-2">
                 <img src={form.imageUrl} alt="preview" className="w-10 h-10 object-cover border border-[#1a1a1a]" />
-                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>REMOVE</button>
+                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>REMOVE</button>
               </div>
             )}
           </div>
           {!form.imageUrl && (
-            <p className="font-mono text-[10px] mt-1.5 opacity-50" style={{ color: '#1a1a1a' }}>Or paste a URL:</p>
+            <p className="font-mono text-[12px] mt-1.5 opacity-50" style={{ color: '#1a1a1a' }}>Or paste a URL:</p>
           )}
           {!form.imageUrl && <TextInput value={form.imageUrl || ''} onChange={(v) => setForm(p => ({ ...p, imageUrl: v }))} placeholder="https://..." />}
         </Field>
@@ -335,11 +335,11 @@ function WorldsTab() {
 
         <Field label="Tools Used">
           <div className="border border-[#1a1a1a] p-2 max-h-36 overflow-y-auto" style={{ backgroundColor: '#f5f0e8' }}>
-            {allTools.length === 0 && <p className="font-mono text-[10px] opacity-50" style={{ color: '#1a1a1a' }}>No tools in DB yet</p>}
+            {allTools.length === 0 && <p className="font-mono text-[12px] opacity-50" style={{ color: '#1a1a1a' }}>No tools in DB yet</p>}
             {allTools.map(t => (
               <label key={t.id} className="flex items-center gap-2 py-0.5 cursor-pointer">
                 <input type="checkbox" checked={selectedTools.includes(t.name)} onChange={() => toggleTool(t.name)} className="w-3.5 h-3.5" style={{ accentColor: '#1a1a1a' }} />
-                <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{t.name}</span>
+                <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{t.name}</span>
               </label>
             ))}
           </div>
@@ -407,19 +407,19 @@ function EventsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{items.length} events</span>
-        <button onClick={openCreate} className="px-3 py-1 font-mono text-[11px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} events</span>
+        <button onClick={openCreate} className="px-3 py-1 font-mono text-[13px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse font-mono text-[11px]" style={{ color: '#1a1a1a' }}>
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Name</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Date</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">City</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Status</th>
-              <th className="px-3 py-2 text-[10px]"></th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Date</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">City</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+              <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -431,14 +431,14 @@ function EventsTab() {
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[10px] underline hover:opacity-60">EDIT</button>
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
                     {deleteConfirm === item.id ? (
                       <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[10px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[10px] underline hover:opacity-60">NO</button>
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
                       </span>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
                     )}
                   </div>
                 </td>
@@ -527,20 +527,20 @@ function GrantsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{items.length} grants</span>
-        <button onClick={openCreate} className="px-3 py-1 font-mono text-[11px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} grants</span>
+        <button onClick={openCreate} className="px-3 py-1 font-mono text-[13px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse font-mono text-[11px]" style={{ color: '#1a1a1a' }}>
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Grant Name</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Org</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Amount</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Status</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Pub</th>
-              <th className="px-3 py-2 text-[10px]"></th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Grant Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Org</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Amount</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Pub</th>
+              <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -557,14 +557,14 @@ function GrantsTab() {
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[10px] underline hover:opacity-60">EDIT</button>
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
                     {deleteConfirm === item.id ? (
                       <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[10px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[10px] underline hover:opacity-60">NO</button>
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
                       </span>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
                     )}
                   </div>
                 </td>
@@ -654,20 +654,20 @@ function ToolsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{items.length} tools</span>
-        <button onClick={openCreate} className="px-3 py-1 font-mono text-[11px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} tools</span>
+        <button onClick={openCreate} className="px-3 py-1 font-mono text-[13px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse font-mono text-[11px]" style={{ color: '#1a1a1a' }}>
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Name</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Category</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Pricing</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Featured</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Status</th>
-              <th className="px-3 py-2 text-[10px]"></th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Category</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Pricing</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Featured</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+              <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -680,14 +680,14 @@ function ToolsTab() {
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[10px] underline hover:opacity-60">EDIT</button>
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
                     {deleteConfirm === item.id ? (
                       <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[10px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[10px] underline hover:opacity-60">NO</button>
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
                       </span>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
                     )}
                   </div>
                 </td>
@@ -788,19 +788,19 @@ function CreatorsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{items.length} creators</span>
-        <button onClick={openCreate} className="px-3 py-1 font-mono text-[11px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} creators</span>
+        <button onClick={openCreate} className="px-3 py-1 font-mono text-[13px] border border-[#1a1a1a]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>+ ADD</button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse font-mono text-[11px]" style={{ color: '#1a1a1a' }}>
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Name</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Slug</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Country</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[10px]">Status</th>
-              <th className="px-3 py-2 text-[10px]"></th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Slug</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Country</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+              <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -812,14 +812,14 @@ function CreatorsTab() {
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[10px] underline hover:opacity-60">EDIT</button>
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
                     {deleteConfirm === item.id ? (
                       <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[10px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[10px] underline hover:opacity-60">NO</button>
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
                       </span>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
                     )}
                   </div>
                 </td>
@@ -838,19 +838,19 @@ function CreatorsTab() {
 
         <Field label="Image">
           <div className="flex items-center gap-3">
-            <label className="px-3 py-1.5 border border-[#1a1a1a] font-mono text-[11px] cursor-pointer hover:opacity-70" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+            <label className="px-3 py-1.5 border border-[#1a1a1a] font-mono text-[13px] cursor-pointer hover:opacity-70" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
               UPLOAD
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
             {form.imageUrl && (
               <div className="flex items-center gap-2">
                 <img src={form.imageUrl} alt="preview" className="w-10 h-10 object-cover border border-[#1a1a1a]" />
-                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} className="font-mono text-[10px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>REMOVE</button>
+                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>REMOVE</button>
               </div>
             )}
           </div>
           {!form.imageUrl && (
-            <p className="font-mono text-[10px] mt-1.5 opacity-50" style={{ color: '#1a1a1a' }}>Or paste a URL:</p>
+            <p className="font-mono text-[12px] mt-1.5 opacity-50" style={{ color: '#1a1a1a' }}>Or paste a URL:</p>
           )}
           {!form.imageUrl && <TextInput value={form.imageUrl || ''} onChange={(v) => setForm(p => ({ ...p, imageUrl: v }))} placeholder="https://..." />}
         </Field>
@@ -888,9 +888,9 @@ export default function AdminDashboard() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="font-mono text-[18px] font-bold" style={{ color: '#f5f0e8' }}>TOPIA</span>
-            <span className="font-mono text-[10px] px-2 py-0.5 border border-[#f5f0e8]/40" style={{ color: '#f5f0e8' }}>ADMIN</span>
+            <span className="font-mono text-[12px] px-2 py-0.5 border border-[#f5f0e8]/40" style={{ color: '#f5f0e8' }}>ADMIN</span>
           </div>
-          <button onClick={logout} className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 border border-[#f5f0e8]/40 hover:border-[#f5f0e8] transition-colors" style={{ color: '#f5f0e8' }}>
+          <button onClick={logout} className="font-mono text-[12px] uppercase tracking-widest px-3 py-1 border border-[#f5f0e8]/40 hover:border-[#f5f0e8] transition-colors" style={{ color: '#f5f0e8' }}>
             LOGOUT
           </button>
         </div>
@@ -903,7 +903,7 @@ export default function AdminDashboard() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="relative px-5 py-3 font-mono text-[11px] uppercase tracking-widest transition-colors"
+              className="relative px-5 py-3 font-mono text-[13px] uppercase tracking-widest transition-colors"
               style={{
                 color: tab === t.id ? '#f5f0e8' : '#1a1a1a',
                 backgroundColor: tab === t.id ? '#1a1a1a' : 'transparent',

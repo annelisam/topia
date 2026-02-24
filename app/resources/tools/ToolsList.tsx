@@ -59,7 +59,7 @@ export default function ToolsList() {
     <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 pt-24 sm:pt-28">
       {/* Header with Category Filters */}
       <div className="mb-8 sm:mb-12">
-        <h1 className="font-mono text-[11px] mb-4 sm:mb-6 uppercase" style={{ color: '#1a1a1a' }}>
+        <h1 className="font-mono text-[13px] mb-4 sm:mb-6 uppercase" style={{ color: '#1a1a1a' }}>
           ALL TOOLS ({tools.length})
         </h1>
 
@@ -69,7 +69,7 @@ export default function ToolsList() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[11px] transition lowercase ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] transition lowercase ${
                 selectedCategory === category
                   ? ''
                   : 'border hover:opacity-70'
@@ -88,11 +88,11 @@ export default function ToolsList() {
       {/* Tools Grid */}
       {loading ? (
         <div className="text-center py-8 sm:py-12">
-          <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>Loading tools...</p>
+          <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>Loading tools...</p>
         </div>
       ) : tools.length === 0 ? (
         <div className="text-center py-8 sm:py-12">
-          <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>No tools found in this category.</p>
+          <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>No tools found in this category.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -106,7 +106,7 @@ export default function ToolsList() {
                 style={{ borderColor: '#1a1a1a', backgroundColor: '#f5f0e8' }}
               >
                 <div className="flex justify-between items-start mb-3 sm:mb-4">
-                  <h3 className="font-mono text-[11px] uppercase group-hover:underline" style={{ color: '#1a1a1a' }}>
+                  <h3 className="font-mono text-[13px] uppercase group-hover:underline" style={{ color: '#1a1a1a' }}>
                     {tool.name}
                   </h3>
                   {tool.url ? (
@@ -114,7 +114,7 @@ export default function ToolsList() {
                       href={tool.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-3 sm:ml-4 font-mono text-[11px] hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 font-mono text-[13px] hover:opacity-60 transition"
                       style={{ color: '#1a1a1a' }}
                     >
                       →
@@ -122,7 +122,7 @@ export default function ToolsList() {
                   ) : (
                     <Link
                       href={`/resources/tools/${tool.slug}`}
-                      className="ml-3 sm:ml-4 font-mono text-[11px] hover:opacity-60 transition"
+                      className="ml-3 sm:ml-4 font-mono text-[13px] hover:opacity-60 transition"
                       style={{ color: '#1a1a1a' }}
                     >
                       →
@@ -130,13 +130,13 @@ export default function ToolsList() {
                   )}
                 </div>
                 {tool.description && (
-                  <p className="font-mono text-[11px] mb-3 sm:mb-4" style={{ color: '#1a1a1a' }}>{tool.description}</p>
+                  <p className="font-mono text-[13px] mb-3 sm:mb-4" style={{ color: '#1a1a1a' }}>{tool.description}</p>
                 )}
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {categories.slice(0, 3).map((cat, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[11px] lowercase"
+                      className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[13px] lowercase"
                       style={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}
                     >
                       {cat}

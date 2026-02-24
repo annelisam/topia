@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
       <div className="w-full max-w-sm">
         <div className="border border-[#1a1a1a] p-8" style={{ backgroundColor: '#f5f0e8' }}>
-          <h1 className="font-mono text-[11px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>
+          <h1 className="font-mono text-[13px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>
             TOPIA
           </h1>
           <h2 className="font-mono text-[24px] font-bold mb-8" style={{ color: '#1a1a1a' }}>
@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
           </h2>
 
           <form onSubmit={handleSubmit}>
-            <label className="block font-mono text-[10px] uppercase tracking-widest mb-2" style={{ color: '#1a1a1a' }}>
+            <label className="block font-mono text-[12px] uppercase tracking-widest mb-2" style={{ color: '#1a1a1a' }}>
               Password
             </label>
             <input
@@ -59,13 +59,13 @@ export default function AdminLoginPage() {
             />
 
             {error && (
-              <p className="font-mono text-[10px] mt-2" style={{ color: '#FF5C34' }}>{error}</p>
+              <p className="font-mono text-[12px] mt-2" style={{ color: '#FF5C34' }}>{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-6 px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border border-[#1a1a1a] transition-colors disabled:opacity-50"
+              className="w-full mt-6 px-4 py-2.5 font-mono text-[13px] uppercase tracking-widest border border-[#1a1a1a] transition-colors disabled:opacity-50"
               style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}
             >
               {loading ? 'SIGNING IN...' : 'SIGN IN'}

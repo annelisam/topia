@@ -174,7 +174,7 @@ export default function DraggableStickyNote() {
         onTouchStart={handleMinimizedTouchStart}
       >
         <div className="flex justify-between items-start pointer-events-none">
-          <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
+          <div className={`uppercase font-bold ${isMobile ? 'text-[12px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
           <button
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -195,7 +195,7 @@ export default function DraggableStickyNote() {
               e.preventDefault();
               handleReopen();
             }}
-            className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[10px]' : 'text-xs'}`}
+            className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[12px]' : 'text-xs'}`}
             style={{ marginTop: '-2px' }}
           >
             OPEN ▢
@@ -225,7 +225,7 @@ export default function DraggableStickyNote() {
       onTouchStart={handleTouchStart}
     >
       <div className="flex justify-between items-start mb-2 pointer-events-none">
-        <div className={`uppercase font-bold ${isMobile ? 'text-[10px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
+        <div className={`uppercase font-bold ${isMobile ? 'text-[12px]' : 'text-xs'}`}>TOPIA_NOTE_001</div>
         <button
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -246,13 +246,13 @@ export default function DraggableStickyNote() {
             e.preventDefault();
             handleClose();
           }}
-          className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[10px]' : 'text-xs'}`}
+          className={`uppercase font-bold hover:opacity-70 transition-opacity cursor-pointer pointer-events-auto ${isMobile ? 'text-[12px]' : 'text-xs'}`}
           style={{ marginTop: '-2px' }}
         >
           CLOSE ×
         </button>
       </div>
-      <div className={`leading-relaxed whitespace-pre-line pointer-events-none ${isMobile ? 'text-[10px]' : 'text-xs'}`}>
+      <div className={`leading-relaxed whitespace-pre-line pointer-events-none ${isMobile ? 'text-[12px]' : 'text-xs'}`}>
         {`TOPIA IS A CREATIVE EMPOWERMENT ENGINE AND NETWORK, BUILT FOR AND BY THE CURIOUS AND CREATIVE.
 
 IT BEGINS WITH THE QUESTION, "WHAT IF THE CREATIVE COMMUNITY BUILT ITS OWN OPEN SOURCE UNIVERSE, A CONSTELLATION OF WORLDS DESIGNED FOR CONNECTION, COLLABORATION, AND CREATIVE SOVEREIGNTY?"
@@ -261,7 +261,11 @@ CONTINUING THE BRIDGE BETWEEN CULTURE AND EMERGING CREATIVE TECH, TOPIA FOSTERS 
 
 FOR FAR TOO LONG, THE TOOLS AND NETWORKS THAT EMPOWER ARTISTS HAVE BEEN SCATTERED, GATEKEPT OR HIDDEN. TOPIA UNITES CREATIVES IN ONE HOME, ONE SPACE WHERE WE CAN TAKE OUR FIRST ENTRUSTED STEP TOWARD SOVEREIGNTY, AND OUR SUPPORTERS CAN EXPLORE AND BECOME A PART OF THE UNIVERSES WE BUILD.
 
-WITH OUR BEGINNINGS AS A COMMUNITY ZOOM CALL AND EVENT, TOPIA IS ANCHORED BY A CREATIVE GRAPH AND HUB. TOPIA CONNECTS ARTISTS WITH PATRONS, COLLABORATORS, FANS AND COMMUNITIES THROUGH A SUITE OF TOOLS CREATED BY AND APPROVED BY ME/YOU/US. WITH TOPIA TV, AUDIENCES CAN WATCH, LISTEN, AND DISCOVER NEW CREATIVE WORLDS WHILE COMMUNITY EVENTS TIE`}
+WITH OUR BEGINNINGS AS A COMMUNITY ZOOM CALL AND EVENT, TOPIA IS ANCHORED BY A CREATIVE GRAPH AND HUB. TOPIA CONNECTS ARTISTS WITH PATRONS, COLLABORATORS, FANS AND COMMUNITIES THROUGH A SUITE OF TOOLS CREATED BY AND APPROVED BY ME/YOU/US. WITH TOPIA TV, AUDIENCES CAN WATCH, LISTEN, AND DISCOVER NEW CREATIVE WORLDS WHILE COMMUNITY EVENTS TIE CONNECTIONS TO LIFE — FLUIDLY MERGING THE DIGITAL AND PHYSICAL EXPERIENCE.
+
+TRADITIONAL SYSTEMS NO LONGER MEET THE NEEDS OF TODAY'S ARTISTS. TOPIA BREAKS, REBUILDS, AND RESTRUCTURES THIS SYSTEM TO CREATE A LIVING NETWORK DESIGNED FOR CREATORS TO DEFINE OUR OWN PATHS, POWER, AND POSSIBILITIES.
+
+FOR ARTISTS, FANS, PATRONS, AND PARTNERS, TOPIA IS MORE THAN A PLATFORM, IT'S A MOVEMENT.`}
       </div>
     </div>
   );

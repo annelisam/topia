@@ -4,17 +4,18 @@
   /* TOPIA Base Colors */
   --color-orange: #FF5C34;
   --color-yellow: #e4fe52;
-  --color-near-black: #171718;
+  --color-near-black: #1a1a1a;
   --color-off-white: #FEFEFF;
+  --color-warm-beige: #f5f0e8;
 
   /* TOPIA Support Colors */
   --color-blue: #4F46FF;
   --color-green: #00FF88;
   --color-pink: #FF5BD7;
 
-  /* Theme Variables */
-  --background: #FEFEFF;
-  --foreground: #171718;
+  /* Theme Variables — warm beige is the canonical TOPIA background */
+  --background: #f5f0e8;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
@@ -26,7 +27,8 @@
   --color-pink: #FF5BD7;
 
   /* Neutral Colors */
-  --color-near-black: #171718;
+  --color-near-black: #1a1a1a;
+  --color-warm-beige: #f5f0e8;
   --color-off-white: #FEFEFF;
 
   /* Background & Foreground */
@@ -38,12 +40,8 @@
   --font-mono: var(--font-space-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #171718;
-    --foreground: #FEFEFF;
-  }
-}
+/* Dark mode is not currently supported — the TOPIA design uses a fixed warm-beige palette.
+   Remove or expand this block when dark mode is fully implemented across all components. */
 
 body {
   background: var(--background);

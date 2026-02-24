@@ -58,7 +58,7 @@ export default function AboutPage() {
             <h1 className="font-mono text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: '#1a1a1a' }}>
               ABOUT US
             </h1>
-            <p className="font-mono text-[11px] leading-relaxed" style={{ color: '#1a1a1a' }}>
+            <p className="font-mono text-[13px] leading-relaxed" style={{ color: '#1a1a1a' }}>
               ■ Our mission is to support the future of worldbuilders, visionaries and creative ecosystems for the people.
               OPEN SOURCING RESOURCES, TOOLS, AND CONNECTION. culture before tech. depth before data.
             </p>
@@ -68,7 +68,7 @@ export default function AboutPage() {
         {/* Main Content */}
         <section className="py-8 sm:py-12 px-4 sm:px-6 border-t" style={{ borderColor: '#1a1a1a' }}>
           <div className="container mx-auto max-w-4xl">
-            <div className="space-y-4 sm:space-y-6 font-mono text-[11px] leading-relaxed" style={{ color: '#1a1a1a' }}>
+            <div className="space-y-4 sm:space-y-6 font-mono text-[13px] leading-relaxed" style={{ color: '#1a1a1a' }}>
               <p>
                 TOPIA is a creative empowerment engine and network, built for and by the curious and creative.
               </p>
@@ -120,9 +120,9 @@ export default function AboutPage() {
                   className="border p-5 sm:p-6 hover:opacity-70 transition"
                   style={{ borderColor: '#1a1a1a', backgroundColor: '#f5f0e8' }}
                 >
-                  <h3 className="font-mono text-[11px] font-bold mb-2 uppercase" style={{ color: '#1a1a1a' }}>{member.name}</h3>
-                  <p className="font-mono text-[11px] mb-3" style={{ color: '#1a1a1a', opacity: 0.6 }}>{member.role}</p>
-                  <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>{member.description}</p>
+                  <h3 className="font-mono text-[13px] font-bold mb-2 uppercase" style={{ color: '#1a1a1a' }}>{member.name}</h3>
+                  <p className="font-mono text-[13px] mb-3" style={{ color: '#1a1a1a', opacity: 0.6 }}>{member.role}</p>
+                  <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{member.description}</p>
                 </div>
               ))}
             </div>
@@ -136,15 +136,15 @@ export default function AboutPage() {
               {/* TOPIA */}
               <div>
                 <h3 className="font-mono text-base sm:text-lg font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>TOPIA</h3>
-                <p className="font-mono text-[11px]" style={{ color: '#1a1a1a', opacity: 0.6 }}>
+                <p className="font-mono text-[13px]" style={{ color: '#1a1a1a', opacity: 0.6 }}>
                   Culture before tech. Depth before data.
                 </p>
               </div>
 
               {/* Connect */}
               <div>
-                <h3 className="font-mono text-[11px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>CONNECT</h3>
-                <ul className="space-y-2 font-mono text-[11px]">
+                <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>CONNECT</h3>
+                <ul className="space-y-2 font-mono text-[13px]">
                   <li>
                     <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
                       Instagram
@@ -165,8 +165,8 @@ export default function AboutPage() {
 
               {/* Explore */}
               <div>
-                <h3 className="font-mono text-[11px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>EXPLORE</h3>
-                <ul className="space-y-2 font-mono text-[11px]">
+                <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>EXPLORE</h3>
+                <ul className="space-y-2 font-mono text-[13px]">
                   <li><Link href="/about" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>ABOUT</Link></li>
                   <li><Link href="/worlds" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>WORLDS</Link></li>
                   <li><Link href="/resources/grants" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>GRANTS</Link></li>
@@ -175,7 +175,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="text-center pt-6 sm:pt-8 border-t font-mono text-[11px]" style={{ borderColor: '#1a1a1a', color: '#1a1a1a', opacity: 0.4 }}>
+            <div className="text-center pt-6 sm:pt-8 border-t font-mono text-[13px]" style={{ borderColor: '#1a1a1a', color: '#1a1a1a', opacity: 0.4 }}>
               © {new Date().getFullYear()} TOPIA. All rights reserved.
             </div>
           </div>

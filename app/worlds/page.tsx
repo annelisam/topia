@@ -412,7 +412,7 @@ export default function WorldsPage() {
                     setSelectedWorldCard(worldCardMapRef.current.get(id) ?? null);
                   }
                 }}
-                className="absolute font-mono text-[9px] sm:text-[10px] px-2 py-1 whitespace-nowrap cursor-pointer touch-manipulation"
+                className="absolute font-mono text-[9px] sm:text-[12px] px-2 py-1 whitespace-nowrap cursor-pointer touch-manipulation"
                 style={{
                   left: 0, top: 0,
                   transform: 'translate3d(0,0,0)',
@@ -430,7 +430,7 @@ export default function WorldsPage() {
 
         {/* Controls Panel */}
         <div
-          className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[11px] p-2 sm:p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[13px] p-2 sm:p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           style={{ color: '#1a1a1a', backgroundColor: '#f5f0e8', borderColor: '#1a1a1a' }}
         >
           <label className="flex items-center justify-between gap-3 mb-2">
@@ -452,12 +452,12 @@ export default function WorldsPage() {
       <section style={{ backgroundColor: '#f5f0e8' }}>
         <div className="flex justify-center py-5">
           {selectedWorldCard ? (
-            <div className="flex items-center gap-2 px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+            <div className="flex items-center gap-2 px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
               <span>{selectedWorldCard.title}</span>
               <button onClick={() => setSelectedWorldCard(null)} className="hover:opacity-60 transition text-[13px] leading-none" aria-label="Clear selection">×</button>
             </div>
           ) : (
-            <span className="px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>ALL WORLDS</span>
+            <span className="px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>ALL WORLDS</span>
           )}
         </div>
 

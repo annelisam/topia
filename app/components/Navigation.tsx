@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import LoginButton from './LoginButton';
 
 interface NavigationProps {
   currentPage?: 'home' | 'about' | 'worlds' | 'events' | 'grants' | 'tools' | 'contact' | 'resources';
@@ -13,12 +14,13 @@ export default function Navigation({ currentPage }: NavigationProps) {
   return (
     <header className="fixed top-0 w-full z-50">
       <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-        <Link href="/" className="font-mono text-[11px] uppercase tracking-tight hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
+        <Link href="/" className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
           TOPIA
         </Link>
 
-        {/* Desktop Navigation */}
-        <ul className="hidden sm:flex gap-6 md:gap-8 font-mono text-[11px] uppercase">
+        {/* Desktop Navigation + Login */}
+        <div className="hidden sm:flex items-center gap-6 md:gap-8">
+        <ul className="flex gap-6 md:gap-8 font-mono text-[13px] uppercase">
           <li>
             <Link
               href="/about"
@@ -80,13 +82,17 @@ export default function Navigation({ currentPage }: NavigationProps) {
             </a>
           </li>
         </ul>
+          <LoginButton />
+        </div>
 
-        {/* Mobile Hamburger Button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="sm:hidden flex flex-col gap-1.5 w-6 h-6 justify-center"
-          aria-label="Toggle menu"
-        >
+        {/* Mobile: Login + Hamburger */}
+        <div className="sm:hidden flex items-center gap-3">
+          <LoginButton />
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex flex-col gap-1.5 w-6 h-6 justify-center"
+            aria-label="Toggle menu"
+          >
           <span
             className={`block h-0.5 w-full transition-transform ${
               mobileMenuOpen ? 'rotate-45 translate-y-2' : ''
@@ -105,13 +111,14 @@ export default function Navigation({ currentPage }: NavigationProps) {
             }`}
             style={{ backgroundColor: '#1a1a1a' }}
           ></span>
-        </button>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="sm:hidden" style={{ backgroundColor: '#f5f0e8' }}>
-          <ul className="container mx-auto px-4 py-4 space-y-3 font-mono text-[11px] uppercase">
+          <ul className="container mx-auto px-4 py-4 space-y-3 font-mono text-[13px] uppercase">
             <li>
               <Link
                 href="/about"

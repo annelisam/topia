@@ -50,7 +50,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
         <Navigation currentPage="worlds" />
-        <p className="font-mono text-[11px]" style={{ color: '#1a1a1a' }}>Loading...</p>
+        <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>Loading...</p>
       </div>
     );
   }
@@ -59,8 +59,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
         <Navigation currentPage="worlds" />
-        <p className="font-mono text-[11px] mb-4" style={{ color: '#1a1a1a' }}>World not found.</p>
-        <Link href="/worlds" className="font-mono text-[11px] underline" style={{ color: '#1a1a1a' }}>← Back to Worlds</Link>
+        <p className="font-mono text-[13px] mb-4" style={{ color: '#1a1a1a' }}>World not found.</p>
+        <Link href="/worlds" className="font-mono text-[13px] underline" style={{ color: '#1a1a1a' }}>← Back to Worlds</Link>
       </div>
     );
   }
@@ -71,7 +71,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
       <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
         {/* Back link */}
-        <Link href="/worlds" className="font-mono text-[11px] hover:opacity-60 transition mb-8 inline-block" style={{ color: '#1a1a1a' }}>
+        <Link href="/worlds" className="font-mono text-[13px] hover:opacity-60 transition mb-8 inline-block" style={{ color: '#1a1a1a' }}>
           ← WORLDS
         </Link>
 
@@ -79,7 +79,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           {/* Category + flag header row */}
           <div className="flex items-center gap-3 mb-3">
             {world.category && (
-              <span className="font-mono text-[11px] px-3 py-1 border" style={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}>
+              <span className="font-mono text-[13px] px-3 py-1 border" style={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}>
                 {world.category}
               </span>
             )}
@@ -89,7 +89,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           </div>
 
           {/* Image placeholder */}
-          <div className="w-full h-48 sm:h-64 mb-6 flex items-center justify-center font-mono text-[11px]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8', opacity: 0.15 }}>
+          <div className="w-full h-48 sm:h-64 mb-6 flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8', opacity: 0.15 }}>
             IMAGE
           </div>
 
@@ -100,13 +100,13 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
           {/* Description */}
           {world.description && (
-            <p className="font-mono text-[11px] sm:text-[12px] leading-relaxed mb-6 max-w-xl" style={{ color: '#1a1a1a' }}>
+            <p className="font-mono text-[13px] sm:text-[12px] leading-relaxed mb-6 max-w-xl" style={{ color: '#1a1a1a' }}>
               {world.description}
             </p>
           )}
 
           {/* Meta info */}
-          <div className="space-y-2 font-mono text-[11px] mb-6" style={{ color: '#1a1a1a' }}>
+          <div className="space-y-2 font-mono text-[13px] mb-6" style={{ color: '#1a1a1a' }}>
             {world.creatorName && (
               <p>
                 <span className="font-bold">BUILT BY:</span>{' '}

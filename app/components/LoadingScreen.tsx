@@ -11,6 +11,13 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
+    // Skip the loading animation if the user has already seen it this session
+    if (sessionStorage.getItem('topia_loaded')) {
+      setIsComplete(true);
+      onComplete?.();
+      return;
+    }
+
     let progress = 0;
     const interval = setInterval(() => {
       progress += 0.08 + Math.random() * 0.12;
@@ -19,6 +26,7 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
         setLoadProgress(progress);
         clearInterval(interval);
         setTimeout(() => {
+          sessionStorage.setItem('topia_loaded', 'true');
           setIsComplete(true);
           onComplete?.();
         }, 200);

@@ -23,7 +23,7 @@ export default function Home() {
           lineCount={38}
           color="#1a1a1a"
           bgColor="#f5f0e8"
-          showControls={true}
+          showControls={false}
         />
       </div>
 

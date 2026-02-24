@@ -1,11 +1,22 @@
 import { pgTable, text, timestamp, uuid, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
 
-// Users table - for future platform expansion
+// Users table - auth via Privy (email, phone, Google, Coinbase wallet)
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
-  email: text('email').notNull().unique(),
+  privyId: text('privy_id').unique(), // Privy DID e.g. did:privy:xxxxxx
+  email: text('email').unique(),      // nullable: users may auth via phone/wallet
+  phone: text('phone').unique(),
+  walletAddress: text('wallet_address').unique(),
   name: text('name'),
+  username: text('username').unique(),
+  bio: text('bio'),
+  avatarUrl: text('avatar_url'),
+  socialWebsite: text('social_website'),
+  socialTwitter: text('social_twitter'),
+  socialInstagram: text('social_instagram'),
   role: text('role').default('user'), // 'user', 'artist', 'admin'
+  roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
+  toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

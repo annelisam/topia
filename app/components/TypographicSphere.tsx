@@ -276,7 +276,7 @@ export default function TypographicSphere({
       {/* Controls */}
       {showControls && (
         <div
-          className={`fixed bottom-5 left-5 font-mono text-[11px] p-3 border z-50 transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          className={`fixed bottom-5 left-5 font-mono text-[13px] p-3 border z-50 transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           style={{ color, backgroundColor: bgColor, borderColor: color }}
         >
           <label className="flex items-center justify-between gap-3 mb-2">

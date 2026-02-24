@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Mono } from "next/font/google";
 import "./globals.css";
+import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
 
 const spaceMono = Space_Mono({
   variable: "--font-space-mono",
@@ -26,7 +27,9 @@ export default function RootLayout({
       <body
         className={`${spaceMono.variable} antialiased`}
       >
-        {children}
+        <PrivyProviderWrapper>
+          {children}
+        </PrivyProviderWrapper>
       </body>
     </html>
   );
