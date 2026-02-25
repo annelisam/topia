@@ -393,7 +393,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           {world.dateAdded && (
             <section className="mb-10">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
-                Member Since
+                Created
               </p>
               <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
                 {world.dateAdded}
