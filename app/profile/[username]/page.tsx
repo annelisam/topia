@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../components/Navigation';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
-import { useUserProfile } from '../../hooks/useUserProfile';
 import { SocialIcon } from '../../components/SocialIcons';
 
 interface PublicProfile {
@@ -70,21 +70,27 @@ const ROLE_LABEL_MAP: Record<string, string> = {
 export default function PublicProfilePage() {
   const params = useParams();
   const username = params?.username as string;
-  const { profile: myProfile, authenticated } = useUserProfile();
+  const { ready, authenticated, user } = usePrivy();
 
   const [profile, setProfile]   = useState<PublicProfile | null>(null);
   const [tools, setTools]       = useState<ResolvedTool[]>([]);
   const [worldMemberships, setWorldMemberships] = useState<WorldMembership[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!username) return;
-    fetch(`/api/profile/${encodeURIComponent(username)}`)
+    if (!username || !ready) return;
+    const url = new URL(`/api/profile/${encodeURIComponent(username)}`, window.location.origin);
+    if (authenticated && user?.id) {
+      url.searchParams.set('viewerPrivyId', user.id);
+    }
+    fetch(url.toString())
       .then((r) => {
         if (r.status === 404) { setNotFound(true); return null; }
         if (!r.ok) { setFetchError(true); return null; }
@@ -96,23 +102,14 @@ export default function PublicProfilePage() {
         setProfile(data.user);
         setTools(data.tools ?? []);
         setWorldMemberships(data.worldMemberships ?? []);
-        // Fetch follow counts
-        if (data.user.id) {
-          fetch(`/api/follow/counts?userId=${encodeURIComponent(data.user.id)}`)
-            .then((r) => r.json())
-            .then((counts) => {
-              setFollowerCount(counts.followers ?? 0);
-              setFollowingCount(counts.following ?? 0);
-            })
-            .catch(console.error);
-        }
+        setFollowerCount(data.followerCount ?? 0);
+        setFollowingCount(data.followingCount ?? 0);
+        setIsFollowing(data.isFollowing ?? false);
+        setIsOwnProfile(data.isOwnProfile ?? false);
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
-  }, [username]);
-
-  // Check if viewing own profile — compare logged-in user's username with the viewed profile
-  const isOwnProfile = authenticated && myProfile?.username === username;
+  }, [username, ready, authenticated, user]);
 
   // Sort worlds: builders first, then collaborators
   const sortedWorlds = useMemo(() => {
@@ -210,7 +207,9 @@ export default function PublicProfilePage() {
                 {profile.id && !isOwnProfile && (
                   <FollowButton
                     targetUserId={profile.id}
+                    initialIsFollowing={isFollowing}
                     onFollowChange={(following) => {
+                      setIsFollowing(following);
                       setFollowerCount((c) => following ? c + 1 : c - 1);
                     }}
                   />

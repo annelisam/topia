@@ -1,30 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 
 interface FollowButtonProps {
   targetUserId: string;
+  initialIsFollowing?: boolean;
   onFollowChange?: (isFollowing: boolean) => void;
 }
 
-export default function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps) {
+export default function FollowButton({ targetUserId, initialIsFollowing = false, onFollowChange }: FollowButtonProps) {
   const { authenticated, user } = usePrivy();
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [busy, setBusy] = useState(false);
 
-  // Check follow status on mount
-  useEffect(() => {
-    if (!authenticated || !user) { setLoading(false); return; }
-    fetch(`/api/follow/status?privyId=${encodeURIComponent(user.id)}&targetUserId=${encodeURIComponent(targetUserId)}`)
-      .then((r) => r.json())
-      .then((data) => setIsFollowing(data.isFollowing ?? false))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [authenticated, user, targetUserId]);
-
-  if (!authenticated || loading) return null;
+  if (!authenticated) return null;
 
   const handleToggle = async () => {
     if (busy || !user) return;
