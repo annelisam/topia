@@ -216,11 +216,6 @@ export default function GrantsList() {
                           {grant.deadlineDate && <span className="inline-block">DEADLINE: {grant.deadlineDate}</span>}
                         </p>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                          {grant.status && (
-                            <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[13px] lowercase" style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)' }}>
-                              {grant.status}
-                            </span>
-                          )}
                           {tags.slice(0, 5).map((tag, idx) => (
                             <span
                               key={idx}

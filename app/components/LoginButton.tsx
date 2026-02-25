@@ -2,10 +2,10 @@
 
 import { usePrivy } from '@privy-io/react-auth';
 import { useEffect } from 'react';
-import Link from 'next/link';
+import AvatarMenu from './AvatarMenu';
 
 export default function LoginButton() {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { authenticated, user } = usePrivy();
 
   // Sync user to our DB after login
   useEffect(() => {
@@ -32,37 +32,5 @@ export default function LoginButton() {
     }
   }, [authenticated, user]);
 
-  // Don't render until Privy is ready
-  if (!ready) return null;
-
-  if (authenticated) {
-    return (
-      <div className="flex items-center gap-4">
-        <Link
-          href="/profile"
-          className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition"
-          style={{ color: 'var(--foreground)' }}
-        >
-          PROFILE
-        </Link>
-        <button
-          onClick={logout}
-          className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition"
-          style={{ color: 'var(--foreground)' }}
-        >
-          LOG OUT
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      onClick={login}
-      className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition border px-3 py-1"
-      style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
-    >
-      LOG IN
-    </button>
-  );
+  return <AvatarMenu />;
 }
