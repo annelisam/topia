@@ -116,6 +116,9 @@ export default function WorldsPage() {
   // label DOM nodes – we move them imperatively, no React state per frame
   const labelRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const dataLoadedRef = useRef(false);
+  const themeColorsRef = useRef({ fgRgb: '26,26,26', fgHex: '#1a1a1a', bgHex: '#f5f0e8' });
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const touchDecidedRef = useRef(false);
 
   // ── React state (only for things that actually need a re-render) ──
   const [isLoaded, setIsLoaded] = useState(false);
@@ -129,6 +132,26 @@ export default function WorldsPage() {
   useEffect(() => { configRef.current = config; }, [config]);
   // keep selectedIdRef in sync
   useEffect(() => { selectedIdRef.current = selectedWorldCard?.id ?? null; }, [selectedWorldCard]);
+
+  // ── read theme colors for canvas ──
+  useEffect(() => {
+    const readColors = () => {
+      const style = getComputedStyle(document.documentElement);
+      const fg = style.getPropertyValue('--foreground').trim() || '#1a1a1a';
+      const bg = style.getPropertyValue('--background').trim() || '#f5f0e8';
+      const hexToRgb = (hex: string) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `${r},${g},${b}`;
+      };
+      themeColorsRef.current = { fgRgb: hexToRgb(fg), fgHex: fg, bgHex: bg };
+    };
+    readColors();
+    const observer = new MutationObserver(() => readColors());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   // ── Fetch + animated loader ──────────────────────────────────────
   useEffect(() => {
@@ -261,7 +284,7 @@ export default function WorldsPage() {
           else ctx.lineTo(centerX + rot.x * scale, centerY - rot.y * scale);
         }
         const avgOpacity = 0.1 + (totalDepth / (segments + 1)) * 0.25;
-        ctx.strokeStyle = `rgba(26,26,26,${avgOpacity})`;
+        ctx.strokeStyle = `rgba(${themeColorsRef.current.fgRgb},${avgOpacity})`;
         ctx.lineWidth = 1.5;
         ctx.stroke();
       });
@@ -275,10 +298,21 @@ export default function WorldsPage() {
         const depth = (rot.z + 1) / 2;
         const isSelected = world.id === selectedId;
 
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, isSelected ? 8 : 5, 0, Math.PI * 2);
-        ctx.fillStyle = isSelected ? 'rgba(26,26,26,1)' : `rgba(26,26,26,${0.3 + depth * 0.7})`;
-        ctx.fill();
+        if (isSelected) {
+          ctx.save();
+          ctx.shadowColor = '#e4fe52';
+          ctx.shadowBlur = 18;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, 8, 0, Math.PI * 2);
+          ctx.fillStyle = '#e4fe52';
+          ctx.fill();
+          ctx.restore();
+        } else {
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${themeColorsRef.current.fgRgb},${0.3 + depth * 0.7})`;
+          ctx.fill();
+        }
       });
 
       // ── move label buttons imperatively (zero React re-renders)
@@ -299,7 +333,15 @@ export default function WorldsPage() {
         el.style.transform = `translate3d(${screenX}px,${screenY + 12}px,0) translate(-50%,0) scale(${displayScale})`;
         el.style.opacity = String(opacity);
         el.style.zIndex = String(zIndex);
-        el.style.backgroundColor = isSelected ? '#1a1a1a' : 'rgba(26,26,26,0.7)';
+        if (isSelected) {
+          el.style.backgroundColor = '#e4fe52';
+          el.style.color = '#1a1a1a';
+          el.style.boxShadow = '0 0 12px 4px rgba(228,254,82,0.5)';
+        } else {
+          el.style.backgroundColor = `rgba(${themeColorsRef.current.fgRgb},0.7)`;
+          el.style.color = themeColorsRef.current.bgHex;
+          el.style.boxShadow = 'none';
+        }
       });
 
       animationRef.current = requestAnimationFrame(animate);
@@ -338,14 +380,34 @@ export default function WorldsPage() {
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if ((e.target as HTMLElement).tagName === 'BUTTON') return;
     if (e.touches.length === 1) {
-      isDraggingRef.current = true;
+      touchDecidedRef.current = false;
+      isDraggingRef.current = false;
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       velocityRef.current = { x: 0, y: 0 };
     }
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDraggingRef.current || e.touches.length !== 1) return;
+    if (e.touches.length !== 1) return;
+
+    // Decide direction on first significant movement
+    if (!touchDecidedRef.current) {
+      const absDx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+      const absDy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+      if (absDx > 8 || absDy > 8) {
+        touchDecidedRef.current = true;
+        if (absDx > absDy) {
+          // Horizontal → capture for galaxy rotation
+          isDraggingRef.current = true;
+        }
+        // Vertical → don't set isDragging, browser scrolls via touch-action: pan-y
+      }
+      return;
+    }
+
+    if (!isDraggingRef.current) return;
+
     const dx = e.touches[0].clientX - lastMouseRef.current.x;
     const dy = e.touches[0].clientY - lastMouseRef.current.y;
     rotationRef.current.y += dx * 0.004;
@@ -357,11 +419,14 @@ export default function WorldsPage() {
     lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, []);
 
-  const handleTouchEnd = useCallback(() => { isDraggingRef.current = false; }, []);
+  const handleTouchEnd = useCallback(() => {
+    isDraggingRef.current = false;
+    touchDecidedRef.current = false;
+  }, []);
 
   // ── Render ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation currentPage="worlds" />
 
       {/* Galaxy viewport */}
@@ -372,7 +437,7 @@ export default function WorldsPage() {
           className="absolute inset-0 flex items-center justify-center transition-opacity duration-300"
           style={{ zIndex: 100, opacity: isLoaded ? 0 : 1, pointerEvents: isLoaded ? 'none' : 'auto' }}
         >
-          <div className="text-center font-mono text-sm" style={{ color: '#1a1a1a' }}>
+          <div className="text-center font-mono text-sm" style={{ color: 'var(--foreground)' }}>
             <div>LOADING WORLDS</div>
             <div className="mt-3 tracking-widest">
               {'█'.repeat(Math.floor(loadProgress * 16))}{'░'.repeat(16 - Math.floor(loadProgress * 16))}
@@ -383,7 +448,7 @@ export default function WorldsPage() {
         {/* Galaxy container */}
         <div
           ref={containerRef}
-          className={`relative select-none touch-none ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          className={`relative select-none touch-pan-y ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
           style={{ width: '100%', height: '100%', cursor: 'grab', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -394,7 +459,7 @@ export default function WorldsPage() {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <canvas ref={canvasRef} className="absolute inset-0 touch-none" style={{ willChange: 'transform' }} />
+          <canvas ref={canvasRef} className="absolute inset-0 touch-pan-y" style={{ willChange: 'transform' }} />
 
           {/* Label buttons – rendered once per world key, moved imperatively */}
           {worldKeys.map((id) => {
@@ -417,7 +482,7 @@ export default function WorldsPage() {
                   left: 0, top: 0,
                   transform: 'translate3d(0,0,0)',
                   transformOrigin: 'center top',
-                  color: '#f5f0e8',
+                  color: 'var(--background)',
                   pointerEvents: 'auto',
                   willChange: 'transform',
                 }}
@@ -431,51 +496,51 @@ export default function WorldsPage() {
         {/* Controls Panel */}
         <div
           className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[13px] p-2 sm:p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          style={{ color: '#1a1a1a', backgroundColor: '#f5f0e8', borderColor: '#1a1a1a' }}
+          style={{ color: 'var(--foreground)', backgroundColor: 'var(--background)', borderColor: 'var(--foreground)' }}
         >
           <label className="flex items-center justify-between gap-3 mb-2">
             SIZE
             <input type="range" min="30" max="120" value={config.zoom * 100}
               onChange={(e) => setConfig(prev => ({ ...prev, zoom: parseInt(e.target.value) / 100 }))}
-              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: '#1a1a1a', accentColor: '#1a1a1a' }} />
+              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: 'var(--foreground)', accentColor: 'var(--foreground)' }} />
           </label>
           <label className="flex items-center justify-between gap-3">
             SPEED
             <input type="range" min="0" max="200" value={config.speed * 100}
               onChange={(e) => setConfig(prev => ({ ...prev, speed: parseInt(e.target.value) / 100 }))}
-              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: '#1a1a1a', accentColor: '#1a1a1a' }} />
+              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: 'var(--foreground)', accentColor: 'var(--foreground)' }} />
           </label>
         </div>
       </div>
 
       {/* ── ALL WORLDS GRID ── */}
-      <section style={{ backgroundColor: '#f5f0e8' }}>
+      <section style={{ backgroundColor: 'var(--background)' }}>
         <div className="flex justify-center py-5">
           {selectedWorldCard ? (
-            <div className="flex items-center gap-2 px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+            <div className="flex items-center gap-2 px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
               <span>{selectedWorldCard.title}</span>
               <button onClick={() => setSelectedWorldCard(null)} className="hover:opacity-60 transition text-[13px] leading-none" aria-label="Clear selection">×</button>
             </div>
           ) : (
-            <span className="px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>ALL WORLDS</span>
+            <span className="px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>ALL WORLDS</span>
           )}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4" style={{ borderTop: '1px solid #1a1a1a', borderLeft: '1px solid #1a1a1a' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4" style={{ borderTop: '1px solid var(--foreground)', borderLeft: '1px solid var(--foreground)' }}>
           {(selectedWorldCard ? [selectedWorldCard] : allWorlds).map((world) => (
             <Link
               key={world.id}
               href={`/worlds/${world.slug}`}
               onClick={(e) => { if (!selectedWorldCard) { e.preventDefault(); setSelectedWorldCard(world); } }}
               className="group block relative"
-              style={{ borderRight: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a', backgroundColor: '#f5f0e8' }}
+              style={{ borderRight: '1px solid var(--foreground)', borderBottom: '1px solid var(--foreground)', backgroundColor: 'var(--background)' }}
             >
               <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: '#d9d4cc' }}>
-                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover" />}
+                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover object-top" />}
               </div>
               <div className="p-3 sm:p-4 flex justify-between items-end" style={{ minHeight: '80px' }}>
-                <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: '#1a1a1a' }}>{world.title}</h3>
-                <span className="font-mono text-[18px] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" style={{ color: '#1a1a1a' }}>→</span>
+                <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>{world.title}</h3>
+                <span className="font-mono text-[18px] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" style={{ color: 'var(--foreground)' }}>→</span>
               </div>
             </Link>
           ))}

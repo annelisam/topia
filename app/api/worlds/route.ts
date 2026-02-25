@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db, worlds, creators } from '@/lib/db';
+import { db } from '@/lib/db';
+import { worlds, creators, worldMembers, users } from '@/lib/db/schema';
 import { ilike, asc, eq, and } from 'drizzle-orm';
 
 export async function GET(request: Request) {
@@ -28,13 +29,15 @@ export async function GET(request: Request) {
         id: worlds.id,
         title: worlds.title,
         slug: worlds.slug,
+        shortDescription: worlds.shortDescription,
         description: worlds.description,
         category: worlds.category,
         imageUrl: worlds.imageUrl,
-        websiteUrl: worlds.websiteUrl,
+        headerImageUrl: worlds.headerImageUrl,
         country: worlds.country,
         tools: worlds.tools,
         collaborators: worlds.collaborators,
+        socialLinks: worlds.socialLinks,
         dateAdded: worlds.dateAdded,
         creatorId: worlds.creatorId,
         creatorName: creators.name,
@@ -45,11 +48,42 @@ export async function GET(request: Request) {
       .from(worlds)
       .leftJoin(creators, eq(worlds.creatorId, creators.id))
       .where(and(...conditions))
-      .orderBy(asc(worlds.title));
+      .orderBy(asc(worlds.displayOrder), asc(worlds.title));
+
+    // Fetch world members for all returned worlds
+    const worldIds = results.map(w => w.id);
+    let members: { worldId: string; userId: string; role: string; userName: string | null; userUsername: string | null; userAvatarUrl: string | null }[] = [];
+    if (worldIds.length > 0) {
+      const memberResults = await db
+        .select({
+          worldId: worldMembers.worldId,
+          userId: worldMembers.userId,
+          role: worldMembers.role,
+          userName: users.name,
+          userUsername: users.username,
+          userAvatarUrl: users.avatarUrl,
+        })
+        .from(worldMembers)
+        .innerJoin(users, eq(worldMembers.userId, users.id));
+
+      members = memberResults.filter(m => worldIds.includes(m.worldId));
+    }
+
+    // Group members by worldId
+    const memberMap: Record<string, typeof members> = {};
+    for (const m of members) {
+      if (!memberMap[m.worldId]) memberMap[m.worldId] = [];
+      memberMap[m.worldId].push(m);
+    }
+
+    const worldsWithMembers = results.map(w => ({
+      ...w,
+      members: memberMap[w.id] || [],
+    }));
 
     return NextResponse.json({
-      worlds: results,
-      count: results.length,
+      worlds: worldsWithMembers,
+      count: worldsWithMembers.length,
     });
   } catch (error) {
     console.error('Error fetching worlds:', error);

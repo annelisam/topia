@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Navigation from '../components/Navigation';
 import LoadingScreen from '../components/LoadingScreen';
 
@@ -46,7 +45,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
 
       <Navigation currentPage="about" />
@@ -55,10 +54,10 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="pt-24 sm:pt-32 pb-8 sm:pb-12 px-4 sm:px-6">
           <div className="container mx-auto max-w-4xl">
-            <h1 className="font-mono text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: '#1a1a1a' }}>
+            <h1 className="font-mono text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: 'var(--foreground)' }}>
               ABOUT US
             </h1>
-            <p className="font-mono text-[13px] leading-relaxed" style={{ color: '#1a1a1a' }}>
+            <p className="font-mono text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
               ■ Our mission is to support the future of worldbuilders, visionaries and creative ecosystems for the people.
               OPEN SOURCING RESOURCES, TOOLS, AND CONNECTION. culture before tech. depth before data.
             </p>
@@ -66,9 +65,9 @@ export default function AboutPage() {
         </section>
 
         {/* Main Content */}
-        <section className="py-8 sm:py-12 px-4 sm:px-6 border-t" style={{ borderColor: '#1a1a1a' }}>
+        <section className="py-8 sm:py-12 px-4 sm:px-6 border-t" style={{ borderColor: 'var(--foreground)' }}>
           <div className="container mx-auto max-w-4xl">
-            <div className="space-y-4 sm:space-y-6 font-mono text-[13px] leading-relaxed" style={{ color: '#1a1a1a' }}>
+            <div className="space-y-4 sm:space-y-6 font-mono text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
               <p>
                 TOPIA is a creative empowerment engine and network, built for and by the curious and creative.
               </p>
@@ -109,77 +108,26 @@ export default function AboutPage() {
         </section>
 
         {/* Team Section */}
-        <section className="py-12 sm:py-20 px-4 sm:px-6 border-t" style={{ borderColor: '#1a1a1a' }}>
+        <section className="py-12 sm:py-20 px-4 sm:px-6 border-t" style={{ borderColor: 'var(--foreground)' }}>
           <div className="container mx-auto max-w-6xl">
-            <h2 className="font-mono text-base sm:text-lg font-bold mb-8 sm:mb-12 uppercase" style={{ color: '#1a1a1a' }}>Our Team</h2>
+            <h2 className="font-mono text-base sm:text-lg font-bold mb-8 sm:mb-12 uppercase" style={{ color: 'var(--foreground)' }}>Our Team</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {team.map((member, idx) => (
                 <div
                   key={idx}
                   className="border p-5 sm:p-6 hover:opacity-70 transition"
-                  style={{ borderColor: '#1a1a1a', backgroundColor: '#f5f0e8' }}
+                  style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}
                 >
-                  <h3 className="font-mono text-[13px] font-bold mb-2 uppercase" style={{ color: '#1a1a1a' }}>{member.name}</h3>
-                  <p className="font-mono text-[13px] mb-3" style={{ color: '#1a1a1a', opacity: 0.6 }}>{member.role}</p>
-                  <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{member.description}</p>
+                  <h3 className="font-mono text-[13px] font-bold mb-2 uppercase" style={{ color: 'var(--foreground)' }}>{member.name}</h3>
+                  <p className="font-mono text-[13px] mb-3" style={{ color: 'var(--foreground)', opacity: 0.6 }}>{member.role}</p>
+                  <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>{member.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t mt-12 sm:mt-20" style={{ borderColor: '#1a1a1a' }}>
-          <div className="container mx-auto max-w-6xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 mb-6 sm:mb-8">
-              {/* TOPIA */}
-              <div>
-                <h3 className="font-mono text-base sm:text-lg font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>TOPIA</h3>
-                <p className="font-mono text-[13px]" style={{ color: '#1a1a1a', opacity: 0.6 }}>
-                  Culture before tech. Depth before data.
-                </p>
-              </div>
-
-              {/* Connect */}
-              <div>
-                <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>CONNECT</h3>
-                <ul className="space-y-2 font-mono text-[13px]">
-                  <li>
-                    <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
-                      Instagram
-                    </a>
-                  </li>
-                  <li>
-                    <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
-                      Twitter
-                    </a>
-                  </li>
-                  <li>
-                    <a href="mailto:contact@topia.vision" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
-                      Email
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Explore */}
-              <div>
-                <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: '#1a1a1a' }}>EXPLORE</h3>
-                <ul className="space-y-2 font-mono text-[13px]">
-                  <li><Link href="/about" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>ABOUT</Link></li>
-                  <li><Link href="/worlds" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>WORLDS</Link></li>
-                  <li><Link href="/resources/grants" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>GRANTS</Link></li>
-                  <li><Link href="/resources/tools" className="hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>TOOLS</Link></li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="text-center pt-6 sm:pt-8 border-t font-mono text-[13px]" style={{ borderColor: '#1a1a1a', color: '#1a1a1a', opacity: 0.4 }}>
-              © {new Date().getFullYear()} TOPIA. All rights reserved.
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );

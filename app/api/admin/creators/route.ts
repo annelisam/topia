@@ -1,11 +1,30 @@
 import { NextResponse } from 'next/server';
-import { db, creators } from '@/lib/db';
+import { db } from '@/lib/db';
+import { creators, users } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 
-// GET – all creators (including unpublished)
+// GET – all creators (including unpublished), with linked user info
 export async function GET() {
   try {
-    const results = await db.select().from(creators).orderBy(asc(creators.name));
+    const results = await db
+      .select({
+        id: creators.id,
+        name: creators.name,
+        slug: creators.slug,
+        description: creators.description,
+        imageUrl: creators.imageUrl,
+        websiteUrl: creators.websiteUrl,
+        country: creators.country,
+        userId: creators.userId,
+        published: creators.published,
+        createdAt: creators.createdAt,
+        updatedAt: creators.updatedAt,
+        linkedUserName: users.name,
+        linkedUserUsername: users.username,
+      })
+      .from(creators)
+      .leftJoin(users, eq(creators.userId, users.id))
+      .orderBy(asc(creators.name));
     return NextResponse.json({ creators: results });
   } catch (error) {
     console.error('Admin GET creators:', error);
@@ -24,6 +43,7 @@ export async function POST(request: Request) {
       imageUrl: data.imageUrl || null,
       websiteUrl: data.websiteUrl || null,
       country: data.country || null,
+      userId: data.userId || null,
       published: data.published ?? true,
     }).returning();
 
@@ -47,6 +67,7 @@ export async function PUT(request: Request) {
       imageUrl: data.imageUrl || null,
       websiteUrl: data.websiteUrl || null,
       country: data.country || null,
+      userId: data.userId || null,
       published: data.published ?? true,
     }).where(eq(creators.id, data.id)).returning();
 

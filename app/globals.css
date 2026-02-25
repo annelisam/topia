@@ -1,5 +1,49 @@
 @import "tailwindcss";
 
+/* ── GT-Zirkon Font ───────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'GT Zirkon';
+  src: url('/fonts/GTZirkon-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Zirkon';
+  src: url('/fonts/GTZirkon-Book.otf') format('opentype');
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Zirkon';
+  src: url('/fonts/GTZirkon-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Zirkon';
+  src: url('/fonts/GTZirkon-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Zirkon';
+  src: url('/fonts/GTZirkon-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Theme Variables ──────────────────────────────────────────── */
+
 :root {
   /* TOPIA Base Colors */
   --color-orange: #FF5C34;
@@ -13,9 +57,33 @@
   --color-green: #00FF88;
   --color-pink: #FF5BD7;
 
-  /* Theme Variables — warm beige is the canonical TOPIA background */
+  /* Light mode (default) */
   --background: #f5f0e8;
   --foreground: #1a1a1a;
+  --border-color: rgba(26, 26, 26, 0.15);
+  --border-color-strong: #1a1a1a;
+  --surface: #f5f0e8;
+  --surface-hover: rgba(26, 26, 26, 0.05);
+  --muted: rgba(26, 26, 26, 0.5);
+  --accent-bg: #1a1a1a;
+  --accent-fg: #f5f0e8;
+  --gradient-hero: linear-gradient(to bottom, transparent 50%, #f5f0e8 100%);
+}
+
+[data-theme="dark"] {
+  --background: #111111;
+  --foreground: #e8e4dc;
+  --border-color: rgba(232, 228, 220, 0.15);
+  --border-color-strong: #e8e4dc;
+  --surface: #1a1a1a;
+  --surface-hover: rgba(232, 228, 220, 0.05);
+  --muted: rgba(232, 228, 220, 0.5);
+  --accent-bg: #e8e4dc;
+  --accent-fg: #111111;
+  --gradient-hero: linear-gradient(to bottom, transparent 50%, #111111 100%);
+
+  --color-warm-beige: #111111;
+  --color-near-black: #e8e4dc;
 }
 
 @theme inline {
@@ -35,18 +103,16 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Fonts */
-  --font-sans: var(--font-space-mono);
-  --font-mono: var(--font-space-mono);
+  /* Fonts — GT Zirkon primary, Space Mono fallback */
+  --font-sans: 'GT Zirkon', var(--font-space-mono), monospace;
+  --font-mono: 'GT Zirkon', var(--font-space-mono), monospace;
 }
-
-/* Dark mode is not currently supported — the TOPIA design uses a fixed warm-beige palette.
-   Remove or expand this block when dark mode is fully implemented across all components. */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-space-mono), monospace;
+  font-family: 'GT Zirkon', var(--font-space-mono), monospace;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Custom range slider styling for TypographicSphere controls */
@@ -55,7 +121,7 @@ input[type="range"] {
   appearance: none;
   width: 80px;
   height: 2px;
-  background: #1a1a1a;
+  background: var(--foreground);
   outline: none;
   cursor: pointer;
 }
@@ -65,14 +131,26 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: #1a1a1a;
+  background: var(--foreground);
   cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 10px;
   height: 10px;
-  background: #1a1a1a;
+  background: var(--foreground);
   border: none;
   cursor: pointer;
+}
+
+/* ── Theme-aware hover utilities ─────────────────────────────── */
+
+.theme-hover-invert:hover {
+  background-color: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+
+.theme-hover-surface:hover {
+  background-color: var(--surface-hover);
 }

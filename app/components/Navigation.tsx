@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import LoginButton from './LoginButton';
+import ThemeToggle from './ThemeToggle';
 
 interface NavigationProps {
   currentPage?: 'home' | 'about' | 'worlds' | 'events' | 'grants' | 'tools' | 'contact' | 'resources';
@@ -12,9 +13,12 @@ export default function Navigation({ currentPage }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 w-full z-50">
+    <header
+      className="fixed top-0 w-full z-[60]"
+      style={{ background: 'linear-gradient(to bottom, color-mix(in srgb, var(--background) 90%, transparent) 0%, color-mix(in srgb, var(--background) 60%, transparent) 40%, color-mix(in srgb, var(--background) 25%, transparent) 70%, transparent 100%)' }}
+    >
       <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-        <Link href="/" className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition" style={{ color: '#1a1a1a' }}>
+        <Link href="/" className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
           TOPIA
         </Link>
 
@@ -23,19 +27,9 @@ export default function Navigation({ currentPage }: NavigationProps) {
         <ul className="flex gap-6 md:gap-8 font-mono text-[13px] uppercase">
           <li>
             <Link
-              href="/about"
-              className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
-            >
-              {currentPage === 'about' && <span>■</span>}
-              ABOUT
-            </Link>
-          </li>
-          <li>
-            <Link
               href="/worlds"
               className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
+              style={{ color: 'var(--foreground)' }}
             >
               {currentPage === 'worlds' && <span>■</span>}
               WORLDS
@@ -43,19 +37,9 @@ export default function Navigation({ currentPage }: NavigationProps) {
           </li>
           <li>
             <Link
-              href="/#events"
-              className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
-            >
-              {currentPage === 'events' && <span>■</span>}
-              EVENTS
-            </Link>
-          </li>
-          <li>
-            <Link
               href="/resources/grants"
               className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
+              style={{ color: 'var(--foreground)' }}
             >
               {currentPage === 'grants' && <span>■</span>}
               GRANTS
@@ -65,28 +49,20 @@ export default function Navigation({ currentPage }: NavigationProps) {
             <Link
               href="/resources/tools"
               className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
+              style={{ color: 'var(--foreground)' }}
             >
               {currentPage === 'tools' && <span>■</span>}
               TOOLS
             </Link>
           </li>
-          <li>
-            <a
-              href="mailto:contact@topia.vision"
-              className="hover:opacity-70 transition flex items-center gap-1"
-              style={{ color: '#1a1a1a' }}
-            >
-              {currentPage === 'contact' && <span>■</span>}
-              CONTACT
-            </a>
-          </li>
         </ul>
+          <ThemeToggle />
           <LoginButton />
         </div>
 
         {/* Mobile: Login + Hamburger */}
         <div className="sm:hidden flex items-center gap-3">
+          <ThemeToggle />
           <LoginButton />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -97,19 +73,19 @@ export default function Navigation({ currentPage }: NavigationProps) {
             className={`block h-0.5 w-full transition-transform ${
               mobileMenuOpen ? 'rotate-45 translate-y-2' : ''
             }`}
-            style={{ backgroundColor: '#1a1a1a' }}
+            style={{ backgroundColor: 'var(--foreground)' }}
           ></span>
           <span
             className={`block h-0.5 w-full transition-opacity ${
               mobileMenuOpen ? 'opacity-0' : ''
             }`}
-            style={{ backgroundColor: '#1a1a1a' }}
+            style={{ backgroundColor: 'var(--foreground)' }}
           ></span>
           <span
             className={`block h-0.5 w-full transition-transform ${
               mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''
             }`}
-            style={{ backgroundColor: '#1a1a1a' }}
+            style={{ backgroundColor: 'var(--foreground)' }}
           ></span>
           </button>
         </div>
@@ -117,25 +93,14 @@ export default function Navigation({ currentPage }: NavigationProps) {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="sm:hidden" style={{ backgroundColor: '#f5f0e8' }}>
+        <div className="sm:hidden" style={{ backgroundColor: 'var(--background)' }}>
           <ul className="container mx-auto px-4 py-4 space-y-3 font-mono text-[13px] uppercase">
-            <li>
-              <Link
-                href="/about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
-              >
-                {currentPage === 'about' && <span>■</span>}
-                ABOUT
-              </Link>
-            </li>
             <li>
               <Link
                 href="/worlds"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
+                style={{ color: 'var(--foreground)' }}
               >
                 {currentPage === 'worlds' && <span>■</span>}
                 WORLDS
@@ -143,21 +108,10 @@ export default function Navigation({ currentPage }: NavigationProps) {
             </li>
             <li>
               <Link
-                href="/#events"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
-              >
-                {currentPage === 'events' && <span>■</span>}
-                EVENTS
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/resources/grants"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
+                style={{ color: 'var(--foreground)' }}
               >
                 {currentPage === 'grants' && <span>■</span>}
                 GRANTS
@@ -168,22 +122,11 @@ export default function Navigation({ currentPage }: NavigationProps) {
                 href="/resources/tools"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
+                style={{ color: 'var(--foreground)' }}
               >
                 {currentPage === 'tools' && <span>■</span>}
                 TOOLS
               </Link>
-            </li>
-            <li>
-              <a
-                href="mailto:contact@topia.vision"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
-                style={{ color: '#1a1a1a' }}
-              >
-                {currentPage === 'contact' && <span>■</span>}
-                CONTACT
-              </a>
             </li>
           </ul>
         </div>

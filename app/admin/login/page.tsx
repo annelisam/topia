@@ -35,18 +35,18 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
       <div className="w-full max-w-sm">
-        <div className="border border-[#1a1a1a] p-8" style={{ backgroundColor: '#f5f0e8' }}>
-          <h1 className="font-mono text-[13px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>
+        <div className="border border-[var(--foreground)] p-8" style={{ backgroundColor: 'var(--background)' }}>
+          <h1 className="font-mono text-[13px] uppercase tracking-widest mb-1" style={{ color: 'var(--foreground)' }}>
             TOPIA
           </h1>
-          <h2 className="font-mono text-[24px] font-bold mb-8" style={{ color: '#1a1a1a' }}>
+          <h2 className="font-mono text-[24px] font-bold mb-8" style={{ color: 'var(--foreground)' }}>
             ADMIN
           </h2>
 
           <form onSubmit={handleSubmit}>
-            <label className="block font-mono text-[12px] uppercase tracking-widest mb-2" style={{ color: '#1a1a1a' }}>
+            <label className="block font-mono text-[12px] uppercase tracking-widest mb-2" style={{ color: 'var(--foreground)' }}>
               Password
             </label>
             <input
@@ -54,8 +54,8 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full border border-[#1a1a1a] px-3 py-2 font-mono text-[13px] outline-none focus:ring-2 focus:ring-[#1a1a1a]"
-              style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }}
+              className="w-full border border-[var(--foreground)] px-3 py-2 font-mono text-[13px] outline-none focus:ring-2 focus:ring-[var(--foreground)]"
+              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
             />
 
             {error && (
@@ -65,8 +65,8 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-6 px-4 py-2.5 font-mono text-[13px] uppercase tracking-widest border border-[#1a1a1a] transition-colors disabled:opacity-50"
-              style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}
+              className="w-full mt-6 px-4 py-2.5 font-mono text-[13px] uppercase tracking-widest border border-[var(--foreground)] transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
               {loading ? 'SIGNING IN...' : 'SIGN IN'}
             </button>

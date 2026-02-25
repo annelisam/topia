@@ -41,14 +41,14 @@ export default function LoginButton() {
         <Link
           href="/profile"
           className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition"
-          style={{ color: '#1a1a1a' }}
+          style={{ color: 'var(--foreground)' }}
         >
           PROFILE
         </Link>
         <button
           onClick={logout}
           className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition"
-          style={{ color: '#1a1a1a' }}
+          style={{ color: 'var(--foreground)' }}
         >
           LOG OUT
         </button>
@@ -60,7 +60,7 @@ export default function LoginButton() {
     <button
       onClick={login}
       className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition border px-3 py-1"
-      style={{ color: '#1a1a1a', borderColor: '#1a1a1a' }}
+      style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
     >
       LOG IN
     </button>

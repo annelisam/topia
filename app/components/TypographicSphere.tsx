@@ -26,8 +26,8 @@ export default function TypographicSphere({
   speed: initialSpeed = 0.0008,
   fontSize: initialFontSize = 18,
   lineCount: initialLineCount = 38,
-  color = '#1a1a1a',
-  bgColor = '#f5f0e8',
+  color: colorProp,
+  bgColor: bgColorProp,
   showControls = true,
 }: TypographicSphereProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,6 +46,29 @@ export default function TypographicSphere({
     fontSize: initialFontSize,
     lineCount: initialLineCount,
   });
+
+  // Read theme colors from CSS variables, falling back to props or defaults
+  const [themeColors, setThemeColors] = useState({ color: colorProp || '#1a1a1a', bgColor: bgColorProp || '#f5f0e8' });
+
+  useEffect(() => {
+    const readColors = () => {
+      const style = getComputedStyle(document.documentElement);
+      const fg = style.getPropertyValue('--foreground').trim() || '#1a1a1a';
+      const bg = style.getPropertyValue('--background').trim() || '#f5f0e8';
+      setThemeColors({ color: colorProp || fg, bgColor: bgColorProp || bg });
+    };
+
+    readColors();
+
+    // Watch for theme changes via data-theme attribute
+    const observer = new MutationObserver(() => readColors());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    return () => observer.disconnect();
+  }, [colorProp, bgColorProp]);
+
+  const color = themeColors.color;
+  const bgColor = themeColors.bgColor;
 
   const hoverSpeed = config.speed * 0.3;
 

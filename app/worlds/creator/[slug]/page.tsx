@@ -51,37 +51,37 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <Navigation currentPage="worlds" />
-        <p className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>Loading...</p>
+        <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Loading...</p>
       </div>
     );
   }
 
   if (!creator) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <Navigation currentPage="worlds" />
-        <p className="font-mono text-[13px] mb-4" style={{ color: '#1a1a1a' }}>Creator not found.</p>
-        <Link href="/worlds" className="font-mono text-[13px] underline" style={{ color: '#1a1a1a' }}>← Back to Worlds</Link>
+        <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Creator not found.</p>
+        <Link href="/worlds" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Worlds</Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation currentPage="worlds" />
 
       <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
         {/* Back link */}
-        <Link href="/worlds" className="font-mono text-[13px] hover:opacity-60 transition mb-8 inline-block" style={{ color: '#1a1a1a' }}>
+        <Link href="/worlds" className="font-mono text-[13px] hover:opacity-60 transition mb-8 inline-block" style={{ color: 'var(--foreground)' }}>
           ← WORLDS
         </Link>
 
         {/* Creator header */}
         <div className="max-w-2xl">
           <div className="flex items-start gap-3 mb-2">
-            <h1 className="font-mono text-[18px] sm:text-[22px] font-bold uppercase" style={{ color: '#1a1a1a' }}>
+            <h1 className="font-mono text-[18px] sm:text-[22px] font-bold uppercase" style={{ color: 'var(--foreground)' }}>
               {creator.name}
             </h1>
             {creator.country && (
@@ -90,7 +90,7 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
           </div>
 
           {creator.description && (
-            <p className="font-mono text-[13px] sm:text-[12px] leading-relaxed mb-3" style={{ color: '#1a1a1a' }}>
+            <p className="font-mono text-[13px] sm:text-[12px] leading-relaxed mb-3" style={{ color: 'var(--foreground)' }}>
               {creator.description}
             </p>
           )}
@@ -101,7 +101,7 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-[13px] hover:opacity-60 transition underline"
-              style={{ color: '#1a1a1a' }}
+              style={{ color: 'var(--foreground)' }}
             >
               {creator.websiteUrl}
             </a>
@@ -109,15 +109,15 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
         </div>
 
         {/* Divider */}
-        <div className="border-t my-8" style={{ borderColor: '#1a1a1a' }} />
+        <div className="border-t my-8" style={{ borderColor: 'var(--foreground)' }} />
 
         {/* Worlds by this creator */}
-        <h2 className="font-mono text-[13px] uppercase mb-4" style={{ color: '#1a1a1a' }}>
+        <h2 className="font-mono text-[13px] uppercase mb-4" style={{ color: 'var(--foreground)' }}>
           Worlds ({worlds.length})
         </h2>
 
         {worlds.length === 0 ? (
-          <p className="font-mono text-[13px]" style={{ color: '#1a1a1a', opacity: 0.5 }}>No worlds yet.</p>
+          <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.5 }}>No worlds yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {worlds.map((world) => (
@@ -125,30 +125,39 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
                 key={world.id}
                 href={`/worlds/${world.slug}`}
                 className="border p-5 sm:p-6 hover:opacity-70 transition group block"
-                style={{ borderColor: '#1a1a1a', backgroundColor: '#f5f0e8' }}
+                style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
               >
-                {/* Image placeholder */}
-                <div className="w-full h-36 mb-4 flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8', opacity: 0.15 }}>
-                  IMAGE
-                </div>
+                {world.imageUrl ? (
+                  <div className="w-full h-36 mb-4 overflow-hidden">
+                    <img
+                      src={world.imageUrl}
+                      alt={world.title}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-36 mb-4 flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: 0.15 }}>
+                    IMAGE
+                  </div>
+                )}
 
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-mono text-[13px] uppercase font-bold group-hover:underline" style={{ color: '#1a1a1a' }}>
+                  <h3 className="font-mono text-[13px] uppercase font-bold group-hover:underline" style={{ color: 'var(--foreground)' }}>
                     {world.title}
                   </h3>
                   {world.category && (
-                    <span className="font-mono text-[12px] px-2 py-0.5 border" style={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}>
+                    <span className="font-mono text-[12px] px-2 py-0.5 border" style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)' }}>
                       {world.category}
                     </span>
                   )}
                 </div>
 
                 {world.description && (
-                  <p className="font-mono text-[13px] mb-3" style={{ color: '#1a1a1a' }}>{world.description}</p>
+                  <p className="font-mono text-[13px] mb-3" style={{ color: 'var(--foreground)' }}>{world.description}</p>
                 )}
 
                 {world.dateAdded && (
-                  <p className="font-mono text-[12px]" style={{ color: '#1a1a1a', opacity: 0.5 }}>{world.dateAdded}</p>
+                  <p className="font-mono text-[12px]" style={{ color: 'var(--foreground)', opacity: 0.5 }}>{world.dateAdded}</p>
                 )}
               </Link>
             ))}

@@ -11,7 +11,7 @@ export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="h-screen w-screen overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
 
       <Navigation />
@@ -22,8 +22,8 @@ export default function HomePage() {
           speed={0.0008}
           fontSize={18}
           lineCount={38}
-          color="#1a1a1a"
-          bgColor="#f5f0e8"
+          color="var(--foreground)"
+          bgColor="var(--background)"
           showControls={false}
         />
       </div>
@@ -33,11 +33,11 @@ export default function HomePage() {
       {/* Enter link */}
       <Link
         href="/"
-        className="fixed bottom-5 right-5 font-mono text-[13px] px-4 py-2 border transition-colors hover:bg-[#1a1a1a] hover:text-[#f5f0e8]"
+        className="fixed bottom-5 right-5 font-mono text-[13px] px-4 py-2 border transition-colors hover:bg-[var(--foreground)] hover:text-[var(--background)]"
         style={{
-          color: '#1a1a1a',
-          backgroundColor: '#f5f0e8',
-          borderColor: '#1a1a1a'
+          color: 'var(--foreground)',
+          backgroundColor: 'var(--background)',
+          borderColor: 'var(--foreground)'
         }}
       >
         ENTER →

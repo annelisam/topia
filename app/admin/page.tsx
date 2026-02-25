@@ -5,17 +5,28 @@ import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface SocialLinks {
+  website?: string;
+  twitter?: string;
+  instagram?: string;
+  soundcloud?: string;
+  spotify?: string;
+  linkedin?: string;
+  substack?: string;
+}
+
 interface World {
   id: string;
   title: string;
   slug: string;
+  shortDescription: string | null;
   description: string | null;
   category: string | null;
   imageUrl: string | null;
-  websiteUrl: string | null;
   country: string | null;
   tools: string | null;
   collaborators: string | null;
+  socialLinks: SocialLinks | null;
   dateAdded: string | null;
   creatorId: string | null;
   published: boolean;
@@ -71,7 +82,39 @@ interface Tool {
   published: boolean;
 }
 
-type Tab = 'worlds' | 'creators' | 'events' | 'grants' | 'tools';
+interface WorldMember {
+  userId: string;
+  role: string;
+  userName: string | null;
+  userUsername: string | null;
+}
+
+interface WorldWithMembers extends World {
+  displayOrder: number | null;
+  members: WorldMember[];
+}
+
+interface UserRow {
+  id: string;
+  name: string | null;
+  username: string | null;
+  email: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  role: string | null;
+  roleTags: string | null;
+  toolSlugs: string | null;
+  socialWebsite: string | null;
+  socialTwitter: string | null;
+  socialInstagram: string | null;
+  socialSoundcloud: string | null;
+  socialSpotify: string | null;
+  socialLinkedin: string | null;
+  socialSubstack: string | null;
+  worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
+}
+
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -168,17 +211,19 @@ interface Creator {
 }
 
 function WorldsTab() {
-  const [items, setItems] = useState<World[]>([]);
-  const [modal, setModal] = useState<{ open: boolean; item: World | null }>({ open: false, item: null });
+  const [items, setItems] = useState<WorldWithMembers[]>([]);
+  const [modal, setModal] = useState<{ open: boolean; item: WorldWithMembers | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Omit<World, 'creatorName'> & { id: string }>({
-    id: '', title: '', slug: '', description: '', category: '', imageUrl: '', websiteUrl: '',
-    country: '', tools: '', collaborators: '', dateAdded: '', creatorId: '', published: true,
+  const [form, setForm] = useState<Omit<World, 'creatorName'> & { id: string; displayOrder: number; worldBuilderIds: string[]; collaboratorIds: string[] }>({
+    id: '', title: '', slug: '', shortDescription: '', description: '', category: '', imageUrl: '',
+    country: '', tools: '', collaborators: '', socialLinks: null, dateAdded: '', creatorId: '', published: true,
+    displayOrder: 0, worldBuilderIds: [], collaboratorIds: [],
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [creators, setCreators] = useState<Creator[]>([]);
   const [allTools, setAllTools] = useState<Tool[]>([]);
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string | null; username: string | null }[]>([]);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/worlds');
@@ -190,17 +235,20 @@ function WorldsTab() {
     load();
     fetch('/api/admin/creators').then(r => r.json()).then(d => setCreators(d.creators || []));
     fetch('/api/admin/tools').then(r => r.json()).then(d => setAllTools(d.tools || []));
+    fetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
   }, [load]);
 
   const openCreate = () => {
     setError('');
-    setForm({ id: '', title: '', slug: '', description: '', category: '', imageUrl: '', websiteUrl: '', country: '', tools: '', collaborators: '', dateAdded: '', creatorId: '', published: true });
+    setForm({ id: '', title: '', slug: '', shortDescription: '', description: '', category: '', imageUrl: '', country: '', tools: '', collaborators: '', socialLinks: null, dateAdded: '', creatorId: '', published: true, displayOrder: 0, worldBuilderIds: [], collaboratorIds: [] });
     setModal({ open: true, item: null });
   };
 
-  const openEdit = (item: World) => {
+  const openEdit = (item: WorldWithMembers) => {
     setError('');
-    setForm({ ...item, description: item.description || '', category: item.category || '', imageUrl: item.imageUrl || '', websiteUrl: item.websiteUrl || '', country: item.country || '', tools: item.tools || '', collaborators: item.collaborators || '', dateAdded: item.dateAdded || '', creatorId: item.creatorId || '' });
+    const builders = item.members.filter(m => m.role === 'world_builder').map(m => m.userId);
+    const collabs = item.members.filter(m => m.role === 'collaborator').map(m => m.userId);
+    setForm({ ...item, shortDescription: item.shortDescription || '', description: item.description || '', category: item.category || '', imageUrl: item.imageUrl || '', country: item.country || '', tools: item.tools || '', collaborators: item.collaborators || '', socialLinks: item.socialLinks || null, dateAdded: item.dateAdded || '', creatorId: item.creatorId || '', displayOrder: item.displayOrder ?? 0, worldBuilderIds: builders, collaboratorIds: collabs });
     setModal({ open: true, item });
   };
 
@@ -226,10 +274,35 @@ function WorldsTab() {
     });
   };
 
+  const toggleWorldBuilder = (userId: string) => {
+    setForm(p => {
+      const next = p.worldBuilderIds.includes(userId)
+        ? p.worldBuilderIds.filter(id => id !== userId)
+        : [...p.worldBuilderIds, userId];
+      return { ...p, worldBuilderIds: next };
+    });
+  };
+
+  const toggleCollaborator = (userId: string) => {
+    setForm(p => {
+      const next = p.collaboratorIds.includes(userId)
+        ? p.collaboratorIds.filter(id => id !== userId)
+        : [...p.collaboratorIds, userId];
+      return { ...p, collaboratorIds: next };
+    });
+  };
+
   const save = async () => {
     setSaving(true);
     setError('');
-    const payload = { ...form, slug: form.slug || generateSlug(form.title), creatorId: form.creatorId || null };
+    const payload = {
+      ...form,
+      slug: form.slug || generateSlug(form.title),
+      creatorId: form.creatorId || null,
+      socialLinks: form.socialLinks || null,
+      worldBuilderIds: form.worldBuilderIds,
+      collaboratorIds: form.collaboratorIds,
+    };
     const method = modal.item ? 'PUT' : 'POST';
     const res = await fetch('/api/admin/worlds', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
@@ -250,6 +323,24 @@ function WorldsTab() {
     load();
   };
 
+  const moveBuilder = (index: number, direction: 'up' | 'down') => {
+    setForm(p => {
+      const ids = [...p.worldBuilderIds];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= ids.length) return p;
+      [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+      return { ...p, worldBuilderIds: ids };
+    });
+  };
+
+  const getSocialLink = (key: string) => (form.socialLinks as SocialLinks)?.[key as keyof SocialLinks] || '';
+  const setSocialLink = (key: string, value: string) => {
+    setForm(p => ({
+      ...p,
+      socialLinks: { ...(p.socialLinks as SocialLinks || {}), [key]: value } as SocialLinks,
+    }));
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -262,36 +353,37 @@ function WorldsTab() {
           <thead>
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Title</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Slug</th>
-              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Creator</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">World Builder(s)</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Category</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
               <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item, i) => (
-              <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
-                <td className="px-3 py-2 font-bold">{item.title}</td>
-                <td className="px-3 py-2 opacity-60">{item.slug}</td>
-                <td className="px-3 py-2">{item.creatorName || '—'}</td>
-                <td className="px-3 py-2">{item.category || '—'}</td>
-                <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
-                    {deleteConfirm === item.id ? (
-                      <span className="flex gap-1">
-                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
-                      </span>
-                    ) : (
-                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {items.map((item, i) => {
+              const builders = item.members.filter(m => m.role === 'world_builder');
+              return (
+                <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
+                  <td className="px-3 py-2 font-bold">{item.title}</td>
+                  <td className="px-3 py-2">{builders.length > 0 ? builders.map(b => b.userName || b.userUsername).join(', ') : item.creatorName || '—'}</td>
+                  <td className="px-3 py-2">{item.category || '—'}</td>
+                  <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
+                      {deleteConfirm === item.id ? (
+                        <span className="flex gap-1">
+                          <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -299,7 +391,8 @@ function WorldsTab() {
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title={modal.item ? 'Edit World' : 'New World'}>
         <Field label="Title"><TextInput value={form.title} onChange={(v) => setForm(p => ({ ...p, title: v, slug: p.slug || generateSlug(v) }))} /></Field>
         <Field label="Slug"><TextInput value={form.slug} onChange={(v) => setForm(p => ({ ...p, slug: v }))} /></Field>
-        <Field label="Description"><TextArea value={form.description || ''} onChange={(v) => setForm(p => ({ ...p, description: v }))} /></Field>
+        <Field label="Short Description"><TextInput value={form.shortDescription || ''} onChange={(v) => setForm(p => ({ ...p, shortDescription: v }))} placeholder="Brief one-line description" /></Field>
+        <Field label="Long Description"><TextArea value={form.description || ''} onChange={(v) => setForm(p => ({ ...p, description: v }))} /></Field>
         <Field label="Category"><TextInput value={form.category || ''} onChange={(v) => setForm(p => ({ ...p, category: v }))} /></Field>
 
         <Field label="Image">
@@ -321,10 +414,36 @@ function WorldsTab() {
           {!form.imageUrl && <TextInput value={form.imageUrl || ''} onChange={(v) => setForm(p => ({ ...p, imageUrl: v }))} placeholder="https://..." />}
         </Field>
 
-        <Field label="Website URL"><TextInput value={form.websiteUrl || ''} onChange={(v) => setForm(p => ({ ...p, websiteUrl: v }))} /></Field>
         <Field label="Country"><TextInput value={form.country || ''} onChange={(v) => setForm(p => ({ ...p, country: v }))} placeholder="e.g. US" /></Field>
 
-        <Field label="Built By">
+        <Field label="World Builder(s)">
+          <div className="border border-[#1a1a1a] p-2 max-h-36 overflow-y-auto" style={{ backgroundColor: '#f5f0e8' }}>
+            {allUsers.length === 0 && <p className="font-mono text-[12px] opacity-50" style={{ color: '#1a1a1a' }}>No users yet</p>}
+            {allUsers.map(u => (
+              <label key={u.id} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                <input type="checkbox" checked={form.worldBuilderIds.includes(u.id)} onChange={() => toggleWorldBuilder(u.id)} className="w-3.5 h-3.5" style={{ accentColor: '#1a1a1a' }} />
+                <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{u.name || u.username || 'Unnamed'}{u.username ? ` (@${u.username})` : ''}</span>
+              </label>
+            ))}
+          </div>
+          {form.worldBuilderIds.length > 1 && (
+            <div className="mt-2 border border-[#1a1a1a] p-2" style={{ backgroundColor: '#ebe6de' }}>
+              <p className="font-mono text-[10px] uppercase tracking-widest mb-1 opacity-60" style={{ color: '#1a1a1a' }}>Display Order</p>
+              {form.worldBuilderIds.map((uid, idx) => {
+                const u = allUsers.find(u => u.id === uid);
+                return (
+                  <div key={uid} className="flex items-center gap-2 py-0.5">
+                    <button onClick={() => moveBuilder(idx, 'up')} disabled={idx === 0} className="text-[12px] leading-none hover:opacity-60 disabled:opacity-20" style={{ color: '#1a1a1a' }}>&#x25B2;</button>
+                    <button onClick={() => moveBuilder(idx, 'down')} disabled={idx === form.worldBuilderIds.length - 1} className="text-[12px] leading-none hover:opacity-60 disabled:opacity-20" style={{ color: '#1a1a1a' }}>&#x25BC;</button>
+                    <span className="font-mono text-[12px]" style={{ color: '#1a1a1a' }}>{u?.name || u?.username || 'Unknown'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Field>
+
+        <Field label="Built By (Legacy Creator)">
           <select value={form.creatorId || ''} onChange={(e) => setForm(p => ({ ...p, creatorId: e.target.value }))} className={inputCls} style={inputStyle}>
             <option value="">— None —</option>
             {creators.map(c => (
@@ -345,7 +464,29 @@ function WorldsTab() {
           </div>
         </Field>
 
-        <Field label="Collaborators (comma-separated)"><TextInput value={form.collaborators || ''} onChange={(v) => setForm(p => ({ ...p, collaborators: v }))} /></Field>
+        <Field label="Collaborators (Users)">
+          <div className="border border-[#1a1a1a] p-2 max-h-36 overflow-y-auto" style={{ backgroundColor: '#f5f0e8' }}>
+            {allUsers.length === 0 && <p className="font-mono text-[12px] opacity-50" style={{ color: '#1a1a1a' }}>No users yet</p>}
+            {allUsers.filter(u => !form.worldBuilderIds.includes(u.id)).map(u => (
+              <label key={u.id} className="flex items-center gap-2 py-0.5 cursor-pointer">
+                <input type="checkbox" checked={form.collaboratorIds.includes(u.id)} onChange={() => toggleCollaborator(u.id)} className="w-3.5 h-3.5" style={{ accentColor: '#1a1a1a' }} />
+                <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{u.name || u.username || 'Unnamed'}{u.username ? ` (@${u.username})` : ''}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="Collaborators (Legacy Text)"><TextInput value={form.collaborators || ''} onChange={(v) => setForm(p => ({ ...p, collaborators: v }))} placeholder="Comma-separated names for non-user collaborators" /></Field>
+
+        <Field label="Social Links">
+          <div className="space-y-1.5">
+            <TextInput value={getSocialLink('website')} onChange={(v) => setSocialLink('website', v)} placeholder="Website URL" />
+            <TextInput value={getSocialLink('twitter')} onChange={(v) => setSocialLink('twitter', v)} placeholder="Twitter/X URL" />
+            <TextInput value={getSocialLink('instagram')} onChange={(v) => setSocialLink('instagram', v)} placeholder="Instagram URL" />
+            <TextInput value={getSocialLink('spotify')} onChange={(v) => setSocialLink('spotify', v)} placeholder="Spotify URL" />
+            <TextInput value={getSocialLink('soundcloud')} onChange={(v) => setSocialLink('soundcloud', v)} placeholder="SoundCloud URL" />
+          </div>
+        </Field>
+
         <Field label="Date Added"><TextInput value={form.dateAdded || ''} onChange={(v) => setForm(p => ({ ...p, dateAdded: v }))} placeholder="e.g. Feb 01, 2026" /></Field>
         <CheckboxField label="Published" checked={form.published} onChange={(v) => setForm(p => ({ ...p, published: v }))} />
         <ActionButtons onSave={save} onCancel={() => setModal({ open: false, item: null })} saving={saving} error={error} />
@@ -724,6 +865,9 @@ interface CreatorRow {
   imageUrl: string | null;
   websiteUrl: string | null;
   country: string | null;
+  userId: string | null;
+  linkedUserName: string | null;
+  linkedUserUsername: string | null;
   published: boolean;
 }
 
@@ -731,9 +875,10 @@ function CreatorsTab() {
   const [items, setItems] = useState<CreatorRow[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: CreatorRow | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<CreatorRow>({ id: '', name: '', slug: '', description: '', imageUrl: '', websiteUrl: '', country: '', published: true });
+  const [form, setForm] = useState<Omit<CreatorRow, 'linkedUserName' | 'linkedUserUsername'>>({ id: '', name: '', slug: '', description: '', imageUrl: '', websiteUrl: '', country: '', userId: '', published: true });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string | null; username: string | null }[]>([]);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/creators');
@@ -741,17 +886,20 @@ function CreatorsTab() {
     setItems(data.creators || []);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    fetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
+  }, [load]);
 
   const openCreate = () => {
     setError('');
-    setForm({ id: '', name: '', slug: '', description: '', imageUrl: '', websiteUrl: '', country: '', published: true });
+    setForm({ id: '', name: '', slug: '', description: '', imageUrl: '', websiteUrl: '', country: '', userId: '', published: true });
     setModal({ open: true, item: null });
   };
 
   const openEdit = (item: CreatorRow) => {
     setError('');
-    setForm({ ...item, description: item.description || '', imageUrl: item.imageUrl || '', websiteUrl: item.websiteUrl || '', country: item.country || '' });
+    setForm({ ...item, description: item.description || '', imageUrl: item.imageUrl || '', websiteUrl: item.websiteUrl || '', country: item.country || '', userId: item.userId || '' });
     setModal({ open: true, item });
   };
 
@@ -798,6 +946,7 @@ function CreatorsTab() {
             <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Slug</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Linked Profile</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Country</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
               <th className="px-3 py-2 text-[12px]"></th>
@@ -808,6 +957,7 @@ function CreatorsTab() {
               <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
                 <td className="px-3 py-2 font-bold">{item.name}</td>
                 <td className="px-3 py-2 opacity-60">{item.slug}</td>
+                <td className="px-3 py-2">{item.linkedUserUsername ? `@${item.linkedUserUsername}` : item.linkedUserName || '—'}</td>
                 <td className="px-3 py-2">{item.country || '—'}</td>
                 <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
                 <td className="px-3 py-2">
@@ -855,7 +1005,221 @@ function CreatorsTab() {
           {!form.imageUrl && <TextInput value={form.imageUrl || ''} onChange={(v) => setForm(p => ({ ...p, imageUrl: v }))} placeholder="https://..." />}
         </Field>
 
+        <Field label="Linked User Profile">
+          <select value={form.userId || ''} onChange={(e) => setForm(p => ({ ...p, userId: e.target.value }))} className={inputCls} style={inputStyle}>
+            <option value="">— None —</option>
+            {allUsers.map(u => (
+              <option key={u.id} value={u.id}>{u.name || u.username || 'Unnamed'}{u.username ? ` (@${u.username})` : ''}</option>
+            ))}
+          </select>
+        </Field>
+
         <CheckboxField label="Published" checked={form.published} onChange={(v) => setForm(p => ({ ...p, published: v }))} />
+        <ActionButtons onSave={save} onCancel={() => setModal({ open: false, item: null })} saving={saving} error={error} />
+      </Modal>
+    </div>
+  );
+}
+
+// ─── Users Tab ────────────────────────────────────────────────────────────────
+
+const ROLE_TAGS = [
+  'music','dj','visual-artist','filmmaker','photographer','writer','poet','dancer',
+  'performer','producer','designer','illustrator','game-designer','architect',
+  'technologist','curator','educator','community-builder','entrepreneur','researcher',
+];
+
+function UsersTab() {
+  const [items, setItems] = useState<UserRow[]>([]);
+  const [modal, setModal] = useState<{ open: boolean; item: UserRow | null }>({ open: false, item: null });
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<Omit<UserRow, 'worldMemberships'>>({
+    id: '', name: '', username: '', email: '', bio: '', avatarUrl: '', role: 'user',
+    roleTags: '', toolSlugs: '', socialWebsite: '', socialTwitter: '', socialInstagram: '',
+    socialSoundcloud: '', socialSpotify: '', socialLinkedin: '', socialSubstack: '',
+  });
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch('/api/admin/users');
+    const data = await res.json();
+    setItems(data.users || []);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openEdit = (item: UserRow) => {
+    setError('');
+    setForm({
+      id: item.id,
+      name: item.name || '', username: item.username || '', email: item.email || '',
+      bio: item.bio || '', avatarUrl: item.avatarUrl || '', role: item.role || 'user',
+      roleTags: item.roleTags || '', toolSlugs: item.toolSlugs || '',
+      socialWebsite: item.socialWebsite || '', socialTwitter: item.socialTwitter || '',
+      socialInstagram: item.socialInstagram || '', socialSoundcloud: item.socialSoundcloud || '',
+      socialSpotify: item.socialSpotify || '', socialLinkedin: item.socialLinkedin || '',
+      socialSubstack: item.socialSubstack || '',
+    });
+    setModal({ open: true, item });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
+    setSaving(false);
+    setModal({ open: false, item: null });
+    load();
+  };
+
+  const remove = async (id: string) => {
+    const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    if (!res.ok) { setError('Delete failed'); return; }
+    setDeleteConfirm(null);
+    load();
+  };
+
+  const filtered = items.filter(u => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+  });
+
+  const selectedRoles = (form.roleTags || '').split(',').map(r => r.trim()).filter(Boolean);
+  const toggleRole = (slug: string) => {
+    const next = selectedRoles.includes(slug)
+      ? selectedRoles.filter(r => r !== slug)
+      : [...selectedRoles, slug];
+    setForm(p => ({ ...p, roleTags: next.join(',') || '' }));
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} users</span>
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-48" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Username</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Email</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Role</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Worlds</th>
+              <th className="px-3 py-2 text-[12px]"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item, i) => (
+              <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
+                <td className="px-3 py-2 font-bold">{item.name || '—'}</td>
+                <td className="px-3 py-2">{item.username ? `@${item.username}` : '—'}</td>
+                <td className="px-3 py-2 opacity-60">{item.email || '—'}</td>
+                <td className="px-3 py-2">
+                  <span className="font-mono text-[9px] px-2 py-0.5 border" style={{
+                    backgroundColor: item.role === 'admin' ? '#8B5CF6' : item.role === 'artist' ? '#3B82F6' : '#e5e5e5',
+                    color: item.role === 'admin' || item.role === 'artist' ? '#fff' : '#1a1a1a',
+                    borderColor: '#1a1a1a',
+                  }}>
+                    {(item.role || 'user').toUpperCase()}
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  {item.worldMemberships.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {item.worldMemberships.map(wm => (
+                        <span key={wm.worldId} className="font-mono text-[9px] px-1.5 py-0.5 border" style={{
+                          backgroundColor: wm.role === 'world_builder' ? '#00FF88' : '#e5e5e5',
+                          color: '#1a1a1a', borderColor: '#1a1a1a',
+                        }}>
+                          {wm.worldTitle} ({wm.role === 'world_builder' ? 'BUILDER' : 'COLLAB'})
+                        </span>
+                      ))}
+                    </div>
+                  ) : '—'}
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
+                    {deleteConfirm === item.id ? (
+                      <span className="flex gap-1">
+                        <button onClick={() => remove(item.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setDeleteConfirm(item.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title="Edit User">
+        <Field label="Name"><TextInput value={form.name || ''} onChange={(v) => setForm(p => ({ ...p, name: v }))} /></Field>
+        <Field label="Username"><TextInput value={form.username || ''} onChange={(v) => setForm(p => ({ ...p, username: v.toLowerCase().replace(/[^a-z0-9_]/g, '') }))} /></Field>
+        <Field label="Email"><TextInput value={form.email || ''} onChange={(v) => setForm(p => ({ ...p, email: v }))} /></Field>
+        <Field label="Bio"><TextArea value={form.bio || ''} onChange={(v) => setForm(p => ({ ...p, bio: v }))} /></Field>
+        <Field label="Avatar URL"><TextInput value={form.avatarUrl || ''} onChange={(v) => setForm(p => ({ ...p, avatarUrl: v }))} /></Field>
+
+        <Field label="System Role">
+          <select value={form.role || 'user'} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))} className={inputCls} style={inputStyle}>
+            <option value="user">User</option>
+            <option value="artist">Artist</option>
+            <option value="admin">Admin</option>
+          </select>
+        </Field>
+
+        <Field label="Creative Roles">
+          <div className="flex flex-wrap gap-1.5">
+            {ROLE_TAGS.map(slug => (
+              <button key={slug} onClick={() => toggleRole(slug)} className="font-mono text-[10px] uppercase px-2 py-1 border transition-colors" style={{
+                borderColor: '#1a1a1a',
+                backgroundColor: selectedRoles.includes(slug) ? '#1a1a1a' : 'transparent',
+                color: selectedRoles.includes(slug) ? '#f5f0e8' : '#1a1a1a',
+              }}>
+                {slug.replace(/-/g, ' ')}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Social - Website"><TextInput value={form.socialWebsite || ''} onChange={(v) => setForm(p => ({ ...p, socialWebsite: v }))} /></Field>
+        <Field label="Social - Twitter"><TextInput value={form.socialTwitter || ''} onChange={(v) => setForm(p => ({ ...p, socialTwitter: v }))} /></Field>
+        <Field label="Social - Instagram"><TextInput value={form.socialInstagram || ''} onChange={(v) => setForm(p => ({ ...p, socialInstagram: v }))} /></Field>
+        <Field label="Social - SoundCloud"><TextInput value={form.socialSoundcloud || ''} onChange={(v) => setForm(p => ({ ...p, socialSoundcloud: v }))} /></Field>
+        <Field label="Social - Spotify"><TextInput value={form.socialSpotify || ''} onChange={(v) => setForm(p => ({ ...p, socialSpotify: v }))} /></Field>
+        <Field label="Social - LinkedIn"><TextInput value={form.socialLinkedin || ''} onChange={(v) => setForm(p => ({ ...p, socialLinkedin: v }))} /></Field>
+        <Field label="Social - Substack"><TextInput value={form.socialSubstack || ''} onChange={(v) => setForm(p => ({ ...p, socialSubstack: v }))} /></Field>
+
+        {/* Show world memberships (read-only here, managed from Worlds tab) */}
+        {modal.item && modal.item.worldMemberships.length > 0 && (
+          <Field label="World Memberships">
+            <div className="space-y-1">
+              {modal.item.worldMemberships.map(wm => (
+                <div key={wm.worldId} className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] px-1.5 py-0.5 border" style={{
+                    backgroundColor: wm.role === 'world_builder' ? '#00FF88' : '#e5e5e5',
+                    color: '#1a1a1a', borderColor: '#1a1a1a',
+                  }}>
+                    {wm.role === 'world_builder' ? 'WORLD BUILDER' : 'COLLABORATOR'}
+                  </span>
+                  <span className="font-mono text-[12px]" style={{ color: '#1a1a1a' }}>{wm.worldTitle}</span>
+                </div>
+              ))}
+            </div>
+          </Field>
+        )}
+
         <ActionButtons onSave={save} onCancel={() => setModal({ open: false, item: null })} saving={saving} error={error} />
       </Modal>
     </div>
@@ -866,6 +1230,7 @@ function CreatorsTab() {
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'worlds', label: 'WORLDS' },
+  { id: 'users', label: 'USERS' },
   { id: 'creators', label: 'CREATORS' },
   { id: 'events', label: 'EVENTS' },
   { id: 'grants', label: 'GRANTS' },
@@ -918,6 +1283,7 @@ export default function AdminDashboard() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
         {tab === 'worlds' && <WorldsTab />}
+        {tab === 'users' && <UsersTab />}
         {tab === 'creators' && <CreatorsTab />}
         {tab === 'events' && <EventsTab />}
         {tab === 'grants' && <GrantsTab />}

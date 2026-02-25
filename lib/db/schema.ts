@@ -34,27 +34,41 @@ export const creators = pgTable('creators', {
   imageUrl: text('image_url'),
   websiteUrl: text('website_url'),
   country: text('country'), // e.g. 'US', 'SE', 'DE'
+  userId: uuid('user_id').references(() => users.id), // Optional link to a user profile
   published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// World members - links users to worlds with roles
+export const worldMembers = pgTable('world_members', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(), // 'world_builder' | 'collaborator'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Worlds - artist-created spaces/projects
 export const worlds = pgTable('worlds', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').notNull(),
+  shortDescription: text('short_description'),
   description: text('description'),
   slug: text('slug').notNull().unique(),
   artistId: uuid('artist_id').references(() => users.id),
   creatorId: uuid('creator_id').references(() => creators.id),
   category: text('category'), // e.g. 'Art', 'Music', 'Film'
   imageUrl: text('image_url'),
+  headerImageUrl: text('header_image_url'),
   websiteUrl: text('website_url'),
   country: text('country'), // e.g. 'US', 'SE'
   tools: text('tools'), // Comma-separated tools
   collaborators: text('collaborators'), // Comma-separated names
+  socialLinks: jsonb('social_links'), // {website: '', twitter: '', instagram: '', etc}
   content: jsonb('content'), // Flexible content structure
   dateAdded: text('date_added'), // Display date e.g. "Feb 01, 2026"
+  displayOrder: integer('display_order').default(0),
   published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

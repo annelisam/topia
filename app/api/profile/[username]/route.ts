@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, tools } from '@/lib/db/schema';
+import { users, tools, worldMembers, worlds } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
 export async function GET(
@@ -53,7 +53,30 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ user, tools: resolvedTools });
+    // Fetch world memberships for this user
+    const userRecord = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    let worldMemberships: { worldId: string; worldTitle: string; worldSlug: string; worldCategory: string | null; worldImageUrl: string | null; role: string }[] = [];
+    if (userRecord.length > 0) {
+      worldMemberships = await db
+        .select({
+          worldId: worldMembers.worldId,
+          worldTitle: worlds.title,
+          worldSlug: worlds.slug,
+          worldCategory: worlds.category,
+          worldImageUrl: worlds.imageUrl,
+          role: worldMembers.role,
+        })
+        .from(worldMembers)
+        .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
+        .where(eq(worldMembers.userId, userRecord[0].id));
+    }
+
+    return NextResponse.json({ user, tools: resolvedTools, worldMemberships });
   } catch (error) {
     console.error('Public profile fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

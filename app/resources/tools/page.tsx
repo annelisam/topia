@@ -9,7 +9,7 @@ export default function ToolsPage() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f5f0e8' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
 
       <Navigation currentPage="tools" />

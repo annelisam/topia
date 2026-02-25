@@ -48,9 +48,9 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-[9999]"
-      style={{ backgroundColor: '#f5f0e8' }}
+      style={{ backgroundColor: 'var(--background)' }}
     >
-      <div className="text-center font-mono text-sm" style={{ color: '#1a1a1a' }}>
+      <div className="text-center font-mono text-sm" style={{ color: 'var(--foreground)' }}>
         <div>LOADING</div>
         <div className="mt-3 tracking-widest">{loaderBar}</div>
       </div>
