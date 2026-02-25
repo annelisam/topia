@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../components/Navigation';
+import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
 
 const ROLE_TAGS = [
@@ -242,7 +243,7 @@ export default function ProfilePage() {
   if (!ready || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <p className="font-mono text-[13px] uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>Loading...</p>
+        <LoadingBar />
       </div>
     );
   }

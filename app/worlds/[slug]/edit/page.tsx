@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Navigation from '../../../components/Navigation';
+import LoadingBar from '../../../components/LoadingBar';
 import { SocialIcon, SOCIAL_PLATFORMS } from '../../../components/SocialIcons';
 
 interface SocialLinks {
@@ -260,7 +261,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <Navigation currentPage="worlds" />
-        <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Loading...</p>
+        <LoadingBar />
       </div>
     );
   }

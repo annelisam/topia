@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingBar from '../../components/LoadingBar';
 
 interface Grant {
   id: string;
@@ -172,7 +173,7 @@ export default function GrantsList() {
 
           {loading ? (
             <div className="text-center py-8 sm:py-12">
-              <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Loading grants...</p>
+              <LoadingBar text="LOADING GRANTS" />
             </div>
           ) : grants.length === 0 ? (
             <div className="text-center py-8 sm:py-12">

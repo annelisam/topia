@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import LoadingBar from '../components/LoadingBar';
 import { useUserProfile } from '../hooks/useUserProfile';
 
 export default function DashboardPage() {
@@ -31,9 +32,7 @@ export default function DashboardPage() {
       <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
         <Navigation />
         <div className="flex items-center justify-center pt-40">
-          <p className="font-mono text-[13px] uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
-            Loading...
-          </p>
+          <LoadingBar />
         </div>
       </div>
     );

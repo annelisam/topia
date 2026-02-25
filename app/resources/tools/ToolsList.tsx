@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingBar from '../../components/LoadingBar';
 
 interface ToolUser {
   username: string | null;
@@ -96,7 +97,7 @@ export default function ToolsList() {
       {/* Tools Grid */}
       {loading ? (
         <div className="text-center py-8 sm:py-12">
-          <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Loading tools...</p>
+          <LoadingBar text="LOADING TOOLS" />
         </div>
       ) : tools.length === 0 ? (
         <div className="text-center py-8 sm:py-12">
