@@ -199,13 +199,13 @@ export default function PublicProfilePage() {
 
               {/* Follow counts + follow button inline */}
               <div className="flex items-center justify-center gap-4 mb-3">
+                                <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
+                  <span className="font-bold">{followingCount}</span>
+                  <span className="opacity-50 ml-1">following</span>
+                </span>
                 <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
                   <span className="font-bold">{followerCount}</span>
                   <span className="opacity-50 ml-1">followers</span>
-                </span>
-                <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
-                  <span className="font-bold">{followingCount}</span>
-                  <span className="opacity-50 ml-1">following</span>
                 </span>
                 {profile.id && !isOwnProfile && (
                   <FollowButton
