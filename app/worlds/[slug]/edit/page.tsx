@@ -125,9 +125,9 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [toolSearch, setToolSearch] = useState('');
 
-  // Fetch world data
+  // Fetch world data, tools, and user in parallel
   useEffect(() => {
-    fetch(`/api/worlds?slug=${slug}`)
+    const worldPromise = fetch(`/api/worlds?slug=${slug}`)
       .then(r => r.json())
       .then(data => {
         if (data.worlds?.length > 0) {
@@ -140,28 +140,24 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
           setTools(w.tools || '');
           setSocialLinks((w.socialLinks as SocialLinks) || {});
         }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      });
 
-    // Fetch available tools
-    fetch('/api/admin/tools')
+    const toolsPromise = fetch('/api/admin/tools')
       .then(r => r.json())
       .then(d => setAllTools((d.tools || []).map((t: ToolOption) => ({ id: t.id, name: t.name }))))
       .catch(() => {});
-  }, [slug]);
 
-  // Resolve current user
-  useEffect(() => {
-    if (ready && authenticated && user?.id) {
-      fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.user) setCurrentUserId(d.user.id);
-        })
-        .catch(() => {});
-    }
-  }, [ready, authenticated, user?.id]);
+    const userPromise = (ready && authenticated && user?.id)
+      ? fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+          .then(r => r.json())
+          .then(d => { if (d.user) setCurrentUserId(d.user.id); })
+          .catch(() => {})
+      : Promise.resolve();
+
+    Promise.all([worldPromise, toolsPromise, userPromise])
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [slug, ready, authenticated, user?.id]);
 
   // Check authorization
   useEffect(() => {

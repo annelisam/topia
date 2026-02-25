@@ -150,25 +150,25 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/worlds?slug=${slug}`)
+    const worldPromise = fetch(`/api/worlds?slug=${slug}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.worlds && data.worlds.length > 0) {
           setWorld(data.worlds[0]);
         }
-      })
+      });
+
+    const userPromise = (authenticated && user?.id)
+      ? fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+          .then(r => r.json())
+          .then(d => { if (d.user) setCurrentUserId(d.user.id); })
+          .catch(() => {})
+      : Promise.resolve();
+
+    Promise.all([worldPromise, userPromise])
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [slug]);
-
-  useEffect(() => {
-    if (authenticated && user?.id) {
-      fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
-        .then(r => r.json())
-        .then(d => { if (d.user) setCurrentUserId(d.user.id); })
-        .catch(() => {});
-    }
-  }, [authenticated, user?.id]);
+  }, [slug, authenticated, user?.id]);
 
   if (loading) {
     return (

@@ -348,9 +348,21 @@ export default function WorldsPage() {
     };
 
     animate();
+
+    // Pause animation when tab is hidden to save CPU
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationRef.current);
+      } else {
+        animate();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isLoaded]); // only dep: isLoaded — loop runs forever after, reads everything via refs
 

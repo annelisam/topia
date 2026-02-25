@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import LoadingBar from '../../components/LoadingBar';
 
@@ -31,19 +31,28 @@ const COMMON_TAGS = [
 export default function GrantsList() {
   const [grants, setGrants] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('all tags');
   const [sortBy, setSortBy] = useState('deadline-asc');
+  const debounceRef = useRef<NodeJS.Timeout>(undefined);
+
+  // Debounce search input by 300ms
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [search]);
 
   useEffect(() => {
     fetchGrants();
-  }, [search, selectedTag, sortBy]);
+  }, [debouncedSearch, selectedTag, sortBy]);
 
   const fetchGrants = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.append('search', search);
+      if (debouncedSearch) params.append('search', debouncedSearch);
       if (selectedTag && selectedTag !== 'all tags') params.append('tag', selectedTag);
       params.append('sortBy', sortBy);
 
@@ -56,6 +65,11 @@ export default function GrantsList() {
       setLoading(false);
     }
   };
+
+  // Track whether this is the first load vs filter change
+  useEffect(() => {
+    if (!loading && grants.length > 0) setInitialLoad(false);
+  }, [loading, grants]);
 
   const formatAmount = (grant: Grant) => {
     if (!grant.amountMin && !grant.amountMax) return null;
@@ -171,16 +185,16 @@ export default function GrantsList() {
             </p>
           </div>
 
-          {loading ? (
+          {loading && initialLoad ? (
             <div className="text-center py-8 sm:py-12">
               <LoadingBar text="LOADING GRANTS" />
             </div>
-          ) : grants.length === 0 ? (
+          ) : grants.length === 0 && !loading ? (
             <div className="text-center py-8 sm:py-12">
               <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>No grants found. Try adjusting your filters.</p>
             </div>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
+            <div className={`space-y-3 sm:space-y-4 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
               {sortedGrants.map((grant) => {
                 const amount = formatAmount(grant);
                 const tags = parseTags(grant.tags);

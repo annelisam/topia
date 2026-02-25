@@ -35,6 +35,7 @@ const CATEGORIES = [
 export default function ToolsList() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
@@ -58,6 +59,11 @@ export default function ToolsList() {
       setLoading(false);
     }
   };
+
+  // Track whether this is the first load (show LoadingBar) vs filter change (show previous results dimmed)
+  useEffect(() => {
+    if (!loading && tools.length > 0) setInitialLoad(false);
+  }, [loading, tools]);
 
   const parseCategories = (categoryString: string | null) => {
     if (!categoryString) return [];
@@ -95,16 +101,16 @@ export default function ToolsList() {
       </div>
 
       {/* Tools Grid */}
-      {loading ? (
+      {loading && initialLoad ? (
         <div className="text-center py-8 sm:py-12">
           <LoadingBar text="LOADING TOOLS" />
         </div>
-      ) : tools.length === 0 ? (
+      ) : tools.length === 0 && !loading ? (
         <div className="text-center py-8 sm:py-12">
           <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>No tools found in this category.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
           {tools.map((tool) => {
             const categories = parseCategories(tool.category);
 
