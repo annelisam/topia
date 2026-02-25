@@ -256,8 +256,8 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  // Loading state
-  if (loading || !ready) {
+  // Loading state — also wait for user ID resolution when authenticated
+  if (loading || !ready || (authenticated && !currentUserId)) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <Navigation currentPage="worlds" />
