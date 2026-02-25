@@ -103,7 +103,7 @@ export default function GrantsList() {
         {/* Sidebar - Search & Filters */}
         <aside className="w-full lg:w-80 flex-shrink-0">
           <div className="lg:sticky lg:top-6">
-            <h2 className="font-mono text-[13px] mb-4 sm:mb-6 uppercase" style={{ color: 'var(--foreground)' }}>SEARCH & FILTERS</h2>
+            {/* <h3 className="font-mono text-[13px] mb-4 sm:mb-6 uppercase" style={{ color: 'var(--foreground)' }}>SEARCH & FILTERS</h3> */}
 
             {/* Search */}
             <div className="mb-6 sm:mb-8">

@@ -12,12 +12,13 @@ export default function LoadingBar({ text = 'LOADING' }: LoadingBarProps) {
   useEffect(() => {
     let progress = 0;
     const interval = setInterval(() => {
-      progress += 0.08 + Math.random() * 0.12;
-      if (progress >= 1) {
-        progress = 0;
+      // Asymptotic: fast at first, decelerates toward ~85%, never reaches 100%
+      const remaining = 0.85 - progress;
+      if (remaining > 0.01) {
+        progress += remaining * (0.02 + Math.random() * 0.03);
       }
       setLoadProgress(progress);
-    }, 50);
+    }, 80);
 
     return () => clearInterval(interval);
   }, []);

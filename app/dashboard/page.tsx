@@ -106,16 +106,68 @@ export default function DashboardPage() {
                   {bioSnippet}
                 </p>
               )}
-              <Link
-                href="/profile"
-                className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
-              >
-                EDIT PROFILE
-              </Link>
+              <div className="flex items-center gap-3 flex-wrap">
+                {profile?.username && (
+                  <Link
+                    href={`/profile/${profile.username}`}
+                    className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
+                    style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                  >
+                    VIEW PROFILE
+                  </Link>
+                )}
+                <Link
+                  href="/profile"
+                  className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
+                  style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                >
+                  EDIT PROFILE
+                </Link>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Action Buttons */}
+        {worldMemberships.length > 0 && (
+          <div className="mb-8 sm:mb-10">
+            <h2
+              className="font-mono text-[13px] uppercase tracking-tight mb-4"
+              style={{ color: 'var(--foreground)' }}
+            >
+              ACTIONS
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/submit-tool"
+                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+              >
+                SUBMIT A TOOL
+              </Link>
+              <Link
+                href="/dashboard/submit-grant"
+                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+              >
+                SUBMIT A GRANT
+              </Link>
+              {worldMemberships.some((wm) => wm.role === 'world_builder') && (
+                <Link
+                  href="/dashboard/create-world"
+                  className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
+                  style={{
+                    color: 'var(--background)',
+                    backgroundColor: 'var(--foreground)',
+                    borderColor: 'var(--foreground)',
+                  }}
+                >
+                  CREATE A WORLD
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* My Worlds Section */}
         <div>

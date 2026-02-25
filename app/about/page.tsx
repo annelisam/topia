@@ -54,7 +54,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="pt-24 sm:pt-32 pb-8 sm:pb-12 px-4 sm:px-6">
           <div className="container mx-auto max-w-4xl">
-            <h1 className="font-mono text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: 'var(--foreground)' }}>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: 'var(--foreground)' }}>
               ABOUT US
             </h1>
             <p className="font-mono text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>

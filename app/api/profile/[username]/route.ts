@@ -16,6 +16,7 @@ export async function GET(
 
     const result = await db
       .select({
+        id:               users.id,
         name:             users.name,
         username:         users.username,
         bio:              users.bio,
@@ -54,27 +55,19 @@ export async function GET(
     }
 
     // Fetch world memberships for this user
-    const userRecord = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-
     let worldMemberships: { worldId: string; worldTitle: string; worldSlug: string; worldCategory: string | null; worldImageUrl: string | null; role: string }[] = [];
-    if (userRecord.length > 0) {
-      worldMemberships = await db
-        .select({
-          worldId: worldMembers.worldId,
-          worldTitle: worlds.title,
-          worldSlug: worlds.slug,
-          worldCategory: worlds.category,
-          worldImageUrl: worlds.imageUrl,
-          role: worldMembers.role,
-        })
-        .from(worldMembers)
-        .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
-        .where(eq(worldMembers.userId, userRecord[0].id));
-    }
+    worldMemberships = await db
+      .select({
+        worldId: worldMembers.worldId,
+        worldTitle: worlds.title,
+        worldSlug: worlds.slug,
+        worldCategory: worlds.category,
+        worldImageUrl: worlds.imageUrl,
+        role: worldMembers.role,
+      })
+      .from(worldMembers)
+      .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
+      .where(eq(worldMembers.userId, user.id));
 
     return NextResponse.json({ user, tools: resolvedTools, worldMemberships });
   } catch (error) {

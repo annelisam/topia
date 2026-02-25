@@ -146,6 +146,24 @@ export const tools = pgTable('tools', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Follows - user-to-user follow relationships
+export const follows = pgTable('follows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  followerId: uuid('follower_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  followingId: uuid('following_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Notifications - in-app notifications (e.g. follow events)
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  recipientId: uuid('recipient_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  actorId: uuid('actor_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: text('type').notNull(), // 'follow'
+  read: boolean('read').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import LoginButton from './LoginButton';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 interface NavigationProps {
   currentPage?: 'home' | 'about' | 'worlds' | 'events' | 'grants' | 'tools' | 'contact' | 'resources';
@@ -56,12 +57,14 @@ export default function Navigation({ currentPage }: NavigationProps) {
             </Link>
           </li>
         </ul>
+          <NotificationBell />
           <ThemeToggle />
           <LoginButton />
         </div>
 
         {/* Mobile: Login + Hamburger */}
         <div className="sm:hidden flex items-center gap-3">
+          <NotificationBell />
           <ThemeToggle />
           <LoginButton />
           <button

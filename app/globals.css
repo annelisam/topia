@@ -42,6 +42,16 @@
   font-display: swap;
 }
 
+/* ── Basement Grotesque Font ─────────────────────────────────── */
+
+@font-face {
+  font-family: 'Basement Grotesque';
+  src: url('/fonts/BasementGrotesque-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Theme Variables ──────────────────────────────────────────── */
 
 :root {
@@ -112,7 +122,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'GT Zirkon', var(--font-space-mono), monospace;
+  letter-spacing: -0.01em !important;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1 {
+  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
+  font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem) !important;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
+  font-size: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem) !important;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
+  font-size: clamp(1rem, 1vw + 0.35rem, 1.25rem) !important;
+  letter-spacing: -0.02em;
 }
 
 /* Custom range slider styling for TypographicSphere controls */

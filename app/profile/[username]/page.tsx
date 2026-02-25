@@ -5,9 +5,12 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../../components/Navigation';
 import LoadingScreen from '../../components/LoadingScreen';
+import FollowButton from '../../components/FollowButton';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import { SocialIcon } from '../../components/SocialIcons';
 
 interface PublicProfile {
+  id:               string;
   name:             string | null;
   username:         string | null;
   bio:              string | null;
@@ -67,10 +70,13 @@ const ROLE_LABEL_MAP: Record<string, string> = {
 export default function PublicProfilePage() {
   const params = useParams();
   const username = params?.username as string;
+  const { profile: myProfile, authenticated } = useUserProfile();
 
   const [profile, setProfile]   = useState<PublicProfile | null>(null);
   const [tools, setTools]       = useState<ResolvedTool[]>([]);
   const [worldMemberships, setWorldMemberships] = useState<WorldMembership[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading]   = useState(true);
@@ -90,10 +96,23 @@ export default function PublicProfilePage() {
         setProfile(data.user);
         setTools(data.tools ?? []);
         setWorldMemberships(data.worldMemberships ?? []);
+        // Fetch follow counts
+        if (data.user.id) {
+          fetch(`/api/follow/counts?userId=${encodeURIComponent(data.user.id)}`)
+            .then((r) => r.json())
+            .then((counts) => {
+              setFollowerCount(counts.followers ?? 0);
+              setFollowingCount(counts.following ?? 0);
+            })
+            .catch(console.error);
+        }
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [username]);
+
+  // Check if viewing own profile — compare logged-in user's username with the viewed profile
+  const isOwnProfile = authenticated && myProfile?.username === username;
 
   // Sort worlds: builders first, then collaborators
   const sortedWorlds = useMemo(() => {
@@ -170,13 +189,33 @@ export default function PublicProfilePage() {
               </div>
 
               {profile.name && (
-                <h1 className="font-mono text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-1" style={{ color: 'var(--foreground)' }}>
+                <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-1" style={{ color: 'var(--foreground)' }}>
                   {profile.name}
                 </h1>
               )}
-              <p className="font-mono text-[14px] opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>
+              <p className="font-mono text-[14px] opacity-40 mb-2" style={{ color: 'var(--foreground)' }}>
                 @{username}
               </p>
+
+              {/* Follow counts + follow button inline */}
+              <div className="flex items-center justify-center gap-4 mb-3">
+                <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
+                  <span className="font-bold">{followerCount}</span>
+                  <span className="opacity-50 ml-1">followers</span>
+                </span>
+                <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
+                  <span className="font-bold">{followingCount}</span>
+                  <span className="opacity-50 ml-1">following</span>
+                </span>
+                {profile.id && !isOwnProfile && (
+                  <FollowButton
+                    targetUserId={profile.id}
+                    onFollowChange={(following) => {
+                      setFollowerCount((c) => following ? c + 1 : c - 1);
+                    }}
+                  />
+                )}
+              </div>
 
               {profile.bio && (
                 <p className="font-mono text-[13px] leading-relaxed max-w-md mx-auto" style={{ color: 'var(--foreground)' }}>
@@ -210,9 +249,9 @@ export default function PublicProfilePage() {
             {/* Role Tags */}
             {roleTags.length > 0 && (
               <section className="mb-10">
-                <h2 className="font-mono text-[11px] uppercase tracking-widest opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                   Creative Roles
-                </h2>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {roleTags.map((tag) => (
                     <span
@@ -230,9 +269,9 @@ export default function PublicProfilePage() {
             {/* Tools */}
             {tools.length > 0 && (
               <section className="mb-10">
-                <h2 className="font-mono text-[11px] uppercase tracking-widest opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                   Tools
-                </h2>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {tools.map((tool) => (
                     <span
@@ -253,9 +292,9 @@ export default function PublicProfilePage() {
             {/* Worlds */}
             {sortedWorlds.length > 0 && (
               <section className="mb-10">
-                <h2 className="font-mono text-[11px] uppercase tracking-widest opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                   Worlds
-                </h2>
+                </p>
                 <div className="space-y-3">
                   {sortedWorlds.map((wm) => (
                     <Link
@@ -276,9 +315,9 @@ export default function PublicProfilePage() {
                       )}
                       <div className="flex items-center justify-between px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="font-mono text-[13px] font-bold uppercase tracking-tight">
+                          <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>
                             {wm.worldTitle}
-                          </span>
+                          </h3>
                           {wm.worldCategory && (
                             <span className="font-mono text-[10px] uppercase opacity-40">
                               {wm.worldCategory}
@@ -305,9 +344,9 @@ export default function PublicProfilePage() {
             {/* Member Since */}
             {memberSince && (
               <section className="mb-10">
-                <h2 className="font-mono text-[11px] uppercase tracking-widest opacity-40 mb-2" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                   Member Since
-                </h2>
+                </p>
                 <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
                   {memberSince}
                 </p>

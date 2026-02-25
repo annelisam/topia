@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
-import { SocialIconLink } from '../../components/SocialIcons';
+import { SocialIcon } from '../../components/SocialIcons';
 
 interface WorldMember {
   userId: string;
@@ -233,67 +233,82 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           )}
         </div>
 
-        <div className="max-w-2xl">
-          {/* Circle World Avatar */}
-          {world.imageUrl && (
-            <div className={`mb-6 ${heroImage ? '-mt-14 relative z-10' : ''}`}>
-              <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2"
-                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}
-              >
-                <img
-                  src={world.imageUrl}
-                  alt={world.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Category + Country */}
-          {(world.category || world.creatorCountry) && (
-            <div className="flex items-center gap-2 mb-4">
-              {world.category && (
-                <span
-                  className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border"
-                  style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+        <div className="max-w-2xl mx-auto">
+          {/* Hero — centered like profile page */}
+          <section className="mb-12 text-center">
+            {/* Circle World Avatar */}
+            {world.imageUrl && (
+              <div className={`mb-5 flex justify-center ${heroImage ? '-mt-14 relative z-10' : ''}`}>
+                <div
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2"
+                  style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}
                 >
-                  {world.category}
-                </span>
-              )}
-              {world.creatorCountry && (
-                <span className="text-[15px]">{FLAG_MAP[world.creatorCountry] || world.creatorCountry}</span>
-              )}
-            </div>
-          )}
+                  <img
+                    src={world.imageUrl}
+                    alt={world.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
 
-          {/* Title */}
-          <h1 className="font-mono text-[24px] sm:text-[32px] font-bold uppercase leading-tight mb-2" style={{ color: 'var(--foreground)' }}>
-            {world.title}
-          </h1>
+            {/* Category + Country */}
+            {(world.category || world.creatorCountry) && (
+              <div className="flex items-center justify-center gap-2 mb-4">
+                {world.category && (
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border"
+                    style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                  >
+                    {world.category}
+                  </span>
+                )}
+                {world.creatorCountry && (
+                  <span className="text-[15px]">{FLAG_MAP[world.creatorCountry] || world.creatorCountry}</span>
+                )}
+              </div>
+            )}
 
-          {/* Short description */}
-          {world.shortDescription && (
-            <p className="font-mono text-[14px] leading-relaxed mb-6 opacity-70 max-w-xl" style={{ color: 'var(--foreground)' }}>
-              {world.shortDescription}
-            </p>
-          )}
+            {/* Title */}
+            <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-1" style={{ color: 'var(--foreground)' }}>
+              {world.title}
+            </h1>
 
-          {/* Social Icons */}
-          {hasSocialLinks && (
-            <div className="flex items-center gap-2 mb-8">
-              {Object.entries(socialLinks!).map(([key, url]) =>
-                url ? <SocialIconLink key={key} type={key} url={url} /> : null
-              )}
-            </div>
-          )}
+            {/* Short description */}
+            {world.shortDescription && (
+              <p className="font-mono text-[13px] leading-relaxed max-w-md mx-auto mt-2" style={{ color: 'var(--foreground)' }}>
+                {world.shortDescription}
+              </p>
+            )}
+
+            {/* Social Icons */}
+            {hasSocialLinks && (
+              <div className="flex justify-center gap-4 mt-5">
+                {Object.entries(socialLinks!).map(([key, url]) =>
+                  url ? (
+                    <a
+                      key={key}
+                      href={url.startsWith('http') ? url : `https://${url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="opacity-35 hover:opacity-60 transition-opacity"
+                      style={{ color: 'var(--foreground)' }}
+                      title={key}
+                    >
+                      <SocialIcon type={key} size={18} />
+                    </a>
+                  ) : null
+                )}
+              </div>
+            )}
+          </section>
 
           {/* Divider */}
-          <div className="border-t mb-8" style={{ borderColor: 'var(--border-color)' }} />
+          <div className="border-t mb-10" style={{ borderColor: 'var(--border-color)' }} />
 
           {/* Built by — World Builders */}
           {worldBuilders.length > 0 && (
-            <div className="mb-8">
+            <section className="mb-10">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                 Built by
               </p>
@@ -302,12 +317,12 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   <MemberCard key={builder.userId} member={builder} />
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Fallback: legacy creator */}
           {worldBuilders.length === 0 && world.creatorName && (
-            <div className="mb-8">
+            <section className="mb-10">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                 Built by
               </p>
@@ -318,46 +333,44 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
               >
                 {world.creatorName}
               </Link>
-            </div>
+            </section>
           )}
 
           {/* About — long description with markdown */}
           {world.description && (
-            <div className="mb-8">
+            <section className="mb-10">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
                 About
               </p>
-              <div className="max-w-xl">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {world.description}
-                </ReactMarkdown>
-              </div>
-            </div>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                {world.description}
+              </ReactMarkdown>
+            </section>
           )}
 
           {/* Tools */}
           {toolsList.length > 0 && (
-            <div className="mb-8">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
+            <section className="mb-10">
+              <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                 Tools
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {toolsList.map(tool => (
                   <span
                     key={tool}
-                    className="font-mono text-[11px] px-2.5 py-1 border rounded-sm"
+                    className="font-mono text-[12px] tracking-tight px-3 py-1.5 border"
                     style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                   >
                     {tool}
                   </span>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Collaborators */}
           {(collaboratorMembers.length > 0 || world.collaborators) && (
-            <div className="mb-8">
+            <section className="mb-10">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
                 Collaborators
               </p>
@@ -373,14 +386,19 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   {world.collaborators}
                 </p>
               )}
-            </div>
+            </section>
           )}
 
           {/* Date added */}
           {world.dateAdded && (
-            <p className="font-mono text-[10px] opacity-30 mt-12 uppercase tracking-widest" style={{ color: 'var(--foreground)' }}>
-              Added {world.dateAdded}
-            </p>
+            <section className="mb-10">
+              <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
+                Member Since
+              </p>
+              <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
+                {world.dateAdded}
+              </p>
+            </section>
           )}
         </div>
       </div>
