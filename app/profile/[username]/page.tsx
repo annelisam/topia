@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../../components/Navigation';
@@ -94,6 +94,14 @@ export default function PublicProfilePage() {
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [username]);
+
+  // Sort worlds: builders first, then collaborators
+  const sortedWorlds = useMemo(() => {
+    return [...worldMemberships].sort((a, b) => {
+      if (a.role === b.role) return 0;
+      return a.role === 'world_builder' ? -1 : 1;
+    });
+  }, [worldMemberships]);
 
   const roleTags = profile?.roleTags
     ? profile.roleTags.split(',').map((s) => s.trim()).filter(Boolean)
@@ -243,13 +251,13 @@ export default function PublicProfilePage() {
             )}
 
             {/* Worlds */}
-            {worldMemberships.length > 0 && (
+            {sortedWorlds.length > 0 && (
               <section className="mb-10">
                 <h2 className="font-mono text-[11px] uppercase tracking-widest opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>
                   Worlds
                 </h2>
                 <div className="space-y-3">
-                  {worldMemberships.map((wm) => (
+                  {sortedWorlds.map((wm) => (
                     <Link
                       key={wm.worldId}
                       href={`/worlds/${wm.worldSlug}`}

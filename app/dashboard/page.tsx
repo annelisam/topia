@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,6 +12,14 @@ export default function DashboardPage() {
   const { ready, authenticated } = usePrivy();
   const router = useRouter();
   const { profile, worldMemberships, loading } = useUserProfile();
+
+  // Sort worlds: builders first, then collaborators
+  const sortedWorlds = useMemo(() => {
+    return [...worldMemberships].sort((a, b) => {
+      if (a.role === b.role) return 0;
+      return a.role === 'world_builder' ? -1 : 1;
+    });
+  }, [worldMemberships]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -119,7 +127,7 @@ export default function DashboardPage() {
             MY WORLDS ({worldMemberships.length})
           </h2>
 
-          {worldMemberships.length === 0 ? (
+          {sortedWorlds.length === 0 ? (
             <div
               className="border p-8 sm:p-10 text-center"
               style={{ borderColor: 'var(--border-color)' }}
@@ -140,7 +148,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              {worldMemberships.map((wm) => (
+              {sortedWorlds.map((wm) => (
                 <div
                   key={wm.worldId}
                   className="border hover:opacity-70 transition group flex flex-col"
