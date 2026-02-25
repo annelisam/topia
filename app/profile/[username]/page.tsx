@@ -261,7 +261,8 @@ export default function PublicProfilePage() {
                           <img
                             src={wm.worldImageUrl}
                             alt={wm.worldTitle}
-                            className="w-full h-full object-cover object-top"
+                            className="w-full h-full object-cover"
+                            style={{ objectPosition: 'center 35%' }}
                           />
                         </div>
                       )}

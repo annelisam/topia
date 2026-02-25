@@ -206,7 +206,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           <img
             src={heroImage}
             alt={world.title}
-            className="w-full h-full object-cover object-top"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: 'center 35%' }}
           />
           <div className="absolute inset-0" style={{ background: 'var(--gradient-hero)' }} />
         </div>

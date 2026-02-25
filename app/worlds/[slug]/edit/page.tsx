@@ -341,8 +341,8 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <img
                   src={headerImageUrl || imageUrl}
                   alt="header preview"
-                  className="w-full max-w-md h-32 object-cover object-top border rounded-sm"
-                  style={{ borderColor: 'var(--border-color)', opacity: headerImageUrl ? 1 : 0.5 }}
+                  className="w-full max-w-md h-32 object-cover border rounded-sm"
+                  style={{ borderColor: 'var(--border-color)', opacity: headerImageUrl ? 1 : 0.5, objectPosition: 'center 35%' }}
                 />
                 {!headerImageUrl && imageUrl && (
                   <span className="absolute bottom-2 left-2 font-mono text-[10px] px-2 py-0.5 rounded-sm" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>

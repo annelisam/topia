@@ -75,6 +75,27 @@ export default function GrantsList() {
     return tagsString.split(',').map(tag => tag.trim()).filter(Boolean);
   };
 
+  const isGrantClosed = (grant: Grant) => {
+    if (!grant.deadlineDate) return false;
+    try {
+      const deadline = new Date(grant.deadlineDate);
+      if (isNaN(deadline.getTime())) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return deadline < today;
+    } catch {
+      return false;
+    }
+  };
+
+  // Sort: current grants first, then closed
+  const sortedGrants = [...grants].sort((a, b) => {
+    const aClosed = isGrantClosed(a);
+    const bClosed = isGrantClosed(b);
+    if (aClosed !== bClosed) return aClosed ? 1 : -1;
+    return 0; // preserve API sort order within each group
+  });
+
   return (
     <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 pt-24 sm:pt-28">
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
@@ -159,21 +180,32 @@ export default function GrantsList() {
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {grants.map((grant) => {
+              {sortedGrants.map((grant) => {
                 const amount = formatAmount(grant);
                 const tags = parseTags(grant.tags);
+                const closed = isGrantClosed(grant);
 
                 return (
                   <div
                     key={grant.id}
-                    className="border p-4 sm:p-6 hover:opacity-70 transition group"
+                    className={`border p-4 sm:p-6 hover:opacity-70 transition group ${closed ? 'opacity-60' : ''}`}
                     style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
                   >
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-mono text-[13px] mb-2 uppercase group-hover:underline" style={{ color: 'var(--foreground)' }}>
-                          {grant.grantName}
-                        </h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-mono text-[13px] uppercase group-hover:underline" style={{ color: 'var(--foreground)' }}>
+                            {grant.grantName}
+                          </h3>
+                          {closed && (
+                            <span
+                              className="px-2 py-0.5 font-mono text-[10px] uppercase font-bold tracking-wide flex-shrink-0"
+                              style={{ backgroundColor: '#C63A1E', color: '#fff' }}
+                            >
+                              CLOSED
+                            </span>
+                          )}
+                        </div>
                         {grant.shortDescription && (
                           <p className="font-mono text-[13px] mb-2 sm:mb-3" style={{ color: 'var(--foreground)' }}>{grant.shortDescription}</p>
                         )}

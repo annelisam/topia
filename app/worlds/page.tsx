@@ -536,7 +536,7 @@ export default function WorldsPage() {
               style={{ borderRight: '1px solid var(--foreground)', borderBottom: '1px solid var(--foreground)', backgroundColor: 'var(--background)' }}
             >
               <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: '#d9d4cc' }}>
-                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover object-top" />}
+                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover" style={{ objectPosition: 'center 35%' }} />}
               </div>
               <div className="p-3 sm:p-4 flex justify-between items-end" style={{ minHeight: '80px' }}>
                 <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>{world.title}</h3>
