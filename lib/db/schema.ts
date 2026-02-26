@@ -141,6 +141,7 @@ export const tools = pgTable('tools', {
   featured: boolean('featured').default(false),
   priority: integer('priority'),
   easeOfUse: text('ease_of_use'),
+  submittedBy: uuid('submitted_by').references(() => users.id),
   published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -159,7 +160,8 @@ export const notifications = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
   recipientId: uuid('recipient_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   actorId: uuid('actor_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  type: text('type').notNull(), // 'follow'
+  type: text('type').notNull(), // 'follow', 'world_member_added'
+  metadata: jsonb('metadata'), // e.g. { worldId, worldTitle, worldSlug, role }
   read: boolean('read').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

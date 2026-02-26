@@ -4,6 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 
+interface NotificationMetadata {
+  worldTitle?: string;
+  worldSlug?: string;
+  role?: string;
+}
+
 interface Notification {
   id: string;
   type: string;
@@ -12,6 +18,7 @@ interface Notification {
   actorName: string | null;
   actorUsername: string | null;
   actorAvatarUrl: string | null;
+  metadata?: NotificationMetadata | null;
 }
 
 export default function NotificationBell() {
@@ -136,7 +143,11 @@ export default function NotificationBell() {
             notifications.map((n) => (
               <Link
                 key={n.id}
-                href={n.actorUsername ? `/profile/${n.actorUsername}` : '#'}
+                href={
+                  n.type === 'world_member_added' && n.metadata?.worldSlug
+                    ? `/worlds/${n.metadata.worldSlug}`
+                    : n.actorUsername ? `/profile/${n.actorUsername}` : '#'
+                }
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 hover:opacity-70 transition border-b last:border-b-0"
                 style={{
@@ -165,6 +176,9 @@ export default function NotificationBell() {
                   <p className="font-mono text-[12px] truncate" style={{ color: 'var(--foreground)' }}>
                     <span className="font-bold">{n.actorName ?? n.actorUsername ?? 'Someone'}</span>
                     {n.type === 'follow' && ' followed you'}
+                    {n.type === 'world_member_added' && n.metadata && (
+                      <> added you as {n.metadata.role === 'world_builder' ? 'a world builder' : 'a collaborator'} in <span className="font-bold">{n.metadata.worldTitle}</span></>
+                    )}
                   </p>
                   <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
                     {timeAgo(n.createdAt)}

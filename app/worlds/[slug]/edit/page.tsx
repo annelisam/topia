@@ -37,6 +37,13 @@ interface ToolOption {
   name: string;
 }
 
+interface SearchUser {
+  id: string;
+  username: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-sm';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
@@ -125,6 +132,16 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [toolSearch, setToolSearch] = useState('');
 
+  // Member management state
+  const [members, setMembers] = useState<WorldData['members']>([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberSearchResults, setMemberSearchResults] = useState<SearchUser[]>([]);
+  const [memberSearching, setMemberSearching] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [memberRole, setMemberRole] = useState<'world_builder' | 'collaborator'>('collaborator');
+  const [memberError, setMemberError] = useState('');
+  const [memberSuccess, setMemberSuccess] = useState('');
+
   // Fetch world data, tools, and user in parallel
   useEffect(() => {
     const worldPromise = fetch(`/api/worlds?slug=${slug}`)
@@ -139,6 +156,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
           setHeaderImageUrl(w.headerImageUrl || '');
           setTools(w.tools || '');
           setSocialLinks((w.socialLinks as SocialLinks) || {});
+          setMembers(w.members || []);
         }
       });
 
@@ -218,6 +236,74 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
       );
     }, 0);
   };
+
+  // Debounced member search
+  useEffect(() => {
+    if (memberSearch.length < 2) {
+      setMemberSearchResults([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      if (!user) return;
+      setMemberSearching(true);
+      fetch(`/api/users/search?q=${encodeURIComponent(memberSearch)}&privyId=${encodeURIComponent(user.id)}`)
+        .then(r => r.json())
+        .then(data => setMemberSearchResults(data.users || []))
+        .catch(() => setMemberSearchResults([]))
+        .finally(() => setMemberSearching(false));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [memberSearch, user]);
+
+  const addMember = async (target: SearchUser) => {
+    if (!world || !user) return;
+    setAddingMember(true);
+    setMemberError('');
+    setMemberSuccess('');
+    try {
+      const res = await fetch('/api/worlds/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, worldId: world.id, targetUserId: target.id, role: memberRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMemberError(data.error || 'Failed to add member');
+        return;
+      }
+      setMembers(prev => [...prev, { userId: target.id, role: memberRole, userName: target.name, userUsername: target.username }]);
+      setMemberSearch('');
+      setMemberSearchResults([]);
+      setMemberSuccess(`Added ${target.username || target.name || 'user'}`);
+      setTimeout(() => setMemberSuccess(''), 3000);
+    } catch {
+      setMemberError('Failed to add member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const removeMember = async (targetUserId: string) => {
+    if (!world || !user) return;
+    setMemberError('');
+    try {
+      const res = await fetch('/api/worlds/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, worldId: world.id, targetUserId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMemberError(data.error || 'Failed to remove member');
+        return;
+      }
+      setMembers(prev => prev.filter(m => m.userId !== targetUserId));
+    } catch {
+      setMemberError('Failed to remove member');
+    }
+  };
+
+  const worldBuilderCount = members.filter(m => m.role === 'world_builder').length;
 
   const save = async () => {
     if (!world || !user) return;
@@ -525,6 +611,158 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                   />
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Members */}
+          <div className="mb-6">
+            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Members</label>
+
+            {/* Current members list */}
+            {members.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {members.map(m => (
+                  <div
+                    key={m.userId}
+                    className="flex items-center gap-3 py-2 px-3 border rounded-sm"
+                    style={{ borderColor: 'var(--border-color)' }}
+                  >
+                    <div
+                      className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
+                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}
+                    >
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                          {(m.userName || m.userUsername)?.[0]?.toUpperCase() ?? '?'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
+                        {m.userUsername ? `@${m.userUsername}` : m.userName || 'Unknown'}
+                      </span>
+                    </div>
+                    <span
+                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-sm flex-shrink-0"
+                      style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.6 }}
+                    >
+                      {m.role === 'world_builder' ? 'Builder' : 'Collaborator'}
+                    </span>
+                    {/* Don't allow removing last world_builder */}
+                    {!(m.role === 'world_builder' && worldBuilderCount <= 1) && (
+                      <button
+                        type="button"
+                        onClick={() => removeMember(m.userId)}
+                        className="font-mono text-[12px] opacity-40 hover:opacity-100 transition flex-shrink-0"
+                        style={{ color: 'var(--foreground)' }}
+                        title="Remove member"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add member */}
+            <div className="space-y-3">
+              {/* Role toggle */}
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMemberRole('world_builder')}
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  style={memberRole === 'world_builder'
+                    ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
+                    : { color: 'var(--foreground)', opacity: 0.4 }
+                  }
+                >
+                  World Builder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMemberRole('collaborator')}
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  style={memberRole === 'collaborator'
+                    ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
+                    : { color: 'var(--foreground)', opacity: 0.4 }
+                  }
+                >
+                  Collaborator
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  placeholder="Search by username..."
+                  className={inputCls}
+                  style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                  disabled={addingMember}
+                />
+
+                {/* Search results dropdown */}
+                {memberSearch.length >= 2 && (memberSearchResults.length > 0 || memberSearching) && (
+                  <div
+                    className="absolute left-0 right-0 top-full mt-1 border rounded-sm z-10 max-h-48 overflow-y-auto shadow-lg"
+                    style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
+                  >
+                    {memberSearching ? (
+                      <div className="px-3 py-2">
+                        <span className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>Searching...</span>
+                      </div>
+                    ) : (
+                      memberSearchResults
+                        .filter(u => !members.some(m => m.userId === u.id))
+                        .map(u => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => addMember(u)}
+                            disabled={addingMember}
+                            className="w-full flex items-center gap-3 px-3 py-2 hover:opacity-70 transition text-left border-b last:border-b-0 disabled:opacity-40"
+                            style={{ borderColor: 'var(--border-color)' }}
+                          >
+                            <div
+                              className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
+                              style={{ borderColor: 'var(--border-color)' }}
+                            >
+                              {u.avatarUrl ? (
+                                <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
+                                  <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                                    {(u.name || u.username)?.[0]?.toUpperCase() ?? '?'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-mono text-[13px] truncate" style={{ color: 'var(--foreground)' }}>
+                                {u.username && <span className="font-bold">@{u.username}</span>}
+                                {u.name && u.username && <span className="opacity-50 ml-2">{u.name}</span>}
+                                {u.name && !u.username && <span>{u.name}</span>}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                    )}
+                    {!memberSearching && memberSearchResults.filter(u => !members.some(m => m.userId === u.id)).length === 0 && memberSearchResults.length > 0 && (
+                      <div className="px-3 py-2">
+                        <span className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>All results are already members</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Messages */}
+              {memberError && <p className="font-mono text-[12px]" style={{ color: '#FF5C34' }}>{memberError}</p>}
+              {memberSuccess && <p className="font-mono text-[12px]" style={{ color: '#00AA55' }}>{memberSuccess}</p>}
             </div>
           </div>
 

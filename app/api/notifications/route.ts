@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         actorName: users.name,
         actorUsername: users.username,
         actorAvatar: users.avatarUrl,
+        metadata: notifications.metadata,
       })
       .from(notifications)
       .innerJoin(users, eq(notifications.actorId, users.id))

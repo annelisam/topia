@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       description: data.description || null,
       pricing: data.pricing || null,
       url: data.url || null,
+      submittedBy: user.id,
       published: false, // Requires admin approval
     }).returning();
 

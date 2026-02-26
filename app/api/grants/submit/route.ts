@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
       category: data.category || null,
       frequency: data.frequency || null,
       orgName: data.orgName || null,
+      source: data.source || null,
+      notes: data.notes || null,
       status: 'Open',
       published: false, // Requires admin approval
     }).returning();
