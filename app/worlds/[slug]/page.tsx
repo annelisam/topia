@@ -225,7 +225,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           {isWorldBuilder && (
             <Link
               href={`/worlds/${world.slug}/edit`}
-              className="font-mono text-[11px] uppercase tracking-widest px-4 py-1.5 rounded-lg border hover:opacity-70 transition"
+              className="font-mono text-[11px] uppercase tracking-widest px-4 py-1.5 rounded-full border hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', borderColor: 'var(--foreground)' }}
             >
               Edit World

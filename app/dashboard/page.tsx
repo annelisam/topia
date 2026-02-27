@@ -241,7 +241,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 mt-2">
                       <Link
                         href={`/worlds/${wm.worldSlug}`}
-                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-lg hover:opacity-70 transition"
+                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-full hover:opacity-70 transition"
                         style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                       >
                         VIEW
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                       {wm.role === 'world_builder' && (
                         <Link
                           href={`/worlds/${wm.worldSlug}/edit`}
-                          className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
+                          className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-full hover:opacity-70 transition"
                           style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
                         >
                           EDIT
