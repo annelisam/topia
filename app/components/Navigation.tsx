@@ -15,7 +15,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
 
   return (
     <header
-      className="fixed top-0 w-full z-[60]"
+      className="fixed top-0 w-full z-[600]"
       style={{ background: 'linear-gradient(to bottom, color-mix(in srgb, var(--background) 90%, transparent) 0%, color-mix(in srgb, var(--background) 60%, transparent) 40%, color-mix(in srgb, var(--background) 25%, transparent) 70%, transparent 100%)' }}
     >
       <nav className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
