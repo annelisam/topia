@@ -166,6 +166,18 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// World invitations - pending invites for world membership
+export const worldInvitations = pgTable('world_invitations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  inviterId: uuid('inviter_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  inviteeId: uuid('invitee_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(), // 'world_builder' | 'collaborator'
+  status: text('status').default('pending').notNull(), // 'pending' | 'accepted' | 'declined'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

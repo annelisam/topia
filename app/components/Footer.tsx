@@ -7,6 +7,9 @@ export default function Footer() {
   const pathname = usePathname();
   const isHome = pathname === '/';
 
+  // Waitlist page has its own footer
+  if (pathname === '/waitlist') return null;
+
   return (
     <footer className={`${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`}>
       {/* Tagline Section */}

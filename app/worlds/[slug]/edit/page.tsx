@@ -19,6 +19,14 @@ interface SocialLinks {
   substack?: string;
 }
 
+interface PendingInvite {
+  invitationId: string;
+  inviteeId: string;
+  role: string;
+  inviteeName: string | null;
+  inviteeUsername: string | null;
+}
+
 interface WorldData {
   id: string;
   title: string;
@@ -30,6 +38,7 @@ interface WorldData {
   tools: string | null;
   socialLinks: SocialLinks | null;
   members: { userId: string; role: string; userName: string | null; userUsername: string | null }[];
+  pendingInvites?: PendingInvite[];
 }
 
 interface ToolOption {
@@ -134,6 +143,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
 
   // Member management state
   const [members, setMembers] = useState<WorldData['members']>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [memberSearchResults, setMemberSearchResults] = useState<SearchUser[]>([]);
   const [memberSearching, setMemberSearching] = useState(false);
@@ -157,6 +167,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
           setTools(w.tools || '');
           setSocialLinks((w.socialLinks as SocialLinks) || {});
           setMembers(w.members || []);
+          setPendingInvites(w.pendingInvites || []);
         }
       });
 
@@ -197,24 +208,39 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
     setTools(next.join(', '));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImageUrl(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+          h = (h * maxWidth) / w;
+          w = maxWidth;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = URL.createObjectURL(file);
+    });
   };
 
-  const handleHeaderImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setHeaderImageUrl(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const compressed = await compressImage(file);
+    setImageUrl(compressed);
+  };
+
+  const handleHeaderImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressImage(file, 1600);
+    setHeaderImageUrl(compressed);
   };
 
   const insertMarkdown = (before: string, after: string, placeholder: string) => {
@@ -268,16 +294,22 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
       });
       const data = await res.json();
       if (!res.ok) {
-        setMemberError(data.error || 'Failed to add member');
+        setMemberError(data.error || 'Failed to send invitation');
         return;
       }
-      setMembers(prev => [...prev, { userId: target.id, role: memberRole, userName: target.name, userUsername: target.username }]);
+      setPendingInvites(prev => [...prev, {
+        invitationId: data.invitationId,
+        inviteeId: target.id,
+        role: memberRole,
+        inviteeName: target.name,
+        inviteeUsername: target.username,
+      }]);
       setMemberSearch('');
       setMemberSearchResults([]);
-      setMemberSuccess(`Added ${target.username || target.name || 'user'}`);
+      setMemberSuccess(`Invite sent to ${target.username || target.name || 'user'}`);
       setTimeout(() => setMemberSuccess(''), 3000);
     } catch {
-      setMemberError('Failed to add member');
+      setMemberError('Failed to send invitation');
     } finally {
       setAddingMember(false);
     }
@@ -311,31 +343,42 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
     setError('');
     setSuccess('');
 
-    const res = await fetch('/api/worlds/update', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        worldId: world.id,
-        privyId: user.id,
-        shortDescription: shortDescription || null,
-        description: description || null,
-        imageUrl: imageUrl || null,
-        headerImageUrl: headerImageUrl || null,
-        tools: tools || null,
-        socialLinks: Object.values(socialLinks).some(v => v) ? socialLinks : null,
-      }),
-    });
+    try {
+      const res = await fetch('/api/worlds/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          worldId: world.id,
+          privyId: user.id,
+          shortDescription: shortDescription || null,
+          description: description || null,
+          imageUrl: imageUrl || null,
+          headerImageUrl: headerImageUrl || null,
+          tools: tools || null,
+          socialLinks: Object.values(socialLinks).some(v => v) ? socialLinks : null,
+        }),
+      });
 
-    const data = await res.json();
-    setSaving(false);
+      if (!res.ok) {
+        let msg = 'Save failed';
+        try {
+          const data = await res.json();
+          msg = data.error || msg;
+        } catch {
+          if (res.status === 413) msg = 'Images are too large. Try using smaller files.';
+        }
+        setError(msg);
+        return;
+      }
 
-    if (!res.ok) {
-      setError(data.error || 'Save failed');
-      return;
+      await res.json();
+      setSuccess('Saved');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed — check your connection');
+    } finally {
+      setSaving(false);
     }
-
-    setSuccess('Saved');
-    setTimeout(() => setSuccess(''), 3000);
   };
 
   // Loading state — also wait for user ID resolution when authenticated
@@ -665,6 +708,50 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
               </div>
             )}
 
+            {/* Pending invitations */}
+            {pendingInvites.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold opacity-40" style={{ color: 'var(--foreground)' }}>
+                  Pending Invites
+                </p>
+                {pendingInvites.map(inv => (
+                  <div
+                    key={inv.invitationId}
+                    className="flex items-center gap-3 py-2 px-3 border rounded-lg"
+                    style={{ borderColor: 'var(--border-color)', opacity: 0.6 }}
+                  >
+                    <div
+                      className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
+                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}
+                    >
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                          {(inv.inviteeName || inv.inviteeUsername)?.[0]?.toUpperCase() ?? '?'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
+                        {inv.inviteeUsername ? `@${inv.inviteeUsername}` : inv.inviteeName || 'Unknown'}
+                      </span>
+                    </div>
+                    <span
+                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-lg flex-shrink-0"
+                      style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      Pending
+                    </span>
+                    <span
+                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-lg flex-shrink-0"
+                      style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.6 }}
+                    >
+                      {inv.role === 'world_builder' ? 'Builder' : 'Collaborator'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Add member */}
             <div className="space-y-3">
               {/* Role toggle */}
@@ -717,7 +804,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                       </div>
                     ) : (
                       memberSearchResults
-                        .filter(u => !members.some(m => m.userId === u.id))
+                        .filter(u => !members.some(m => m.userId === u.id) && !pendingInvites.some(i => i.inviteeId === u.id))
                         .map(u => (
                           <button
                             key={u.id}
@@ -751,9 +838,9 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                           </button>
                         ))
                     )}
-                    {!memberSearching && memberSearchResults.filter(u => !members.some(m => m.userId === u.id)).length === 0 && memberSearchResults.length > 0 && (
+                    {!memberSearching && memberSearchResults.filter(u => !members.some(m => m.userId === u.id) && !pendingInvites.some(i => i.inviteeId === u.id)).length === 0 && memberSearchResults.length > 0 && (
                       <div className="px-3 py-2">
-                        <span className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>All results are already members</span>
+                        <span className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>All results are already members or invited</span>
                       </div>
                     )}
                   </div>

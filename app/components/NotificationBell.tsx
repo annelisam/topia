@@ -8,6 +8,7 @@ interface NotificationMetadata {
   worldTitle?: string;
   worldSlug?: string;
   role?: string;
+  invitationId?: string;
 }
 
 interface Notification {
@@ -25,6 +26,7 @@ export default function NotificationBell() {
   const { authenticated, user } = usePrivy();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(() => {
@@ -76,6 +78,37 @@ export default function NotificationBell() {
       body: JSON.stringify({ privyId: user.id }),
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const respondToInvite = async (invitationId: string, action: 'accept' | 'decline') => {
+    if (!user) return;
+    setRespondingTo(invitationId);
+    try {
+      const res = await fetch('/api/worlds/invitations/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, invitationId, action }),
+      });
+      if (res.ok) {
+        // Update the notification locally to reflect the response
+        setNotifications((prev) =>
+          prev.map((n) => {
+            if (n.type === 'world_invite' && n.metadata?.invitationId === invitationId) {
+              return {
+                ...n,
+                type: action === 'accept' ? 'world_invite_accepted_self' : 'world_invite_declined_self',
+                read: true,
+              };
+            }
+            return n;
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Failed to respond to invite:', err);
+    } finally {
+      setRespondingTo(null);
+    }
   };
 
   const timeAgo = (dateStr: string) => {
@@ -140,57 +173,121 @@ export default function NotificationBell() {
               </p>
             </div>
           ) : (
-            notifications.map((n) => (
-              <Link
-                key={n.id}
-                href={
-                  n.type === 'world_member_added' && n.metadata?.worldSlug
-                    ? `/worlds/${n.metadata.worldSlug}`
-                    : n.actorUsername ? `/profile/${n.actorUsername}` : '#'
-                }
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 hover:opacity-70 transition border-b last:border-b-0"
-                style={{
-                  borderColor: 'var(--border-color)',
-                  backgroundColor: n.read ? 'transparent' : 'color-mix(in srgb, var(--foreground) 4%, transparent)',
-                }}
-              >
-                {/* Actor avatar */}
-                <div
-                  className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
-                  style={{ borderColor: 'var(--border-color)' }}
-                >
-                  {n.actorAvatarUrl ? (
-                    <img src={n.actorAvatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
-                      <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
-                        {n.actorName?.[0]?.toUpperCase() ?? '?'}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            notifications.map((n) => {
+              const isInvite = n.type === 'world_invite';
+              const isRespondedInvite = n.type === 'world_invite_accepted_self' || n.type === 'world_invite_declined_self';
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-mono text-[12px] truncate" style={{ color: 'var(--foreground)' }}>
-                    <span className="font-bold">{n.actorName ?? n.actorUsername ?? 'Someone'}</span>
-                    {n.type === 'follow' && ' followed you'}
-                    {n.type === 'world_member_added' && n.metadata && (
-                      <> added you as {n.metadata.role === 'world_builder' ? 'a world builder' : 'a collaborator'} in <span className="font-bold">{n.metadata.worldTitle}</span></>
+              const linkHref =
+                (n.type === 'world_member_added' || n.type === 'world_invite_accepted') && n.metadata?.worldSlug
+                  ? `/worlds/${n.metadata.worldSlug}`
+                  : n.actorUsername ? `/profile/${n.actorUsername}` : '#';
+
+              const notificationText = () => {
+                const actor = <span className="font-bold">{n.actorName ?? n.actorUsername ?? 'Someone'}</span>;
+                const roleLabel = n.metadata?.role === 'world_builder' ? 'a world builder' : 'a collaborator';
+                const worldName = <span className="font-bold">{n.metadata?.worldTitle}</span>;
+
+                if (n.type === 'follow') return <>{actor} followed you</>;
+                if (n.type === 'world_member_added') return <>{actor} added you as {roleLabel} in {worldName}</>;
+                if (n.type === 'world_invite') return <>{actor} invited you to join {worldName} as {roleLabel}</>;
+                if (n.type === 'world_invite_accepted') return <>{actor} accepted your invite to {worldName}</>;
+                if (n.type === 'world_invite_accepted_self') return <>You accepted the invite to {worldName}</>;
+                if (n.type === 'world_invite_declined_self') return <>You declined the invite to {worldName}</>;
+                return <>{actor}</>;
+              };
+
+              const content = (
+                <>
+                  {/* Actor avatar */}
+                  <div
+                    className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
+                    style={{ borderColor: 'var(--border-color)' }}
+                  >
+                    {n.actorAvatarUrl ? (
+                      <img src={n.actorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
+                        <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                          {n.actorName?.[0]?.toUpperCase() ?? '?'}
+                        </span>
+                      </div>
                     )}
-                  </p>
-                  <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
-                    {timeAgo(n.createdAt)}
-                  </p>
-                </div>
+                  </div>
 
-                {/* Unread dot */}
-                {!n.read && (
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--foreground)' }} />
-                )}
-              </Link>
-            ))
+                  {/* Text + actions */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
+                      {notificationText()}
+                    </p>
+                    <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
+                      {timeAgo(n.createdAt)}
+                    </p>
+                    {/* Accept / Decline buttons for pending invites */}
+                    {isInvite && n.metadata?.invitationId && (
+                      <div className="flex gap-2 mt-1.5">
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); respondToInvite(n.metadata!.invitationId!, 'accept'); }}
+                          disabled={respondingTo === n.metadata.invitationId}
+                          className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg transition hover:opacity-80 disabled:opacity-40"
+                          style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                        >
+                          {respondingTo === n.metadata.invitationId ? '...' : 'Accept'}
+                        </button>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); respondToInvite(n.metadata!.invitationId!, 'decline'); }}
+                          disabled={respondingTo === n.metadata.invitationId}
+                          className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg border transition hover:opacity-80 disabled:opacity-40"
+                          style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                    {isRespondedInvite && (
+                      <p className="font-mono text-[10px] mt-1 opacity-50" style={{ color: n.type === 'world_invite_accepted_self' ? '#00AA55' : 'var(--foreground)' }}>
+                        {n.type === 'world_invite_accepted_self' ? 'Accepted' : 'Declined'}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Unread dot */}
+                  {!n.read && (
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: 'var(--foreground)' }} />
+                  )}
+                </>
+              );
+
+              // Invites shouldn't navigate away — they need action buttons
+              if (isInvite) {
+                return (
+                  <div
+                    key={n.id}
+                    className="flex items-start gap-3 px-3 py-2.5 border-b last:border-b-0"
+                    style={{
+                      borderColor: 'var(--border-color)',
+                      backgroundColor: n.read ? 'transparent' : 'color-mix(in srgb, var(--foreground) 4%, transparent)',
+                    }}
+                  >
+                    {content}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={n.id}
+                  href={linkHref}
+                  onClick={() => setOpen(false)}
+                  className="flex items-start gap-3 px-3 py-2.5 hover:opacity-70 transition border-b last:border-b-0"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    backgroundColor: n.read ? 'transparent' : 'color-mix(in srgb, var(--foreground) 4%, transparent)',
+                  }}
+                >
+                  {content}
+                </Link>
+              );
+            })
           )}
         </div>
       )}

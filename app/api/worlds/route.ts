@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worlds, creators, worldMembers, users } from '@/lib/db/schema';
+import { worlds, creators, worldMembers, worldInvitations, users } from '@/lib/db/schema';
 import { ilike, asc, eq, and } from 'drizzle-orm';
 
 export async function GET(request: Request) {
@@ -76,9 +76,36 @@ export async function GET(request: Request) {
       memberMap[m.worldId].push(m);
     }
 
+    // Fetch pending invitations for all returned worlds
+    let pendingInvites: { worldId: string; inviteeId: string; role: string; inviteeName: string | null; inviteeUsername: string | null; invitationId: string }[] = [];
+    if (worldIds.length > 0) {
+      const inviteResults = await db
+        .select({
+          worldId: worldInvitations.worldId,
+          inviteeId: worldInvitations.inviteeId,
+          role: worldInvitations.role,
+          inviteeName: users.name,
+          inviteeUsername: users.username,
+          invitationId: worldInvitations.id,
+        })
+        .from(worldInvitations)
+        .innerJoin(users, eq(worldInvitations.inviteeId, users.id))
+        .where(eq(worldInvitations.status, 'pending'));
+
+      pendingInvites = inviteResults.filter(i => worldIds.includes(i.worldId));
+    }
+
+    // Group pending invites by worldId
+    const inviteMap: Record<string, typeof pendingInvites> = {};
+    for (const i of pendingInvites) {
+      if (!inviteMap[i.worldId]) inviteMap[i.worldId] = [];
+      inviteMap[i.worldId].push(i);
+    }
+
     const worldsWithMembers = results.map(w => ({
       ...w,
       members: memberMap[w.id] || [],
+      pendingInvites: inviteMap[w.id] || [],
     }));
 
     return NextResponse.json({

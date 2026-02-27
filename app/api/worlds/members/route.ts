@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, worlds, worldMembers, notifications } from '@/lib/db/schema';
+import { users, worlds, worldMembers, worldInvitations, notifications } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
-// POST – add a member to a world
+// POST – invite a user to a world (creates pending invitation + notification)
 export async function POST(request: NextRequest) {
   try {
     const { privyId, worldId, targetUserId, role } = await request.json();
@@ -50,8 +50,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User is already a member of this world' }, { status: 409 });
     }
 
-    // Add member
-    await db.insert(worldMembers).values({ worldId, userId: targetUserId, role });
+    // Check for existing pending invitation
+    const [existingInvite] = await db
+      .select({ id: worldInvitations.id })
+      .from(worldInvitations)
+      .where(and(
+        eq(worldInvitations.worldId, worldId),
+        eq(worldInvitations.inviteeId, targetUserId),
+        eq(worldInvitations.status, 'pending')
+      ))
+      .limit(1);
+    if (existingInvite) {
+      return NextResponse.json({ error: 'User already has a pending invitation' }, { status: 409 });
+    }
+
+    // Create invitation
+    const [invitation] = await db.insert(worldInvitations).values({
+      worldId,
+      inviterId: caller.id,
+      inviteeId: targetUserId,
+      role,
+    }).returning();
 
     // Get world info for notification metadata
     const [world] = await db
@@ -60,23 +79,24 @@ export async function POST(request: NextRequest) {
       .where(eq(worlds.id, worldId))
       .limit(1);
 
-    // Create notification
+    // Create notification for the invitee
     await db.insert(notifications).values({
       recipientId: targetUserId,
       actorId: caller.id,
-      type: 'world_member_added',
+      type: 'world_invite',
       metadata: {
         worldId,
         worldTitle: world?.title ?? 'Unknown',
         worldSlug: world?.slug ?? '',
         role,
+        invitationId: invitation.id,
       },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, invitationId: invitation.id });
   } catch (error) {
-    console.error('Add world member error:', error);
-    return NextResponse.json({ error: 'Failed to add member' }, { status: 500 });
+    console.error('Invite world member error:', error);
+    return NextResponse.json({ error: 'Failed to send invitation' }, { status: 500 });
   }
 }
 
