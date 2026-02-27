@@ -201,8 +201,10 @@ export default function DashboardPage() {
               {sortedWorlds.map((wm) => (
                 <div
                   key={wm.worldId}
-                  className="border rounded-2xl overflow-hidden hover:opacity-70 transition group flex flex-col"
+                  className="border rounded-2xl overflow-hidden transition-colors duration-200 group flex flex-col"
                   style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                 >
                   {/* World Image */}
                   <div className="aspect-video overflow-hidden" style={{ backgroundColor: 'var(--foreground)', opacity: wm.worldImageUrl ? 1 : 0.05 }}>

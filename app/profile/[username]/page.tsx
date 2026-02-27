@@ -299,8 +299,10 @@ export default function PublicProfilePage() {
                     <Link
                       key={wm.worldId}
                       href={`/worlds/${wm.worldSlug}`}
-                      className="border rounded-2xl hover:opacity-70 transition group block overflow-hidden"
-                      style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                      className="border rounded-2xl transition-colors duration-200 group block overflow-hidden"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'var(--surface)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                     >
                       {wm.worldImageUrl && (
                         <div className="w-full h-32 overflow-hidden">
