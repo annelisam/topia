@@ -203,8 +203,10 @@ export default function GrantsList() {
                 return (
                   <div
                     key={grant.id}
-                    className={`border p-4 sm:p-6 rounded-2xl hover:opacity-70 transition group ${closed ? 'opacity-60' : ''}`}
+                    className={`border p-4 sm:p-6 rounded-2xl transition-colors duration-200 group ${closed ? 'opacity-60' : ''}`}
                     style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+                    onMouseEnter={(e) => { if (!closed) e.currentTarget.style.backgroundColor = 'var(--surface-hover)'; }}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                   >
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">

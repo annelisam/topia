@@ -117,8 +117,10 @@ export default function ToolsList() {
             return (
               <div
                 key={tool.id}
-                className="border p-5 sm:p-6 rounded-2xl hover:opacity-70 transition group flex flex-col"
+                className="border p-5 sm:p-6 rounded-2xl transition-colors duration-200 group flex flex-col"
                 style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
               >
                 <div className="flex justify-between items-start mb-3 sm:mb-4">
                   <h3 className="font-mono text-[16px] sm:text-[18px] font-bold uppercase group-hover:underline" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>

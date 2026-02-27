@@ -116,8 +116,10 @@ export default function AboutPage() {
               {team.map((member, idx) => (
                 <div
                   key={idx}
-                  className="border p-5 sm:p-6 rounded-2xl hover:opacity-70 transition"
+                  className="border p-5 sm:p-6 rounded-2xl transition-colors duration-200"
                   style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
                 >
                   <h3 className="font-mono text-[13px] font-bold mb-2 uppercase" style={{ color: 'var(--foreground)' }}>{member.name}</h3>
                   <p className="font-mono text-[13px] mb-3" style={{ color: 'var(--foreground)', opacity: 0.6 }}>{member.role}</p>

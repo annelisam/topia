@@ -544,8 +544,10 @@ export default function WorldsPage() {
               key={world.id}
               href={`/worlds/${world.slug}`}
               onClick={(e) => { if (!selectedWorldCard) { e.preventDefault(); setSelectedWorldCard(world); } }}
-              className="group block relative rounded-2xl overflow-hidden border hover:shadow-lg transition-all duration-200"
+              className="group block relative rounded-2xl overflow-hidden border transition-colors duration-200"
               style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
             >
               <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: 'var(--surface-hover)' }}>
                 {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" style={{ objectPosition: 'center 35%' }} />}
