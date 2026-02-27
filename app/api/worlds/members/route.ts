@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, worlds, worldMembers, worldInvitations, notifications } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 
 // POST – invite a user to a world (creates pending invitation + notification)
 export async function POST(request: NextRequest) {
@@ -50,18 +50,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User is already a member of this world' }, { status: 409 });
     }
 
-    // Check for existing pending invitation
+    // Check for existing invitation (pending or accepted)
     const [existingInvite] = await db
-      .select({ id: worldInvitations.id })
+      .select({ id: worldInvitations.id, status: worldInvitations.status })
       .from(worldInvitations)
       .where(and(
         eq(worldInvitations.worldId, worldId),
         eq(worldInvitations.inviteeId, targetUserId),
-        eq(worldInvitations.status, 'pending')
+        ne(worldInvitations.status, 'declined')
       ))
       .limit(1);
     if (existingInvite) {
-      return NextResponse.json({ error: 'User already has a pending invitation' }, { status: 409 });
+      const msg = existingInvite.status === 'pending'
+        ? 'User already has a pending invitation'
+        : 'User has already accepted an invitation';
+      return NextResponse.json({ error: msg }, { status: 409 });
     }
 
     // Create invitation
