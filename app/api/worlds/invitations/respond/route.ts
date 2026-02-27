@@ -35,6 +35,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invitation already responded to' }, { status: 409 });
     }
 
+    // Update the original world_invite notification so it no longer shows accept/decline buttons
+    // Find the notification for this user with matching invitationId in metadata
+    const inviteNotifications = await db
+      .select({ id: notifications.id, metadata: notifications.metadata })
+      .from(notifications)
+      .where(and(eq(notifications.recipientId, caller.id), eq(notifications.type, 'world_invite')));
+
+    const matchingNotification = inviteNotifications.find(
+      (n) => (n.metadata as Record<string, unknown>)?.invitationId === invitationId
+    );
+
+    if (matchingNotification) {
+      await db.update(notifications)
+        .set({
+          type: action === 'accept' ? 'world_invite_accepted_self' : 'world_invite_declined_self',
+          read: true,
+        })
+        .where(eq(notifications.id, matchingNotification.id));
+    }
+
     if (action === 'accept') {
       // Check not already a member
       const [existing] = await db
