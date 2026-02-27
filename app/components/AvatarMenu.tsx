@@ -49,8 +49,8 @@ export default function AvatarMenu() {
     return (
       <button
         onClick={login}
-        className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition border px-3 py-1"
-        style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+        className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition border rounded-lg px-3 py-1"
+        style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
       >
         LOG IN
       </button>
@@ -87,10 +87,10 @@ export default function AvatarMenu() {
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 min-w-[240px] max-w-[calc(100vw-2rem)] border z-[70]"
+          className="absolute right-0 top-full mt-2 min-w-[240px] max-w-[calc(100vw-2rem)] border rounded-2xl overflow-hidden z-[70]"
           style={{
             backgroundColor: 'var(--background)',
-            borderColor: 'var(--foreground)',
+            borderColor: 'var(--border-color)',
           }}
         >
           {/* 1. Profile: avatar + name (links to view profile) + edit icon */}

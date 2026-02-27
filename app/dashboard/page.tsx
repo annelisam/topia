@@ -5,7 +5,6 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '../components/Navigation';
-import Footer from '../components/Footer';
 import LoadingBar from '../components/LoadingBar';
 import { useUserProfile } from '../hooks/useUserProfile';
 
@@ -65,8 +64,8 @@ export default function DashboardPage() {
 
         {/* Profile Summary Card */}
         <div
-          className="border p-5 sm:p-6 mb-8 sm:mb-10"
-          style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+          className="border p-5 sm:p-6 mb-8 sm:mb-10 rounded-2xl"
+          style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
         >
           <div className="flex items-start gap-4 sm:gap-5">
             {/* Avatar */}
@@ -110,16 +109,16 @@ export default function DashboardPage() {
                 {profile?.username && (
                   <Link
                     href={`/profile/${profile.username}`}
-                    className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
-                    style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                    className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-lg hover:opacity-70 transition"
+                    style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                   >
                     VIEW PROFILE
                   </Link>
                 )}
                 <Link
                   href="/profile"
-                  className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
-                  style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                  className="inline-block font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-lg hover:opacity-70 transition"
+                  style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                 >
                   EDIT PROFILE
                 </Link>
@@ -140,22 +139,22 @@ export default function DashboardPage() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/dashboard/submit-tool"
-                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 rounded-lg hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 SUBMIT A TOOL
               </Link>
               <Link
                 href="/dashboard/submit-grant"
-                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 rounded-lg hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 SUBMIT A GRANT
               </Link>
               {worldMemberships.some((wm) => wm.role === 'world_builder') && (
                 <Link
                   href="/dashboard/create-world"
-                  className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
+                  className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 rounded-lg hover:opacity-70 transition"
                   style={{
                     color: 'var(--background)',
                     backgroundColor: 'var(--foreground)',
@@ -180,7 +179,7 @@ export default function DashboardPage() {
 
           {sortedWorlds.length === 0 ? (
             <div
-              className="border p-8 sm:p-10 text-center"
+              className="border p-8 sm:p-10 text-center rounded-2xl"
               style={{ borderColor: 'var(--border-color)' }}
             >
               <p
@@ -191,8 +190,8 @@ export default function DashboardPage() {
               </p>
               <Link
                 href="/worlds"
-                className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 rounded-lg hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 EXPLORE WORLDS
               </Link>
@@ -202,8 +201,8 @@ export default function DashboardPage() {
               {sortedWorlds.map((wm) => (
                 <div
                   key={wm.worldId}
-                  className="border hover:opacity-70 transition group flex flex-col"
-                  style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                  className="border rounded-2xl overflow-hidden hover:opacity-70 transition group flex flex-col"
+                  style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
                 >
                   {/* World Image */}
                   <div className="aspect-video overflow-hidden" style={{ backgroundColor: 'var(--foreground)', opacity: wm.worldImageUrl ? 1 : 0.05 }}>
@@ -240,8 +239,8 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 mt-2">
                       <Link
                         href={`/worlds/${wm.worldSlug}`}
-                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition"
-                        style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-lg hover:opacity-70 transition"
+                        style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                       >
                         VIEW
                       </Link>
@@ -262,8 +261,6 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

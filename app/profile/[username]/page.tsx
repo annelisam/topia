@@ -255,8 +255,8 @@ export default function PublicProfilePage() {
                   {roleTags.map((tag) => (
                     <span
                       key={tag}
-                      className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 border"
-                      style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)' }}
+                      className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 rounded-full border"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
                     >
                       {ROLE_LABEL_MAP[tag] ?? tag.replace(/-/g, ' ')}
                     </span>
@@ -275,7 +275,7 @@ export default function PublicProfilePage() {
                   {tools.map((tool) => (
                     <span
                       key={tool.slug}
-                      className="font-mono text-[12px] tracking-tight px-3 py-1.5 border"
+                      className="font-mono text-[12px] tracking-tight px-3 py-1.5 rounded-lg border"
                       style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
                     >
                       {tool.name}
@@ -299,7 +299,7 @@ export default function PublicProfilePage() {
                     <Link
                       key={wm.worldId}
                       href={`/worlds/${wm.worldSlug}`}
-                      className="border hover:opacity-70 transition group block overflow-hidden"
+                      className="border rounded-2xl hover:opacity-70 transition group block overflow-hidden"
                       style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
                     >
                       {wm.worldImageUrl && (
@@ -324,7 +324,7 @@ export default function PublicProfilePage() {
                           )}
                         </div>
                         <span
-                          className="font-mono text-[10px] uppercase tracking-tight px-2 py-0.5 border"
+                          className="font-mono text-[10px] uppercase tracking-tight px-2 py-0.5 rounded-full border"
                           style={{
                             borderColor: wm.role === 'world_builder' ? 'var(--foreground)' : 'var(--border-color)',
                             color: 'var(--foreground)',

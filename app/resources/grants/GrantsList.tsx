@@ -128,7 +128,7 @@ export default function GrantsList() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 font-mono text-[13px] border focus:outline-none focus:ring-2"
-                style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
               />
             </div>
 
@@ -140,14 +140,14 @@ export default function GrantsList() {
                   <button
                     key={tag}
                     onClick={() => setSelectedTag(tag)}
-                    className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] transition lowercase ${
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] transition lowercase rounded-full ${
                       selectedTag === tag
                         ? ''
                         : 'border hover:opacity-70'
                     }`}
                     style={selectedTag === tag
                       ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
-                      : { borderColor: 'var(--foreground)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }
+                      : { borderColor: 'var(--border-color)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }
                     }
                   >
                     {tag}
@@ -163,7 +163,7 @@ export default function GrantsList() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 font-mono text-[13px] border focus:outline-none focus:ring-2"
-                style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
               >
                 <option value="deadline-asc">Deadline (soonest first)</option>
                 <option value="deadline-desc">Deadline (latest first)</option>
@@ -203,8 +203,8 @@ export default function GrantsList() {
                 return (
                   <div
                     key={grant.id}
-                    className={`border p-4 sm:p-6 hover:opacity-70 transition group ${closed ? 'opacity-60' : ''}`}
-                    style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                    className={`border p-4 sm:p-6 rounded-2xl hover:opacity-70 transition group ${closed ? 'opacity-60' : ''}`}
+                    style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
                   >
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
@@ -214,7 +214,7 @@ export default function GrantsList() {
                           </h3>
                           {closed && (
                             <span
-                              className="px-2 py-0.5 font-mono text-[10px] uppercase font-bold tracking-wide flex-shrink-0"
+                              className="px-2 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold tracking-wide flex-shrink-0"
                               style={{ backgroundColor: '#C63A1E', color: '#fff' }}
                             >
                               CLOSED
@@ -234,8 +234,8 @@ export default function GrantsList() {
                           {tags.slice(0, 5).map((tag, idx) => (
                             <span
                               key={idx}
-                              className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[13px] lowercase"
-                              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)' }}
+                              className="px-2.5 sm:px-3 py-0.5 sm:py-1 border rounded-full font-mono text-[13px] lowercase"
+                              style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
                             >
                               {tag}
                             </span>

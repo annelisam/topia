@@ -225,7 +225,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           {isWorldBuilder && (
             <Link
               href={`/worlds/${world.slug}/edit`}
-              className="font-mono text-[11px] uppercase tracking-widest px-4 py-1.5 border hover:opacity-70 transition"
+              className="font-mono text-[11px] uppercase tracking-widest px-4 py-1.5 rounded-lg border hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', borderColor: 'var(--foreground)' }}
             >
               Edit World
@@ -257,7 +257,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
               <div className="flex items-center justify-center gap-2 mb-4">
                 {world.category && (
                   <span
-                    className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border"
+                    className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border"
                     style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                   >
                     {world.category}
@@ -358,7 +358,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                 {toolsList.map(tool => (
                   <span
                     key={tool}
-                    className="font-mono text-[12px] tracking-tight px-3 py-1.5 border"
+                    className="font-mono text-[12px] tracking-tight px-3 py-1.5 rounded-lg border"
                     style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                   >
                     {tool}

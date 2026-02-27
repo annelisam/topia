@@ -126,6 +126,18 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── Soft rounded defaults ───────────────────────────────────── */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+textarea,
+select {
+  border-radius: 10px;
+}
+
 h1 {
   font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
   font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem) !important;

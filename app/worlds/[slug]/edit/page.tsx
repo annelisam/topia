@@ -44,7 +44,7 @@ interface SearchUser {
   avatarUrl: string | null;
 }
 
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-sm';
+const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 /* ── Markdown preview components ──────────────────────────────── */
@@ -96,13 +96,13 @@ const markdownComponents = {
 function MarkdownToolbar({ onInsert }: { onInsert: (before: string, after: string, placeholder: string) => void }) {
   return (
     <div className="flex flex-wrap gap-1 mb-1.5">
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('**', '**', 'bold')} title="Bold"><strong>B</strong></button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('*', '*', 'italic')} title="Italic"><em>I</em></button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('[', '](url)', 'link text')} title="Link">Link</button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('## ', '', 'Heading')} title="Heading">H2</button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('- ', '', 'list item')} title="List">List</button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('> ', '', 'quote')} title="Quote">Quote</button>
-      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-sm cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('\n---\n', '', '')} title="Divider">---</button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('**', '**', 'bold')} title="Bold"><strong>B</strong></button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('*', '*', 'italic')} title="Italic"><em>I</em></button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('[', '](url)', 'link text')} title="Link">Link</button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('## ', '', 'Heading')} title="Heading">H2</button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('- ', '', 'list item')} title="List">List</button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('> ', '', 'quote')} title="Quote">Quote</button>
+      <button type="button" className="px-2 py-1 font-mono text-[11px] border transition-all rounded-lg cursor-pointer theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} onClick={() => onInsert('\n---\n', '', '')} title="Divider">---</button>
     </div>
   );
 }
@@ -406,7 +406,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
             )}
             <div>
               <label
-                className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-sm theme-hover-invert"
+                className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert"
                 style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 {imageUrl ? 'Change Image' : 'Upload Image'}
@@ -424,11 +424,11 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <img
                   src={headerImageUrl || imageUrl}
                   alt="header preview"
-                  className="w-full max-w-md h-32 object-cover border rounded-sm"
+                  className="w-full max-w-md h-32 object-cover border rounded-lg"
                   style={{ borderColor: 'var(--border-color)', opacity: headerImageUrl ? 1 : 0.5, objectPosition: 'center 35%' }}
                 />
                 {!headerImageUrl && imageUrl && (
-                  <span className="absolute bottom-2 left-2 font-mono text-[10px] px-2 py-0.5 rounded-sm" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                  <span className="absolute bottom-2 left-2 font-mono text-[10px] px-2 py-0.5 rounded-lg" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                     Using world image as default
                   </span>
                 )}
@@ -445,7 +445,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
             )}
             <div>
               <label
-                className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-sm theme-hover-invert"
+                className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert"
                 style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 {headerImageUrl ? 'Change Header' : 'Upload Header'}
@@ -475,7 +475,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <button
                   type="button"
                   onClick={() => setDescriptionPreview(false)}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={!descriptionPreview
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -486,7 +486,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <button
                   type="button"
                   onClick={() => setDescriptionPreview(true)}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={descriptionPreview
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -515,7 +515,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
               </>
             ) : (
               <div
-                className="border px-4 py-3 rounded-sm min-h-[180px]"
+                className="border px-4 py-3 rounded-lg min-h-[180px]"
                 style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
               >
                 {description ? (
@@ -540,7 +540,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                     key={name}
                     type="button"
                     onClick={() => toggleTool(name)}
-                    className="flex items-center gap-1 px-2.5 py-1 border font-mono text-[12px] rounded-sm transition hover:opacity-70"
+                    className="flex items-center gap-1 px-2.5 py-1 border font-mono text-[12px] rounded-lg transition hover:opacity-70"
                     style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
                   >
                     {name}
@@ -559,7 +559,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                   className={inputCls + ' mb-2'}
                   style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                 />
-                <div className="border p-3 max-h-48 overflow-y-auto rounded-sm" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+                <div className="border p-3 max-h-48 overflow-y-auto rounded-lg" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
                   {allTools
                     .filter(t => !toolSearch || t.name.toLowerCase().includes(toolSearch.toLowerCase()))
                     .map(t => (
@@ -624,7 +624,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 {members.map(m => (
                   <div
                     key={m.userId}
-                    className="flex items-center gap-3 py-2 px-3 border rounded-sm"
+                    className="flex items-center gap-3 py-2 px-3 border rounded-lg"
                     style={{ borderColor: 'var(--border-color)' }}
                   >
                     <div
@@ -643,7 +643,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                       </span>
                     </div>
                     <span
-                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-sm flex-shrink-0"
+                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-lg flex-shrink-0"
                       style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.6 }}
                     >
                       {m.role === 'world_builder' ? 'Builder' : 'Collaborator'}
@@ -672,7 +672,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <button
                   type="button"
                   onClick={() => setMemberRole('world_builder')}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={memberRole === 'world_builder'
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -683,7 +683,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 <button
                   type="button"
                   onClick={() => setMemberRole('collaborator')}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm transition-all"
+                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={memberRole === 'collaborator'
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -708,7 +708,7 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
                 {/* Search results dropdown */}
                 {memberSearch.length >= 2 && (memberSearchResults.length > 0 || memberSearching) && (
                   <div
-                    className="absolute left-0 right-0 top-full mt-1 border rounded-sm z-10 max-h-48 overflow-y-auto shadow-lg"
+                    className="absolute left-0 right-0 top-full mt-1 border rounded-lg z-10 max-h-48 overflow-y-auto shadow-lg"
                     style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
                   >
                     {memberSearching ? (
@@ -771,14 +771,14 @@ export default function EditWorldPage({ params }: { params: Promise<{ slug: stri
             <button
               onClick={save}
               disabled={saving}
-              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest hover:opacity-80 transition disabled:opacity-40 rounded-sm"
+              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest hover:opacity-80 transition disabled:opacity-40 rounded-lg"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <Link
               href={`/worlds/${slug}`}
-              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest border hover:opacity-70 transition rounded-sm"
+              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg"
               style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
             >
               Cancel

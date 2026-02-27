@@ -84,14 +84,14 @@ export default function ToolsList() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] transition lowercase ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] transition lowercase rounded-full ${
                 selectedCategory === category
-                  ? ''
+                  ? 'rounded-full'
                   : 'border hover:opacity-70'
               }`}
               style={selectedCategory === category
                 ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
-                : { borderColor: 'var(--foreground)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }
+                : { borderColor: 'var(--border-color)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }
               }
             >
               {category}
@@ -117,8 +117,8 @@ export default function ToolsList() {
             return (
               <div
                 key={tool.id}
-                className="border p-5 sm:p-6 hover:opacity-70 transition group flex flex-col"
-                style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                className="border p-5 sm:p-6 rounded-2xl hover:opacity-70 transition group flex flex-col"
+                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
               >
                 <div className="flex justify-between items-start mb-3 sm:mb-4">
                   <h3 className="font-mono text-[16px] sm:text-[18px] font-bold uppercase group-hover:underline" style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
@@ -153,8 +153,8 @@ export default function ToolsList() {
                     {categories.slice(0, 3).map((cat, idx) => (
                       <span
                         key={idx}
-                        className="px-2.5 sm:px-3 py-0.5 sm:py-1 border font-mono text-[13px] lowercase"
-                        style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)' }}
+                        className="px-2.5 sm:px-3 py-0.5 sm:py-1 border rounded-full font-mono text-[13px] lowercase"
+                        style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
                       >
                         {cat}
                       </span>

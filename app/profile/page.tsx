@@ -268,8 +268,8 @@ export default function ProfilePage() {
             {username && (
               <Link
                 href={`/profile/${username}`}
-                className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 hover:opacity-70 transition flex-shrink-0 mt-1"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                className="font-mono text-[13px] uppercase tracking-tight border rounded-lg px-3 py-1.5 hover:opacity-70 transition flex-shrink-0 mt-1"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 VIEW PROFILE →
               </Link>
@@ -389,9 +389,9 @@ export default function ProfilePage() {
                 <button
                   key={slug}
                   onClick={() => toggleRole(slug)}
-                  className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 border transition-colors"
+                  className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 border rounded-full transition-colors"
                   style={{
-                    borderColor:     'var(--foreground)',
+                    borderColor:     'var(--border-color)',
                     backgroundColor: isSelected ? 'var(--foreground)' : 'transparent',
                     color:           isSelected ? 'var(--background)' : 'var(--foreground)',
                   }}
@@ -422,7 +422,7 @@ export default function ProfilePage() {
                   <button
                     key={slug}
                     onClick={() => toggleTool(slug)}
-                    className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 border flex items-center gap-2 transition-colors"
+                    className="font-mono text-[12px] uppercase tracking-tight px-3 py-1.5 border rounded-full flex items-center gap-2 transition-colors"
                     style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                     title="Click to remove"
                   >
@@ -451,7 +451,7 @@ export default function ProfilePage() {
             <p className="font-mono text-[12px] opacity-30" style={{ color: 'var(--foreground)' }}>No tools match your search</p>
           ) : (
             <div
-              className="border overflow-y-auto"
+              className="border rounded-xl overflow-y-auto"
               style={{ borderColor: 'var(--border-color)', maxHeight: '220px' }}
             >
               {filteredTools.map((tool) => {
@@ -553,8 +553,8 @@ export default function ProfilePage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition disabled:opacity-40"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+            className="font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition disabled:opacity-40"
+            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
           >
             {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE PROFILE'}
           </button>

@@ -8,7 +8,7 @@ import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-sm';
+const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 const TOOL_CATEGORIES = [
@@ -91,8 +91,8 @@ export default function SubmitToolPage() {
           </p>
           <Link
             href="/dashboard"
-            className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+            className="inline-block font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition"
+            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
           >
             BACK TO DASHBOARD
           </Link>
@@ -111,8 +111,8 @@ export default function SubmitToolPage() {
           </p>
           <Link
             href="/dashboard"
-            className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+            className="inline-block font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition"
+            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
           >
             BACK TO DASHBOARD
           </Link>
@@ -212,7 +212,7 @@ export default function SubmitToolPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="font-mono text-[13px] uppercase tracking-tight border px-5 py-2 hover:opacity-70 transition disabled:opacity-40"
+            className="font-mono text-[13px] uppercase tracking-tight border rounded-lg px-5 py-2 hover:opacity-70 transition disabled:opacity-40"
             style={{
               color: 'var(--background)',
               backgroundColor: 'var(--foreground)',

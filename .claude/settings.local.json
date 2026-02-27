@@ -28,7 +28,9 @@
       "Bash(npx tsc:*)",
       "mcp__Claude_Preview__preview_start",
       "Bash(npx drizzle-kit:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(find /Users/annelisamoody/topia/app/worlds/[slug]/edit/ -type f \\\\\\( -name \"*.tsx\" -o -name \"*.jsx\" -o -name \"*.ts\" -o -name \"*.js\" \\\\\\))",
+      "Bash(kill 20503 23003 23604)"
     ]
   }
 }

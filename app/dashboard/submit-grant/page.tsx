@@ -8,7 +8,7 @@ import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-sm';
+const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 const requiredCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold';
 
@@ -269,8 +269,8 @@ export default function SubmitGrantPage() {
           </p>
           <Link
             href="/dashboard"
-            className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+            className="inline-block font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition"
+            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
           >
             BACK TO DASHBOARD
           </Link>
@@ -289,8 +289,8 @@ export default function SubmitGrantPage() {
           </p>
           <Link
             href="/dashboard"
-            className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+            className="inline-block font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition"
+            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
           >
             BACK TO DASHBOARD
           </Link>
@@ -320,7 +320,7 @@ export default function SubmitGrantPage() {
 
         {/* URL Parser Section */}
         <div
-          className="border rounded-sm p-4 mb-8"
+          className="border rounded-lg p-4 mb-8"
           style={{ borderColor: 'var(--foreground)', opacity: 0.9 }}
         >
           <label className={labelCls} style={{ color: 'var(--foreground)' }}>
@@ -375,7 +375,7 @@ export default function SubmitGrantPage() {
                   type="button"
                   onClick={handleParse}
                   disabled={!parseUrl.trim()}
-                  className="font-mono text-[12px] uppercase tracking-tight border px-4 py-2 hover:opacity-70 transition disabled:opacity-30 whitespace-nowrap"
+                  className="font-mono text-[12px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition disabled:opacity-30 whitespace-nowrap"
                   style={{
                     color: 'var(--background)',
                     backgroundColor: 'var(--foreground)',
@@ -395,7 +395,7 @@ export default function SubmitGrantPage() {
         {/* Verify notice after parsing */}
         {parsedSource && (
           <div
-            className="border border-amber-400/50 rounded-sm px-4 py-3 mb-6"
+            className="border border-amber-400/50 rounded-lg px-4 py-3 mb-6"
             style={{ backgroundColor: 'rgba(245, 158, 11, 0.05)' }}
           >
             <p className="font-mono text-[11px] text-amber-600 uppercase tracking-tight font-bold">
@@ -536,7 +536,7 @@ export default function SubmitGrantPage() {
                   return (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 font-mono text-[11px] border px-2 py-1 rounded-sm"
+                      className="inline-flex items-center gap-1 font-mono text-[11px] border px-2 py-1 rounded-lg"
                       style={{
                         borderColor: 'var(--foreground)',
                         color: 'var(--background)',
@@ -578,7 +578,7 @@ export default function SubmitGrantPage() {
               {showSuggestions && tagSuggestions.length > 0 && (
                 <div
                   ref={suggestionsRef}
-                  className="absolute z-10 left-0 right-0 mt-1 border rounded-sm max-h-40 overflow-y-auto"
+                  className="absolute z-10 left-0 right-0 mt-1 border rounded-lg max-h-40 overflow-y-auto"
                   style={{
                     borderColor: 'var(--foreground)',
                     backgroundColor: 'var(--background)',
@@ -611,7 +611,7 @@ export default function SubmitGrantPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="font-mono text-[13px] uppercase tracking-tight border px-5 py-2 hover:opacity-70 transition disabled:opacity-40"
+            className="font-mono text-[13px] uppercase tracking-tight border rounded-lg px-5 py-2 hover:opacity-70 transition disabled:opacity-40"
             style={{
               color: 'var(--background)',
               backgroundColor: 'var(--foreground)',

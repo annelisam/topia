@@ -48,7 +48,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
     <button
       onClick={handleToggle}
       disabled={busy}
-      className="font-mono text-[10px] uppercase tracking-tight border px-3 py-1 hover:opacity-70 transition disabled:opacity-40"
+      className="font-mono text-[10px] uppercase tracking-tight border px-3 py-1 rounded-full hover:opacity-70 transition disabled:opacity-40"
       style={{
         color: isFollowing ? 'var(--background)' : 'var(--foreground)',
         backgroundColor: isFollowing ? 'var(--foreground)' : 'transparent',

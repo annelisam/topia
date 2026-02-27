@@ -507,8 +507,8 @@ export default function WorldsPage() {
 
         {/* Controls Panel */}
         <div
-          className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[13px] p-2 sm:p-3 border z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          style={{ color: 'var(--foreground)', backgroundColor: 'var(--background)', borderColor: 'var(--foreground)' }}
+          className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[13px] p-2 sm:p-3 border rounded-xl z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          style={{ color: 'var(--foreground)', backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
         >
           <label className="flex items-center justify-between gap-3 mb-2">
             SIZE
@@ -529,30 +529,30 @@ export default function WorldsPage() {
       <section style={{ backgroundColor: 'var(--background)' }}>
         <div className="flex justify-center py-5">
           {selectedWorldCard ? (
-            <div className="flex items-center gap-2 px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+            <div className="flex items-center gap-2 px-5 py-2 rounded-full font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
               <span>{selectedWorldCard.title}</span>
               <button onClick={() => setSelectedWorldCard(null)} className="hover:opacity-60 transition text-[13px] leading-none" aria-label="Clear selection">×</button>
             </div>
           ) : (
-            <span className="px-4 py-1.5 font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>ALL WORLDS</span>
+            <span className="px-5 py-2 rounded-full font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>ALL WORLDS</span>
           )}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4" style={{ borderTop: '1px solid var(--foreground)', borderLeft: '1px solid var(--foreground)' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 px-4 sm:px-6 pb-8">
           {(selectedWorldCard ? [selectedWorldCard] : allWorlds).map((world) => (
             <Link
               key={world.id}
               href={`/worlds/${world.slug}`}
               onClick={(e) => { if (!selectedWorldCard) { e.preventDefault(); setSelectedWorldCard(world); } }}
-              className="group block relative"
-              style={{ borderRight: '1px solid var(--foreground)', borderBottom: '1px solid var(--foreground)', backgroundColor: 'var(--background)' }}
+              className="group block relative rounded-2xl overflow-hidden border hover:shadow-lg transition-all duration-200"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
             >
-              <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: '#d9d4cc' }}>
-                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover" style={{ objectPosition: 'center 35%' }} />}
+              <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: 'var(--surface-hover)' }}>
+                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" style={{ objectPosition: 'center 35%' }} />}
               </div>
-              <div className="p-3 sm:p-4 flex justify-between items-end" style={{ minHeight: '80px' }}>
-                <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>{world.title}</h3>
-                <span className="font-mono text-[18px] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" style={{ color: 'var(--foreground)' }}>→</span>
+              <div className="p-3 sm:p-4 flex justify-between items-end" style={{ minHeight: '72px' }}>
+                <h3 className="font-mono text-[13px] sm:text-[15px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>{world.title}</h3>
+                <span className="font-mono text-[16px] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" style={{ color: 'var(--foreground)' }}>→</span>
               </div>
             </Link>
           ))}

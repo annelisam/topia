@@ -113,8 +113,8 @@ export default function NotificationBell() {
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-72 border shadow-lg z-50 max-h-80 overflow-y-auto"
-          style={{ backgroundColor: 'var(--background)', borderColor: 'var(--foreground)' }}
+          className="absolute right-0 top-full mt-2 w-72 border rounded-2xl shadow-lg z-50 max-h-80 overflow-y-auto"
+          style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: 'var(--border-color)' }}>

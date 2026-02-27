@@ -8,54 +8,64 @@ export default function Footer() {
   const isHome = pathname === '/';
 
   return (
-    <footer className={`py-8 sm:py-12 px-4 sm:px-6 border-t ${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`} style={{ borderColor: 'var(--foreground)', backgroundColor: 'var(--background)' }}>
-      <div className="container mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 mb-6 sm:mb-8">
-          {/* TOPIA */}
-          <div>
-            <h3 className="font-mono text-base sm:text-lg font-bold mb-3 sm:mb-4 uppercase" style={{ color: 'var(--foreground)' }}>TOPIA</h3>
-            <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.6 }}>
-              Culture before tech. Depth before data.
-            </p>
-          </div>
+    <footer className={`${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`}>
+      {/* Tagline Section */}
+      <div
+        className="rounded-t-[24px] sm:rounded-t-[32px] px-6 sm:px-10 pt-10 sm:pt-16 pb-6 sm:pb-8 relative overflow-hidden"
+        style={{ backgroundColor: 'var(--surface)' }}
+      >
+        {/* Corner decorations */}
+        <span className="absolute top-5 left-5 font-mono text-[13px] opacity-20 select-none" style={{ color: 'var(--foreground)' }}>+</span>
+        <span className="absolute top-5 right-5 font-mono text-[13px] opacity-20 select-none" style={{ color: 'var(--foreground)' }}>+</span>
 
-          {/* Connect */}
-          <div>
-            <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: 'var(--foreground)' }}>CONNECT</h3>
-            <ul className="space-y-2 font-mono text-[13px]">
-              <li>
-                <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
-                  Instagram
-                </a>
-              </li>
-              <li>
-                <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
-                  Twitter
-                </a>
-              </li>
-              <li>
-                <a href="mailto:contact@topia.vision" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
+        {/* Tagline row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-8 sm:mb-12 mt-8 sm:mt-16">
+          <h2
+            className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight"
+            style={{ color: 'var(--foreground)', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+          >
+            CULTURE FIRST.<br />SYSTEMS NEXT.
+          </h2>
 
-          {/* Explore */}
-          <div>
-            <h3 className="font-mono text-[13px] font-bold mb-3 sm:mb-4 uppercase" style={{ color: 'var(--foreground)' }}>EXPLORE</h3>
-            <ul className="space-y-2 font-mono text-[13px]">
-              <li><Link href="/about" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>About</Link></li>
-              <li><Link href="/worlds" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>Worlds</Link></li>
-              <li><Link href="/#events" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>Events</Link></li>
-              <li><Link href="/resources/grants" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>Grants</Link></li>
-              <li><Link href="/resources/tools" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>Tools</Link></li>
-            </ul>
+          {/* Theme dots */}
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded-full" style={{ backgroundColor: 'var(--color-yellow)' }} />
+            <span className="w-5 h-5 rounded-full" style={{ backgroundColor: 'var(--foreground)' }} />
+            <span className="w-5 h-5 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
           </div>
         </div>
 
-        <div className="text-center pt-6 sm:pt-8 border-t font-mono text-[13px]" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', opacity: 0.4 }}>
-          © {new Date().getFullYear()} TOPIA. All rights reserved.
+        {/* Divider with corner marks */}
+        <div className="relative">
+          <span className="absolute -top-3 left-0 font-mono text-[13px] opacity-20 select-none" style={{ color: 'var(--foreground)' }}>+</span>
+          <span className="absolute -top-3 right-0 font-mono text-[13px] opacity-20 select-none" style={{ color: 'var(--foreground)' }}>+</span>
+          <div className="border-t" style={{ borderColor: 'var(--border-color)' }} />
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-5 sm:pt-6">
+          <Link
+            href="/"
+            className="font-mono text-[13px] uppercase tracking-tight hover:opacity-70 transition"
+            style={{ color: 'var(--foreground)', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+          >
+            TOPIA
+          </Link>
+
+          <nav className="flex flex-wrap items-center gap-4 sm:gap-6 font-mono text-[11px] sm:text-[12px] uppercase tracking-wide">
+            <Link href="/about" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
+              About
+            </Link>
+            <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
+              Instagram
+            </a>
+            <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
+              X
+            </a>
+            <a href="mailto:contact@topia.vision" className="hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
+              Contact
+            </a>
+          </nav>
         </div>
       </div>
     </footer>
