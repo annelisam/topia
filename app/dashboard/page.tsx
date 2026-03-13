@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,10 +8,21 @@ import Navigation from '../components/Navigation';
 import LoadingBar from '../components/LoadingBar';
 import { useUserProfile } from '../hooks/useUserProfile';
 
+interface HostedEvent {
+  id: string;
+  eventName: string;
+  slug: string;
+  date: string | null;
+  dateIso: string | null;
+  city: string | null;
+  imageUrl: string | null;
+}
+
 export default function DashboardPage() {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
   const router = useRouter();
   const { profile, worldMemberships, loading } = useUserProfile();
+  const [hostedEvents, setHostedEvents] = useState<HostedEvent[]>([]);
 
   // Sort worlds: builders first, then collaborators
   const sortedWorlds = useMemo(() => {
@@ -20,6 +31,15 @@ export default function DashboardPage() {
       return a.role === 'world_builder' ? -1 : 1;
     });
   }, [worldMemberships]);
+
+  // Fetch hosted events
+  useEffect(() => {
+    if (!profile?.id) return;
+    fetch(`/api/events?hostUserId=${profile.id}`)
+      .then(r => r.json())
+      .then(data => setHostedEvents(data.events || []))
+      .catch(console.error);
+  }, [profile?.id]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -167,6 +187,94 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* My Events Section */}
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2
+              className="font-mono text-[13px] uppercase tracking-tight"
+              style={{ color: 'var(--foreground)' }}
+            >
+              MY EVENTS ({hostedEvents.length})
+            </h2>
+            <Link
+              href="/dashboard/create-event"
+              className="font-mono text-[12px] uppercase tracking-widest hover:opacity-70 transition"
+              style={{ color: 'var(--foreground)' }}
+            >
+              + Create Event
+            </Link>
+          </div>
+
+          {hostedEvents.length === 0 ? (
+            <div
+              className="border p-8 sm:p-10 text-center rounded-2xl"
+              style={{ borderColor: 'var(--border-color)' }}
+            >
+              <p
+                className="font-mono text-[13px] uppercase tracking-tight opacity-50 mb-4"
+                style={{ color: 'var(--foreground)' }}
+              >
+                You haven&apos;t hosted any events yet
+              </p>
+              <Link
+                href="/dashboard/create-event"
+                className="inline-block font-mono text-[13px] uppercase tracking-tight border px-4 py-2 rounded-lg hover:opacity-70 transition"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+              >
+                CREATE AN EVENT
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {hostedEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="border rounded-2xl overflow-hidden transition-colors duration-200 group flex flex-col"
+                  style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
+                >
+                  {ev.imageUrl && (
+                    <div className="aspect-square overflow-hidden">
+                      <img src={ev.imageUrl} alt={ev.eventName} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="p-4 sm:p-5 flex flex-col flex-1">
+                    <h3
+                      className="font-mono text-[15px] sm:text-[16px] font-bold uppercase group-hover:underline mb-1"
+                      style={{ color: 'var(--foreground)', letterSpacing: '-0.02em' }}
+                    >
+                      {ev.eventName}
+                    </h3>
+                    {(ev.date || ev.city) && (
+                      <p className="font-mono text-[11px] opacity-50 mb-3" style={{ color: 'var(--foreground)' }}>
+                        {[ev.date, ev.city].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    <div className="flex-grow" />
+                    <div className="flex items-center gap-3 mt-2">
+                      <Link
+                        href={`/events/${ev.slug}`}
+                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-full hover:opacity-70 transition"
+                        style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                      >
+                        VIEW
+                      </Link>
+                      <Link
+                        href={`/dashboard/edit-event/${ev.slug}`}
+                        className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1.5 rounded-full hover:opacity-70 transition"
+                        style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                      >
+                        EDIT
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* My Worlds Section */}
         <div>

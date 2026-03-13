@@ -38,6 +38,16 @@ export default function Navigation({ currentPage }: NavigationProps) {
           </li>
           <li>
             <Link
+              href="/events"
+              className="hover:opacity-70 transition flex items-center gap-1"
+              style={{ color: 'var(--foreground)' }}
+            >
+              {currentPage === 'events' && <span>■</span>}
+              EVENTS
+            </Link>
+          </li>
+          <li>
+            <Link
               href="/resources/grants"
               className="hover:opacity-70 transition flex items-center gap-1"
               style={{ color: 'var(--foreground)' }}
@@ -107,6 +117,17 @@ export default function Navigation({ currentPage }: NavigationProps) {
               >
                 {currentPage === 'worlds' && <span>■</span>}
                 WORLDS
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/events"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 hover:opacity-70 transition flex items-center gap-1"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {currentPage === 'events' && <span>■</span>}
+                EVENTS
               </Link>
             </li>
             <li>

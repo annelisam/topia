@@ -142,9 +142,19 @@ const markdownComponents = {
 
 /* ── Main Page ────────────────────────────────────────────────── */
 
+interface WorldEvent {
+  id: string;
+  eventName: string;
+  slug: string;
+  date: string | null;
+  city: string | null;
+  imageUrl: string | null;
+}
+
 export default function WorldPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [world, setWorld] = useState<WorldDetail | null>(null);
+  const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, authenticated } = usePrivy();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -169,6 +179,15 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [slug, authenticated, user?.id]);
+
+  // Fetch events linked to this world
+  useEffect(() => {
+    if (!world?.id) return;
+    fetch(`/api/events?worldId=${world.id}`)
+      .then(r => r.json())
+      .then(data => setWorldEvents(data.events || []))
+      .catch(console.error);
+  }, [world?.id]);
 
   if (loading) {
     return (
@@ -386,6 +405,48 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   {world.collaborators}
                 </p>
               )}
+            </section>
+          )}
+
+          {/* Events */}
+          {worldEvents.length > 0 && (
+            <section className="mb-10">
+              <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
+                Events
+              </p>
+              <div className="space-y-3">
+                {worldEvents.map((ev) => (
+                  <Link
+                    key={ev.id}
+                    href={`/events/${ev.slug}`}
+                    className="border rounded-2xl transition-colors duration-200 group block overflow-hidden"
+                    style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'var(--surface)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
+                  >
+                    {ev.imageUrl && (
+                      <div className="w-full h-32 overflow-hidden">
+                        <img
+                          src={ev.imageUrl}
+                          alt={ev.eventName}
+                          className="w-full h-full object-cover"
+                          style={{ objectPosition: 'center 35%' }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>
+                        {ev.eventName}
+                      </h3>
+                      {(ev.date || ev.city) && (
+                        <span className="font-mono text-[10px] uppercase opacity-40">
+                          {[ev.date, ev.city].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </section>
           )}
 

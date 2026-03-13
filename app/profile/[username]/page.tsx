@@ -83,6 +83,7 @@ export default function PublicProfilePage() {
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hostedEvents, setHostedEvents] = useState<{ id: string; eventName: string; slug: string; date: string | null; city: string | null; imageUrl: string | null }[]>([]);
 
   useEffect(() => {
     if (!username || !ready) return;
@@ -110,6 +111,15 @@ export default function PublicProfilePage() {
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [username, ready, authenticated, user]);
+
+  // Fetch hosted events when profile loads
+  useEffect(() => {
+    if (!profile?.id) return;
+    fetch(`/api/events?hostUserId=${profile.id}`)
+      .then(r => r.json())
+      .then(data => setHostedEvents(data.events || []))
+      .catch(console.error);
+  }, [profile?.id]);
 
   // Sort worlds: builders first, then collaborators
   const sortedWorlds = useMemo(() => {
@@ -335,6 +345,48 @@ export default function PublicProfilePage() {
                         >
                           {wm.role === 'world_builder' ? 'World Builder' : 'Collaborator'}
                         </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Hosted Events */}
+            {hostedEvents.length > 0 && (
+              <section className="mb-10">
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>
+                  Events
+                </p>
+                <div className="space-y-3">
+                  {hostedEvents.map((ev) => (
+                    <Link
+                      key={ev.id}
+                      href={`/events/${ev.slug}`}
+                      className="border rounded-2xl transition-colors duration-200 group block overflow-hidden"
+                      style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'var(--surface)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
+                    >
+                      {ev.imageUrl && (
+                        <div className="w-full h-32 overflow-hidden">
+                          <img
+                            src={ev.imageUrl}
+                            alt={ev.eventName}
+                            className="w-full h-full object-cover"
+                            style={{ objectPosition: 'center 35%' }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <h3 className="font-mono text-[15px] sm:text-[18px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>
+                          {ev.eventName}
+                        </h3>
+                        {(ev.date || ev.city) && (
+                          <span className="font-mono text-[10px] uppercase opacity-40">
+                            {[ev.date, ev.city].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   ))}

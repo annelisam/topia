@@ -9,6 +9,9 @@ interface NotificationMetadata {
   worldSlug?: string;
   role?: string;
   invitationId?: string;
+  eventId?: string;
+  eventName?: string;
+  eventSlug?: string;
 }
 
 interface Notification {
@@ -111,6 +114,36 @@ export default function NotificationBell() {
     }
   };
 
+  const respondToEventInvite = async (invitationId: string, action: 'accept' | 'decline') => {
+    if (!user) return;
+    setRespondingTo(invitationId);
+    try {
+      const res = await fetch('/api/events/hosts/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, invitationId, action }),
+      });
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => {
+            if (n.type === 'event_cohost_invite' && n.metadata?.invitationId === invitationId) {
+              return {
+                ...n,
+                type: action === 'accept' ? 'event_cohost_accepted_self' : 'event_cohost_declined_self',
+                read: true,
+              };
+            }
+            return n;
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Failed to respond to event invite:', err);
+    } finally {
+      setRespondingTo(null);
+    }
+  };
+
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -174,18 +207,24 @@ export default function NotificationBell() {
             </div>
           ) : (
             notifications.map((n) => {
-              const isInvite = n.type === 'world_invite';
-              const isRespondedInvite = n.type === 'world_invite_accepted_self' || n.type === 'world_invite_declined_self';
+              const isInvite = n.type === 'world_invite' || n.type === 'event_cohost_invite';
+              const isEventInvite = n.type === 'event_cohost_invite';
+              const isRespondedInvite =
+                n.type === 'world_invite_accepted_self' || n.type === 'world_invite_declined_self' ||
+                n.type === 'event_cohost_accepted_self' || n.type === 'event_cohost_declined_self';
 
               const linkHref =
                 (n.type === 'world_member_added' || n.type === 'world_invite_accepted') && n.metadata?.worldSlug
                   ? `/worlds/${n.metadata.worldSlug}`
+                  : (n.type === 'event_cohost_accepted' || n.type === 'event_rsvp') && n.metadata?.eventSlug
+                  ? `/events/${n.metadata.eventSlug}`
                   : n.actorUsername ? `/profile/${n.actorUsername}` : '#';
 
               const notificationText = () => {
                 const actor = <span className="font-bold">{n.actorName ?? n.actorUsername ?? 'Someone'}</span>;
                 const roleLabel = n.metadata?.role === 'world_builder' ? 'a world builder' : 'a collaborator';
                 const worldName = <span className="font-bold">{n.metadata?.worldTitle}</span>;
+                const eventName = <span className="font-bold">{n.metadata?.eventName}</span>;
 
                 if (n.type === 'follow') return <>{actor} followed you</>;
                 if (n.type === 'world_member_added') return <>{actor} added you as {roleLabel} in {worldName}</>;
@@ -193,6 +232,12 @@ export default function NotificationBell() {
                 if (n.type === 'world_invite_accepted') return <>{actor} accepted your invite to {worldName}</>;
                 if (n.type === 'world_invite_accepted_self') return <>You accepted the invite to {worldName}</>;
                 if (n.type === 'world_invite_declined_self') return <>You declined the invite to {worldName}</>;
+                if (n.type === 'event_cohost_invite') return <>{actor} invited you to co-host {eventName}</>;
+                if (n.type === 'event_cohost_accepted') return <>{actor} accepted your co-host invite for {eventName}</>;
+                if (n.type === 'event_cohost_accepted_self') return <>You accepted the co-host invite for {eventName}</>;
+                if (n.type === 'event_cohost_declined_self') return <>You declined the co-host invite for {eventName}</>;
+                if (n.type === 'event_cohost_declined') return <>{actor} declined your co-host invite for {eventName}</>;
+                if (n.type === 'event_rsvp') return <>{actor} RSVP&apos;d to {eventName}</>;
                 return <>{actor}</>;
               };
 
@@ -226,7 +271,12 @@ export default function NotificationBell() {
                     {isInvite && n.metadata?.invitationId && (
                       <div className="flex gap-2 mt-1.5">
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); respondToInvite(n.metadata!.invitationId!, 'accept'); }}
+                          onClick={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            isEventInvite
+                              ? respondToEventInvite(n.metadata!.invitationId!, 'accept')
+                              : respondToInvite(n.metadata!.invitationId!, 'accept');
+                          }}
                           disabled={respondingTo === n.metadata.invitationId}
                           className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg transition hover:opacity-80 disabled:opacity-40"
                           style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
@@ -234,7 +284,12 @@ export default function NotificationBell() {
                           {respondingTo === n.metadata.invitationId ? '...' : 'Accept'}
                         </button>
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); respondToInvite(n.metadata!.invitationId!, 'decline'); }}
+                          onClick={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            isEventInvite
+                              ? respondToEventInvite(n.metadata!.invitationId!, 'decline')
+                              : respondToInvite(n.metadata!.invitationId!, 'decline');
+                          }}
                           disabled={respondingTo === n.metadata.invitationId}
                           className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg border transition hover:opacity-80 disabled:opacity-40"
                           style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
