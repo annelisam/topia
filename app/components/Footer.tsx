@@ -7,8 +7,9 @@ export default function Footer() {
   const pathname = usePathname();
   const isHome = pathname === '/';
 
-  // Waitlist page has its own footer
+  // Hide footer on pages with their own full-screen layouts
   if (pathname === '/waitlist') return null;
+  if (pathname === '/dashboard' || pathname.endsWith('/edit')) return null;
 
   return (
     <footer className={`${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`}>
