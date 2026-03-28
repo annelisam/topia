@@ -93,11 +93,17 @@ export const events = pgTable('events', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventName: text('event_name').notNull(),
   slug: text('slug').notNull().unique(),
+  description: text('description'), // Markdown description
   date: text('date'), // Stored as text from CSV (e.g., "18-Jul-2025")
+  dateIso: text('date_iso'), // ISO format "2025-07-18" for chronological sorting
   startTime: text('start_time'), // e.g., "9:00 PM"
+  endTime: text('end_time'), // e.g., "11:00 PM"
+  timezone: text('timezone'), // e.g., "America/Los_Angeles"
   city: text('city'),
+  address: text('address'), // Full street address
   link: text('link'),
   imageUrl: text('image_url'),
+  createdBy: uuid('created_by').references(() => users.id),
   published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -166,6 +172,48 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// World invitations - pending invites for world membership
+export const worldInvitations = pgTable('world_invitations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  inviterId: uuid('inviter_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  inviteeId: uuid('invitee_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(), // 'world_builder' | 'collaborator'
+  status: text('status').default('pending').notNull(), // 'pending' | 'accepted' | 'declined'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Event hosts - links users to events with roles
+export const eventHosts = pgTable('event_hosts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(), // 'creator' | 'co_host'
+  worldId: uuid('world_id').references(() => worlds.id), // optional: hosting as a World
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Event co-host invitations
+export const eventHostInvitations = pgTable('event_host_invitations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  inviterId: uuid('inviter_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  inviteeId: uuid('invitee_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  status: text('status').default('pending').notNull(), // 'pending' | 'accepted' | 'declined'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Event RSVPs
+export const eventRsvps = pgTable('event_rsvps', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  status: text('status').default('going').notNull(), // 'going'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -177,6 +225,25 @@ export const tvContent = pgTable('tv_content', {
   thumbnailUrl: text('thumbnail_url'),
   duration: text('duration'),
   published: boolean('published').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// World projects - items that appear as labels on a world's globe
+export const worldProjects = pgTable('world_projects', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),       // Short description shown on card
+  content: text('content'),               // Long-form markdown content
+  imageUrl: text('image_url'),            // Cover/hero image
+  videoUrl: text('video_url'),            // Video embed URL (YouTube, Vimeo, etc.)
+  url: text('url'),                       // External project link
+  links: jsonb('links'),                  // Array of {label, url} pairs
+  tags: jsonb('tags'),                    // Array of string tags
+  sortOrder: integer('sort_order').default(0),
+  published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

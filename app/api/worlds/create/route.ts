@@ -55,11 +55,11 @@ export async function POST(request: NextRequest) {
       published: true, // Publishes immediately for existing worldbuilders
     }).returning();
 
-    // Add creator as world_builder
+    // Add creator as owner
     await db.insert(worldMembers).values({
       worldId: world.id,
       userId: user.id,
-      role: 'world_builder',
+      role: 'owner',
     });
 
     return NextResponse.json({ world }, { status: 201 });

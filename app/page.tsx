@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import TypographicSphere from './components/TypographicSphere';
-import DraggableStickyNote from './components/DraggableStickyNote';
 import Navigation from './components/Navigation';
 import LoadingScreen from './components/LoadingScreen';
+import HomepageSections from './components/HomepageSections';
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -27,7 +27,7 @@ export default function Home() {
         </div>
       </div>
 
-      {isLoaded && <DraggableStickyNote />}
+      {isLoaded && <HomepageSections />}
     </div>
   );
 }

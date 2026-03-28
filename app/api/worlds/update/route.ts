@@ -24,20 +24,19 @@ export async function PUT(request: Request) {
 
     const userId = userResult[0].id;
 
-    // Verify user is a world builder for this world
+    // Verify user is an owner or world_builder for this world
     const membership = await db
-      .select({ id: worldMembers.id })
+      .select({ role: worldMembers.role })
       .from(worldMembers)
       .where(
         and(
           eq(worldMembers.worldId, data.worldId),
           eq(worldMembers.userId, userId),
-          eq(worldMembers.role, 'world_builder')
         )
       )
       .limit(1);
 
-    if (membership.length === 0) {
+    if (membership.length === 0 || (membership[0].role !== 'owner' && membership[0].role !== 'world_builder')) {
       return NextResponse.json({ error: 'Not authorized — you are not a world builder for this world' }, { status: 403 });
     }
 

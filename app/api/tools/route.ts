@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db, tools } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { ilike, or, asc, isNotNull } from 'drizzle-orm';
+import { ilike, or, and, asc, desc, eq, isNotNull } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const search = searchParams.get('search');
+    const sort = searchParams.get('sort');
 
     // Build query
     let query = db.select().from(tools);
 
-    // Apply filters
-    let conditions = [];
+    // Apply filters — always require published = true
+    const conditions = [eq(tools.published, true)];
 
     if (category && category !== 'all') {
-      // Case-insensitive search for category
       conditions.push(ilike(tools.category, `%${category}%`));
     }
 
@@ -26,14 +26,22 @@ export async function GET(request: Request) {
           ilike(tools.name, `%${search}%`),
           ilike(tools.description, `%${search}%`),
           ilike(tools.category, `%${search}%`)
-        )
+        )!
       );
     }
 
-    // Execute query - ordered by name by default
+    // Determine sort order
+    let orderBy;
+    switch (sort) {
+      case 'name_desc': orderBy = desc(tools.name); break;
+      case 'newest': orderBy = desc(tools.createdAt); break;
+      default: orderBy = asc(tools.name); break;
+    }
+
+    // Execute query with all conditions combined
     const results = await query
-      .where(conditions.length > 0 ? conditions[0] : undefined)
-      .orderBy(asc(tools.name));
+      .where(and(...conditions))
+      .orderBy(orderBy);
 
     // Fetch users who have toolSlugs set, to build per-tool user lists
     const usersWithTools = await db

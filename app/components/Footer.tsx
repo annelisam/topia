@@ -7,6 +7,10 @@ export default function Footer() {
   const pathname = usePathname();
   const isHome = pathname === '/';
 
+  // Hide footer on pages with their own full-screen layouts
+  if (pathname === '/waitlist') return null;
+  if (pathname.startsWith('/dashboard')) return null;
+
   return (
     <footer className={`${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`}>
       {/* Tagline Section */}

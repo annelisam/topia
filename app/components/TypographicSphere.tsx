@@ -10,6 +10,7 @@ interface TypographicSphereProps {
   color?: string;
   bgColor?: string;
   showControls?: boolean;
+  skipLoading?: boolean;
 }
 
 interface TextStrip {
@@ -29,6 +30,7 @@ export default function TypographicSphere({
   color: colorProp,
   bgColor: bgColorProp,
   showControls = true,
+  skipLoading = false,
 }: TypographicSphereProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,8 +41,8 @@ export default function TypographicSphere({
   const dimensionsRef = useRef({ width: 0, height: 0, centerX: 0, centerY: 0, radius: 0, dpr: 1, responsiveScale: 1 });
 
   const [isHovering, setIsHovering] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(skipLoading);
+  const [loadProgress, setLoadProgress] = useState(skipLoading ? 1 : 0);
   const [config, setConfig] = useState({
     speed: initialSpeed,
     fontSize: initialFontSize,
@@ -225,6 +227,7 @@ export default function TypographicSphere({
 
   // Loading simulation
   useEffect(() => {
+    if (skipLoading) return;
     let progress = 0;
     const interval = setInterval(() => {
       progress += 0.08 + Math.random() * 0.12;
@@ -239,6 +242,7 @@ export default function TypographicSphere({
     }, 50);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Setup and animation
