@@ -291,7 +291,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     );
   }
 
-  const worldBuilders = world.members?.filter(m => m.role === 'world_builder') || [];
+  const worldBuilders = world.members?.filter(m => m.role === 'world_builder' || m.role === 'owner') || [];
   const collaboratorMembers = world.members?.filter(m => m.role === 'collaborator') || [];
   const isWorldBuilder = currentUserId && worldBuilders.some(b => b.userId === currentUserId);
   const socialLinks = world.socialLinks as SocialLinks | null;
@@ -310,7 +310,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
           </Link>
           {isWorldBuilder && (
             <Link
-              href={`/worlds/${world.slug}/edit`}
+              href={`/dashboard/worlds/${world.slug}`}
               className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full transition theme-hover-invert"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >

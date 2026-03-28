@@ -9,7 +9,7 @@ export default function Footer() {
 
   // Hide footer on pages with their own full-screen layouts
   if (pathname === '/waitlist') return null;
-  if (pathname === '/dashboard' || pathname.endsWith('/edit')) return null;
+  if (pathname.startsWith('/dashboard')) return null;
 
   return (
     <footer className={`${isHome ? 'mt-0' : 'mt-12 sm:mt-20'}`}>
