@@ -27,7 +27,8 @@ export default function AvatarMenu() {
   const sortedWorlds = useMemo(() => {
     return [...worldMemberships].sort((a, b) => {
       if (a.role === b.role) return 0;
-      return a.role === 'world_builder' ? -1 : 1;
+      const priority = (r: string) => r === 'owner' ? 0 : r === 'world_builder' ? 1 : 2;
+      return priority(a.role) - priority(b.role);
     });
   }, [worldMemberships]);
 
@@ -180,11 +181,11 @@ export default function AvatarMenu() {
                         className="font-mono text-[9px] uppercase opacity-40"
                         style={{ color: 'var(--foreground)' }}
                       >
-                        {wm.role === 'world_builder' ? 'BUILDER' : 'COLLAB'}
+                        {wm.role === 'owner' ? 'OWNER' : wm.role === 'world_builder' ? 'BUILDER' : 'COLLAB'}
                       </span>
-                      {wm.role === 'world_builder' && (
+                      {(wm.role === 'world_builder' || wm.role === 'owner') && (
                         <Link
-                          href={`/worlds/${wm.worldSlug}/edit`}
+                          href={`/dashboard/worlds/${wm.worldSlug}`}
                           onClick={() => setOpen(false)}
                           className="opacity-40 hover:opacity-100 transition"
                           style={{ color: 'var(--foreground)' }}

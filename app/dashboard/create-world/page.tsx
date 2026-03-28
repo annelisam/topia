@@ -46,7 +46,7 @@ export default function CreateWorldPage() {
 
   if (!authenticated) return null;
 
-  const isWorldBuilder = worldMemberships.some((wm) => wm.role === 'world_builder');
+  const isWorldBuilder = worldMemberships.some((wm) => wm.role === 'world_builder' || wm.role === 'owner');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +67,7 @@ export default function CreateWorldPage() {
         return;
       }
       // Redirect to the new world's edit page
-      router.push(`/worlds/${data.world.slug}/edit`);
+      router.push(`/dashboard/worlds/${data.world.slug}`);
     } catch {
       setError('Failed to create world');
     } finally {

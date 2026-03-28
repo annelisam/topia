@@ -103,7 +103,7 @@ export default function CreateEventPage() {
   const { worldMemberships } = useUserProfile();
   const myWorlds = useMemo(() =>
     worldMemberships
-      .filter(wm => wm.role === 'world_builder')
+      .filter(wm => wm.role === 'world_builder' || wm.role === 'owner')
       .map(wm => ({ id: wm.worldId, title: wm.worldTitle, slug: wm.worldSlug })),
     [worldMemberships]
   );

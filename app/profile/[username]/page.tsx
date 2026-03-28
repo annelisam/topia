@@ -125,7 +125,8 @@ export default function PublicProfilePage() {
   const sortedWorlds = useMemo(() => {
     return [...worldMemberships].sort((a, b) => {
       if (a.role === b.role) return 0;
-      return a.role === 'world_builder' ? -1 : 1;
+      const priority = (r: string) => r === 'owner' ? 0 : r === 'world_builder' ? 1 : 2;
+      return priority(a.role) - priority(b.role);
     });
   }, [worldMemberships]);
 
@@ -338,12 +339,12 @@ export default function PublicProfilePage() {
                         <span
                           className="font-mono text-[10px] uppercase tracking-tight px-2 py-0.5 rounded-full border"
                           style={{
-                            borderColor: wm.role === 'world_builder' ? 'var(--foreground)' : 'var(--border-color)',
+                            borderColor: (wm.role === 'world_builder' || wm.role === 'owner') ? 'var(--foreground)' : 'var(--border-color)',
                             color: 'var(--foreground)',
-                            opacity: wm.role === 'world_builder' ? 1 : 0.6,
+                            opacity: (wm.role === 'world_builder' || wm.role === 'owner') ? 1 : 0.6,
                           }}
                         >
-                          {wm.role === 'world_builder' ? 'World Builder' : 'Collaborator'}
+                          {wm.role === 'owner' ? 'Owner' : wm.role === 'world_builder' ? 'World Builder' : 'Collaborator'}
                         </span>
                       </div>
                     </Link>

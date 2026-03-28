@@ -22,6 +22,20 @@
       "when": 1773422460527,
       "tag": "0002_dapper_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774637138617,
+      "tag": "0003_complete_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774638203662,
+      "tag": "0004_mature_blade",
+      "breakpoints": true
     }
   ]
 }

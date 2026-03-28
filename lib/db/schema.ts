@@ -228,3 +228,22 @@ export const tvContent = pgTable('tv_content', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// World projects - items that appear as labels on a world's globe
+export const worldProjects = pgTable('world_projects', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),       // Short description shown on card
+  content: text('content'),               // Long-form markdown content
+  imageUrl: text('image_url'),            // Cover/hero image
+  videoUrl: text('video_url'),            // Video embed URL (YouTube, Vimeo, etc.)
+  url: text('url'),                       // External project link
+  links: jsonb('links'),                  // Array of {label, url} pairs
+  tags: jsonb('tags'),                    // Array of string tags
+  sortOrder: integer('sort_order').default(0),
+  published: boolean('published').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});

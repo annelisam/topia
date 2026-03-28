@@ -9,7 +9,7 @@ export interface WorldMembership {
   worldSlug: string;
   worldCategory: string | null;
   worldImageUrl: string | null;
-  role: string; // 'world_builder' | 'collaborator'
+  role: string; // 'owner' | 'world_builder' | 'collaborator'
 }
 
 export interface UserProfile {
