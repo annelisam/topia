@@ -52,22 +52,52 @@
   font-display: swap;
 }
 
-/* ── Theme Variables ──────────────────────────────────────────── */
+/* ── CSS Variables ────────────────────────────────────────────── */
 
 :root {
-  /* TOPIA Base Colors */
+  /* TOPIA Core */
+  --obsidian: #1a1a1a;
+  --bone: #f5f0e8;
+  --lime: #e4fe52;
+  --orange: #FF5C34;
+  --blue: #4F46FF;
+  --pink: #FF5BD7;
+  --green: #00FF88;
+
+  /* Accent system (switchable via ColorSlider) */
+  --accent: #e4fe52;
+  --accent-text: #1a1a1a;
+  --page-tint: rgba(228, 254, 82, 0.08);
+  --page-glow: rgba(228, 254, 82, 0.03);
+  --border-accent: rgba(228, 254, 82, 0.25);
+
+  /* Fonts */
+  --font-basement: 'Basement Grotesque', 'Arial Black', Impact, sans-serif;
+  --font-zirkon: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
+  --font-mono-ui: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
+
+  /* Layout */
+  --nav-height: 56px;
+  --page-pad: clamp(20px, 4vw, 60px);
+  --content-max: 1800px;
+
+  /* Legacy compat */
   --color-orange: #FF5C34;
   --color-yellow: #e4fe52;
   --color-near-black: #1a1a1a;
   --color-off-white: #FEFEFF;
   --color-warm-beige: #f5f0e8;
-
-  /* TOPIA Support Colors */
   --color-blue: #4F46FF;
   --color-green: #00FF88;
   --color-pink: #FF5BD7;
 
-  /* Light mode (default) */
+  /* Theme (light default) */
+  --page-bg: #f5f0e8;
+  --page-text: #1a1a1a;
+  --sentient-color: #1a1a1a;
+  --nav-bg: rgba(245, 240, 232, 0.95);
+  --nav-border: rgba(26, 26, 26, 0.08);
+
   --background: #f5f0e8;
   --foreground: #1a1a1a;
   --border-color: rgba(26, 26, 26, 0.15);
@@ -81,6 +111,12 @@
 }
 
 [data-theme="dark"] {
+  --page-bg: #1a1a1a;
+  --page-text: #f5f0e8;
+  --sentient-color: #f5f0e8;
+  --nav-bg: rgba(26, 26, 26, 0.95);
+  --nav-border: rgba(245, 240, 232, 0.06);
+
   --background: #111111;
   --foreground: #e8e4dc;
   --border-color: rgba(232, 228, 220, 0.15);
@@ -103,6 +139,9 @@
   --color-blue: #4F46FF;
   --color-green: #00FF88;
   --color-pink: #FF5BD7;
+  --color-lime: #e4fe52;
+  --color-obsidian: #1a1a1a;
+  --color-bone: #f5f0e8;
 
   /* Neutral Colors */
   --color-near-black: #1a1a1a;
@@ -113,20 +152,217 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Fonts — GT Zirkon primary, Space Mono fallback */
-  --font-sans: 'GT Zirkon', var(--font-space-mono), monospace;
-  --font-mono: 'GT Zirkon', var(--font-space-mono), monospace;
+  /* Fonts */
+  --font-sans: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
+
+  /* Border radius */
+  --radius-card: 12px;
+
+  /* Max width */
+  --max-width-content: 1800px;
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'GT Zirkon', var(--font-space-mono), monospace;
-  letter-spacing: -0.01em !important;
+  font-family: var(--font-zirkon);
+  background: var(--page-bg);
+  color: var(--page-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ── Soft rounded defaults ───────────────────────────────────── */
+/* Grid panels are always dark */
+.bg-obsidian {
+  background-color: #1a1a1a;
+  color: #f5f0e8;
+}
+
+/* ── Typography Utilities ─────────────────────────────────────── */
+
+.heading-display {
+  font-family: var(--font-basement);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.85;
+  letter-spacing: -4px;
+}
+
+.heading-sm {
+  font-family: var(--font-basement);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.9;
+  letter-spacing: -2px;
+}
+
+.body-text {
+  font-family: var(--font-zirkon);
+  font-weight: 400;
+  font-size: clamp(14px, 1.2vw, 16px);
+  line-height: 1.75;
+}
+
+.meta-text {
+  font-family: var(--font-mono-ui);
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.4;
+}
+
+.font-basement {
+  font-family: var(--font-basement);
+}
+
+.font-zirkon {
+  font-family: var(--font-zirkon);
+}
+
+h1 {
+  font-family: var(--font-basement) !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem) !important;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+}
+
+h2 {
+  font-family: var(--font-basement) !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem) !important;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+}
+
+h3 {
+  font-family: var(--font-basement) !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(1rem, 1vw + 0.35rem, 1.25rem) !important;
+  letter-spacing: -0.02em;
+}
+
+/* ── Texture Patterns ─────────────────────────────────────────── */
+
+.hatched-bg {
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px),
+    repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px);
+}
+
+.hatched-bg-dark {
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px),
+    repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px);
+}
+
+.scanline-texture {
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.3) 1px, rgba(0,0,0,0.3) 2px);
+  background-size: 100% 2px;
+}
+
+/* ── Texture Overlays ─────────────────────────────────────────── */
+
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+}
+.grain-overlay::before {
+  content: "";
+  position: absolute;
+  inset: -200%;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' seed='1' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  animation: grainDrift 0.5s steps(3) infinite;
+}
+
+@keyframes grainDrift {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-80px, -60px); }
+  66% { transform: translate(40px, -120px); }
+  100% { transform: translate(-40px, 80px); }
+}
+
+.scanlines-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.015) 2px,
+    rgba(0, 0, 0, 0.015) 4px
+  );
+  opacity: 0.4;
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+
+@keyframes globeSpin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glitchFlicker {
+  0% { opacity: 1; transform: translate(0); }
+  25% { opacity: 0.8; transform: translate(-2px, 1px); }
+  50% { opacity: 1; transform: translate(1px, -1px); }
+  75% { opacity: 0.6; transform: translate(-1px, 0); }
+  100% { opacity: 1; transform: translate(0); }
+}
+
+/* ── Theme System ─────────────────────────────────────────────── */
+
+/* Page section backgrounds flip in dark mode */
+[data-theme="dark"] .bg-\[\#f5f0e8\] {
+  background-color: #1a1a1a;
+}
+
+/* Grid gap always dark */
+section.min-h-screen .border-obsidian\/15 {
+  background-color: #1a1a1a;
+}
+
+/* Grid outer border subtle in dark mode */
+[data-theme="dark"] .border-obsidian\/15 {
+  border-color: rgba(245, 240, 232, 0.08);
+}
+
+/* Footer always dark */
+footer.topia-footer {
+  background-color: #1a1a1a !important;
+  border-color: rgba(245, 240, 232, 0.06) !important;
+}
+
+/* ── Form Defaults ────────────────────────────────────────────── */
 
 input[type="text"],
 input[type="email"],
@@ -138,31 +374,13 @@ select {
   border-radius: 10px;
 }
 
-h1 {
-  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
-  font-size: clamp(1.75rem, 2vw + 1rem, 2.5rem) !important;
-  letter-spacing: -0.02em;
-}
+/* ── Range Slider ─────────────────────────────────────────────── */
 
-h2 {
-  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
-  font-size: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem) !important;
-  letter-spacing: -0.02em;
-}
-
-h3 {
-  font-family: 'Basement Grotesque', var(--font-space-mono), monospace !important;
-  font-size: clamp(1rem, 1vw + 0.35rem, 1.25rem) !important;
-  letter-spacing: -0.02em;
-}
-
-/* Custom range slider styling for TypographicSphere controls */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
-  height: 2px;
-  background: var(--foreground);
+  height: 3px;
+  background: transparent;
   outline: none;
   cursor: pointer;
 }
@@ -170,18 +388,51 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 10px;
-  height: 10px;
-  background: var(--foreground);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  border: 2px solid rgba(245, 240, 232, 0.6);
+  box-shadow: 0 0 8px var(--page-tint);
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
-  background: var(--foreground);
-  border: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  border: 2px solid rgba(245, 240, 232, 0.6);
+  box-shadow: 0 0 8px var(--page-tint);
   cursor: pointer;
+}
+
+/* ── Accent Color System ──────────────────────────────────────── */
+
+body[data-accent] section {
+  position: relative;
+}
+body[data-accent] section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--page-tint);
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+}
+
+body[data-accent] .font-basement {
+  text-shadow: 0 0 80px var(--page-glow);
+}
+
+body[data-accent] ::-webkit-scrollbar-thumb {
+  background: var(--border-accent);
 }
 
 /* ── Theme-aware hover utilities ─────────────────────────────── */
@@ -194,4 +445,10 @@ input[type="range"]::-moz-range-thumb {
 
 .theme-hover-surface:hover {
   background-color: var(--surface-hover);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }

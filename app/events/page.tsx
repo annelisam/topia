@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Navigation from '../components/Navigation';
-import LoadingBar from '../components/LoadingBar';
+import PageShell from '../components/PageShell';
 
 interface EventHost {
   userId: string;
@@ -32,6 +31,8 @@ export default function EventsPage() {
   const [cities, setCities] = useState<string[]>([]);
   const [selectedCity, setSelectedCity] = useState('');
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [hoveredEvent, setHoveredEvent] = useState<EventCard | null>(null);
 
   // Fetch cities on mount
   useEffect(() => {
@@ -56,172 +57,184 @@ export default function EventsPage() {
   }, [selectedCity]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = events.filter(e => !e.dateIso || e.dateIso >= today);
-  const past = events.filter(e => e.dateIso && e.dateIso < today);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
-        <LoadingBar />
-      </div>
-    );
-  }
-
-  const renderCard = (event: EventCard, isPast: boolean) => (
-    <Link
-      key={event.id}
-      href={`/events/${event.slug}`}
-      className="group block rounded-2xl overflow-hidden border transition-colors duration-200"
-      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
-      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
-      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
-    >
-      {/* 1:1 image */}
-      <div className="w-full overflow-hidden relative" style={{ aspectRatio: '1', backgroundColor: 'var(--surface-hover)' }}>
-        {event.imageUrl ? (
-          <img
-            src={event.imageUrl}
-            alt={event.eventName}
-            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-            style={isPast ? { filter: 'grayscale(40%) opacity(0.7)' } : undefined}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="font-mono text-[32px] opacity-10" style={{ color: 'var(--foreground)' }}>E</span>
-          </div>
-        )}
-        {isPast && (
-          <span
-            className="absolute top-3 right-3 px-2 py-0.5 rounded-full font-mono text-[9px] uppercase tracking-widest font-bold"
-            style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: 0.7 }}
-          >
-            Past
-          </span>
-        )}
-      </div>
-
-      <div className="p-4">
-        <h3 className="font-mono text-[14px] font-bold uppercase leading-tight mb-2" style={{ color: 'var(--foreground)' }}>
-          {event.eventName}
-        </h3>
-
-        {/* Date & Time */}
-        {(event.date || event.startTime) && (
-          <p className="font-mono text-[11px] opacity-60 mb-1" style={{ color: 'var(--foreground)' }}>
-            {event.date}{event.startTime ? ` · ${event.startTime}` : ''}
-          </p>
-        )}
-
-        {/* Location */}
-        {(event.city || event.address) && (
-          <p className="font-mono text-[11px] opacity-40 mb-2" style={{ color: 'var(--foreground)' }}>
-            {event.city || event.address}
-          </p>
-        )}
-
-        {/* Host avatars + RSVP count */}
-        {((event.hosts && event.hosts.length > 0) || (event.rsvpCount != null && event.rsvpCount > 0)) && (
-          <div className="flex items-center justify-between mt-auto pt-1">
-            {event.hosts && event.hosts.length > 0 && (
-              <div className="flex -space-x-1.5">
-                {event.hosts.slice(0, 4).map((host) => (
-                  <div
-                    key={host.userId}
-                    className="w-5 h-5 rounded-full overflow-hidden border"
-                    style={{ borderColor: 'var(--background)' }}
-                    title={host.name || host.username || undefined}
-                  >
-                    {host.avatarUrl ? (
-                      <img src={host.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center font-mono text-[8px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-                        {(host.name || host.username || '?')[0]?.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {event.rsvpCount != null && event.rsvpCount > 0 && (
-              <span className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
-                {event.rsvpCount} going
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </Link>
+  const filtered = events.filter(e =>
+    !search || e.eventName.toLowerCase().includes(search.toLowerCase()) ||
+    (e.city && e.city.toLowerCase().includes(search.toLowerCase()))
   );
+  const upcoming = filtered.filter(e => !e.dateIso || e.dateIso >= today);
+  const past = filtered.filter(e => e.dateIso && e.dateIso < today);
+  const allSorted = [...upcoming, ...past];
+  const preview = hoveredEvent || allSorted[0] || null;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="events" />
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
+      <PageShell>
+        <section className="px-[var(--page-pad)] py-[clamp(24px,4vw,48px)]">
+          <div className="max-w-[var(--content-max)] mx-auto">
+            {/* Editorial grid */}
+            <div className="grid grid-rows-[auto_auto_1fr] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] border border-obsidian/15 rounded-lg overflow-hidden min-h-[600px] md:h-[calc(100vh-var(--nav-height)-48px)]">
 
-      <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-16">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <h1 className="font-mono text-[20px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
-            Events
-          </h1>
-
-          <div className="flex items-center gap-3">
-            {/* City filter dropdown */}
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              className="border px-3 py-2 font-mono text-[12px] outline-none rounded-lg w-48 appearance-none cursor-pointer"
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            >
-              <option value="">All Locations</option>
-              {cities.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-
-            {/* Create event link */}
-            <Link
-              href="/dashboard/create-event"
-              className="px-4 py-2 font-mono text-[12px] uppercase tracking-widest hover:opacity-80 transition rounded-lg"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-            >
-              + Create Event
-            </Link>
-          </div>
-        </div>
-
-        {/* No events */}
-        {events.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>
-              {selectedCity ? `No events in ${selectedCity}.` : 'No events yet.'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Upcoming events */}
-            {upcoming.length > 0 && (
-              <div className="mb-12">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {upcoming.map(event => renderCard(event, false))}
+              {/* Row 1: Title bar */}
+              <div className="col-span-1 md:col-span-2 grid grid-cols-[1fr_auto]">
+                <div className="p-4 md:p-5 flex items-center" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                  <h1 className="font-basement font-black text-lg md:text-xl uppercase tracking-tight leading-none">Events</h1>
+                </div>
+                <div className="bg-obsidian p-4 md:p-5 flex items-center gap-4">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-bone/40">{allSorted.length} listed</span>
+                  <Link
+                    href="/dashboard/create-event"
+                    className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-card no-underline transition-opacity hover:opacity-80"
+                    style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+                  >
+                    + Create
+                  </Link>
                 </div>
               </div>
-            )}
 
-            {/* Past events */}
-            {past.length > 0 && (
-              <div>
-                <h2 className="font-mono text-[12px] uppercase tracking-[0.15em] font-bold opacity-40 mb-5" style={{ color: 'var(--foreground)' }}>
-                  Past Events
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {past.map(event => renderCard(event, true))}
-                </div>
+              {/* Row 2: Search/filters */}
+              <div className="col-span-1 md:col-span-2 bg-obsidian p-3 flex items-center gap-3 flex-wrap">
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="flex-1 min-w-[150px] bg-bone/[0.04] border border-bone/[0.08] rounded-lg px-3 py-2 font-mono text-[11px] text-bone placeholder:text-bone/30 outline-none"
+                />
+                <select
+                  value={selectedCity}
+                  onChange={e => setSelectedCity(e.target.value)}
+                  className="bg-bone/[0.04] border border-bone/[0.08] rounded-lg px-3 py-2 font-mono text-[11px] text-bone outline-none appearance-none cursor-pointer"
+                >
+                  <option value="">All Locations</option>
+                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-            )}
-          </>
-        )}
-      </div>
+
+              {/* Row 3 Left: Ledger index */}
+              <div className="bg-obsidian overflow-y-auto relative">
+                {/* Ruled lines background */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+                  style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 39px, #f5f0e8 39px, #f5f0e8 40px)' }}
+                />
+
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="font-mono text-[11px] text-bone/40 uppercase tracking-wider">Loading...</span>
+                  </div>
+                ) : allSorted.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="font-mono text-[11px] text-bone/40 uppercase tracking-wider">
+                      {selectedCity ? `No events in ${selectedCity}` : 'No events yet'}
+                    </span>
+                  </div>
+                ) : (
+                  allSorted.map((event, i) => {
+                    const isPast = event.dateIso && event.dateIso < today;
+                    return (
+                      <Link
+                        key={event.id}
+                        href={`/events/${event.slug}`}
+                        className={`flex items-stretch no-underline transition-colors duration-150 border-b border-bone/[0.04] ${hoveredEvent?.id === event.id ? 'bg-bone/[0.04]' : 'hover:bg-bone/[0.02]'}`}
+                        onMouseEnter={() => setHoveredEvent(event)}
+                      >
+                        {/* Line number */}
+                        <div className="w-[28px] flex items-center justify-center font-mono text-[9px] text-bone/20 shrink-0 py-3">
+                          {String(i + 1).padStart(2, '0')}
+                        </div>
+                        {/* Color strip */}
+                        <div className="w-[2px] shrink-0" style={{ backgroundColor: isPast ? 'var(--orange)' : 'var(--accent)' }} />
+                        {/* Content */}
+                        <div className="flex-1 px-3 py-3 min-w-0">
+                          <div className="font-mono text-[11px] text-bone font-bold uppercase tracking-wide truncate">
+                            {event.eventName}
+                          </div>
+                          <div className="font-mono text-[9px] text-bone/40 mt-0.5 flex items-center gap-2">
+                            {event.date && <span>{event.date}</span>}
+                            {event.city && <span>· {event.city}</span>}
+                            {isPast && <span className="text-orange/60">past</span>}
+                          </div>
+                        </div>
+                        {/* RSVP count */}
+                        {event.rsvpCount != null && event.rsvpCount > 0 && (
+                          <div className="flex items-center pr-3">
+                            <span className="font-mono text-[9px] text-bone/30">{event.rsvpCount}</span>
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Row 3 Right: Preview panel */}
+              <div className="bg-obsidian hidden md:flex flex-col relative">
+                {preview ? (
+                  <>
+                    {/* Image */}
+                    <div className="flex-1 relative overflow-hidden">
+                      {preview.imageUrl ? (
+                        <img
+                          src={preview.imageUrl}
+                          alt={preview.eventName}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="font-mono text-[48px] text-bone/10">E</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent" />
+                    </div>
+                    {/* Info overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <h3 className="font-basement font-black text-2xl uppercase leading-none tracking-tight text-bone mb-2">
+                        {preview.eventName}
+                      </h3>
+                      <div className="font-mono text-[10px] text-bone/50 uppercase tracking-wider space-y-1">
+                        {preview.date && <p>{preview.date}{preview.startTime ? ` · ${preview.startTime}` : ''}</p>}
+                        {preview.city && <p>{preview.city}</p>}
+                      </div>
+                      {/* Hosts */}
+                      {preview.hosts && preview.hosts.length > 0 && (
+                        <div className="flex -space-x-1.5 mt-3">
+                          {preview.hosts.slice(0, 4).map(host => (
+                            <div key={host.userId} className="w-6 h-6 rounded-full overflow-hidden border-2 border-obsidian">
+                              {host.avatarUrl ? (
+                                <img src={host.avatarUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-bone/20 font-mono text-[8px] text-bone">
+                                  {(host.name || host.username || '?')[0]?.toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Action bar */}
+                      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                        <span className="font-mono text-[9px] text-bone/30 uppercase tracking-wider self-center">
+                          {preview.rsvpCount || 0} going
+                        </span>
+                        <Link
+                          href={`/events/${preview.slug}`}
+                          className="font-mono text-[10px] uppercase tracking-wider px-4 py-2 rounded-card no-underline transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+                        >
+                          View Event →
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">Hover to preview</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </PageShell>
     </div>
   );
 }

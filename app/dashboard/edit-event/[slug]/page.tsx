@@ -287,7 +287,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
+        <Navigation />
         <LoadingBar />
       </div>
     );
@@ -295,7 +295,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
   if (!authenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
+        <Navigation />
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Please log in.</p>
       </div>
     );
@@ -303,7 +303,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="events" />
+      <Navigation />
 
       <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
         <div className="flex items-center justify-between mb-8">

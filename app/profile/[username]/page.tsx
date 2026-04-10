@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
-import Navigation from '../../components/Navigation';
+import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import { SocialIcon } from '../../components/SocialIcons';
@@ -151,8 +151,8 @@ export default function PublicProfilePage() {
 
   if (!loading && (notFound || fetchError)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--page-bg)' }}>
+        <PageShell><div /></PageShell>
         <p className="font-mono text-[13px] uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
           {fetchError ? 'Could not load profile — please try again.' : 'Profile not found.'}
         </p>
@@ -168,12 +168,12 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
-      <Navigation />
+      <PageShell>
 
       <main
-        className={`container mx-auto max-w-2xl px-4 sm:px-6 pt-28 pb-20 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}
+        className={`container mx-auto max-w-2xl px-[var(--page-pad)] pt-8 pb-20 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}
       >
         {profile && (
           <>
@@ -423,6 +423,7 @@ export default function PublicProfilePage() {
           </>
         )}
       </main>
+      </PageShell>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navigation from '../components/Navigation';
+import PageShell from '../components/PageShell';
 import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
 
@@ -249,10 +249,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation />
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
+      <PageShell>
 
-      <main className="container mx-auto max-w-2xl px-4 sm:px-6 pt-28 pb-16">
+      <main className="container mx-auto max-w-2xl px-[var(--page-pad)] pt-8 pb-16">
 
         {/* Header */}
         <div className="mb-10 border-b pb-6" style={{ borderColor: 'var(--foreground)' }}>
@@ -567,6 +567,7 @@ export default function ProfilePage() {
           </button>
         </div>
       </main>
+      </PageShell>
     </div>
   );
 }

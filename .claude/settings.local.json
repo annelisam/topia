@@ -30,7 +30,24 @@
       "Bash(npx drizzle-kit:*)",
       "Bash(wc:*)",
       "Bash(find /Users/annelisamoody/topia/app/worlds/[slug]/edit/ -type f \\\\\\( -name \"*.tsx\" -o -name \"*.jsx\" -o -name \"*.ts\" -o -name \"*.js\" \\\\\\))",
-      "Bash(kill 20503 23003 23604)"
+      "Bash(kill 20503 23003 23604)",
+      "Bash(git -C /Users/annelisamoody/topia log --oneline --all -- app/home/page.tsx)",
+      "Bash(git -C /Users/annelisamoody/topia ls-files -- '*.DS_Store' '*/.DS_Store')",
+      "Bash(git -C /Users/annelisamoody/topia ls-files -- proxy.ts)",
+      "Bash(git -C /Users/annelisamoody/topia ls-files -- 'app/resources/grants/page.tsx.backup')",
+      "Bash(git -C /Users/annelisamoody/topia ls-files -- 'public/file.svg' 'public/globe.svg' 'public/next.svg' 'public/vercel.svg' 'public/window.svg')",
+      "Bash(git -C /Users/annelisamoody/topia ls-files -- 'app/home/')",
+      "Bash(git -C /Users/annelisamoody/topia log --oneline -3 -- proxy.ts)",
+      "Bash(git rm app/resources/grants/page.tsx.backup)",
+      "Bash(git rm -r app/home/)",
+      "Bash(git rm public/file.svg public/globe.svg public/next.svg public/vercel.svg public/window.svg)",
+      "Bash(source .env.local)",
+      "Bash(git diff:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git status:*)"
     ]
   }
 }

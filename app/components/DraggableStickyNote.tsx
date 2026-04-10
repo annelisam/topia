@@ -167,7 +167,7 @@ export default function DraggableStickyNote() {
           top: `${position.y}px`,
           backgroundColor: '#e4fe52',
           color: '#1a1a1a',
-          fontFamily: "'Space Mono', monospace",
+          fontFamily: "'GT Zirkon', sans-serif",
           width: isMobile ? `${window.innerWidth - 40}px` : '500px',
           padding: isMobile ? '12px' : '16px',
         }}
@@ -217,7 +217,7 @@ export default function DraggableStickyNote() {
         top: `${position.y}px`,
         backgroundColor: '#e4fe52',
         color: '#1a1a1a',
-        fontFamily: "'Space Mono', monospace",
+        fontFamily: "'GT Zirkon', sans-serif",
         width: isMobile ? `${window.innerWidth - 40}px` : '500px',
         padding: isMobile ? '12px' : '16px',
         maxHeight: isMobile ? '70vh' : `calc(100vh - ${position.y}px - 20px)`,

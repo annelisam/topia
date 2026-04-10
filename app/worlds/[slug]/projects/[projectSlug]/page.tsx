@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import Navigation from '../../../../components/Navigation';
+import PageShell from '../../../../components/PageShell';
 import LoadingBar from '../../../../components/LoadingBar';
 import ProjectContent from '../../../../components/ProjectContent';
 import type { ProjectItem } from '../../../../components/ProjectContent';
@@ -47,26 +47,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="worlds" />
+      <PageShell>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
         <LoadingBar />
       </div>
+      </PageShell>
     );
   }
 
   if (error || !world || !project) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="worlds" />
+      <PageShell>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ backgroundColor: 'var(--page-bg)' }}>
         <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Project not found.</p>
         <Link href={`/worlds/${slug}`} className="font-mono text-[12px] underline" style={{ color: 'var(--foreground)' }}>← Back to world</Link>
       </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="worlds" />
+    <PageShell>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
       <div className="pt-20 sm:pt-24 pb-16">
         {/* Breadcrumb */}
@@ -93,5 +95,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
     </div>
+    </PageShell>
   );
 }

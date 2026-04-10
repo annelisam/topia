@@ -98,7 +98,7 @@ export default function TypographicSphere({
       const offCtx = offscreen.getContext('2d');
       if (!offCtx) continue;
 
-      offCtx.font = `500 ${adjustedFontSize * dpr}px "Space Mono", "Courier New", monospace`;
+      offCtx.font = `500 ${adjustedFontSize * dpr}px "GT Zirkon", "Segoe UI", sans-serif`;
       const singleWidth = offCtx.measureText(fullText).width;
 
       const repeatCount = Math.ceil((width * dpr * 3) / singleWidth) + 2;
@@ -107,7 +107,7 @@ export default function TypographicSphere({
       offscreen.width = totalWidth;
       offscreen.height = Math.ceil(adjustedFontSize * dpr * 1.5);
 
-      offCtx.font = `500 ${adjustedFontSize * dpr}px "Space Mono", "Courier New", monospace`;
+      offCtx.font = `500 ${adjustedFontSize * dpr}px "GT Zirkon", "Segoe UI", sans-serif`;
       offCtx.fillStyle = color;
       offCtx.textBaseline = 'middle';
 

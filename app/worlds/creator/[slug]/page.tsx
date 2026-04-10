@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import Navigation from '../../../components/Navigation';
+import PageShell from '../../../components/PageShell';
 
 interface CreatorWorld {
   id: string;
@@ -51,26 +51,28 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="worlds" />
+      <PageShell>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
         <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Loading...</p>
       </div>
+      </PageShell>
     );
   }
 
   if (!creator) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="worlds" />
+      <PageShell>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Creator not found.</p>
         <Link href="/worlds" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Worlds</Link>
       </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="worlds" />
+    <PageShell>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
       <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
         {/* Back link */}
@@ -165,5 +167,6 @@ export default function CreatorPage({ params }: { params: Promise<{ slug: string
         )}
       </div>
     </div>
+    </PageShell>
   );
 }

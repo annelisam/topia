@@ -496,7 +496,7 @@ function ToolTickerCard({ tool }: { tool: Tool }) {
         <div className="flex items-start justify-between mb-2">
           <div
             className="uppercase tracking-wide font-bold text-sm"
-            style={{ fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+            style={{ fontFamily: "'Basement Grotesque', sans-serif" }}
           >
             {tool.name}
           </div>
@@ -597,7 +597,7 @@ function WorldCard({ world }: { world: World }) {
         <div className="p-3 md:p-4">
           <div
             className="text-sm uppercase tracking-wide mb-1 font-bold"
-            style={{ fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+            style={{ fontFamily: "'Basement Grotesque', sans-serif" }}
           >
             {world.title}
           </div>
@@ -634,7 +634,7 @@ function EditorialTitle({
     <div
       className="uppercase leading-[0.8]"
       style={{
-        fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace",
+        fontFamily: "'Basement Grotesque', sans-serif",
         fontSize:
           size === 'xxl'
             ? 'clamp(5rem, 22vw, 18rem)'
@@ -763,7 +763,7 @@ function EventCardDeck({ events }: { events: Event[] }) {
               <div className="p-3 md:p-4">
                 <div
                   className="text-xs md:text-sm uppercase tracking-wide mb-2 line-clamp-1 font-bold"
-                  style={{ fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+                  style={{ fontFamily: "'Basement Grotesque', sans-serif" }}
                 >
                   {event.eventName}
                 </div>
@@ -865,7 +865,7 @@ export default function HomepageSections() {
                 <span
                   className="block leading-[0.85]"
                   style={{
-                    fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace",
+                    fontFamily: "'Basement Grotesque', sans-serif",
                     fontSize: 'clamp(1.8rem, 5vw, 4rem)',
                     letterSpacing: '-0.04em',
                     color: 'var(--muted)',
@@ -876,7 +876,7 @@ export default function HomepageSections() {
                 <span
                   className="block leading-[0.78] flex items-center gap-3 md:gap-5"
                   style={{
-                    fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace",
+                    fontFamily: "'Basement Grotesque', sans-serif",
                     fontSize: 'clamp(5rem, 22vw, 18rem)',
                     letterSpacing: '-0.06em',
                   }}
@@ -889,7 +889,7 @@ export default function HomepageSections() {
                 <span
                   className="block leading-[0.85] text-right"
                   style={{
-                    fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace",
+                    fontFamily: "'Basement Grotesque', sans-serif",
                     fontSize: 'clamp(1.8rem, 5vw, 4rem)',
                     letterSpacing: '-0.04em',
                     color: 'var(--muted)',

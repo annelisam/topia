@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import Navigation from '../components/Navigation';
+import PageShell from '../components/PageShell';
 
 export default function ResourcesPage() {
   return (
+    <PageShell>
     <div className="min-h-screen bg-black text-white">
-      <Navigation currentPage="resources" />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
@@ -89,5 +89,6 @@ export default function ResourcesPage() {
         </div>
       </footer>
     </div>
+    </PageShell>
   );
 }

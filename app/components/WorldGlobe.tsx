@@ -287,7 +287,7 @@ export default function WorldGlobe({
             }}
             className="absolute whitespace-nowrap cursor-pointer rounded-full font-bold tracking-wider"
             style={{
-              fontFamily: "'GT Zirkon', var(--font-space-mono), monospace",
+              fontFamily: "'GT Zirkon', sans-serif",
               fontSize: '11px',
               padding: '6px 14px',
               left: x,

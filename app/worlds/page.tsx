@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import Navigation from '../components/Navigation';
+import PageShell from '../components/PageShell';
 
 interface WorldCard {
   id: string;
@@ -23,8 +23,6 @@ interface World {
   name: string;
   description: string;
   builtBy: string;
-  tools?: string[];
-  collaborators?: string[];
   image: string;
   orbitIndex: number;
   orbitAngle: number;
@@ -35,7 +33,12 @@ interface World {
 
 interface Point3D { x: number; y: number; z: number; }
 
-// ─── Static orbit configs ────────────────────────────────────────────────────
+const COLOR_CYCLE = ['lime', 'blue', 'pink', 'orange', 'green'];
+const COLOR_DOT: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pink: 'bg-pink', orange: 'bg-orange', green: 'bg-green' };
+const COLOR_TEXT: Record<string, string> = { lime: 'text-lime', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
+const GIF_MAP: Record<string, string> = { lime: '/gif/spiral.gif', blue: '/gif/surreal.gif', pink: '/gif/Topian-Gif.gif', orange: '/gif/spiral.gif', green: '/gif/surreal.gif' };
+
+// ─── Orbit configs ──────────────────────────────────────────────
 const orbitConfigs = [
   { radius: 0.18, tilt: 8, rotation: 0 },
   { radius: 0.38, tilt: -6, rotation: 30 },
@@ -51,33 +54,26 @@ const orbitConfigs = [
   { radius: 0.45, tilt: -7, rotation: 330 },
 ];
 
-// ─── Pure math (no closures, no hooks) ───────────────────────────────────────
 function rotatePoint(point: Point3D, rotX: number, rotY: number): Point3D {
   const x = point.x * Math.cos(rotY) - point.z * Math.sin(rotY);
   const z = point.x * Math.sin(rotY) + point.z * Math.cos(rotY);
-  const y = point.y;
-  return {
-    x,
-    y: y * Math.cos(rotX) - z * Math.sin(rotX),
-    z: y * Math.sin(rotX) + z * Math.cos(rotX),
-  };
+  return { x, y: point.y * Math.cos(rotX) - z * Math.sin(rotX), z: point.y * Math.sin(rotX) + z * Math.cos(rotX) };
 }
 
 function getOrbitPosition(angle: number, radius: number, tilt: number, rotation: number, time: number): Point3D {
   const currentAngle = angle + time * 0.0003 * (1 + radius * 0.5);
-  const x = Math.cos(currentAngle) * radius;
-  const z = Math.sin(currentAngle) * radius * 0.85;
-  // y = 0 before tilt, so tiltedY = -z * sin(tilt)
-  const tiltedY = -z * Math.sin(tilt);
-  const tiltedZ = z * Math.cos(tilt);
+  const xp = Math.cos(currentAngle) * radius;
+  const zp = Math.sin(currentAngle) * radius * 0.85;
+  const tiltedY = -zp * Math.sin(tilt);
+  const tiltedZ = zp * Math.cos(tilt);
   return {
-    x: x * Math.cos(rotation) - tiltedZ * Math.sin(rotation),
+    x: xp * Math.cos(rotation) - tiltedZ * Math.sin(rotation),
     y: tiltedY,
-    z: x * Math.sin(rotation) + tiltedZ * Math.cos(rotation),
+    z: xp * Math.sin(rotation) + tiltedZ * Math.cos(rotation),
   };
 }
 
-function buildWorlds(apiWorlds: any[]): World[] {
+function buildWorlds(apiWorlds: WorldCard[]): World[] {
   return apiWorlds.map((w, i) => {
     const c = orbitConfigs[i % orbitConfigs.length];
     return {
@@ -85,8 +81,6 @@ function buildWorlds(apiWorlds: any[]): World[] {
       name: w.title,
       description: w.description || '',
       builtBy: w.creatorName || '',
-      tools: w.tools ? w.tools.split(',').map((s: string) => s.trim()) : [],
-      collaborators: w.collaborators ? w.collaborators.split(',').map((s: string) => s.trim()) : [],
       image: w.imageUrl || '',
       orbitIndex: i,
       orbitAngle: (i * 0.618 * Math.PI * 2) % (Math.PI * 2),
@@ -97,469 +91,378 @@ function buildWorlds(apiWorlds: any[]): World[] {
   });
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-export default function WorldsPage() {
-  // ── refs that the animation loop reads directly (no re-renders) ──
+/* ── Galaxy Canvas ─────────────────────────────────────────────── */
+function GalaxyMap({ worlds, activeWorld, onHover }: {
+  worlds: World[];
+  activeWorld: string | null;
+  onHover: (name: string | null) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>(0);
+  const animRef = useRef<number>(0);
   const isDraggingRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const rotationRef = useRef({ x: 0.3, y: 0 });
   const velocityRef = useRef({ x: 0, y: 0 });
   const timeRef = useRef(0);
-  const worldsRef = useRef<World[]>([]);
-  const worldCardMapRef = useRef<Map<string, WorldCard>>(new Map());
   const isHoveringRef = useRef(false);
-  const selectedIdRef = useRef<string | null>(null);
-  const configRef = useRef({ zoom: 1.0, speed: 1.0 });
-  // label DOM nodes – we move them imperatively, no React state per frame
-  const labelRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const dataLoadedRef = useRef(false);
-  const themeColorsRef = useRef({ fgRgb: '26,26,26', fgHex: '#1a1a1a', bgHex: '#f5f0e8' });
-  const touchStartPosRef = useRef({ x: 0, y: 0 });
-  const touchDecidedRef = useRef(false);
+  const worldPositionsRef = useRef<{ id: string; x: number; y: number }[]>([]);
 
-  // ── React state (only for things that actually need a re-render) ──
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0); // 0 → 1
-  const [config, setConfig] = useState({ zoom: 1.0, speed: 1.0 });
-  const [selectedWorldCard, setSelectedWorldCard] = useState<WorldCard | null>(null);
-  const [allWorlds, setAllWorlds] = useState<WorldCard[]>([]);
-  const [worldKeys, setWorldKeys] = useState<string[]>([]); // just the ids, for rendering label buttons
-
-  // keep configRef in sync
-  useEffect(() => { configRef.current = config; }, [config]);
-  // keep selectedIdRef in sync
-  useEffect(() => { selectedIdRef.current = selectedWorldCard?.id ?? null; }, [selectedWorldCard]);
-
-  // ── read theme colors for canvas ──
   useEffect(() => {
-    const readColors = () => {
-      const style = getComputedStyle(document.documentElement);
-      const fg = style.getPropertyValue('--foreground').trim() || '#1a1a1a';
-      const bg = style.getPropertyValue('--background').trim() || '#f5f0e8';
-      const hexToRgb = (hex: string) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `${r},${g},${b}`;
-      };
-      themeColorsRef.current = { fgRgb: hexToRgb(fg), fgHex: fg, bgHex: bg };
-    };
-    readColors();
-    const observer = new MutationObserver(() => readColors());
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
-
-  // ── Fetch + animated loader ──────────────────────────────────────
-  useEffect(() => {
-    let progress = 0;
-    let dataReady = false;
-
-    // Animate bar: fills to ~80% quickly while waiting, then holds
-    const interval = setInterval(() => {
-      if (dataReady) {
-        // Data is in — race to 100
-        progress += 0.08 + Math.random() * 0.12;
-      } else {
-        // Still waiting — fill toward 80% with diminishing increments
-        const remaining = 0.8 - progress;
-        progress += remaining * (0.12 + Math.random() * 0.08);
-      }
-
-      if (progress >= 1) {
-        progress = 1;
-        setLoadProgress(1);
-        clearInterval(interval);
-        // Small pause so user sees the full bar before galaxy pops in
-        setTimeout(() => setIsLoaded(true), 180);
-        return;
-      }
-      setLoadProgress(progress);
-    }, 60);
-
-    // Fetch worlds — when done, flip the flag so bar races to 100
-    fetch('/api/worlds')
-      .then(res => res.json())
-      .then(data => {
-        const apiWorlds = data.worlds || [];
-        worldsRef.current = buildWorlds(apiWorlds);
-        const cards = apiWorlds.map((w: any) => ({
-          id: w.slug, title: w.title, slug: w.slug,
-          description: w.description, category: w.category,
-          imageUrl: w.imageUrl, country: w.country,
-          dateAdded: w.dateAdded, creatorName: w.creatorName,
-          creatorSlug: w.creatorSlug, creatorCountry: w.creatorCountry,
-        }));
-        const map = new Map<string, WorldCard>();
-        cards.forEach((c: WorldCard) => map.set(c.id, c));
-        worldCardMapRef.current = map;
-        setAllWorlds(cards);
-        setWorldKeys(cards.map((c: WorldCard) => c.id));
-        dataLoadedRef.current = true;
-        dataReady = true; // bar will now race to 100
-      })
-      .catch(err => console.error('Failed to fetch worlds:', err));
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── Animation loop – runs once, reads everything via refs ────────
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    const canvas = canvasRef.current;
     const container = containerRef.current;
+    if (!container) return;
+    function onMove(e: MouseEvent) {
+      const rect = container!.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      let closest: string | null = null, closestDist = 30;
+      worldPositionsRef.current.forEach(wp => {
+        const dist = Math.sqrt((wp.x - mx) ** 2 + (wp.y - my) ** 2);
+        if (dist < closestDist) { closestDist = dist; closest = wp.id; }
+      });
+      onHover(closest);
+    }
+    function onLeave() { onHover(null); }
+    container.addEventListener('mousemove', onMove);
+    container.addEventListener('mouseleave', onLeave);
+    return () => { container.removeEventListener('mousemove', onMove); container.removeEventListener('mouseleave', onLeave); };
+  }, [onHover]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current, container = containerRef.current;
     if (!canvas || !container) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener('resize', resize);
+    function resize() {
+      const rect = container!.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      canvas!.width = rect.width * dpr; canvas!.height = rect.height * dpr;
+      canvas!.style.width = rect.width + 'px'; canvas!.style.height = rect.height + 'px';
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
-    const animate = () => {
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const aspectRatio = width / height;
-      const baseScale = aspectRatio > 1.2 ? width * 0.82 : height * 0.75;
-      const scale = baseScale * configRef.current.zoom;
-      const speed = configRef.current.speed;
+    function animate() {
+      const w = canvas!.width / (window.devicePixelRatio || 1), h = canvas!.height / (window.devicePixelRatio || 1);
+      const cx = w * 0.5, cy = h * 0.5;
+      const scale = Math.min(w, h) * 0.9;
 
-      // auto-rotate
-      if (!isHoveringRef.current && !isDraggingRef.current) {
-        rotationRef.current.y += 0.0015 * speed;
-      }
-      // momentum decay
+      if (!isHoveringRef.current && !isDraggingRef.current) rotationRef.current.y += 0.0015;
       if (!isDraggingRef.current) {
         rotationRef.current.x += velocityRef.current.x;
         rotationRef.current.y += velocityRef.current.y;
         velocityRef.current.x *= 0.92;
         velocityRef.current.y *= 0.92;
       }
-      timeRef.current += speed;
+      timeRef.current += 1;
 
-      const rotX = rotationRef.current.x;
-      const rotY = rotationRef.current.y;
-      const time = timeRef.current;
-      const worlds = worldsRef.current;
-      const selectedId = selectedIdRef.current;
+      const rotX = rotationRef.current.x, rotY = rotationRef.current.y, time = timeRef.current;
+      ctx!.clearRect(0, 0, w, h);
+      const positions: { id: string; x: number; y: number }[] = [];
 
-      // ── clear
-      ctx.clearRect(0, 0, width, height);
-
-      // ── draw orbit paths (batch by opacity bucket to minimise strokeStyle changes)
-      // Pre-compute all orbit segments with their screen positions + depths
+      // Draw orbit rings
       const uniqueOrbits = new Map<string, { radius: number; tilt: number; rotation: number }>();
-      worlds.forEach(w => {
-        const key = `${w.orbitRadius.toFixed(2)}-${w.orbitTilt.toFixed(2)}-${w.orbitRotation.toFixed(2)}`;
-        if (!uniqueOrbits.has(key)) uniqueOrbits.set(key, { radius: w.orbitRadius, tilt: w.orbitTilt, rotation: w.orbitRotation });
+      worlds.forEach(wd => {
+        const key = `${wd.orbitRadius.toFixed(2)}-${wd.orbitTilt.toFixed(2)}-${wd.orbitRotation.toFixed(2)}`;
+        if (!uniqueOrbits.has(key)) uniqueOrbits.set(key, { radius: wd.orbitRadius, tilt: wd.orbitTilt, rotation: wd.orbitRotation });
       });
-
-      // Draw each orbit as a single path with uniform opacity (average depth)
-      // This collapses 64 stroke() calls per orbit → 1 stroke() call per orbit
       uniqueOrbits.forEach(({ radius, tilt, rotation }) => {
-        ctx.beginPath();
-        let totalDepth = 0;
-        const segments = 48; // reduced from 64 – imperceptible difference
-        for (let i = 0; i <= segments; i++) {
-          const angle = (i / segments) * Math.PI * 2;
+        ctx!.beginPath();
+        for (let i = 0; i <= 48; i++) {
+          const angle = (i / 48) * Math.PI * 2;
           const pos = getOrbitPosition(angle, radius, tilt, rotation, 0);
           const rot = rotatePoint(pos, rotX, rotY);
-          totalDepth += (rot.z + 1) / 2;
-          if (i === 0) ctx.moveTo(centerX + rot.x * scale, centerY - rot.y * scale);
-          else ctx.lineTo(centerX + rot.x * scale, centerY - rot.y * scale);
+          if (i === 0) ctx!.moveTo(cx + rot.x * scale, cy - rot.y * scale);
+          else ctx!.lineTo(cx + rot.x * scale, cy - rot.y * scale);
         }
-        const avgOpacity = 0.1 + (totalDepth / (segments + 1)) * 0.25;
-        ctx.strokeStyle = `rgba(${themeColorsRef.current.fgRgb},${avgOpacity})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx!.strokeStyle = 'rgba(245,240,232,0.08)';
+        ctx!.lineWidth = 1.5;
+        ctx!.stroke();
       });
 
-      // ── draw planet dots
-      worlds.forEach(world => {
-        const pos = getOrbitPosition(world.orbitAngle, world.orbitRadius, world.orbitTilt, world.orbitRotation, time);
+      // Draw world dots + labels
+      worlds.forEach((wd, i) => {
+        const pos = getOrbitPosition(wd.orbitAngle, wd.orbitRadius, wd.orbitTilt, wd.orbitRotation, time);
         const rot = rotatePoint(pos, rotX, rotY);
-        const screenX = centerX + rot.x * scale;
-        const screenY = centerY - rot.y * scale;
-        const depth = (rot.z + 1) / 2;
-        const isSelected = world.id === selectedId;
+        const sx = cx + rot.x * scale, sy = cy - rot.y * scale;
+        const isActive = activeWorld === wd.id;
 
-        if (isSelected) {
-          ctx.save();
-          ctx.shadowColor = '#e4fe52';
-          ctx.shadowBlur = 18;
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, 8, 0, Math.PI * 2);
-          ctx.fillStyle = '#e4fe52';
-          ctx.fill();
-          ctx.restore();
-        } else {
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${themeColorsRef.current.fgRgb},${0.3 + depth * 0.7})`;
-          ctx.fill();
+        if (isActive) {
+          ctx!.beginPath(); ctx!.arc(sx, sy, 12, 0, Math.PI * 2);
+          const g = ctx!.createRadialGradient(sx, sy, 2, sx, sy, 12);
+          g.addColorStop(0, 'rgba(228,254,82,0.3)'); g.addColorStop(1, 'rgba(228,254,82,0)');
+          ctx!.fillStyle = g; ctx!.fill();
         }
+        ctx!.beginPath(); ctx!.arc(sx, sy, isActive ? 5 : 3, 0, Math.PI * 2);
+        ctx!.fillStyle = isActive ? 'rgba(228,254,82,1)' : 'rgba(228,254,82,0.5)';
+        ctx!.fill();
+
+        ctx!.font = 'bold 7px "GT Zirkon", sans-serif';
+        ctx!.fillStyle = `rgba(245,240,232,${isActive ? 0.9 : 0.25})`;
+        ctx!.fillText(wd.name, sx + 8, sy + 3);
+        positions.push({ id: wd.id, x: sx, y: sy });
       });
 
-      // ── move label buttons imperatively (zero React re-renders)
-      worlds.forEach(world => {
-        const pos = getOrbitPosition(world.orbitAngle, world.orbitRadius, world.orbitTilt, world.orbitRotation, time);
-        const rot = rotatePoint(pos, rotX, rotY);
-        const screenX = centerX + rot.x * scale;
-        const screenY = centerY - rot.y * scale;
-        const depth = rot.z;
-        const buttonScale = 0.8 + (depth + 1) * 0.2;
-        const isSelected = world.id === selectedId;
-        const displayScale = isSelected ? buttonScale * 1.15 : buttonScale;
-        const opacity = isSelected ? 1 : 0.3 + ((depth + 1) / 2) * 0.7;
-        const zIndex = isSelected ? 500 : Math.floor((depth + 1) * 100);
+      worldPositionsRef.current = positions;
+      animRef.current = requestAnimationFrame(animate);
+    }
 
-        const el = labelRefs.current.get(world.id);
-        if (!el) return;
-        el.style.transform = `translate3d(${screenX}px,${screenY + 12}px,0) translate(-50%,0) scale(${displayScale})`;
-        el.style.opacity = String(opacity);
-        el.style.zIndex = String(zIndex);
-        if (isSelected) {
-          el.style.backgroundColor = '#e4fe52';
-          el.style.color = '#1a1a1a';
-          el.style.boxShadow = '0 0 12px 4px rgba(228,254,82,0.5)';
-        } else {
-          el.style.backgroundColor = `rgba(${themeColorsRef.current.fgRgb},0.7)`;
-          el.style.color = themeColorsRef.current.bgHex;
-          el.style.boxShadow = 'none';
-        }
-      });
+    resize(); animate();
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize); };
+  }, [worlds, activeWorld]);
 
-      animationRef.current = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    // Pause animation when tab is hidden to save CPU
-    const handleVisibility = () => {
-      if (document.hidden) {
-        cancelAnimationFrame(animationRef.current);
-      } else {
-        animate();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      cancelAnimationFrame(animationRef.current);
-      window.removeEventListener('resize', resize);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [isLoaded]); // only dep: isLoaded — loop runs forever after, reads everything via refs
-
-  // ── Mouse / touch handlers ────────────────────────────────────────
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
     velocityRef.current = { x: 0, y: 0 };
   }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDraggingRef.current) return;
-    const dx = e.clientX - lastMouseRef.current.x;
-    const dy = e.clientY - lastMouseRef.current.y;
-    rotationRef.current.y += dx * 0.004;
-    rotationRef.current.x += dy * 0.004;
-    velocityRef.current = {
-      x: velocityRef.current.x * 0.5 + dy * 0.0015,
-      y: velocityRef.current.y * 0.5 + dx * 0.0015,
-    };
+    const dx = e.clientX - lastMouseRef.current.x, dy = e.clientY - lastMouseRef.current.y;
+    rotationRef.current.y += dx * 0.004; rotationRef.current.x += dy * 0.004;
+    velocityRef.current = { x: dy * 0.0015, y: dx * 0.0015 };
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
   }, []);
+  const onMouseUp = useCallback(() => { isDraggingRef.current = false; }, []);
 
-  const handleMouseUp = useCallback(() => { isDraggingRef.current = false; }, []);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).tagName === 'BUTTON') return;
-    if (e.touches.length === 1) {
-      touchDecidedRef.current = false;
-      isDraggingRef.current = false;
-      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      velocityRef.current = { x: 0, y: 0 };
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-
-    // Decide direction on first significant movement
-    if (!touchDecidedRef.current) {
-      const absDx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-      const absDy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-      if (absDx > 8 || absDy > 8) {
-        touchDecidedRef.current = true;
-        if (absDx > absDy) {
-          // Horizontal → capture for galaxy rotation
-          isDraggingRef.current = true;
-        }
-        // Vertical → don't set isDragging, browser scrolls via touch-action: pan-y
-      }
-      return;
-    }
-
-    if (!isDraggingRef.current) return;
-
-    const dx = e.touches[0].clientX - lastMouseRef.current.x;
-    const dy = e.touches[0].clientY - lastMouseRef.current.y;
-    rotationRef.current.y += dx * 0.004;
-    rotationRef.current.x += dy * 0.004;
-    velocityRef.current = {
-      x: velocityRef.current.x * 0.5 + dy * 0.0015,
-      y: velocityRef.current.y * 0.5 + dx * 0.0015,
-    };
-    lastMouseRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    isDraggingRef.current = false;
-    touchDecidedRef.current = false;
-  }, []);
-
-  // ── Render ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="worlds" />
+    <div
+      ref={containerRef}
+      className="relative w-full h-full cursor-grab active:cursor-grabbing"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseEnter={() => { isHoveringRef.current = true; }}
+      onMouseLeave={() => { isHoveringRef.current = false; isDraggingRef.current = false; }}
+    >
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+    </div>
+  );
+}
 
-      {/* Galaxy viewport */}
-      <div className="relative w-full overflow-hidden" style={{ height: '100vh' }}>
+/* ── Page ──────────────────────────────────────────────────────── */
+export default function WorldsPage() {
+  const [allWorlds, setAllWorlds] = useState<WorldCard[]>([]);
+  const [orbitWorlds, setOrbitWorlds] = useState<World[]>([]);
+  const [activeWorld, setActiveWorld] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-        {/* Loader – animated bar until data arrives + bar finishes */}
-        <div
-          className="absolute inset-0 flex items-center justify-center transition-opacity duration-300"
-          style={{ zIndex: 100, opacity: isLoaded ? 0 : 1, pointerEvents: isLoaded ? 'none' : 'auto' }}
-        >
-          <div className="text-center font-mono text-sm" style={{ color: 'var(--foreground)' }}>
-            <div>LOADING WORLDS</div>
-            <div className="mt-3 tracking-widest">
-              {'█'.repeat(Math.floor(loadProgress * 16))}{'░'.repeat(16 - Math.floor(loadProgress * 16))}
+  const handleHover = useCallback((id: string | null) => setActiveWorld(id), []);
+
+  useEffect(() => {
+    fetch('/api/worlds')
+      .then(res => res.json())
+      .then(data => {
+        const apiWorlds: WorldCard[] = (data.worlds || []).map((w: any) => ({
+          id: w.slug, title: w.title, slug: w.slug,
+          description: w.description, category: w.category,
+          imageUrl: w.imageUrl, country: w.country,
+          dateAdded: w.dateAdded, creatorName: w.creatorName,
+          creatorSlug: w.creatorSlug, creatorCountry: w.creatorCountry,
+        }));
+        setAllWorlds(apiWorlds);
+        setOrbitWorlds(buildWorlds(apiWorlds));
+        setLoading(false);
+      })
+      .catch(err => { console.error('Failed to fetch worlds:', err); setLoading(false); });
+  }, []);
+
+  const active = allWorlds.find(w => w.slug === activeWorld);
+  const activeColor = active ? COLOR_CYCLE[allWorlds.indexOf(active) % COLOR_CYCLE.length] : 'lime';
+  const filteredWorlds = search
+    ? allWorlds.filter(w => w.title.toLowerCase().includes(search.toLowerCase()))
+    : allWorlds;
+
+  return (
+    <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: 'var(--page-bg)' }}>
+      <PageShell>
+        <section className="min-h-screen px-4 md:px-6 py-4 md:py-6" style={{ backgroundColor: 'var(--page-bg)' }}>
+          <div className="max-w-[var(--content-max)] mx-auto min-h-[600px] md:h-[calc(100vh-var(--nav-height,80px)-48px)]">
+            <div className="h-full grid grid-rows-[auto_auto_1fr] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] border border-obsidian/15 rounded-lg overflow-hidden">
+
+              {/* ROW 1 — Title bar */}
+              <div className="p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
+                <span className="font-mono text-[7px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>
+                  worlds // constellation
+                </span>
+                <h1 className="font-basement font-black text-[clamp(32px,5vw,64px)] leading-[0.85] uppercase mt-2" style={{ color: 'var(--accent-text, #1a1a1a)' }}>
+                  WORLDS
+                </h1>
+              </div>
+              <div className="bg-obsidian p-4 flex items-center justify-between border-l border-bone/[0.04]">
+                <div>
+                  <span className="font-mono text-[8px] text-bone block">every world is an ecosystem.</span>
+                  <span className="font-mono text-[8px] text-bone block">built by creators, for their communities.</span>
+                </div>
+                <div className="w-12 h-12 rounded bg-gradient-to-br from-bone/20 via-bone/5 to-bone/15 flex items-center justify-center shrink-0">
+                  <img src="/brand/logo-white.png" alt="" className="w-8 h-8 opacity-40" />
+                </div>
+              </div>
+
+              {/* ROW 2 — Navigation bar */}
+              <div className="md:col-span-2 bg-obsidian border-t border-b border-bone/[0.04] px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="search..."
+                    className="font-mono text-[9px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 placeholder:text-bone/15 px-2.5 py-1 rounded outline-none w-32 focus:w-48 transition-all"
+                  />
+                  <span className="font-mono text-[9px] text-bone/30">←</span>
+                  <span className="font-mono text-[10px] text-bone/50 tracking-wider">
+                    {active ? (
+                      <><span className="text-bone/25">world:</span> <span className={`font-bold ${COLOR_TEXT[activeColor]}`}>{active.title}</span></>
+                    ) : (
+                      <span className="text-bone/25">hover a world to explore</span>
+                    )}
+                  </span>
+                  <span className="font-mono text-[9px] text-bone/30">→</span>
+                </div>
+                <div className="flex gap-1.5">
+                  {allWorlds.slice(0, 7).map((w, i) => (
+                    <div key={w.slug} className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[COLOR_CYCLE[i % COLOR_CYCLE.length]]} ${activeWorld === w.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} />
+                  ))}
+                  {allWorlds.length > 7 && <span className="font-mono text-[7px] text-bone/15 ml-1">+{allWorlds.length - 7}</span>}
+                </div>
+              </div>
+
+              {/* ROW 3 — Main content */}
+              {/* Left: Galaxy Map + Ledger Index */}
+              <div className={`${mapFullscreen ? 'md:col-span-2' : ''} grid ${mapFullscreen ? 'grid-rows-[1fr]' : 'grid-rows-[2fr_1fr]'} gap-[3px] overflow-hidden transition-all duration-500`}>
+                {/* Galaxy Map */}
+                <div className="bg-obsidian relative min-h-[200px]">
+                  {loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-mono text-[10px] text-bone/30 uppercase tracking-wider">Loading constellation...</span>
+                    </div>
+                  ) : (
+                    <GalaxyMap worlds={orbitWorlds} activeWorld={activeWorld} onHover={handleHover} />
+                  )}
+                  <div className="absolute bottom-2 left-3">
+                    <span className="font-mono text-[7px] uppercase tracking-wider text-bone/15">topia://constellation</span>
+                  </div>
+                  <button
+                    onClick={() => setMapFullscreen(!mapFullscreen)}
+                    className="absolute top-3 right-3 z-[5] font-mono text-[9px] uppercase tracking-wider text-bone/40 hover:text-bone/80 bg-obsidian/60 backdrop-blur-sm px-3 py-1.5 rounded transition-colors"
+                  >
+                    {mapFullscreen ? '← exit' : '⛶ expand'}
+                  </button>
+                </div>
+
+                {/* Ledger Index */}
+                <div className={`relative bg-obsidian overflow-y-auto ${mapFullscreen ? 'hidden' : ''}`} style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(245,240,232,0.1) transparent' }}>
+                  {/* Crosshatch texture */}
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                    style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px)' }}
+                  />
+                  {/* Ruled lines */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+                    style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(245,240,232,1) 39px, rgba(245,240,232,1) 40px)' }}
+                  />
+                  <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-bone/[0.06] pointer-events-none z-[1]" />
+
+                  <div className="relative z-10">
+                    {filteredWorlds.map((world, i) => {
+                      const color = COLOR_CYCLE[i % COLOR_CYCLE.length];
+                      const isActive = activeWorld === world.slug;
+                      return (
+                        <Link
+                          key={world.slug}
+                          href={`/worlds/${world.slug}`}
+                          className={`flex items-center no-underline cursor-pointer transition-all duration-150 border-b border-bone/[0.04] ${isActive ? 'bg-bone/[0.04]' : 'hover:bg-bone/[0.02]'}`}
+                          style={{ minHeight: '40px' }}
+                          onMouseEnter={() => setActiveWorld(world.slug)}
+                          onMouseLeave={() => setActiveWorld(null)}
+                        >
+                          <div className="w-[28px] shrink-0 flex items-center justify-center">
+                            <span className="font-mono text-[7px] text-bone/15">{String(i + 1).padStart(2, '0')}</span>
+                          </div>
+                          <div className={`w-[2px] shrink-0 self-stretch ${COLOR_DOT[color]}`} />
+                          <div className="flex-1 px-3 py-2 min-w-0">
+                            <span className={`font-mono text-[10px] uppercase font-bold ${isActive ? COLOR_TEXT[color] : 'text-bone/50'} transition-colors truncate block`}>
+                              {world.title}
+                            </span>
+                          </div>
+                          {world.creatorName && (
+                            <span className="font-mono text-[7px] text-bone/20 pr-3 shrink-0">{world.creatorName}</span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Preview panel */}
+              <div className={`border-l border-bone/[0.04] overflow-hidden ${mapFullscreen ? 'hidden' : ''}`}>
+                {active ? (
+                  <div className="h-full grid grid-rows-[1fr_auto]">
+                    {/* Image area */}
+                    <div className="relative overflow-hidden">
+                      {active.imageUrl ? (
+                        <img src={active.imageUrl} alt={active.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={GIF_MAP[activeColor]} alt="" className="w-full h-full object-cover" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-2 h-2 rounded-full ${COLOR_DOT[activeColor]}`} />
+                          {active.creatorName && <span className="font-mono text-[7px] uppercase tracking-wider text-bone/50">{active.creatorName}</span>}
+                        </div>
+                        <h2 className="font-basement font-black text-[clamp(24px,3vw,36px)] uppercase text-bone leading-[0.9]">
+                          {active.title}
+                        </h2>
+                      </div>
+                    </div>
+
+                    {/* Bottom detail bar */}
+                    <div className="grid grid-cols-[1fr_auto] border-t border-bone/[0.04]">
+                      <div className="p-4">
+                        <p className="font-mono text-[10px] text-bone/40 leading-relaxed mb-3">
+                          {active.description || 'A world in the TOPIA constellation.'}
+                        </p>
+                        <div className="flex gap-2">
+                          {['ecosystem', 'culture', 'community'].map(tag => (
+                            <span key={tag} className="font-mono text-[7px] uppercase tracking-wider text-bone/20 border border-bone/[0.06] px-2 py-0.5 rounded">{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <Link
+                        href={`/worlds/${active.slug}`}
+                        className={`flex items-center justify-center px-6 ${COLOR_DOT[activeColor].replace('bg-', 'bg-')} no-underline transition-opacity hover:opacity-80`}
+                        style={{ backgroundColor: `var(--${activeColor === 'lime' ? 'lime' : activeColor})` }}
+                      >
+                        <span className={`font-mono text-[9px] uppercase tracking-wider font-bold ${activeColor === 'lime' || activeColor === 'green' ? 'text-obsidian' : 'text-bone'}`}>
+                          enter →
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full relative overflow-hidden">
+                    <video src="/brand/vhs-loop.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 pointer-events-none z-[2] opacity-[0.05]"
+                      style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(245,240,232,0.3) 2px, rgba(245,240,232,0.3) 4px)' }}
+                    />
+                    <div className="absolute inset-0 pointer-events-none z-[3]"
+                      style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)' }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 z-[4] bg-gradient-to-t from-obsidian/90 via-obsidian/40 to-transparent p-5">
+                      <span className="font-mono text-[8px] uppercase tracking-wider text-bone/30 block mb-2">featured</span>
+                      <span className="font-basement font-black text-[clamp(24px,2.5vw,28px)] uppercase text-bone/80">EXPLORE THE CONSTELLATION</span>
+                      <span className="font-mono text-[9px] text-bone/25 block mt-2">hover a world to preview</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
-        </div>
-
-        {/* Galaxy container */}
-        <div
-          ref={containerRef}
-          className={`relative select-none touch-pan-y ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-          style={{ width: '100%', height: '100%', cursor: 'grab', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseEnter={() => { isHoveringRef.current = true; }}
-          onMouseLeave={() => { isHoveringRef.current = false; isDraggingRef.current = false; }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <canvas ref={canvasRef} className="absolute inset-0 touch-pan-y" style={{ willChange: 'transform' }} />
-
-          {/* Label buttons – rendered once per world key, moved imperatively */}
-          {worldKeys.map((id) => {
-            const world = worldsRef.current.find(w => w.id === id);
-            if (!world) return null;
-            return (
-              <button
-                key={id}
-                ref={(el) => { if (el) labelRefs.current.set(id, el); else labelRefs.current.delete(id); }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (selectedWorldCard?.id === id) {
-                    setSelectedWorldCard(null);
-                  } else {
-                    setSelectedWorldCard(worldCardMapRef.current.get(id) ?? null);
-                  }
-                }}
-                className="absolute font-mono text-[9px] sm:text-[12px] px-2 py-1 whitespace-nowrap cursor-pointer touch-manipulation"
-                style={{
-                  left: 0, top: 0,
-                  transform: 'translate3d(0,0,0)',
-                  transformOrigin: 'center top',
-                  color: 'var(--background)',
-                  pointerEvents: 'auto',
-                  willChange: 'transform',
-                }}
-              >
-                {world.name}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Controls Panel */}
-        <div
-          className={`absolute bottom-5 left-5 font-mono text-[9px] sm:text-[13px] p-2 sm:p-3 border rounded-xl z-50 transition-all duration-500 ${isLoaded && !selectedWorldCard ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          style={{ color: 'var(--foreground)', backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
-        >
-          <label className="flex items-center justify-between gap-3 mb-2">
-            SIZE
-            <input type="range" min="30" max="120" value={config.zoom * 100}
-              onChange={(e) => setConfig(prev => ({ ...prev, zoom: parseInt(e.target.value) / 100 }))}
-              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: 'var(--foreground)', accentColor: 'var(--foreground)' }} />
-          </label>
-          <label className="flex items-center justify-between gap-3">
-            SPEED
-            <input type="range" min="0" max="200" value={config.speed * 100}
-              onChange={(e) => setConfig(prev => ({ ...prev, speed: parseInt(e.target.value) / 100 }))}
-              className="w-20 h-0.5 appearance-none cursor-pointer" style={{ background: 'var(--foreground)', accentColor: 'var(--foreground)' }} />
-          </label>
-        </div>
-      </div>
-
-      {/* ── ALL WORLDS GRID ── */}
-      <section style={{ backgroundColor: 'var(--background)' }}>
-        <div className="flex justify-center py-5">
-          {selectedWorldCard ? (
-            <div className="flex items-center gap-2 px-5 py-2 rounded-full font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-              <span>{selectedWorldCard.title}</span>
-              <button onClick={() => setSelectedWorldCard(null)} className="hover:opacity-60 transition text-[13px] leading-none" aria-label="Clear selection">×</button>
-            </div>
-          ) : (
-            <span className="px-5 py-2 rounded-full font-mono text-[13px] uppercase tracking-widest" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>ALL WORLDS</span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 px-4 sm:px-6 pb-8">
-          {(selectedWorldCard ? [selectedWorldCard] : allWorlds).map((world) => (
-            <Link
-              key={world.id}
-              href={`/worlds/${world.slug}`}
-              onClick={(e) => { if (!selectedWorldCard) { e.preventDefault(); setSelectedWorldCard(world); } }}
-              className="group block relative rounded-2xl overflow-hidden border transition-colors duration-200"
-              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
-            >
-              <div className="w-full overflow-hidden" style={{ aspectRatio: '1', backgroundColor: 'var(--surface-hover)' }}>
-                {world.imageUrl && <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" style={{ objectPosition: 'center 35%' }} />}
-              </div>
-              <div className="p-3 sm:p-4 flex justify-between items-end" style={{ minHeight: '72px' }}>
-                <h3 className="font-mono text-[13px] sm:text-[15px] font-bold uppercase leading-tight" style={{ color: 'var(--foreground)' }}>{world.title}</h3>
-                <span className="font-mono text-[16px] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2" style={{ color: 'var(--foreground)' }}>→</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+        </section>
+      </PageShell>
     </div>
   );
 }

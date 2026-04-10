@@ -1,136 +1,165 @@
 'use client';
 
-import { useState } from 'react';
-import Navigation from '../components/Navigation';
-import LoadingScreen from '../components/LoadingScreen';
+import { useState, useEffect, useCallback } from 'react';
+import PageShell from '../components/PageShell';
+import GlitchType from '../components/ui/GlitchType';
+
+const teamMembers = [
+  { name: 'Latashá', role: 'CEO' },
+  { name: 'Annelisa', role: 'CPO' },
+  { name: 'Jah.', role: 'CCO' },
+  { name: 'Jada', role: 'CMO' },
+  { name: 'Dae', role: 'Community Lead' },
+  { name: 'Kesaun', role: 'Business Manager' },
+  { name: 'CY Lee', role: 'Executive Producer' },
+];
 
 export default function AboutPage() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const team = [
-    {
-      name: "Latashá",
-      role: "Co-Founder // Chief Executive Officer",
-      description: "Artist. Performer. Creative Technologist.",
-    },
-    {
-      name: "Jahmel Reynolds",
-      role: "Co-Founder // Chief Creative Officer",
-      description: "Filmmaker. Worldbuilder. Creative Technologist.",
-    },
-    {
-      name: "Jada Beasley",
-      role: "Co-Founder // Chief Marketing Officer",
-      description: "Strategist. Digital Architect. Creative.",
-    },
-    {
-      name: "Annelisa Moody",
-      role: "Co-Founder // Chief Product Officer",
-      description: "Designer. DJ. Creative Technologist.",
-    },
-    {
-      name: "Dae McMorris",
-      role: "Project Manager",
-      description: "Community-builder. Creative. Digital Culture Enthusiast.",
-    },
-    {
-      name: "Kesaun Austin",
-      role: "Business Manager",
-      description: "Business Architect. Investor. Technologist.",
-    },
-    {
-      name: "CY Lee",
-      role: "Executive Producer",
-      description: "Patron of Culture in Web3.",
-    },
-  ];
+  const [screen, setScreen] = useState(0);
+  const [sub, setSub] = useState(0);
+
+  useEffect(() => {
+    setTimeout(() => setScreen(1), 500);
+  }, []);
+
+  const s1Done = useCallback(() => {
+    setTimeout(() => setSub(1), 800);
+  }, []);
+  const s1bDone = useCallback(() => {
+    setTimeout(() => {
+      setScreen(2);
+      setSub(0);
+    }, 1500);
+  }, []);
+  const s2Done = useCallback(() => {
+    setTimeout(() => setSub(1), 400);
+  }, []);
+  const s2bDone = useCallback(() => {
+    setTimeout(() => {
+      setScreen(3);
+      setSub(0);
+    }, 1500);
+  }, []);
+  const s3Done = useCallback(() => {
+    setTimeout(() => setSub(1), 600);
+  }, []);
+
+  const screenBg =
+    screen === 1 ? 'bg-obsidian' : screen === 2 ? 'bg-blue' : 'bg-bone';
+  const isDark = screen !== 3;
+  const text = isDark ? 'text-bone' : 'text-obsidian';
+  const textSub = isDark ? 'text-bone/50' : 'text-obsidian/50';
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <LoadingScreen onComplete={() => setIsLoaded(true)} />
+    <PageShell>
+      <section
+        className={`min-h-screen ${screenBg} transition-colors duration-500 flex items-center justify-center px-6 md:px-10 py-20`}
+      >
+        <div className="max-w-3xl w-full relative">
+          <span
+            className={`font-mono text-[8px] uppercase tracking-[3px] ${textSub} block mb-6`}
+          >
+            {screen === 1
+              ? 'about // origin'
+              : screen === 2
+                ? 'about // values'
+                : 'about // team'}
+          </span>
 
-      <Navigation currentPage="about" />
-
-      <div className={`transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-        {/* Hero Section */}
-        <section className="pt-24 sm:pt-32 pb-8 sm:pb-12 px-4 sm:px-6">
-          <div className="container mx-auto max-w-4xl">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-6 sm:mb-8 uppercase" style={{ color: 'var(--foreground)' }}>
-              ABOUT US
-            </h1>
-            <p className="font-mono text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
-              ■ Our mission is to support the future of worldbuilders, visionaries and creative ecosystems for the people.
-              OPEN SOURCING RESOURCES, TOOLS, AND CONNECTION. culture before tech. depth before data.
-            </p>
-          </div>
-        </section>
-
-        {/* Main Content */}
-        <section className="py-8 sm:py-12 px-4 sm:px-6 border-t" style={{ borderColor: 'var(--foreground)' }}>
-          <div className="container mx-auto max-w-4xl">
-            <div className="space-y-4 sm:space-y-6 font-mono text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
-              <p>
-                TOPIA is a creative empowerment engine and network, built for and by the curious and creative.
-              </p>
-
-              <p>
-                It begins with the question, "what if the creative community built its own open source universe,
-                a constellation of worlds designed for connection, collaboration, and creative sovereignty?"
-              </p>
-
-              <p>
-                Continuing the bridge between culture and emerging creative tech, TOPIA fosters ecosystems where
-                artistry, innovation, and community thrive together.
-              </p>
-
-              <p>
-                For far too long, the tools and networks that empower artists have been scattered, gatekept or hidden.
-                TOPIA unites creatives in one home, one space where we can take our first entrusted step toward sovereignty,
-                and our supporters can explore and become a part of the universes we build.
-              </p>
-
-              <p>
-                With our beginnings as a community zoom call and event, TOPIA is anchored by a creative graph and hub.
-                TOPIA connects artists with patrons, collaborators, fans and communities through a suite of tools created
-                by and approved by me/you/us. With TOPIA TV, audiences can watch, listen, and discover new creative worlds
-                while community events tie connections to life — fluidly merging the digital and physical experience.
-              </p>
-
-              <p>
-                Traditional systems no longer meet the needs of today's artists. TOPIA breaks, rebuilds, and restructures
-                this system to create a living network designed for creators to define our own paths, power, and possibilities.
-              </p>
-
-              <p className="font-bold">
-                For artists, fans, patrons, and partners, TOPIA is more than a platform, it's a movement.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Team Section */}
-        <section className="py-12 sm:py-20 px-4 sm:px-6 border-t" style={{ borderColor: 'var(--foreground)' }}>
-          <div className="container mx-auto max-w-6xl">
-            <h2 className="font-mono text-base sm:text-lg font-bold mb-8 sm:mb-12 uppercase" style={{ color: 'var(--foreground)' }}>Our Team</h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {team.map((member, idx) => (
+          {/* Screen 1 — Origin */}
+          {screen === 1 && (
+            <div className="space-y-4">
+              <div
+                className={`font-mono font-bold text-[clamp(24px,4vw,48px)] leading-[1.2] uppercase ${text}`}
+                style={{ transform: 'rotate(-1deg)' }}
+              >
+                <GlitchType
+                  text="WE BUILT THIS BECAUSE WE NEEDED IT."
+                  onComplete={s1Done}
+                  speed={25}
+                />
+              </div>
+              {sub >= 1 && (
                 <div
-                  key={idx}
-                  className="border p-5 sm:p-6 rounded-2xl transition-colors duration-200"
-                  style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--surface)'}
+                  className={`font-mono text-[clamp(13px,1.6vw,18px)] leading-[1.9] ${textSub} max-w-xl`}
                 >
-                  <h3 className="font-mono text-[13px] font-bold mb-2 uppercase" style={{ color: 'var(--foreground)' }}>{member.name}</h3>
-                  <p className="font-mono text-[13px] mb-3" style={{ color: 'var(--foreground)', opacity: 0.6 }}>{member.role}</p>
-                  <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>{member.description}</p>
+                  <GlitchType
+                    text="topia exists because artists deserve infrastructure. not platforms that extract — systems that support. not algorithms that reduce — tools that amplify."
+                    onComplete={s1bDone}
+                    speed={20}
+                  />
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        </section>
+          )}
 
-      </div>
-    </div>
+          {/* Screen 2 — Values */}
+          {screen === 2 && (
+            <div className="space-y-4">
+              <div
+                className={`font-mono font-bold text-[clamp(24px,4vw,48px)] leading-[1.2] uppercase ${text}`}
+                style={{ transform: 'rotate(-0.5deg)' }}
+              >
+                <GlitchType
+                  text="CULTURE FIRST. SYSTEMS SECOND. OWNERSHIP ALWAYS."
+                  onComplete={s2Done}
+                  speed={28}
+                />
+              </div>
+              {sub >= 1 && (
+                <div
+                  className={`font-mono text-[clamp(13px,1.6vw,18px)] leading-[1.9] ${textSub} max-w-xl`}
+                >
+                  <GlitchType
+                    text="we don't build for scale. we build for depth. every decision starts with the creator. every feature earns its place."
+                    onComplete={s2bDone}
+                    speed={22}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Screen 3 — Team */}
+          {screen === 3 && (
+            <div className="space-y-8">
+              <div
+                className={`font-mono font-bold text-[clamp(24px,4vw,48px)] leading-[1.2] uppercase ${text}`}
+                style={{ transform: 'rotate(-1deg)' }}
+              >
+                <GlitchType
+                  text="BUILT BY CREATORS, FOR CREATORS."
+                  onComplete={s3Done}
+                  speed={28}
+                />
+              </div>
+              {sub >= 1 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-8">
+                  {teamMembers.map((m, i) => (
+                    <div
+                      key={m.name}
+                      className="opacity-0 animate-[fadeUp_0.5s_ease_forwards]"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    >
+                      <div className="aspect-square bg-obsidian/10 rounded-lg mb-3 flex items-center justify-center">
+                        <span className="font-basement text-3xl text-obsidian/20">
+                          {m.name[0]}
+                        </span>
+                      </div>
+                      <h3 className="font-mono font-bold text-sm uppercase">
+                        {m.name}
+                      </h3>
+                      <p className="font-mono text-[9px] uppercase tracking-wider opacity-40">
+                        {m.role}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    </PageShell>
   );
 }

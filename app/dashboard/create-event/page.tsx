@@ -240,7 +240,7 @@ export default function CreateEventPage() {
   if (!authenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
+        <Navigation />
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Please log in to create an event.</p>
         <Link href="/events" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Events</Link>
       </div>
@@ -249,7 +249,7 @@ export default function CreateEventPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="events" />
+      <Navigation />
 
       <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
         <div className="flex items-center justify-between mb-8">

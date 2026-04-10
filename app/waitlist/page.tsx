@@ -177,7 +177,7 @@ export default function WaitlistPage() {
           <div className="text-center">
             <h1
               className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-5"
-              style={{ fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+              style={{ fontFamily: "'Basement Grotesque', sans-serif" }}
             >
               <span style={{ color: '#e8e4dc' }}>BUILD </span>
               <span style={{ color: LIME }}>WORLDS</span>
@@ -206,7 +206,7 @@ export default function WaitlistPage() {
             </p>
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight mb-6"
-              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', sans-serif" }}
             >
               What&apos;s your name?
             </h2>
@@ -248,7 +248,7 @@ export default function WaitlistPage() {
             </p>
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight mb-6"
-              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', sans-serif" }}
             >
               What&apos;s your email?
             </h2>
@@ -290,7 +290,7 @@ export default function WaitlistPage() {
             </p>
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight mb-2"
-              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', sans-serif" }}
             >
               What do you do?
             </h2>
@@ -363,7 +363,7 @@ export default function WaitlistPage() {
             </div>
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight mb-2"
-              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+              style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', sans-serif" }}
             >
               YOU&apos;RE IN.
             </h2>
@@ -424,7 +424,7 @@ export default function WaitlistPage() {
         <a
           href="/"
           className="font-mono text-[11px] uppercase tracking-tight opacity-40 hover:opacity-70 transition"
-          style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', var(--font-space-mono), monospace" }}
+          style={{ color: '#e8e4dc', fontFamily: "'Basement Grotesque', sans-serif" }}
         >
           TOPIA
         </a>

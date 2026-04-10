@@ -269,7 +269,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
+        <Navigation />
         <LoadingBar />
       </div>
     );
@@ -278,7 +278,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   if (!event) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation currentPage="events" />
+        <Navigation />
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Event not found.</p>
         <Link href="/events" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Events</Link>
       </div>
@@ -292,7 +292,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation currentPage="events" />
+      <Navigation />
 
       <div className="pt-20 sm:pt-24 pb-16">
         {/* Back link */}
