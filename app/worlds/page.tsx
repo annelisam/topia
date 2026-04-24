@@ -168,7 +168,9 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
     function animate() {
       const w = canvas!.width / (window.devicePixelRatio || 1), h = canvas!.height / (window.devicePixelRatio || 1);
       const cx = w * 0.5, cy = h * 0.5;
-      const scale = Math.min(w, h) * 0.95;
+      // Scale to fill the container — use the smaller axis but boost so
+      // the outermost orbits (r ≈ 0.66) reach near the edges
+      const scale = Math.min(w, h) * 1.35;
 
       // Smooth startup expansion: 0→1 over ~1.2s with ease-out
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
