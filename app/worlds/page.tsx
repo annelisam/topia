@@ -402,12 +402,12 @@ export default function WorldsPage() {
   return (
     <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: 'var(--page-bg)' }}>
       <PageShell>
-        <section className="min-h-screen px-4 md:px-6 py-4 md:py-6" style={{ backgroundColor: 'var(--page-bg)' }}>
-          <div className="max-w-[var(--content-max)] mx-auto min-h-[600px] md:h-[calc(100vh-var(--nav-height,80px)-48px)]">
+        <section className="min-h-screen px-3 sm:px-4 md:px-6 py-3 md:py-6" style={{ backgroundColor: 'var(--page-bg)' }}>
+          <div className="max-w-[var(--content-max)] mx-auto md:h-[calc(100vh-var(--nav-height,80px)-48px)]">
             <div className="h-full grid grid-rows-[auto_auto_1fr] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] border border-obsidian/15 rounded-lg overflow-hidden">
 
               {/* ROW 1 — Title bar */}
-              <div className="p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
+              <div className="p-3 sm:p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
                 <span className="font-mono text-[7px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>
                   worlds // constellation
                 </span>
@@ -457,7 +457,7 @@ export default function WorldsPage() {
               {/* Left: Galaxy Map + Ledger Index */}
               <div className={`${mapFullscreen ? 'md:col-span-2' : ''} grid ${mapFullscreen ? 'grid-rows-[1fr]' : 'grid-rows-[2fr_1fr]'} gap-[3px] overflow-hidden transition-all duration-500`}>
                 {/* Galaxy Map */}
-                <div className="bg-obsidian relative min-h-[200px]">
+                <div className="bg-obsidian relative h-[250px] sm:h-[300px] md:h-auto md:min-h-[200px]">
                   {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="font-mono text-[10px] text-bone/30 uppercase tracking-wider">Loading constellation...</span>
@@ -485,7 +485,7 @@ export default function WorldsPage() {
                 </div>
 
                 {/* Ledger Index */}
-                <div className={`relative bg-obsidian overflow-y-auto ${mapFullscreen ? 'hidden' : ''}`} style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(245,240,232,0.1) transparent' }}>
+                <div className={`relative bg-obsidian overflow-y-auto max-h-[200px] sm:max-h-[240px] md:max-h-none ${mapFullscreen ? 'hidden' : ''}`} style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(245,240,232,0.1) transparent' }}>
                   {/* Crosshatch texture */}
                   <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                     style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px)' }}
@@ -529,7 +529,7 @@ export default function WorldsPage() {
               </div>
 
               {/* Right: Preview panel */}
-              <div className={`border-l border-bone/[0.04] overflow-hidden ${mapFullscreen ? 'hidden' : ''}`}>
+              <div className={`border-l border-bone/[0.04] overflow-hidden max-h-[280px] sm:max-h-[320px] md:max-h-none ${mapFullscreen ? 'hidden' : ''}`}>
                 {active ? (
                   <div className="h-full grid grid-rows-[1fr_auto]">
                     {/* Image area */}
