@@ -121,14 +121,28 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
   const startTimeRef = useRef(Date.now());
   const resizeFnRef = useRef<(() => void) | null>(null);
   const onSelectRef = useRef(onSelect);
+  const [transitioning, setTransitioning] = useState(false);
 
   useEffect(() => { activeWorldRef.current = activeWorld; }, [activeWorld]);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
-  // Re-measure canvas when expanded/collapsed — wait for CSS transition
+  // Show loading overlay during expand/collapse, poll resize until settled
+  const prevExpandedRef = useRef(expanded);
   useEffect(() => {
-    const t = setTimeout(() => { resizeFnRef.current?.(); }, 550);
-    return () => clearTimeout(t);
+    if (prevExpandedRef.current === expanded) return;
+    prevExpandedRef.current = expanded;
+    setTransitioning(true);
+    // Poll resize every 50ms during the CSS transition, then reveal
+    let frame = 0;
+    const interval = setInterval(() => {
+      resizeFnRef.current?.();
+      frame++;
+      if (frame >= 12) { // ~600ms
+        clearInterval(interval);
+        setTransitioning(false);
+      }
+    }, 50);
+    return () => { clearInterval(interval); setTransitioning(false); };
   }, [expanded]);
 
   useEffect(() => {
@@ -304,7 +318,12 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
       onMouseEnter={() => { isHoveringRef.current = true; }}
       onMouseLeave={() => { isHoveringRef.current = false; isDraggingRef.current = false; }}
     >
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity: transitioning ? 0 : 1, transition: 'opacity 0.2s ease-out' }} />
+      {transitioning && (
+        <div className="absolute inset-0 flex items-center justify-center z-[3]">
+          <span className="font-mono text-[10px] text-bone/30 uppercase tracking-wider animate-pulse">Loading constellation...</span>
+        </div>
+      )}
       <div
         ref={popoverRef}
         className="absolute top-0 left-0 pointer-events-none will-change-transform transition-opacity duration-150 z-[4]"
