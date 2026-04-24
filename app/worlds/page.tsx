@@ -39,20 +39,20 @@ const COLOR_DOT: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pi
 const COLOR_TEXT: Record<string, string> = { lime: 'text-lime', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
 const GIF_MAP: Record<string, string> = { lime: '/gif/spiral.gif', blue: '/gif/surreal.gif', pink: '/gif/Topian-Gif.gif', orange: '/gif/spiral.gif', green: '/gif/surreal.gif' };
 
-// ─── Orbit configs ──────────────────────────────────────────────
+// ─── Orbit configs (wider radii for fuller spread) ──────────────
 const orbitConfigs = [
-  { radius: 0.18, tilt: 8, rotation: 0 },
-  { radius: 0.38, tilt: -6, rotation: 30 },
-  { radius: 0.28, tilt: 10, rotation: 60 },
-  { radius: 0.48, tilt: -4, rotation: 90 },
-  { radius: 0.33, tilt: 12, rotation: 120 },
-  { radius: 0.16, tilt: -8, rotation: 150 },
-  { radius: 0.52, tilt: 6, rotation: 180 },
-  { radius: 0.24, tilt: -10, rotation: 210 },
-  { radius: 0.42, tilt: 8, rotation: 240 },
-  { radius: 0.55, tilt: -5, rotation: 270 },
-  { radius: 0.35, tilt: 10, rotation: 300 },
-  { radius: 0.45, tilt: -7, rotation: 330 },
+  { radius: 0.22, tilt: 8, rotation: 0 },
+  { radius: 0.48, tilt: -6, rotation: 30 },
+  { radius: 0.34, tilt: 10, rotation: 60 },
+  { radius: 0.58, tilt: -4, rotation: 90 },
+  { radius: 0.40, tilt: 12, rotation: 120 },
+  { radius: 0.20, tilt: -8, rotation: 150 },
+  { radius: 0.62, tilt: 6, rotation: 180 },
+  { radius: 0.30, tilt: -10, rotation: 210 },
+  { radius: 0.52, tilt: 8, rotation: 240 },
+  { radius: 0.66, tilt: -5, rotation: 270 },
+  { radius: 0.44, tilt: 10, rotation: 300 },
+  { radius: 0.56, tilt: -7, rotation: 330 },
 ];
 
 function rotatePoint(point: Point3D, rotX: number, rotY: number): Point3D {
@@ -61,10 +61,11 @@ function rotatePoint(point: Point3D, rotX: number, rotY: number): Point3D {
   return { x, y: point.y * Math.cos(rotX) - z * Math.sin(rotX), z: point.y * Math.sin(rotX) + z * Math.cos(rotX) };
 }
 
-function getOrbitPosition(angle: number, radius: number, tilt: number, rotation: number, time: number): Point3D {
-  const currentAngle = angle + time * 0.0003 * (1 + radius * 0.5);
-  const xp = Math.cos(currentAngle) * radius;
-  const zp = Math.sin(currentAngle) * radius * 0.85;
+function getOrbitPosition(angle: number, radius: number, tilt: number, rotation: number, time: number, expansion = 1): Point3D {
+  const currentAngle = angle + time * 0.0006 * (1 + radius * 0.5);
+  const r = radius * expansion;
+  const xp = Math.cos(currentAngle) * r;
+  const zp = Math.sin(currentAngle) * r * 0.85;
   const tiltedY = -zp * Math.sin(tilt);
   const tiltedZ = zp * Math.cos(tilt);
   return {
@@ -115,6 +116,8 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
   const worldPositionsRef = useRef<{ id: string; x: number; y: number }[]>([]);
   const activeWorldRef = useRef<string | null>(null);
   const activationRef = useRef<Map<string, number>>(new Map());
+  const expansionRef = useRef(0);         // 0→1 startup expansion
+  const startTimeRef = useRef(Date.now());
   const onSelectRef = useRef(onSelect);
 
   useEffect(() => { activeWorldRef.current = activeWorld; }, [activeWorld]);
@@ -165,9 +168,13 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
     function animate() {
       const w = canvas!.width / (window.devicePixelRatio || 1), h = canvas!.height / (window.devicePixelRatio || 1);
       const cx = w * 0.5, cy = h * 0.5;
-      const scale = Math.min(w, h) * 0.9;
+      const scale = Math.min(w, h) * 0.95;
 
-      if (!isHoveringRef.current && !isDraggingRef.current) rotationRef.current.y += 0.0015;
+      // Smooth startup expansion: 0→1 over ~1.2s with ease-out
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      expansionRef.current = Math.min(1, 1 - Math.pow(1 - Math.min(elapsed / 1.2, 1), 3));
+
+      if (!isHoveringRef.current && !isDraggingRef.current) rotationRef.current.y += 0.002;
       if (!isDraggingRef.current) {
         rotationRef.current.x += velocityRef.current.x;
         rotationRef.current.y += velocityRef.current.y;
@@ -177,6 +184,7 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
       timeRef.current += 1;
 
       const rotX = rotationRef.current.x, rotY = rotationRef.current.y, time = timeRef.current;
+      const expansion = expansionRef.current;
       ctx!.clearRect(0, 0, w, h);
       ctx!.imageSmoothingEnabled = true;
       const positions: { id: string; x: number; y: number; activation: number }[] = [];
@@ -191,12 +199,12 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
         ctx!.beginPath();
         for (let i = 0; i <= 96; i++) {
           const angle = (i / 96) * Math.PI * 2;
-          const pos = getOrbitPosition(angle, radius, tilt, rotation, 0);
+          const pos = getOrbitPosition(angle, radius, tilt, rotation, 0, expansion);
           const rot = rotatePoint(pos, rotX, rotY);
           if (i === 0) ctx!.moveTo(cx + rot.x * scale, cy - rot.y * scale);
           else ctx!.lineTo(cx + rot.x * scale, cy - rot.y * scale);
         }
-        ctx!.strokeStyle = 'rgba(245,240,232,0.08)';
+        ctx!.strokeStyle = `rgba(245,240,232,${0.08 * expansion})`;
         ctx!.lineWidth = 1;
         ctx!.stroke();
       });
@@ -205,13 +213,13 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
       const activeId = activeWorldRef.current;
       ctx!.textBaseline = 'middle';
       worlds.forEach(wd => {
-        const pos = getOrbitPosition(wd.orbitAngle, wd.orbitRadius, wd.orbitTilt, wd.orbitRotation, time);
+        const pos = getOrbitPosition(wd.orbitAngle, wd.orbitRadius, wd.orbitTilt, wd.orbitRotation, time, expansion);
         const rot = rotatePoint(pos, rotX, rotY);
         const sx = cx + rot.x * scale, sy = cy - rot.y * scale;
 
         const target = activeId === wd.id ? 1 : 0;
         const cur = activationRef.current.get(wd.id) ?? 0;
-        const next = cur + (target - cur) * 0.14;
+        const next = cur + (target - cur) * 0.22;
         activationRef.current.set(wd.id, next);
         const t = next;
 
@@ -226,11 +234,11 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
 
         const dotR = 2.6 + t * 2.8;
         ctx!.beginPath(); ctx!.arc(sx, sy, dotR, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(228,254,82,${0.5 + t * 0.5})`;
+        ctx!.fillStyle = `rgba(228,254,82,${(0.5 + t * 0.5) * expansion})`;
         ctx!.fill();
 
         ctx!.font = '500 10.5px "GT Zirkon", "Inter", sans-serif';
-        ctx!.fillStyle = `rgba(245,240,232,${0.2 + t * 0.7})`;
+        ctx!.fillStyle = `rgba(245,240,232,${(0.2 + t * 0.7) * expansion})`;
         ctx!.fillText(wd.name, sx + 10, sy + 0.5);
         positions.push({ id: wd.id, x: sx, y: sy, activation: t });
       });
