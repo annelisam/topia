@@ -94,13 +94,14 @@ function buildWorlds(apiWorlds: WorldCard[]): World[] {
 }
 
 /* ── Galaxy Canvas ─────────────────────────────────────────────── */
-function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSelect }: {
+function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSelect, expanded }: {
   worlds: World[];
   activeWorld: string | null;
   activeData: WorldCard | null;
   activeColor: string;
   onHover: (name: string | null) => void;
   onSelect: (slug: string) => void;
+  expanded?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,10 +119,17 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
   const activationRef = useRef<Map<string, number>>(new Map());
   const expansionRef = useRef(0);         // 0→1 startup expansion
   const startTimeRef = useRef(Date.now());
+  const resizeFnRef = useRef<(() => void) | null>(null);
   const onSelectRef = useRef(onSelect);
 
   useEffect(() => { activeWorldRef.current = activeWorld; }, [activeWorld]);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
+
+  // Re-measure canvas when expanded/collapsed — wait for CSS transition
+  useEffect(() => {
+    const t = setTimeout(() => { resizeFnRef.current?.(); }, 550);
+    return () => clearTimeout(t);
+  }, [expanded]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -164,12 +172,14 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
       canvas!.style.width = rect.width + 'px'; canvas!.style.height = rect.height + 'px';
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
+    resizeFnRef.current = resize;
 
     function animate() {
       const w = canvas!.width / (window.devicePixelRatio || 1), h = canvas!.height / (window.devicePixelRatio || 1);
-      // Center the constellation in the visible panel and size to fit
-      const cx = w * 0.52, cy = h * 0.46;
-      const scale = Math.min(w, h * 1.1) * 1.05;
+      // Always true center — canvas auto-resizes to fill its container
+      const cx = w * 0.5, cy = h * 0.5;
+      // Scale based on width so the constellation grows with the panel
+      const scale = w * 0.75;
 
       // Smooth startup expansion: 0→1 over ~1.2s with ease-out
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
@@ -441,6 +451,7 @@ export default function WorldsPage() {
                       activeColor={lastActive?.color ?? 'lime'}
                       onHover={handleHover}
                       onSelect={handleSelect}
+                      expanded={mapFullscreen}
                     />
                   )}
                   <div className="absolute bottom-2 left-3">
