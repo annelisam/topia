@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import PageShell from '../components/PageShell';
 
 interface WorldCard {
@@ -92,21 +93,32 @@ function buildWorlds(apiWorlds: WorldCard[]): World[] {
 }
 
 /* ── Galaxy Canvas ─────────────────────────────────────────────── */
-function GalaxyMap({ worlds, activeWorld, onHover }: {
+function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSelect }: {
   worlds: World[];
   activeWorld: string | null;
+  activeData: WorldCard | null;
+  activeColor: string;
   onHover: (name: string | null) => void;
+  onSelect: (slug: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const isDraggingRef = useRef(false);
+  const dragMovedRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const rotationRef = useRef({ x: 0.3, y: 0 });
   const velocityRef = useRef({ x: 0, y: 0 });
   const timeRef = useRef(0);
   const isHoveringRef = useRef(false);
   const worldPositionsRef = useRef<{ id: string; x: number; y: number }[]>([]);
+  const activeWorldRef = useRef<string | null>(null);
+  const activationRef = useRef<Map<string, number>>(new Map());
+  const onSelectRef = useRef(onSelect);
+
+  useEffect(() => { activeWorldRef.current = activeWorld; }, [activeWorld]);
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -114,7 +126,7 @@ function GalaxyMap({ worlds, activeWorld, onHover }: {
     function onMove(e: MouseEvent) {
       const rect = container!.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      let closest: string | null = null, closestDist = 30;
+      let closest: string | null = null, closestDist = 34;
       worldPositionsRef.current.forEach(wp => {
         const dist = Math.sqrt((wp.x - mx) ** 2 + (wp.y - my) ** 2);
         if (dist < closestDist) { closestDist = dist; closest = wp.id; }
@@ -122,9 +134,19 @@ function GalaxyMap({ worlds, activeWorld, onHover }: {
       onHover(closest);
     }
     function onLeave() { onHover(null); }
+    function onClick() {
+      if (dragMovedRef.current) return;
+      const id = activeWorldRef.current;
+      if (id) onSelectRef.current(id);
+    }
     container.addEventListener('mousemove', onMove);
     container.addEventListener('mouseleave', onLeave);
-    return () => { container.removeEventListener('mousemove', onMove); container.removeEventListener('mouseleave', onLeave); };
+    container.addEventListener('click', onClick);
+    return () => {
+      container.removeEventListener('mousemove', onMove);
+      container.removeEventListener('mouseleave', onLeave);
+      container.removeEventListener('click', onClick);
+    };
   }, [onHover]);
 
   useEffect(() => {
@@ -156,7 +178,8 @@ function GalaxyMap({ worlds, activeWorld, onHover }: {
 
       const rotX = rotationRef.current.x, rotY = rotationRef.current.y, time = timeRef.current;
       ctx!.clearRect(0, 0, w, h);
-      const positions: { id: string; x: number; y: number }[] = [];
+      ctx!.imageSmoothingEnabled = true;
+      const positions: { id: string; x: number; y: number; activation: number }[] = [];
 
       // Draw orbit rings
       const uniqueOrbits = new Map<string, { radius: number; tilt: number; rotation: number }>();
@@ -166,58 +189,86 @@ function GalaxyMap({ worlds, activeWorld, onHover }: {
       });
       uniqueOrbits.forEach(({ radius, tilt, rotation }) => {
         ctx!.beginPath();
-        for (let i = 0; i <= 48; i++) {
-          const angle = (i / 48) * Math.PI * 2;
+        for (let i = 0; i <= 96; i++) {
+          const angle = (i / 96) * Math.PI * 2;
           const pos = getOrbitPosition(angle, radius, tilt, rotation, 0);
           const rot = rotatePoint(pos, rotX, rotY);
           if (i === 0) ctx!.moveTo(cx + rot.x * scale, cy - rot.y * scale);
           else ctx!.lineTo(cx + rot.x * scale, cy - rot.y * scale);
         }
         ctx!.strokeStyle = 'rgba(245,240,232,0.08)';
-        ctx!.lineWidth = 1.5;
+        ctx!.lineWidth = 1;
         ctx!.stroke();
       });
 
-      // Draw world dots + labels
-      worlds.forEach((wd, i) => {
+      // Draw world dots + labels with smooth activation
+      const activeId = activeWorldRef.current;
+      ctx!.textBaseline = 'middle';
+      worlds.forEach(wd => {
         const pos = getOrbitPosition(wd.orbitAngle, wd.orbitRadius, wd.orbitTilt, wd.orbitRotation, time);
         const rot = rotatePoint(pos, rotX, rotY);
         const sx = cx + rot.x * scale, sy = cy - rot.y * scale;
-        const isActive = activeWorld === wd.id;
 
-        if (isActive) {
-          ctx!.beginPath(); ctx!.arc(sx, sy, 12, 0, Math.PI * 2);
-          const g = ctx!.createRadialGradient(sx, sy, 2, sx, sy, 12);
-          g.addColorStop(0, 'rgba(228,254,82,0.3)'); g.addColorStop(1, 'rgba(228,254,82,0)');
+        const target = activeId === wd.id ? 1 : 0;
+        const cur = activationRef.current.get(wd.id) ?? 0;
+        const next = cur + (target - cur) * 0.14;
+        activationRef.current.set(wd.id, next);
+        const t = next;
+
+        if (t > 0.02) {
+          const glowR = 6 + t * 14;
+          ctx!.beginPath(); ctx!.arc(sx, sy, glowR, 0, Math.PI * 2);
+          const g = ctx!.createRadialGradient(sx, sy, 1, sx, sy, glowR);
+          g.addColorStop(0, `rgba(228,254,82,${0.32 * t})`);
+          g.addColorStop(1, 'rgba(228,254,82,0)');
           ctx!.fillStyle = g; ctx!.fill();
         }
-        ctx!.beginPath(); ctx!.arc(sx, sy, isActive ? 5 : 3, 0, Math.PI * 2);
-        ctx!.fillStyle = isActive ? 'rgba(228,254,82,1)' : 'rgba(228,254,82,0.5)';
+
+        const dotR = 2.6 + t * 2.8;
+        ctx!.beginPath(); ctx!.arc(sx, sy, dotR, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(228,254,82,${0.5 + t * 0.5})`;
         ctx!.fill();
 
-        ctx!.font = 'bold 7px "GT Zirkon", sans-serif';
-        ctx!.fillStyle = `rgba(245,240,232,${isActive ? 0.9 : 0.25})`;
-        ctx!.fillText(wd.name, sx + 8, sy + 3);
-        positions.push({ id: wd.id, x: sx, y: sy });
+        ctx!.font = '500 10.5px "GT Zirkon", "Inter", sans-serif';
+        ctx!.fillStyle = `rgba(245,240,232,${0.2 + t * 0.7})`;
+        ctx!.fillText(wd.name, sx + 10, sy + 0.5);
+        positions.push({ id: wd.id, x: sx, y: sy, activation: t });
       });
 
-      worldPositionsRef.current = positions;
+      worldPositionsRef.current = positions.map(p => ({ id: p.id, x: p.x, y: p.y }));
+
+      // Position the hover popover on the active (or fading) world
+      if (popoverRef.current) {
+        let target: { x: number; y: number; activation: number } | null = null;
+        let maxAct = 0;
+        positions.forEach(p => { if (p.activation > maxAct) { maxAct = p.activation; target = p; } });
+        if (target && maxAct > 0.04) {
+          const t = target as { x: number; y: number; activation: number };
+          popoverRef.current.style.opacity = String(Math.min(1, maxAct * 1.1));
+          popoverRef.current.style.transform = `translate3d(${t.x + 18}px, ${t.y - 12}px, 0)`;
+        } else {
+          popoverRef.current.style.opacity = '0';
+        }
+      }
+
       animRef.current = requestAnimationFrame(animate);
     }
 
     resize(); animate();
     window.addEventListener('resize', resize);
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize); };
-  }, [worlds, activeWorld]);
+  }, [worlds]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;
+    dragMovedRef.current = false;
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
     velocityRef.current = { x: 0, y: 0 };
   }, []);
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDraggingRef.current) return;
     const dx = e.clientX - lastMouseRef.current.x, dy = e.clientY - lastMouseRef.current.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) dragMovedRef.current = true;
     rotationRef.current.y += dx * 0.004; rotationRef.current.x += dy * 0.004;
     velocityRef.current = { x: dy * 0.0015, y: dx * 0.0015 };
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
@@ -235,20 +286,52 @@ function GalaxyMap({ worlds, activeWorld, onHover }: {
       onMouseLeave={() => { isHoveringRef.current = false; isDraggingRef.current = false; }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <div
+        ref={popoverRef}
+        className="absolute top-0 left-0 pointer-events-none will-change-transform transition-opacity duration-150 z-[4]"
+        style={{ opacity: 0 }}
+      >
+        {activeData && (
+          <div className="bg-obsidian/85 backdrop-blur-md border border-bone/10 rounded-md px-4 py-3 max-w-[280px] shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[activeColor]}`} />
+              {activeData.creatorName && (
+                <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/50">
+                  {activeData.creatorName}
+                </span>
+              )}
+            </div>
+            <h3 className={`font-basement font-black text-[15px] uppercase leading-[0.95] ${COLOR_TEXT[activeColor]}`}>
+              {activeData.title}
+            </h3>
+            {activeData.description && (
+              <p className="font-mono text-[9px] text-bone/45 mt-2 leading-relaxed line-clamp-3">
+                {activeData.description}
+              </p>
+            )}
+            <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/30 block mt-2">
+              click to enter →
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /* ── Page ──────────────────────────────────────────────────────── */
 export default function WorldsPage() {
+  const router = useRouter();
   const [allWorlds, setAllWorlds] = useState<WorldCard[]>([]);
   const [orbitWorlds, setOrbitWorlds] = useState<World[]>([]);
   const [activeWorld, setActiveWorld] = useState<string | null>(null);
+  const [lastActive, setLastActive] = useState<{ data: WorldCard; color: string } | null>(null);
   const [search, setSearch] = useState('');
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const handleHover = useCallback((id: string | null) => setActiveWorld(id), []);
+  const handleSelect = useCallback((slug: string) => router.push(`/worlds/${slug}`), [router]);
 
   useEffect(() => {
     fetch('/api/worlds')
@@ -273,6 +356,10 @@ export default function WorldsPage() {
   const filteredWorlds = search
     ? allWorlds.filter(w => w.title.toLowerCase().includes(search.toLowerCase()))
     : allWorlds;
+
+  useEffect(() => {
+    if (active) setLastActive({ data: active, color: activeColor });
+  }, [active, activeColor]);
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden" style={{ backgroundColor: 'var(--page-bg)' }}>
@@ -338,7 +425,14 @@ export default function WorldsPage() {
                       <span className="font-mono text-[10px] text-bone/30 uppercase tracking-wider">Loading constellation...</span>
                     </div>
                   ) : (
-                    <GalaxyMap worlds={orbitWorlds} activeWorld={activeWorld} onHover={handleHover} />
+                    <GalaxyMap
+                      worlds={orbitWorlds}
+                      activeWorld={activeWorld}
+                      activeData={lastActive?.data ?? null}
+                      activeColor={lastActive?.color ?? 'lime'}
+                      onHover={handleHover}
+                      onSelect={handleSelect}
+                    />
                   )}
                   <div className="absolute bottom-2 left-3">
                     <span className="font-mono text-[7px] uppercase tracking-wider text-bone/15">topia://constellation</span>
