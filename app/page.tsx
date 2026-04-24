@@ -1,11 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import GlitchType from './components/ui/GlitchType';
 import Link from 'next/link';
 
 export default function Home() {
+  const router = useRouter();
+  const { ready, authenticated } = usePrivy();
   const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      router.replace('/worlds');
+    }
+  }, [ready, authenticated, router]);
 
   useEffect(() => {
     const timers = [
@@ -19,6 +29,10 @@ export default function Home() {
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  if (!ready || authenticated) {
+    return null;
+  }
 
   return (
     <div
