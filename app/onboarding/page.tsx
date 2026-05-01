@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
+import { Suspense, useEffect, useReducer, useState, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PATH_CONFIG, UserPath } from '../components/profile/pathConfig';
@@ -106,7 +106,23 @@ function firstIncompleteStep(data: Partial<WizardData>): number {
 
 /* ── Page component ───────────────────────────────────────────── */
 
+function LoadingFrame() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-obsidian text-bone">
+      <span className="font-mono text-[11px] uppercase tracking-[3px] text-bone/40">loading…</span>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<LoadingFrame />}>
+      <OnboardingWizard />
+    </Suspense>
+  );
+}
+
+function OnboardingWizard() {
   const { ready, authenticated, user } = usePrivy();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -189,11 +205,7 @@ export default function OnboardingPage() {
 
   /* Loading frame while we figure out where to send the user */
   if (!ready || !authenticated || !hydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-obsidian text-bone">
-        <span className="font-mono text-[11px] uppercase tracking-[3px] text-bone/40">loading…</span>
-      </div>
-    );
+    return <LoadingFrame />;
   }
 
   const current = STEPS[state.step];
