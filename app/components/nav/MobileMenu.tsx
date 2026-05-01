@@ -6,6 +6,7 @@ import LoginButton from '../LoginButton';
 const NAV_LINKS = [
   { href: '/worlds', label: 'Worlds' },
   { href: '/events', label: 'Events' },
+  { href: '/tv', label: 'TV' },
   { href: '/resources/tools', label: 'Tools' },
   { href: '/resources/grants', label: 'Grants' },
   { href: '/dashboard', label: 'Dashboard' },
