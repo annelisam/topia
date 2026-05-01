@@ -4,18 +4,30 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import GlitchType from './components/ui/GlitchType';
-import Link from 'next/link';
 
 export default function Home() {
   const router = useRouter();
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, user, login } = usePrivy();
   const [phase, setPhase] = useState(0);
+  const [routing, setRouting] = useState(false);
 
+  // When authenticated, decide where to send the user:
+  //   - no username yet → /onboarding (first-time builder)
+  //   - has username → /worlds (dashboard)
   useEffect(() => {
-    if (ready && authenticated) {
-      router.replace('/worlds');
-    }
-  }, [ready, authenticated, router]);
+    if (!ready || !authenticated || !user) return;
+    setRouting(true);
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then(({ user: saved }) => {
+        if (saved && saved.username && saved.name) {
+          router.replace('/worlds');
+        } else {
+          router.replace('/onboarding');
+        }
+      })
+      .catch(() => router.replace('/worlds'));
+  }, [ready, authenticated, user, router]);
 
   useEffect(() => {
     const timers = [
@@ -30,7 +42,20 @@ export default function Home() {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  if (!ready || authenticated) {
+  // Loading state while we decide where to route an authenticated user
+  if (ready && authenticated) {
+    return (
+      <div className="fixed inset-0 bg-obsidian text-bone flex flex-col items-center justify-center">
+        <div className="font-mono text-[12px] uppercase tracking-[3px] text-bone/60 mb-3">
+          <GlitchType text="entering topia" speed={28} />
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">
+          {routing ? '↳ routing…' : '↳ authenticating…'}
+        </div>
+      </div>
+    );
+  }
+  if (!ready) {
     return null;
   }
 
@@ -161,8 +186,8 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Big CTA */}
-        <Link href="/worlds" className="group block no-underline">
+        {/* Big CTA — triggers Privy login (which routes via the home effect once authenticated) */}
+        <button onClick={() => login()} className="group block no-underline w-full text-left bg-transparent border-none cursor-pointer p-0">
           <div className="flex items-baseline justify-between">
             <span className="font-basement font-black text-[clamp(48px,10vw,120px)] uppercase text-[#1a1a1a] leading-none group-hover:text-bone transition-colors duration-300">
               {phase >= 7 ? <GlitchType text="ENTER TOPIA" speed={50} /> : ''}
@@ -179,7 +204,7 @@ export default function Home() {
               }`}
             />
           </div>
-        </Link>
+        </button>
       </div>
     </div>
   );

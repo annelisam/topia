@@ -8,7 +8,7 @@ import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import { SocialIcon } from '../../components/SocialIcons';
-import { PATH_CONFIG, derivePath } from '../../components/profile/pathConfig';
+import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
 import IdentityLayer from '../../components/profile/IdentityLayer';
 import WorldLayer from '../../components/profile/WorldLayer';
 import ProofLayer from '../../components/profile/ProofLayer';
@@ -32,6 +32,7 @@ interface PublicProfile {
   socialSubstack: string | null;
   roleTags: string | null;
   toolSlugs: string | null;
+  path: string | null;
   createdAt: string;
 }
 
@@ -107,7 +108,7 @@ export default function PublicProfilePage() {
 
   const roleTags = profile?.roleTags ? profile.roleTags.split(',').map((s) => s.trim()).filter(Boolean) : [];
   const hasOwnedWorlds = sortedWorlds.some((w) => w.role === 'owner' || w.role === 'world_builder');
-  const path = derivePath(roleTags, hasOwnedWorlds);
+  const path = resolvePath(profile?.path, roleTags, hasOwnedWorlds);
   const config = PATH_CONFIG[path];
 
   const socialLinks = profile ? [

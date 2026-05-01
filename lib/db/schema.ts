@@ -21,6 +21,7 @@ export const users = pgTable('users', {
   role: text('role').default('user'), // 'user', 'artist', 'admin'
   roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
   toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table
+  path: text('path'),                 // 'worldbuilder' | 'catalyst' | 'anchor' — null until onboarding
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

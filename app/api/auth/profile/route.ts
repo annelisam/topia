@@ -5,10 +5,38 @@ import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
+    const username = request.nextUrl.searchParams.get('username');
     const privyId = request.nextUrl.searchParams.get('privyId');
 
+    // ── Username availability lookup ─────────────────────────────
+    if (username) {
+      const u = username.trim().toLowerCase();
+      if (!/^[a-z0-9_]{3,30}$/.test(u)) {
+        return NextResponse.json({ available: false, reason: 'invalid' });
+      }
+      const exists = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, u))
+        .limit(1);
+      const ownerPrivyId = request.nextUrl.searchParams.get('forPrivyId');
+      // Allow user to "claim" their own current username
+      if (exists.length > 0 && ownerPrivyId) {
+        const owner = await db
+          .select({ privyId: users.privyId })
+          .from(users)
+          .where(eq(users.username, u))
+          .limit(1);
+        if (owner[0]?.privyId === ownerPrivyId) {
+          return NextResponse.json({ available: true });
+        }
+      }
+      return NextResponse.json({ available: exists.length === 0 });
+    }
+
+    // ── Profile fetch ────────────────────────────────────────────
     if (!privyId) {
-      return NextResponse.json({ error: 'Missing privyId' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing privyId or username' }, { status: 400 });
     }
 
     const result = await db
@@ -23,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     const user = result[0];
 
-    // Fetch world memberships for this user
     const memberships = await db
       .select({
         worldId: worldMembers.worldId,

@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const socialSubstack    = norm(body, 'socialSubstack');
     const roleTags          = 'roleTags'  in body ? body.roleTags  : undefined;
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
+    const path              = norm(body, 'path');
 
     // Fetch existing user
     const existing = await db
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
           socialSubstack:   socialSubstack  !== undefined ? socialSubstack  : prev.socialSubstack,
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
+          path:             path            !== undefined ? path            : prev.path,
           updatedAt: new Date(),
         })
         .where(eq(users.privyId, privyId))
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
         socialSubstack:   socialSubstack  ?? null,
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
+        path:             path            ?? null,
       })
       .returning();
 

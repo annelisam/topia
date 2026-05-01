@@ -726,22 +726,37 @@ export default function ProfilePage() {
               >
                 {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE PROFILE'}
               </button>
-              <button
-                onClick={logout}
-                className="hover:opacity-70 transition"
-                style={{
-                  fontFamily: 'GT Zirkon, sans-serif',
-                  fontSize: 10,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase' as const,
-                  color: 'rgba(255,255,255,0.3)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                LOG OUT
-              </button>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/onboarding?from=profile"
+                  className="hover:opacity-70 transition no-underline"
+                  style={{
+                    fontFamily: 'GT Zirkon, sans-serif',
+                    fontSize: 10,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase' as const,
+                    color: 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  ↺ REDO INTRO
+                </Link>
+                <button
+                  onClick={logout}
+                  className="hover:opacity-70 transition"
+                  style={{
+                    fontFamily: 'GT Zirkon, sans-serif',
+                    fontSize: 10,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase' as const,
+                    color: 'rgba(255,255,255,0.3)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  LOG OUT
+                </button>
+              </div>
             </div>
 
             {/* ▸ MRZ barcode strip */}

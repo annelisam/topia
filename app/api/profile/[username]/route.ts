@@ -31,6 +31,7 @@ export async function GET(
         socialSubstack:   users.socialSubstack,
         roleTags:         users.roleTags,
         toolSlugs:        users.toolSlugs,
+        path:             users.path,
         createdAt:        users.createdAt,
       })
       .from(users)

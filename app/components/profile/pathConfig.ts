@@ -28,3 +28,25 @@ export function derivePath(roleTags: string[], hasOwnedWorlds: boolean): UserPat
   if (roleTags.some((r) => catalystRoles.includes(r))) return 'catalyst';
   return 'anchor';
 }
+
+/**
+ * Resolve the user's path: prefer the explicit DB column, else derive from
+ * roleTags + world membership signals.
+ */
+export function resolvePath(
+  explicitPath: string | null | undefined,
+  roleTags: string[],
+  hasOwnedWorlds: boolean,
+): UserPath {
+  if (explicitPath === 'worldbuilder' || explicitPath === 'catalyst' || explicitPath === 'anchor') {
+    return explicitPath;
+  }
+  return derivePath(roleTags, hasOwnedWorlds);
+}
+
+/** Default role-tag seeds keyed by path — used to pre-check role step in onboarding. */
+export const PATH_DEFAULT_ROLES: Record<UserPath, string[]> = {
+  worldbuilder: ['community-builder', 'curator', 'entrepreneur'],
+  catalyst:     ['designer', 'producer', 'technologist'],
+  anchor:       ['curator', 'community-builder'],
+};
