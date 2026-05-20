@@ -38,6 +38,7 @@ interface EventCard {
 }
 
 type Tab = 'all' | 'upcoming' | 'thisWeek' | 'past' | 'saved' | 'mine';
+type ViewMode = 'list' | 'grid';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'all',      label: 'All' },
@@ -92,7 +93,19 @@ export default function EventsPage() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Restore view preference
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('topia.events.viewMode');
+    if (saved === 'grid' || saved === 'list') setViewMode(saved);
+  }, []);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('topia.events.viewMode', viewMode);
+  }, [viewMode]);
 
   // Single batched fetch
   const reload = useCallback(async () => {
@@ -187,6 +200,15 @@ export default function EventsPage() {
   }, [filtered, today]);
 
   const activeEvent = activeSlug ? events.find((e) => e.slug === activeSlug) ?? null : null;
+
+  // Featured: next 3 upcoming events that have a cover image
+  const featured = useMemo(() => {
+    return events
+      .filter((e) => e.dateIso && e.dateIso >= today && e.imageUrl)
+      .slice(0, 3);
+  }, [events, today]);
+
+  const showFeatured = !search && !selectedCity && (tab === 'all' || tab === 'upcoming' || tab === 'thisWeek');
 
   /* ── Optimistic toggles ─────────────────────────────────────── */
 
@@ -302,6 +324,34 @@ export default function EventsPage() {
                 <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 md:ml-auto shrink-0">
                   {filtered.length} event{filtered.length !== 1 ? 's' : ''}
                 </span>
+                {/* List/grid toggle */}
+                <div className="flex items-center border border-bone/15 rounded-sm overflow-hidden shrink-0">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-1.5 transition cursor-pointer ${viewMode === 'list' ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}
+                    title="List view"
+                    aria-label="List view"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <line x1="2" y1="3.5" x2="12" y2="3.5" />
+                      <line x1="2" y1="7"   x2="12" y2="7" />
+                      <line x1="2" y1="10.5" x2="12" y2="10.5" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 transition cursor-pointer border-l border-bone/15 ${viewMode === 'grid' ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}
+                    title="Grid view"
+                    aria-label="Grid view"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                      <rect x="1" y="1" width="5" height="5" rx="0.5" />
+                      <rect x="8" y="1" width="5" height="5" rx="0.5" />
+                      <rect x="1" y="8" width="5" height="5" rx="0.5" />
+                      <rect x="8" y="8" width="5" height="5" rx="0.5" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* ─── ROW 3: Tabs ─── */}
@@ -326,21 +376,53 @@ export default function EventsPage() {
                 })}
               </div>
 
-              {/* ─── ROW 4: Grouped list ─── */}
+              {/* ─── Featured carousel (3 large cards) ─── */}
+              {!loading && showFeatured && featured.length > 0 && (
+                <FeaturedRow
+                  events={featured}
+                  authenticated={authenticated}
+                  onOpen={(slug) => setActiveSlug(slug)}
+                  onToggleRsvp={(eventId, going) => toggleRsvp(eventId, going)}
+                  onToggleSave={(slug, saved) => toggleSave(slug, saved)}
+                />
+              )}
+
+              {/* ─── ROW 4: Grouped list OR grid ─── */}
               <div className="bg-obsidian min-h-[400px]">
                 {loading ? (
-                  <EventsListSkeleton />
+                  viewMode === 'grid' ? <EventsGridSkeleton /> : <EventsListSkeleton />
                 ) : grouped.length === 0 ? (
                   <EmptyState tab={tab} search={search} selectedCity={selectedCity} onClear={() => { setSearch(''); setSelectedCity(''); setTab('all'); }} onCreate={() => setSubmitOpen(true)} />
-                ) : (
-                  grouped.map((group) => (
+                ) : viewMode === 'grid' ? (
+                  grouped.map((group, gi) => (
                     <div key={group.label}>
-                      {/* Sticky group header */}
+                      <div className="sticky top-[calc(var(--nav-height,56px)+58px)] z-20 bg-obsidian/95 backdrop-blur-sm px-4 py-1.5 border-y border-bone/[0.06]">
+                        <span className="font-mono text-[10px] uppercase tracking-[3px] text-bone/40">{group.label} · {group.items.length}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                        {group.items.map((ev, i) => (
+                          <EventGridCard
+                            key={ev.id}
+                            event={ev}
+                            authenticated={authenticated}
+                            today={today}
+                            onOpen={() => setActiveSlug(ev.slug)}
+                            onToggleRsvp={() => toggleRsvp(ev.id, !ev.isGoing)}
+                            onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
+                            staggerIndex={gi * 8 + i}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  grouped.map((group, gi) => (
+                    <div key={group.label}>
                       <div className="sticky top-[calc(var(--nav-height,56px)+58px)] z-20 bg-obsidian/95 backdrop-blur-sm px-4 py-1.5 border-y border-bone/[0.06]">
                         <span className="font-mono text-[10px] uppercase tracking-[3px] text-bone/40">{group.label} · {group.items.length}</span>
                       </div>
                       <div className="divide-y divide-bone/[0.04]">
-                        {group.items.map((ev) => (
+                        {group.items.map((ev, i) => (
                           <EventRow
                             key={ev.id}
                             event={ev}
@@ -349,6 +431,7 @@ export default function EventsPage() {
                             onOpen={() => setActiveSlug(ev.slug)}
                             onToggleRsvp={() => toggleRsvp(ev.id, !ev.isGoing)}
                             onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
+                            staggerIndex={gi * 8 + i}
                           />
                         ))}
                       </div>
@@ -386,15 +469,20 @@ interface RowProps {
   onOpen: () => void;
   onToggleRsvp: () => void;
   onToggleSave: () => void;
+  staggerIndex?: number;
 }
 
-function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleSave }: RowProps) {
+function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
   const isPast = !!(event.dateIso && event.dateIso < today);
   const chip = formatDayChip(event.dateIso);
   const accentLeft = event.isHosting ? 'border-l-lime' : isPast ? 'border-l-orange/50' : 'border-l-bone/15';
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 hover:bg-bone/[0.03] transition cursor-pointer border-l-2 ${accentLeft}`} onClick={onOpen}>
+    <div
+      className={`flex items-center gap-3 px-4 py-3 hover:bg-bone/[0.04] hover:translate-x-0.5 transition-all duration-200 cursor-pointer border-l-2 ${accentLeft}`}
+      style={{ opacity: 0, animation: `fadeUp 0.4s ease-out ${Math.min(staggerIndex * 30, 400)}ms forwards` }}
+      onClick={onOpen}
+    >
       {/* Date chip */}
       <div className="shrink-0 w-12 text-center border border-bone/15 rounded-sm py-1.5">
         <div className="font-basement text-[18px] leading-none text-bone">{chip.day}</div>
@@ -497,6 +585,252 @@ function EventsListSkeleton() {
           <div className="h-7 w-20 bg-bone/[0.04] rounded-sm animate-pulse shrink-0" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function EventsGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="border border-bone/10 rounded-sm overflow-hidden bg-bone/[0.02]">
+          <div className="aspect-[16/10] bg-bone/[0.04] animate-pulse" />
+          <div className="p-3 space-y-1.5">
+            <div className="h-3 w-40 bg-bone/[0.06] rounded animate-pulse" />
+            <div className="h-2.5 w-24 bg-bone/[0.04] rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Featured row (top 3 upcoming with covers) ───────────────────── */
+
+interface FeaturedRowProps {
+  events: EventCard[];
+  authenticated: boolean;
+  onOpen: (slug: string) => void;
+  onToggleRsvp: (eventId: string, going: boolean) => Promise<void>;
+  onToggleSave: (slug: string, saved: boolean) => Promise<void>;
+}
+
+function FeaturedRow({ events, authenticated, onOpen, onToggleRsvp, onToggleSave }: FeaturedRowProps) {
+  return (
+    <div className="bg-obsidian border-b border-bone/[0.06] p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="font-mono text-[10px] uppercase tracking-[3px] text-lime">◉ FEATURED</span>
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">next up</span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {events.map((ev, i) => {
+          const chip = formatDayChip(ev.dateIso);
+          return (
+            <button
+              key={ev.id}
+              onClick={() => onOpen(ev.slug)}
+              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent"
+              style={{ opacity: 0, animation: `fadeUp 0.5s ease-out ${i * 80}ms forwards` }}
+            >
+              {/* Cover */}
+              <div className="relative aspect-[16/10] overflow-hidden bg-bone/[0.04]">
+                {ev.imageUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={ev.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                )}
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/40 to-transparent" />
+                {/* Date chip floating top-left */}
+                <div className="absolute top-3 left-3 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-2 py-1 text-center min-w-[44px]">
+                  <div className="font-basement text-[16px] leading-none text-bone">{chip.day}</div>
+                  <div className="font-mono text-[8px] uppercase tracking-[2px] text-bone/60 mt-0.5">{chip.mon}</div>
+                </div>
+                {/* Hosting/going pill */}
+                {ev.isHosting && (
+                  <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold">Hosting</span>
+                )}
+                {!ev.isHosting && ev.isGoing && (
+                  <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[2px] bg-green/20 text-green border border-green/40 px-1.5 py-0.5 rounded-sm">✓ Going</span>
+                )}
+                {/* Save heart top-right when not hosting/going */}
+                {authenticated && !ev.isHosting && !ev.isGoing && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void onToggleSave(ev.slug, !ev.isSaved); }}
+                    className={`absolute top-3 right-3 w-7 h-7 rounded-full border flex items-center justify-center transition cursor-pointer ${
+                      ev.isSaved ? 'bg-bone text-obsidian border-bone' : 'bg-obsidian/60 backdrop-blur-sm border-bone/30 text-bone/70 hover:text-bone hover:border-bone'
+                    }`}
+                    title={ev.isSaved ? 'Saved' : 'Save'}
+                  >
+                    <StarIcon size={11} filled={ev.isSaved} />
+                  </button>
+                )}
+                {/* Title overlay bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <h3 className="font-basement font-black text-[clamp(15px,1.5vw,20px)] uppercase leading-[0.95] text-bone line-clamp-2">
+                    {ev.eventName}
+                  </h3>
+                  <div className="font-mono text-[10px] text-bone/60 mt-1 truncate">
+                    {ev.startTime ? `${ev.startTime} ` : ''}
+                    {ev.city ? `· ${ev.city}` : ''}
+                  </div>
+                </div>
+              </div>
+              {/* Action row beneath card */}
+              <div className="px-3 py-2 flex items-center justify-between gap-2 bg-bone/[0.02] border-t border-bone/[0.04]">
+                <div className="flex items-center -space-x-1.5">
+                  {ev.hosts.slice(0, 3).map((h, hi) => (
+                    <span
+                      key={h.userId}
+                      className="relative block w-5 h-5 rounded-full border overflow-hidden bg-bone/5"
+                      style={{ borderColor: '#1a1a1a', zIndex: 3 - hi }}
+                      title={h.name || h.username || ''}
+                    >
+                      {h.avatarUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-bone/40">
+                          {(h.name || h.username || '?')[0]?.toUpperCase()}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                  <span className="font-mono text-[10px] text-bone/30 pl-3">{ev.rsvpCount} going</span>
+                </div>
+                {authenticated && !ev.isHosting && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
+                    className={`font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm border transition cursor-pointer ${
+                      ev.isGoing
+                        ? 'bg-green/15 border-green/40 text-green'
+                        : 'bg-transparent border-bone/20 text-bone/70 hover:bg-lime hover:text-obsidian hover:border-lime'
+                    }`}
+                  >
+                    {ev.isGoing ? '✓ Going' : 'RSVP'}
+                  </button>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Grid card ───────────────────────────────────────────────────── */
+
+function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
+  const isPast = !!(event.dateIso && event.dateIso < today);
+  const chip = formatDayChip(event.dateIso);
+  const accent = event.isHosting ? 'border-lime/40' : isPast ? 'border-orange/30' : 'border-bone/10';
+
+  return (
+    <div
+      onClick={onOpen}
+      className={`group relative overflow-hidden rounded-md border ${accent} hover:border-lime/40 hover:translate-y-[-2px] transition-all duration-300 cursor-pointer bg-bone/[0.02] flex flex-col`}
+      style={{ opacity: 0, animation: `fadeUp 0.4s ease-out ${Math.min(staggerIndex * 40, 400)}ms forwards` }}
+    >
+      {/* Cover or fallback */}
+      <div className="relative aspect-[16/10] overflow-hidden bg-bone/[0.03]">
+        {event.imageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={event.imageUrl}
+            alt=""
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isPast ? 'grayscale opacity-60' : ''}`}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="font-basement font-black text-[clamp(40px,8vw,80px)] leading-none text-bone/10 uppercase">
+              {event.eventName[0]?.toUpperCase()}
+            </span>
+          </div>
+        )}
+        {/* Subtle gradient bottom for legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-obsidian/40 to-transparent pointer-events-none" />
+        {/* Date chip */}
+        <div className="absolute top-2 left-2 bg-obsidian/85 backdrop-blur-sm border border-bone/20 rounded-sm px-1.5 py-0.5 text-center min-w-[40px]">
+          <div className="font-basement text-[14px] leading-none text-bone">{chip.day}</div>
+          <div className="font-mono text-[8px] uppercase tracking-[2px] text-bone/60">{chip.mon}</div>
+        </div>
+        {/* Status indicator */}
+        {event.isHosting && (
+          <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold">Host</span>
+        )}
+        {!event.isHosting && event.isGoing && (
+          <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1.5 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm">✓ Going</span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        <h3 className="font-mono text-[12px] uppercase font-bold text-bone leading-tight line-clamp-2">{event.eventName}</h3>
+        <div className="font-mono text-[10px] text-bone/40 truncate">
+          {event.startTime ? `${event.startTime} ` : ''}
+          {event.city ? `· ${event.city}` : ''}
+        </div>
+
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-bone/[0.06]">
+          <div className="flex items-center gap-1.5">
+            {event.hosts.length > 0 && (
+              <div className="flex items-center -space-x-1.5">
+                {event.hosts.slice(0, 3).map((h, i) => (
+                  <span
+                    key={h.userId}
+                    className="relative block w-5 h-5 rounded-full border overflow-hidden bg-bone/5"
+                    style={{ borderColor: '#1a1a1a', zIndex: 3 - i }}
+                  >
+                    {h.avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-bone/40">
+                        {(h.name || h.username || '?')[0]?.toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {event.rsvpCount > 0 && (
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30">{event.rsvpCount} going</span>
+            )}
+          </div>
+          {authenticated && (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {!isPast && (
+                <button
+                  onClick={onToggleRsvp}
+                  className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border transition cursor-pointer ${
+                    event.isGoing
+                      ? 'bg-green/15 border-green/40 text-green'
+                      : 'bg-transparent border-bone/15 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
+                  }`}
+                  title={event.isGoing ? 'Click to un-RSVP' : 'RSVP'}
+                >
+                  {event.isGoing ? '✓' : 'RSVP'}
+                </button>
+              )}
+              <button
+                onClick={onToggleSave}
+                className={`inline-flex items-center justify-center w-6 h-6 rounded-sm border transition cursor-pointer ${
+                  event.isSaved
+                    ? 'bg-bone text-obsidian border-bone'
+                    : 'bg-transparent border-bone/15 text-bone/40 hover:border-bone/60 hover:text-bone'
+                }`}
+                title={event.isSaved ? 'Saved' : 'Save'}
+              >
+                <StarIcon size={10} filled={event.isSaved} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

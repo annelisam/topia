@@ -101,14 +101,21 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-6 py-6 backdrop-blur-sm"
-      style={{ backgroundColor: 'rgba(10,10,10,0.75)' }}
+      className="fixed inset-0 z-[100] backdrop-blur-sm"
+      style={{ backgroundColor: 'rgba(10,10,10,0.65)' }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] bg-obsidian text-bone rounded-lg border border-bone/[0.08] overflow-hidden flex flex-col"
+        className="absolute right-0 top-0 bottom-0 w-full sm:max-w-md md:max-w-lg bg-obsidian text-bone border-l border-bone/[0.08] overflow-hidden flex flex-col shadow-2xl"
+        style={{ animation: 'slideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1)' }}
         onClick={(e) => e.stopPropagation()}
       >
+        <style jsx>{`
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0.6; }
+            to   { transform: translateX(0);    opacity: 1; }
+          }
+        `}</style>
         {/* Accent strip */}
         <div className="px-4 py-2 flex items-center justify-between shrink-0" style={{ backgroundColor: accent }}>
           <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/60">topia://events</span>
