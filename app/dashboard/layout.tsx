@@ -12,6 +12,7 @@ import { DashboardContext } from './_components/DashboardContext';
 import type { HostedEvent } from './_components/DashboardContext';
 import DashboardSidebar from './_components/DashboardSidebar';
 import { DashboardOverviewProvider } from './_components/DashboardOverviewContext';
+import { SidebarProvider, useSidebar } from './_components/SidebarContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { ready, authenticated } = usePrivy();
@@ -53,20 +54,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <DashboardContext.Provider value={{ profile, worldMemberships, hostedEvents }}>
       <DashboardOverviewProvider>
-        <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
-          {/* Subtle texture overlays */}
-          <div className="grain-overlay" />
-          <div className="scanlines-overlay" />
-
-          <Navigation />
-          <DashboardSidebar />
-          <main className="pt-28 sm:pt-24 sm:ml-56 px-4 sm:px-8 pb-16 md:pb-8">
-            <div className="max-w-6xl">{children}</div>
-          </main>
-          <ColorSlider />
-          <ThemeToggle />
-        </div>
+        <SidebarProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </SidebarProvider>
       </DashboardOverviewProvider>
     </DashboardContext.Provider>
+  );
+}
+
+/**
+ * The actual rendered shell. Lives below SidebarProvider so it can read the
+ * collapsed state and slide <main>'s margin in lockstep with the sidebar's
+ * width animation.
+ *
+ * Both transitions share the same duration (300ms) + easing (ease-out) so
+ * the whole page feels like one smooth motion rather than two parts.
+ *
+ * Keyboard shortcut: ⌘\ / Ctrl+\ toggles collapse.
+ */
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  const { collapsed, toggle } = useSidebar();
+
+  // ⌘\ keyboard shortcut
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault();
+        toggle();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggle]);
+
+  return (
+    <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
+      {/* Subtle texture overlays */}
+      <div className="grain-overlay" />
+      <div className="scanlines-overlay" />
+
+      <Navigation />
+      <DashboardSidebar />
+      <main
+        className={`pt-28 sm:pt-24 px-4 sm:px-8 pb-16 md:pb-8 transition-[margin-left] duration-300 ease-out ${
+          collapsed ? 'sm:ml-14' : 'sm:ml-56'
+        }`}
+      >
+        <div className="max-w-6xl">{children}</div>
+      </main>
+      <ColorSlider />
+      <ThemeToggle />
+    </div>
   );
 }

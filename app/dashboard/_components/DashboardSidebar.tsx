@@ -4,10 +4,12 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useDashboard } from './DashboardContext';
+import { useSidebar } from './SidebarContext';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const { worldMemberships, profile } = useDashboard();
+  const { collapsed, toggle } = useSidebar();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const switcherRef = useRef<HTMLDivElement>(null);
 
@@ -222,16 +224,106 @@ export default function DashboardSidebar() {
     </div>
   );
 
+  /* ── Collapsed rail nav (compact mode) ───────────────── */
+  // Shows just the avatar + a row of single-letter tabs so users can still
+  // navigate without expanding. The expand chevron sits at the bottom.
+  const railNav = (
+    <nav className="flex-1 flex flex-col items-center gap-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+      {navItems.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          title={item.label}
+          className={`w-9 h-9 rounded-sm flex items-center justify-center font-mono text-[11px] uppercase tracking-wider transition-colors no-underline ${
+            isActive(item.href)
+              ? 'bg-lime text-obsidian font-bold'
+              : 'text-bone/50 hover:text-bone hover:bg-bone/[0.04]'
+          }`}
+        >
+          {item.label[0]?.toUpperCase()}
+        </Link>
+      ))}
+      {!currentWorld && (
+        <>
+          <div className="w-6 h-px bg-bone/15 my-2" />
+          {[
+            { label: 'Tools',  href: '/resources/tools', glyph: 'T' },
+            { label: 'Worlds', href: '/worlds',          glyph: 'W' },
+            { label: 'Events', href: '/events',          glyph: 'E' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className="w-9 h-9 rounded-sm flex items-center justify-center font-mono text-[11px] uppercase tracking-wider text-bone/35 hover:text-bone hover:bg-bone/[0.04] transition-colors no-underline"
+            >
+              {item.glyph}
+            </Link>
+          ))}
+        </>
+      )}
+    </nav>
+  );
+
   /* ── Desktop sidebar ─────────────────────────────────── */
   const desktopSidebar = (
-    <aside className="hidden sm:flex flex-col fixed top-0 left-0 h-full w-56 pt-16 z-20 border-r border-bone/[0.06] bg-obsidian">
-      {/* Switcher */}
-      <div className="pt-3">
-        {contextSwitcher}
+    <aside
+      className={`hidden sm:flex flex-col fixed top-0 left-0 h-full pt-16 z-20 border-r border-bone/[0.06] bg-obsidian transition-[width] duration-300 ease-out ${
+        collapsed ? 'w-14' : 'w-56'
+      }`}
+    >
+      {/* Top: switcher (full) or just avatar (rail) */}
+      <div className="pt-3 relative">
+        {collapsed ? (
+          // Compact avatar — click expands
+          <button
+            onClick={toggle}
+            title="Expand sidebar"
+            className="mx-auto block w-9 h-9 rounded-full overflow-hidden border border-bone/15 hover:border-lime/50 transition cursor-pointer bg-bone/[0.02]"
+          >
+            {currentWorld ? (
+              currentWorld.worldImageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={currentWorld.worldImageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-basement text-[13px] bg-lime text-obsidian">
+                  {currentWorld.worldTitle[0]?.toUpperCase()}
+                </div>
+              )
+            ) : profile?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-lime">
+                <span className="font-basement text-[14px] text-obsidian">{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
+              </div>
+            )}
+          </button>
+        ) : (
+          contextSwitcher
+        )}
       </div>
 
-      {navSection}
-      {bottomLinks}
+      {collapsed ? railNav : navSection}
+
+      {/* Collapse / expand toggle — bottom-right edge */}
+      <div className={`px-2 pb-3 ${collapsed ? 'flex justify-center' : 'flex justify-end'} border-t border-bone/[0.06] pt-2`}>
+        <button
+          onClick={toggle}
+          title={collapsed ? 'Expand sidebar (⌘\\)' : 'Collapse sidebar (⌘\\)'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="w-7 h-7 rounded-sm flex items-center justify-center text-bone/40 hover:text-bone hover:bg-bone/[0.05] transition cursor-pointer bg-transparent border border-bone/10"
+        >
+          <span
+            className="font-mono text-[14px] leading-none"
+            style={{ transition: 'transform 250ms ease-out', transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
+          >
+            ›
+          </span>
+        </button>
+      </div>
+
+      {!collapsed && bottomLinks}
     </aside>
   );
 

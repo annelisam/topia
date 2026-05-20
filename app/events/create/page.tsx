@@ -100,6 +100,19 @@ export default function CreateEventPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [worldId, setWorldId] = useState('');
+  // Visual accent — drives the publish button + cover focus ring tint.
+  // Five Partiful-ish moods that map to the rest of the platform's palette.
+  const ACCENTS = [
+    { name: 'lime',   hex: '#e4fe52', on: '#0a0a0a' },
+    { name: 'pink',   hex: '#FF5BD7', on: '#0a0a0a' },
+    { name: 'blue',   hex: '#4F46FF', on: '#f5f0e8' },
+    { name: 'orange', hex: '#FF5C34', on: '#0a0a0a' },
+    { name: 'green',  hex: '#00FF88', on: '#0a0a0a' },
+  ] as const;
+  const [accent, setAccent] = useState<typeof ACCENTS[number]>(ACCENTS[0]);
+  const [showMore, setShowMore] = useState(false);
+  // Drag-hover state for the cover dropzone glow
+  const [dragOver, setDragOver] = useState(false);
   const { worldMemberships } = useUserProfile();
   const myWorlds = useMemo(() =>
     worldMemberships
@@ -222,6 +235,52 @@ export default function CreateEventPage() {
   const coverIsVideo = imageUrl.startsWith('data:video/') ||
     /\.(mp4|mov|webm)(\?|#|$)/i.test(imageUrl);
 
+  /** Shared validate+upload entry point so both the file picker and the
+   * drag-and-drop overlay route through the same constraints + state. */
+  async function uploadFile(file: File) {
+    setError('');
+    const isVideo = file.type.startsWith('video/');
+    const isGif = file.type === 'image/gif';
+    try {
+      setUploading(true);
+      if (isVideo) {
+        if (file.size > MAX_VIDEO_BYTES) {
+          setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB. Compress first.`);
+          return;
+        }
+        const duration = await getVideoDuration(file);
+        if (duration > MAX_VIDEO_SECONDS + 0.2) {
+          setError(`Video too long — max ${MAX_VIDEO_SECONDS}s (this one is ${duration.toFixed(1)}s).`);
+          return;
+        }
+        setImageUrl(await uploadToBlob(file, file.name));
+      } else if (isGif) {
+        if (file.size > MAX_IMAGE_BYTES) {
+          setError(`GIF too large — max ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`);
+          return;
+        }
+        setImageUrl(await uploadToBlob(file, file.name));
+      } else if (file.type.startsWith('image/')) {
+        const compressed = await compressImageToBlob(file);
+        setImageUrl(await uploadToBlob(compressed, 'cover.jpg'));
+      } else {
+        setError('Unsupported file. Use JPG, PNG, GIF, or short MP4/MOV.');
+      }
+    } catch (err) {
+      console.error('cover upload failed', err);
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) await uploadFile(file);
+  }
+
   const insertMarkdown = (before: string, after: string, placeholder: string) => {
     const textarea = document.getElementById('description-editor') as HTMLTextAreaElement;
     if (!textarea) return;
@@ -322,315 +381,333 @@ export default function CreateEventPage() {
     );
   }
 
+  // Used to render the small chip-row + "more" drawer toggle. Each chip
+  // wraps an existing input but styles it like a tappable pill.
+  const cityChipText = (showCustomCity ? customCity : city) || 'Add location';
+  const dateChipText = date
+    ? new Date(date + 'T00:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' })
+    : 'Add date';
+  const timeChipText = startTime
+    ? formatTimeForStorage(startTime) + (endTime ? ` – ${formatTimeForStorage(endTime)}` : '')
+    : 'Add time';
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="min-h-screen text-bone" style={{ backgroundColor: '#0a0a0a' }}>
       <Navigation />
 
-      <div className="container mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12">
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/events" className="font-mono text-[12px] uppercase tracking-widest hover:opacity-60 transition" style={{ color: 'var(--foreground)' }}>
+      {/* ── Sticky top bar — back link + status + publish ──────── */}
+      <div
+        className="sticky top-0 z-40 backdrop-blur-md border-b border-bone/[0.06]"
+        style={{ backgroundColor: 'rgba(10,10,10,0.85)', marginTop: 'var(--nav-height, 56px)' }}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
+          <Link
+            href="/events"
+            className="font-mono text-[11px] uppercase tracking-[2px] text-bone/50 hover:text-bone transition no-underline"
+          >
             ← Events
           </Link>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 ml-auto">
+            {eventName.trim() ? 'Draft' : 'New event'}
+          </span>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !eventName.trim()}
+            className="font-mono text-[11px] uppercase tracking-[2px] px-4 py-1.5 rounded-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-none"
+            style={{
+              backgroundColor: accent.hex,
+              color: accent.on,
+              boxShadow: !saving && eventName.trim() ? `0 0 0 1px ${accent.hex}40, 0 6px 24px -8px ${accent.hex}80` : 'none',
+            }}
+          >
+            {saving ? 'Publishing…' : 'Publish →'}
+          </button>
         </div>
+      </div>
 
-        <div className="max-w-2xl">
-          <h1 className="font-mono text-[20px] font-bold uppercase mb-8" style={{ color: 'var(--foreground)' }}>
-            Create Event
-          </h1>
+      {/* ── Body ───────────────────────────────────────────────── */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-32">
 
-          {/* Event Cover (image · gif · short video) */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Cover</label>
-            <p className="font-mono text-[13px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>
-              Square 1:1. JPG/PNG cropped to center. GIFs and short MP4/MOV (≤ 10s, ≤ 6 MB) play silently on the card.
-            </p>
-            {imageUrl && (
-              <div className="mb-3 relative inline-block">
-                {coverIsVideo ? (
-                  <video
-                    src={imageUrl}
-                    className="w-32 h-32 rounded-lg object-cover border"
-                    style={{ borderColor: 'var(--border-color)' }}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
+        {/* ─── 1. Cover hero ─────────────────────────────────── */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          className={`relative group rounded-2xl overflow-hidden mb-8 transition-all duration-300 ${
+            imageUrl ? 'border border-bone/10' : 'border-2 border-dashed'
+          }`}
+          style={{
+            aspectRatio: imageUrl ? '16 / 10' : '16 / 9',
+            borderColor: dragOver
+              ? accent.hex
+              : imageUrl ? 'rgba(245,240,232,0.10)' : 'rgba(245,240,232,0.18)',
+            backgroundColor: 'rgba(245,240,232,0.02)',
+            boxShadow: dragOver ? `0 0 0 4px ${accent.hex}30` : 'none',
+          }}
+        >
+          {imageUrl ? (
+            <>
+              {coverIsVideo ? (
+                <video src={imageUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={imageUrl} alt="cover" className="w-full h-full object-cover" />
+              )}
+              {/* Overlay actions */}
+              <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <label
+                  className={`font-mono text-[10px] uppercase tracking-[2px] bg-obsidian/80 backdrop-blur-sm text-bone border border-bone/20 px-3 py-1.5 rounded-sm transition cursor-pointer hover:border-lime/50 ${uploading ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  {uploading ? 'Uploading…' : 'Change'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
                   />
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={imageUrl} alt="preview" className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
-                )}
+                </label>
                 <button
                   onClick={() => setImageUrl('')}
-                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[13px] transition hover:opacity-80"
-                  style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                  className="font-mono text-[10px] uppercase tracking-[2px] bg-obsidian/80 backdrop-blur-sm text-bone/70 border border-bone/20 px-3 py-1.5 rounded-sm transition cursor-pointer hover:text-pink hover:border-pink/50"
                 >
-                  ×
+                  Remove
                 </button>
               </div>
-            )}
-            <div>
-              <label
-                className={`inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest transition-all rounded-lg theme-hover-invert ${uploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-              >
-                {uploading ? 'Uploading…' : imageUrl ? 'Change Cover' : 'Upload Cover'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Event Name */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Name *</label>
-            <input
-              type="text"
-              value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
-              placeholder="What's the event called?"
-              className={inputCls}
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            />
-          </div>
-
-          {/* Date & Time row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className={labelCls} style={{ color: 'var(--foreground)' }}>Date</label>
+            </>
+          ) : (
+            // Empty dropzone
+            <label className={`absolute inset-0 flex flex-col items-center justify-center gap-2 cursor-pointer ${uploading ? 'cursor-wait' : ''}`}>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={inputCls}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={uploading}
               />
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: 'var(--foreground)' }}>Start Time</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className={inputCls}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-              />
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: 'var(--foreground)' }}>End Time</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className={inputCls}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-              />
-            </div>
-          </div>
-
-
-          {/* Timezone */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Timezone</label>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className={inputCls + ' appearance-none cursor-pointer'}
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            >
-              <option value="America/New_York">Eastern Time (ET)</option>
-              <option value="America/Chicago">Central Time (CT)</option>
-              <option value="America/Denver">Mountain Time (MT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PT)</option>
-              <option value="America/Anchorage">Alaska Time (AKT)</option>
-              <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
-              <option value="Europe/London">Greenwich Mean Time (GMT)</option>
-              <option value="Europe/Paris">Central European Time (CET)</option>
-              <option value="Europe/Berlin">Central European Time (CET)</option>
-              <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
-              <option value="Asia/Shanghai">China Standard Time (CST)</option>
-              <option value="Australia/Sydney">Australian Eastern Time (AEST)</option>
-            </select>
-          </div>
-
-          {/* City */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>City *</label>
-            {!showCustomCity ? (
-              <select
-                value={city}
-                onChange={(e) => {
-                  if (e.target.value === '__new__') {
-                    setShowCustomCity(true);
-                    setCity('');
-                  } else {
-                    setCity(e.target.value);
-                  }
-                }}
-                className={inputCls + ' appearance-none cursor-pointer'}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+              <span
+                className="font-basement font-black uppercase leading-none"
+                style={{ fontSize: 'clamp(28px, 5vw, 56px)', color: accent.hex, opacity: 0.85 }}
               >
-                <option value="">Select a city...</option>
-                {cities.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-                <option value="__new__">+ Add new city</option>
-              </select>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customCity}
-                  onChange={(e) => setCustomCity(e.target.value)}
-                  placeholder="e.g. Los Angeles"
-                  className={inputCls}
-                  style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => { setShowCustomCity(false); setCustomCity(''); }}
-                  className="px-3 py-2 font-mono text-[11px] border rounded-lg hover:opacity-70 transition shrink-0"
-                  style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Venue / Address */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Venue / Address</label>
-            <input
-              type="text"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="e.g. The Fonda Theatre, 6126 Hollywood Blvd"
-              className={inputCls}
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            />
-          </div>
-
-          {/* Event Link */}
-          <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Link</label>
-            <input
-              type="url"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder="https://..."
-              className={inputCls}
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            />
-          </div>
-
-          {/* Host as World */}
-          {myWorlds.length > 0 && (
-            <div className="mb-6">
-              <label className={labelCls} style={{ color: 'var(--foreground)' }}>Host as World</label>
-              <p className="font-mono text-[13px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>Optionally host this event as one of your worlds</p>
-              <select
-                value={worldId}
-                onChange={(e) => setWorldId(e.target.value)}
-                className={inputCls + ' appearance-none cursor-pointer'}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-              >
-                <option value="">Just me (personal)</option>
-                {myWorlds.map(w => (
-                  <option key={w.id} value={w.id}>{w.title}</option>
-                ))}
-              </select>
-            </div>
+                {uploading ? 'Uploading…' : dragOver ? 'Drop it' : '+ Cover'}
+              </span>
+              <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/35 text-center px-6">
+                drag a file · or click · jpg · gif · mp4 (≤10s)
+              </span>
+            </label>
           )}
+        </div>
 
-          {/* Description with markdown editor */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Description</label>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDescriptionPreview(false)}
-                  className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
-                  style={!descriptionPreview
-                    ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
-                    : { color: 'var(--foreground)', opacity: 0.4 }
-                  }
-                >
-                  Write
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDescriptionPreview(true)}
-                  className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
-                  style={descriptionPreview
-                    ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
-                    : { color: 'var(--foreground)', opacity: 0.4 }
-                  }
-                >
-                  Preview
-                </button>
+        {/* ─── 2. Mega title (inline editable) ─────────────── */}
+        <input
+          type="text"
+          value={eventName}
+          onChange={(e) => setEventName(e.target.value)}
+          placeholder="Untitled event"
+          autoFocus
+          className="w-full bg-transparent border-none outline-none font-basement font-black uppercase text-bone placeholder:text-bone/20 mb-5 px-0"
+          style={{ fontSize: 'clamp(32px, 6vw, 64px)', lineHeight: 0.95, letterSpacing: '-0.02em' }}
+        />
+
+        {/* ─── 3. Chip row — date · time · location ────────── */}
+        <div className="flex flex-wrap items-center gap-2 mb-8">
+          {/* Date chip wraps a hidden native date input */}
+          <label className="relative inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition group">
+            <span className="text-[14px] leading-none">📅</span>
+            <span className={date ? 'text-bone' : 'text-bone/50'}>{dateChipText}</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+            />
+          </label>
+
+          {/* Time chip — opens a tiny popover */}
+          <details className="relative">
+            <summary className="list-none inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition">
+              <span className="text-[14px] leading-none">⏰</span>
+              <span className={startTime ? 'text-bone' : 'text-bone/50'}>{timeChipText}</span>
+            </summary>
+            <div className="absolute top-full left-0 mt-2 z-10 bg-obsidian border border-bone/15 rounded-lg p-3 shadow-2xl w-[260px]">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Start</span>
+                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" />
+                </div>
+                <div>
+                  <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">End</span>
+                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" />
+                </div>
               </div>
             </div>
+          </details>
 
-            {!descriptionPreview ? (
-              <>
-                <MarkdownToolbar onInsert={insertMarkdown} />
-                <textarea
-                  id="description-editor"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={8}
-                  placeholder="Describe the event... Supports **bold**, *italic*, [links](url), ## headings, - lists, > quotes"
-                  className={inputCls}
-                  style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)', resize: 'vertical', minHeight: '150px' }}
-                />
-                <p className="font-mono text-[13px] mt-1 opacity-30" style={{ color: 'var(--foreground)' }}>
-                  Supports Markdown formatting
-                </p>
-              </>
-            ) : (
-              <div
-                className="border px-4 py-3 rounded-lg min-h-[150px]"
-                style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
-              >
-                {description ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                    {description}
-                  </ReactMarkdown>
-                ) : (
-                  <p className="font-mono text-[13px] opacity-30" style={{ color: 'var(--foreground)' }}>Nothing to preview</p>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Location chip — opens city + venue inputs */}
+          <details className="relative">
+            <summary className="list-none inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition">
+              <span className="text-[14px] leading-none">📍</span>
+              <span className={(city || customCity) ? 'text-bone' : 'text-bone/50'}>{cityChipText}</span>
+            </summary>
+            <div className="absolute top-full left-0 mt-2 z-10 bg-obsidian border border-bone/15 rounded-lg p-3 shadow-2xl w-[320px]">
+              <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">City</span>
+              {!showCustomCity ? (
+                <select
+                  value={city}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') { setShowCustomCity(true); setCity(''); }
+                    else setCity(e.target.value);
+                  }}
+                  className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50 cursor-pointer mb-2"
+                >
+                  <option value="">Select a city…</option>
+                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="__new__">+ Add new city</option>
+                </select>
+              ) : (
+                <div className="flex gap-1.5 mb-2">
+                  <input
+                    type="text"
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    placeholder="e.g. Los Angeles"
+                    autoFocus
+                    className="flex-1 bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomCity(false); setCustomCity(''); }}
+                    className="px-2 py-1 font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone bg-transparent border border-bone/15 rounded-sm cursor-pointer"
+                  >
+                    ↺
+                  </button>
+                </div>
+              )}
+              <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Venue</span>
+              <input
+                type="text"
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
+                placeholder="e.g. The Fonda Theatre"
+                className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50"
+              />
+            </div>
+          </details>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3 mt-10 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !eventName.trim()}
-              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest hover:opacity-80 transition disabled:opacity-40 rounded-lg"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-            >
-              {saving ? 'Creating...' : 'Create Event'}
-            </button>
-            <Link
-              href="/events"
-              className="px-6 py-2 font-mono text-[12px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg"
-              style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-            >
-              Cancel
-            </Link>
-            {error && <span className="font-mono text-[12px]" style={{ color: '#FF5C34' }}>{error}</span>}
+          {/* Accent picker — tints publish + cover focus ring */}
+          <div className="inline-flex items-center gap-1 border border-bone/15 rounded-full px-2 py-1 ml-auto">
+            <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/35 pl-1 pr-1">mood</span>
+            {ACCENTS.map((a) => (
+              <button
+                key={a.name}
+                type="button"
+                onClick={() => setAccent(a)}
+                title={a.name}
+                className="w-5 h-5 rounded-full transition-all cursor-pointer border-2"
+                style={{
+                  backgroundColor: a.hex,
+                  borderColor: accent.name === a.name ? '#f5f0e8' : 'transparent',
+                  transform: accent.name === a.name ? 'scale(1.1)' : 'scale(1)',
+                }}
+              />
+            ))}
           </div>
         </div>
+
+        {/* ─── 4. Description — clean by default, toolbar on focus ── */}
+        <div className="mb-6 border border-bone/10 hover:border-bone/20 focus-within:border-lime/40 rounded-lg overflow-hidden transition-colors">
+          <div className="flex items-center justify-between bg-bone/[0.02] border-b border-bone/[0.04] px-3 py-1.5">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40">Description</span>
+            {description && (
+              <div className="flex gap-1">
+                <button type="button" onClick={() => setDescriptionPreview(false)} className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm transition cursor-pointer border-none ${!descriptionPreview ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}>Write</button>
+                <button type="button" onClick={() => setDescriptionPreview(true)}  className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm transition cursor-pointer border-none ${descriptionPreview ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}>Preview</button>
+              </div>
+            )}
+          </div>
+          {!descriptionPreview ? (
+            <div className="p-3">
+              {description && <MarkdownToolbar onInsert={insertMarkdown} />}
+              <textarea
+                id="description-editor"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                placeholder="What's the vibe? Who's it for? Bring something? **Markdown** works."
+                className="w-full bg-transparent border-none outline-none font-mono text-[14px] text-bone placeholder:text-bone/25 resize-none leading-relaxed"
+                style={{ minHeight: '120px' }}
+              />
+            </div>
+          ) : (
+            <div className="p-3 min-h-[150px]">
+              {description ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{description}</ReactMarkdown>
+              ) : (
+                <p className="font-mono text-[12px] text-bone/30">Nothing to preview yet</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ─── 5. "More details" collapsible drawer ──────────── */}
+        <button
+          type="button"
+          onClick={() => setShowMore(!showMore)}
+          className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone transition bg-transparent border-none cursor-pointer flex items-center gap-2 mb-3"
+        >
+          <span style={{ transition: 'transform 200ms', display: 'inline-block', transform: showMore ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+          {showMore ? 'Hide options' : 'More options · timezone · external link · world host'}
+        </button>
+
+        {showMore && (
+          <div className="space-y-4 border border-bone/[0.06] rounded-lg p-4 mb-6" style={{ animation: 'fadeUp 280ms ease-out' }}>
+            <div>
+              <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Timezone</label>
+              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none cursor-pointer">
+                <option value="America/New_York">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="America/Anchorage">Alaska Time (AKT)</option>
+                <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                <option value="Europe/London">Greenwich Mean Time (GMT)</option>
+                <option value="Europe/Paris">Central European Time (CET)</option>
+                <option value="Europe/Berlin">Central European Time (CET)</option>
+                <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
+                <option value="Asia/Shanghai">China Standard Time (CST)</option>
+                <option value="Australia/Sydney">Australian Eastern Time (AEST)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">External event link</label>
+              <input
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="https://… (if you'd rather RSVP somewhere else)"
+                className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none placeholder:text-bone/25"
+              />
+            </div>
+
+            {myWorlds.length > 0 && (
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Host as world</label>
+                <select value={worldId} onChange={(e) => setWorldId(e.target.value)} className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none cursor-pointer">
+                  <option value="">Just me (personal)</option>
+                  {myWorlds.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Inline error */}
+        {error && (
+          <div className="mb-6 font-mono text-[12px] uppercase tracking-[2px] text-pink/90 border border-pink/30 bg-pink/[0.06] rounded-sm px-3 py-2">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );
