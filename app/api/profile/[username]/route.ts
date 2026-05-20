@@ -32,6 +32,7 @@ export async function GET(
         roleTags:         users.roleTags,
         toolSlugs:        users.toolSlugs,
         path:             users.path,
+        verifiedProviders: users.verifiedProviders,
         createdAt:        users.createdAt,
       })
       .from(users)

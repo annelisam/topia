@@ -133,6 +133,15 @@ const PROVIDER_META: Record<SocialProvider, ProviderMeta> = {
   },
 };
 
+/* ── Mapping: provider → social column name in DB ──────────── */
+
+const SOCIAL_FIELD_NAME: Record<SocialProvider, string> = {
+  twitter:   'socialTwitter',
+  instagram: 'socialInstagram',
+  linkedin:  'socialLinkedin',
+  spotify:   'socialSpotify',
+};
+
 /* ── Helpers ───────────────────────────────────────────────── */
 
 function findOAuthAccount(user: unknown, oauthType: ProviderMeta['oauthType']): OAuthAccount | null {
@@ -170,11 +179,33 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
   const legacyHandle = !linked && value ? meta.parseHandle(value) : null;
   const displayLabel = linkedLabel ?? (legacyHandle ? `@${legacyHandle}` : (value ? 'Connected' : ''));
 
-  // When Privy linking finishes, push the constructed URL up to parent for persistence
+  /** Persist a connect or disconnect to the DB so the public profile shows it. */
+  async function persistToDb(url: string | null, mode: 'verify' | 'unverify') {
+    if (!user?.id) return;
+    try {
+      await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId: user.id,
+          [SOCIAL_FIELD_NAME[provider]]: url,
+          [mode === 'verify' ? 'verifyProvider' : 'unverifyProvider']: provider,
+        }),
+      });
+    } catch (err) {
+      console.error(`persist ${mode} ${provider} failed`, err);
+    }
+  }
+
+  // When Privy linking finishes, push the URL up AND save it to the DB
+  // (so the public profile reflects the new verified connection immediately).
   useEffect(() => {
     if (!ready || !authenticated || !linked) return;
     const expected = meta.buildUrl(linked);
-    if (expected && expected !== value) onChange(expected);
+    if (expected && expected !== value) {
+      onChange(expected);
+      void persistToDb(expected, 'verify');
+    }
     if (busy === 'connect') setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linked?.subject, linked?.username, ready, authenticated]);
@@ -242,11 +273,13 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
         await callUnlink(linked.subject);
       }
       onChange('');
+      await persistToDb(null, 'unverify');
     } catch (err) {
       console.error(`unlink ${provider} failed`, err);
       // If the account isn't actually linked on Privy's side (e.g. they
       // already revoked it elsewhere) we still want to clear the stale URL.
       onChange('');
+      await persistToDb(null, 'unverify');
       setError(readableError(err));
     } finally {
       setBusy(null);

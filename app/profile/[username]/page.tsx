@@ -33,6 +33,7 @@ interface PublicProfile {
   roleTags: string | null;
   toolSlugs: string | null;
   path: string | null;
+  verifiedProviders: string | null;
   createdAt: string;
 }
 
@@ -111,14 +112,17 @@ export default function PublicProfilePage() {
   const path = resolvePath(profile?.path, roleTags, hasOwnedWorlds);
   const config = PATH_CONFIG[path];
 
+  const verifiedSet = new Set(
+    (profile?.verifiedProviders ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+  );
   const socialLinks = profile ? [
-    { type: 'website', url: profile.socialWebsite, label: 'WEB' },
-    { type: 'twitter', url: profile.socialTwitter, label: 'X' },
-    { type: 'instagram', url: profile.socialInstagram, label: 'IG' },
-    { type: 'soundcloud', url: profile.socialSoundcloud, label: 'SC' },
-    { type: 'spotify', url: profile.socialSpotify, label: 'SPOT' },
-    { type: 'linkedin', url: profile.socialLinkedin, label: 'LI' },
-    { type: 'substack', url: profile.socialSubstack, label: 'SUB' },
+    { type: 'website',    url: profile.socialWebsite,    label: 'WEB',  verified: false },
+    { type: 'twitter',    url: profile.socialTwitter,    label: 'X',    verified: verifiedSet.has('twitter') },
+    { type: 'instagram',  url: profile.socialInstagram,  label: 'IG',   verified: verifiedSet.has('instagram') },
+    { type: 'soundcloud', url: profile.socialSoundcloud, label: 'SC',   verified: false },
+    { type: 'spotify',    url: profile.socialSpotify,    label: 'SPOT', verified: verifiedSet.has('spotify') },
+    { type: 'linkedin',   url: profile.socialLinkedin,   label: 'LI',   verified: verifiedSet.has('linkedin') },
+    { type: 'substack',   url: profile.socialSubstack,   label: 'SUB',  verified: false },
   ].filter((l) => l.url) : [];
 
   const memberSince = profile?.createdAt
@@ -307,8 +311,33 @@ export default function PublicProfilePage() {
                           {socialLinks.length > 0 ? (
                             <div className="flex items-center flex-wrap gap-3">
                               {socialLinks.map((link) => (
-                                <a key={link.type} href={link.url!} target="_blank" rel="noopener noreferrer" className="text-bone/30 hover:text-bone/60 transition-colors" title={link.label}>
+                                <a
+                                  key={link.type}
+                                  href={link.url!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`relative transition-colors ${link.verified ? 'text-bone/70 hover:text-bone' : 'text-bone/30 hover:text-bone/60'}`}
+                                  title={link.verified ? `${link.label} · verified` : link.label}
+                                  style={link.verified ? { color: config.hex } : undefined}
+                                >
                                   <SocialIcon type={link.type} size={16} />
+                                  {link.verified && (
+                                    <span
+                                      className="absolute -top-1 -right-1.5 flex items-center justify-center rounded-full"
+                                      style={{
+                                        width: 9,
+                                        height: 9,
+                                        backgroundColor: config.hex,
+                                        color: config.textOn === 'text-obsidian' ? '#1a1a1a' : '#f5f0e8',
+                                        fontSize: 7,
+                                        fontWeight: 900,
+                                        lineHeight: 1,
+                                      }}
+                                      aria-label="verified"
+                                    >
+                                      ✓
+                                    </span>
+                                  )}
                                 </a>
                               ))}
                             </div>

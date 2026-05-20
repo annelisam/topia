@@ -42,12 +42,25 @@ export async function POST(request: NextRequest) {
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
     const path              = norm(body, 'path');
 
+    // verifyProvider / unverifyProvider: atomically add/remove a provider from
+    // the verifiedProviders CSV without the client needing to read-modify-write.
+    const verifyProvider:   string | undefined = typeof body.verifyProvider   === 'string' ? body.verifyProvider.trim().toLowerCase()   : undefined;
+    const unverifyProvider: string | undefined = typeof body.unverifyProvider === 'string' ? body.unverifyProvider.trim().toLowerCase() : undefined;
+
     // Fetch existing user
     const existing = await db
       .select()
       .from(users)
       .where(eq(users.privyId, privyId))
       .limit(1);
+
+    function nextVerifiedProviders(prev: string | null): string | null {
+      const set = new Set((prev ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+      if (verifyProvider)   set.add(verifyProvider);
+      if (unverifyProvider) set.delete(unverifyProvider);
+      const joined = [...set].join(',');
+      return joined || null;
+    }
 
     if (existing.length > 0) {
       const prev = existing[0];
@@ -71,6 +84,7 @@ export async function POST(request: NextRequest) {
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
           path:             path            !== undefined ? path            : prev.path,
+          ...((verifyProvider || unverifyProvider) && { verifiedProviders: nextVerifiedProviders(prev.verifiedProviders) }),
           updatedAt: new Date(),
         })
         .where(eq(users.privyId, privyId))
@@ -101,6 +115,7 @@ export async function POST(request: NextRequest) {
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
         path:             path            ?? null,
+        verifiedProviders: nextVerifiedProviders(null),
       })
       .returning();
 
