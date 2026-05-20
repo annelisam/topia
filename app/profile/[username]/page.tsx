@@ -157,7 +157,12 @@ export default function PublicProfilePage() {
     { type: 'substack',   url: profile.socialSubstack,   label: 'SUB',  verified: false },
   ]
     .filter((l) => l.url)
-    .map((l) => ({ ...l, handle: l.verified ? handleFromUrl(l.type, l.url) : null })) : [];
+    .map((l) => ({
+      ...l,
+      handle: l.verified ? handleFromUrl(l.type, l.url)?.toLowerCase() ?? null : null,
+    }))
+    // Verified (OAuth-linked) profiles first; pasted links after. Stable within each group.
+    .sort((a, b) => Number(b.verified) - Number(a.verified)) : [];
 
   const memberSince = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
@@ -360,7 +365,7 @@ export default function PublicProfilePage() {
                                       <SocialIcon type={link.type} size={12} />
                                       {link.handle && (
                                         <span
-                                          className="font-mono uppercase tracking-[1px]"
+                                          className="font-mono lowercase tracking-[1px]"
                                           style={{ fontSize: 10, color: config.hex }}
                                         >
                                           @{link.handle}
