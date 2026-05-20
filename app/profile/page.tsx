@@ -7,6 +7,7 @@ import Link from 'next/link';
 import PageShell from '../components/PageShell';
 import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
+import SocialConnect from '../components/SocialConnect';
 
 const ACCENT_COLORS = ['#BFFF00','#3B82F6','#EC4899','#F97316','#22C55E','#E8E0D0'];
 
@@ -638,12 +639,16 @@ export default function ProfilePage() {
               {activeSection === 'social' && (
                 <div className="p-4 sm:p-6 space-y-5">
                   <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    SOCIAL LINKS — CONNECT YOUR WORLD
+                    CONNECTED PROFILES — VERIFIED ACCOUNTS
+                  </p>
+                  <SocialConnect provider="twitter"   value={socialTwitter}   onChange={setSocialTwitter}   accent={accent} />
+                  <SocialConnect provider="instagram" value={socialInstagram} onChange={setSocialInstagram} accent={accent} />
+
+                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8, marginTop: 24 }}>
+                    LINKS — PASTE URLs
                   </p>
                   {[
                     { label: 'Website',     value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',              icon: <SocialIcon type="website" /> },
-                    { label: 'Twitter / X', value: socialTwitter,    set: setSocialTwitter,    placeholder: 'https://x.com/handle',              icon: <SocialIcon type="twitter" /> },
-                    { label: 'Instagram',   value: socialInstagram,  set: setSocialInstagram,  placeholder: 'https://instagram.com/handle',      icon: <SocialIcon type="instagram" /> },
                     { label: 'SoundCloud',  value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle',     icon: <SocialIcon type="soundcloud" /> },
                     { label: 'Spotify',     value: socialSpotify,    set: setSocialSpotify,    placeholder: 'https://open.spotify.com/artist/…', icon: <SocialIcon type="spotify" /> },
                     { label: 'LinkedIn',    value: socialLinkedin,   set: setSocialLinkedin,   placeholder: 'https://linkedin.com/in/handle',    icon: <SocialIcon type="linkedin" /> },

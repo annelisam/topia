@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
+import SocialConnect from '../../components/SocialConnect';
 
 interface Socials {
   socialWebsite: string;
@@ -44,13 +45,13 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
 
   const SOCIAL_FIELDS: { key: keyof Socials; label: string; placeholder: string }[] = [
     { key: 'socialWebsite',    label: 'WEB',   placeholder: 'yoursite.com' },
-    { key: 'socialTwitter',    label: 'X',     placeholder: 'x.com/handle' },
-    { key: 'socialInstagram',  label: 'IG',    placeholder: 'instagram.com/handle' },
     { key: 'socialSoundcloud', label: 'SC',    placeholder: 'soundcloud.com/handle' },
     { key: 'socialSpotify',    label: 'SPOT',  placeholder: 'open.spotify.com/...' },
     { key: 'socialLinkedin',   label: 'LI',    placeholder: 'linkedin.com/in/handle' },
     { key: 'socialSubstack',   label: 'SUB',   placeholder: 'handle.substack.com' },
   ];
+
+  const accentHex = config?.hex ?? '#e4fe52';
 
   return (
     <StepShell
@@ -75,7 +76,25 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
       <div className="mt-1 font-mono text-[10px] uppercase tracking-[2px] text-bone/25 text-right">{bio.length}/280</div>
 
       <div className="mt-8">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">links</span>
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">connected profiles</span>
+        <div className="space-y-1">
+          <SocialConnect
+            provider="twitter"
+            value={socials.socialTwitter}
+            onChange={(url) => setSocial('socialTwitter', url)}
+            accent={accentHex}
+          />
+          <SocialConnect
+            provider="instagram"
+            value={socials.socialInstagram}
+            onChange={(url) => setSocial('socialInstagram', url)}
+            accent={accentHex}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">other links</span>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
           {SOCIAL_FIELDS.map(({ key, label, placeholder }) => (
             <label key={key} className="flex items-center gap-2 border-b border-bone/10 focus-within:border-bone/40 py-1.5 transition-colors">
