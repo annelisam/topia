@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, events, eventRsvps, eventHosts, eventComments } from '@/lib/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { getReactionsForTargets } from '@/lib/reactions';
 
 /** Returns the set of user IDs who are hosts of this event. Includes the
  * eventHosts join AND the events.createdBy field — but skips createdBy for
@@ -37,12 +38,15 @@ export async function GET(request: NextRequest) {
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 
     const authors = alias(users, 'authors');
+    // Pull ALL rows (top-level + replies) in one shot — cheaper than two
+    // queries, then we split by parentId in memory.
     const rows = await db
       .select({
         id: eventComments.id,
         body: eventComments.body,
         imageUrl: eventComments.imageUrl,
         giphyId: eventComments.giphyId,
+        parentId: eventComments.parentId,
         createdAt: eventComments.createdAt,
         authorId: eventComments.userId,
         authorName: authors.name,
@@ -52,33 +56,66 @@ export async function GET(request: NextRequest) {
       .from(eventComments)
       .leftJoin(authors, eq(eventComments.userId, authors.id))
       .where(eq(eventComments.eventId, event.id))
-      .orderBy(desc(eventComments.createdAt));
+      .orderBy(asc(eventComments.createdAt));
 
-    // Resolve which authors are hosts so the UI can render a HOSTING badge
-    // next to their comments. Note: this includes the implicit createdBy
-    // host on non-external events.
+    // Resolve hosts so we can render the HOST pill on host comments.
     const hostIds = await getHostIds(event.id, event.createdBy, event.externalSource);
-    const comments = rows.map((r) => ({ ...r, isHost: hostIds.has(r.authorId) }));
 
-    // Gate check — hosts always allowed; otherwise must be RSVP'd OR
-    // interested (event slug in savedEventSlugs CSV).
-    let canPost = false;
+    // Resolve viewer id (used for reactions' viewerReacted flag + canPost)
+    let viewerId: string | null = null;
+    let viewerSavedSlugs = '';
     if (viewerPrivyId) {
       const [viewer] = await db
         .select({ id: users.id, savedEventSlugs: users.savedEventSlugs })
         .from(users).where(eq(users.privyId, viewerPrivyId)).limit(1);
       if (viewer) {
-        if (hostIds.has(viewer.id)) {
+        viewerId = viewer.id;
+        viewerSavedSlugs = viewer.savedEventSlugs ?? '';
+      }
+    }
+
+    // Reactions per comment — single query batched across all IDs
+    const reactionsByTarget = await getReactionsForTargets('event_comment', rows.map((r) => r.id), viewerId);
+
+    // Annotate each row + split into top-level + replies (one level deep)
+    type Annotated = typeof rows[number] & {
+      isHost: boolean;
+      reactions: ReturnType<typeof getReactionsForTargets> extends Promise<Record<string, infer V>> ? V : never;
+      replies: Annotated[];
+    };
+    const annotated: Annotated[] = rows.map((r) => ({
+      ...r,
+      isHost: hostIds.has(r.authorId),
+      reactions: reactionsByTarget[r.id] ?? [],
+      replies: [],
+    }));
+    const byId = new Map(annotated.map((c) => [c.id, c]));
+    const topLevel: Annotated[] = [];
+    for (const c of annotated) {
+      if (c.parentId && byId.has(c.parentId)) {
+        byId.get(c.parentId)!.replies.push(c);
+      } else {
+        topLevel.push(c);
+      }
+    }
+    // Sort top-level newest-first; replies stay oldest-first within each thread
+    topLevel.sort((a, b) => (b.createdAt instanceof Date ? b.createdAt.getTime() : 0) - (a.createdAt instanceof Date ? a.createdAt.getTime() : 0));
+    const comments = topLevel;
+
+    // Gate check — hosts always allowed; otherwise must be RSVP'd OR
+    // interested (event slug in savedEventSlugs CSV).
+    let canPost = false;
+    if (viewerId) {
+      if (hostIds.has(viewerId)) {
+        canPost = true;
+      } else {
+        const saved = viewerSavedSlugs.split(',').map((s) => s.trim()).filter(Boolean);
+        if (saved.includes(event.slug)) {
           canPost = true;
         } else {
-          const saved = (viewer.savedEventSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-          if (saved.includes(event.slug)) {
-            canPost = true;
-          } else {
-            const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps)
-              .where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, viewer.id))).limit(1);
-            canPost = !!rsvp;
-          }
+          const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps)
+            .where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, viewerId))).limit(1);
+          canPost = !!rsvp;
         }
       }
     }
@@ -92,7 +129,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, slug, body, imageUrl, giphyId } = await request.json();
+    const { privyId, slug, body, imageUrl, giphyId, parentId } = await request.json();
     if (!privyId || !slug) return NextResponse.json({ error: 'Missing privyId or slug' }, { status: 400 });
     if (!body?.trim() && !imageUrl) return NextResponse.json({ error: 'Body or gif required' }, { status: 400 });
 
@@ -121,12 +158,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "RSVP or mark interested to comment." }, { status: 403 });
     }
 
+    // If this is a reply, validate the parent belongs to the same event
+    // AND is itself a top-level comment (one-level nesting only).
+    let resolvedParentId: string | null = null;
+    if (parentId) {
+      const [parent] = await db
+        .select({ id: eventComments.id, eventId: eventComments.eventId, parentId: eventComments.parentId })
+        .from(eventComments).where(eq(eventComments.id, parentId)).limit(1);
+      if (!parent || parent.eventId !== event.id) {
+        return NextResponse.json({ error: 'Invalid parent comment' }, { status: 400 });
+      }
+      // Don't allow replies to replies — keep threads one level deep
+      resolvedParentId = parent.parentId ?? parent.id;
+    }
+
     const [inserted] = await db.insert(eventComments).values({
       eventId: event.id,
       userId:  user.id,
       body:    body?.trim() || null,
       imageUrl: imageUrl || null,
       giphyId:  giphyId  || null,
+      parentId: resolvedParentId,
     }).returning();
 
     return NextResponse.json({ comment: inserted }, { status: 201 });

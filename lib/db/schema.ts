@@ -269,27 +269,32 @@ export const guestbookEntries = pgTable('guestbook_entries', {
   id: uuid('id').defaultRandom().primaryKey(),
   profileUserId: uuid('profile_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   authorUserId:  uuid('author_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  kind: text('kind').notNull(),                 // 'drawing' | 'message' | 'gif'
+  kind: text('kind').notNull(),                 // 'drawing' | 'message' | 'gif' | 'reply'
   body: text('body'),                           // text content / caption
   imageUrl: text('image_url'),                  // drawing PNG OR gif URL (Vercel Blob or Giphy CDN)
   giphyId: text('giphy_id'),                    // for Giphy attribution
+  // Optional parent for one-level-deep text replies. Guestbook replies are
+  // limited: text-only, no further nesting. Null for top-level entries.
+  parentId: uuid('parent_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 /* Tool comments + optional 1–5 rating. Only users who have the tool in
  * their kit (users.tool_slugs contains tool.slug) can post — enforced at
- * the API layer. Public read. */
+ * the API layer. Public read. Replies live in the same table via parentId. */
 export const toolComments = pgTable('tool_comments', {
   id: uuid('id').defaultRandom().primaryKey(),
   toolId: uuid('tool_id').references(() => tools.id, { onDelete: 'cascade' }).notNull(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   body: text('body'),
-  rating: integer('rating'),                    // nullable 1..5
+  rating: integer('rating'),                    // nullable 1..5; replies don't carry ratings
+  parentId: uuid('parent_id'),                  // top-level when null
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 /* Event comments + optional gif. Only users who RSVP'd or have the event
- * slug in savedEventSlugs (interested) can post — enforced at the API. */
+ * slug in savedEventSlugs (interested) can post — enforced at the API.
+ * Replies live in the same table via parentId. */
 export const eventComments = pgTable('event_comments', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
@@ -297,5 +302,28 @@ export const eventComments = pgTable('event_comments', {
   body: text('body'),
   imageUrl: text('image_url'),                  // gif URL
   giphyId: text('giphy_id'),
+  parentId: uuid('parent_id'),                  // top-level when null
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/* ────────────────────────────────────────────────────────────────────
+ * Polymorphic emoji reactions on guestbook entries + comments.
+ *
+ * One row per (target, user, emoji) — toggling the same emoji on the
+ * same target by the same user deletes the row. Aggregation happens at
+ * read time (cheap; counts shown live).
+ *
+ *   targetType ∈ 'guestbook' | 'tool_comment' | 'event_comment'
+ *
+ * `target_id` is *not* a FK because it refers to different tables
+ * depending on `target_type`. Cascade cleanup of orphans is handled
+ * lazily when the parent row is deleted (a separate sweep, not via FK).
+ * ──────────────────────────────────────────────────────────────────── */
+export const reactions = pgTable('reactions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  targetType: text('target_type').notNull(),   // 'guestbook' | 'tool_comment' | 'event_comment'
+  targetId:   uuid('target_id').notNull(),
+  userId:     uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  emoji:      text('emoji').notNull(),         // unicode character, e.g. '❤️', '🔥'
+  createdAt:  timestamp('created_at').defaultNow().notNull(),
 });
