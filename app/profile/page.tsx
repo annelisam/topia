@@ -7,7 +7,7 @@ import Link from 'next/link';
 import PageShell from '../components/PageShell';
 import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
-import SocialConnect from '../components/SocialConnect';
+import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../components/SocialConnect';
 
 const ACCENT_COLORS = ['#BFFF00','#3B82F6','#EC4899','#F97316','#22C55E','#E8E0D0'];
 
@@ -641,10 +641,21 @@ export default function ProfilePage() {
                   <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
                     CONNECTED PROFILES — VERIFIED ACCOUNTS
                   </p>
-                  <SocialConnect provider="twitter"   value={socialTwitter}   onChange={setSocialTwitter}   accent={accent} />
-                  <SocialConnect provider="instagram" value={socialInstagram} onChange={setSocialInstagram} accent={accent} />
-                  <SocialConnect provider="linkedin"  value={socialLinkedin}  onChange={setSocialLinkedin}  accent={accent} />
-                  <SocialConnect provider="spotify"   value={socialSpotify}   onChange={setSocialSpotify}   accent={accent} />
+                  {([
+                    { p: 'twitter'   as const, v: socialTwitter,   set: setSocialTwitter   },
+                    { p: 'instagram' as const, v: socialInstagram, set: setSocialInstagram },
+                    { p: 'linkedin'  as const, v: socialLinkedin,  set: setSocialLinkedin  },
+                    { p: 'spotify'   as const, v: socialSpotify,   set: setSocialSpotify   },
+                  ] satisfies { p: SocialProvider; v: string; set: (s: string) => void }[])
+                    .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
+                    .map(({ p, v, set }) => (
+                      <SocialConnect key={p} provider={p} value={v} onChange={set} accent={accent} />
+                    ))}
+                  {ENABLED_SOCIAL_PROVIDERS.length === 0 && (
+                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em' }}>
+                      No social providers enabled yet. Enable each in dashboard.privy.io and add to NEXT_PUBLIC_SOCIAL_PROVIDERS.
+                    </p>
+                  )}
 
                   <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8, marginTop: 24 }}>
                     LINKS — PASTE URLs

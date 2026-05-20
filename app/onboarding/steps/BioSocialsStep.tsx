@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
-import SocialConnect from '../../components/SocialConnect';
+import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../../components/SocialConnect';
 
 interface Socials {
   socialWebsite: string;
@@ -73,35 +73,29 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
       />
       <div className="mt-1 font-mono text-[10px] uppercase tracking-[2px] text-bone/25 text-right">{bio.length}/280</div>
 
-      <div className="mt-8">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">connected profiles</span>
-        <div className="space-y-1">
-          <SocialConnect
-            provider="twitter"
-            value={socials.socialTwitter}
-            onChange={(url) => setSocial('socialTwitter', url)}
-            accent={accentHex}
-          />
-          <SocialConnect
-            provider="instagram"
-            value={socials.socialInstagram}
-            onChange={(url) => setSocial('socialInstagram', url)}
-            accent={accentHex}
-          />
-          <SocialConnect
-            provider="linkedin"
-            value={socials.socialLinkedin}
-            onChange={(url) => setSocial('socialLinkedin', url)}
-            accent={accentHex}
-          />
-          <SocialConnect
-            provider="spotify"
-            value={socials.socialSpotify}
-            onChange={(url) => setSocial('socialSpotify', url)}
-            accent={accentHex}
-          />
+      {ENABLED_SOCIAL_PROVIDERS.length > 0 && (
+        <div className="mt-8">
+          <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">connected profiles</span>
+          <div className="space-y-1">
+            {([
+              { p: 'twitter'   as const, key: 'socialTwitter'   as const },
+              { p: 'instagram' as const, key: 'socialInstagram' as const },
+              { p: 'linkedin'  as const, key: 'socialLinkedin'  as const },
+              { p: 'spotify'   as const, key: 'socialSpotify'   as const },
+            ] satisfies { p: SocialProvider; key: keyof Socials }[])
+              .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
+              .map(({ p, key }) => (
+                <SocialConnect
+                  key={p}
+                  provider={p}
+                  value={socials[key]}
+                  onChange={(url) => setSocial(key, url)}
+                  accent={accentHex}
+                />
+              ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-6">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-3">other links</span>

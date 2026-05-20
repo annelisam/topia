@@ -6,6 +6,27 @@ import { SocialIcon } from './SocialIcons';
 
 export type SocialProvider = 'twitter' | 'instagram' | 'linkedin' | 'spotify';
 
+const ALL_PROVIDERS: SocialProvider[] = ['twitter', 'instagram', 'linkedin', 'spotify'];
+
+/**
+ * Which providers should actually render in the UI. Driven by the
+ * NEXT_PUBLIC_SOCIAL_PROVIDERS env var (comma-separated). Flip each one on
+ * as you finish setting it up in Privy → Login Methods.
+ *
+ * Example: NEXT_PUBLIC_SOCIAL_PROVIDERS="twitter,linkedin"
+ *
+ * Default if unset: ['twitter'] only — that's the one Privy ships with
+ * managed OAuth credentials out of the box.
+ */
+export const ENABLED_SOCIAL_PROVIDERS: SocialProvider[] = (() => {
+  const raw = process.env.NEXT_PUBLIC_SOCIAL_PROVIDERS;
+  if (!raw) return ['twitter'];
+  return raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((p): p is SocialProvider => ALL_PROVIDERS.includes(p as SocialProvider));
+})();
+
 interface Props {
   provider: SocialProvider;
   /** Current stored URL (from DB). When non-empty, switches to "Connected as @handle". */
