@@ -376,18 +376,6 @@ export default function EventsPage() {
                 })}
               </div>
 
-              {/* ─── Featured row — compact in grid view, hero in list view ─── */}
-              {!loading && showFeatured && featured.length > 0 && (
-                <FeaturedRow
-                  events={featured}
-                  authenticated={authenticated}
-                  compact={viewMode === 'grid'}
-                  onOpen={(slug) => setActiveSlug(slug)}
-                  onToggleRsvp={(eventId, going) => toggleRsvp(eventId, going)}
-                  onToggleSave={(slug, saved) => toggleSave(slug, saved)}
-                />
-              )}
-
               {/* ─── ROW 4: Grouped list OR grid ─── */}
               <div className="bg-obsidian min-h-[400px]">
                 {loading ? (
@@ -440,6 +428,20 @@ export default function EventsPage() {
                   ))
                 )}
               </div>
+
+              {/* ─── ROW 5: Featured (below the list/grid) — adapts to view mode ─── */}
+              {!loading && showFeatured && featured.length > 0 && (
+                <div className="border-t border-bone/[0.06]">
+                  <FeaturedRow
+                    events={featured}
+                    authenticated={authenticated}
+                    compact={viewMode === 'grid'}
+                    onOpen={(slug) => setActiveSlug(slug)}
+                    onToggleRsvp={(eventId, going) => toggleRsvp(eventId, going)}
+                    onToggleSave={(slug, saved) => toggleSave(slug, saved)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </section>
