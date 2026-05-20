@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
         imageUrl: events.imageUrl,
         description: events.description,
         createdBy: events.createdBy,
+        externalSource: events.externalSource,
       })
       .from(events)
       .where(where)

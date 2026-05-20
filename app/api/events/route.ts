@@ -267,6 +267,7 @@ export async function POST(request: NextRequest) {
       imageUrl: data.imageUrl || null,
       createdBy: user.id,
       published: true,
+      externalSource: data.externalSource || null,
     }).returning();
 
     // Auto-create host row for the creator

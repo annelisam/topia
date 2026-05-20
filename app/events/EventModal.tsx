@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
+import EventSourceBadge from './EventSourceBadge';
 
 interface EventHost {
   userId: string;
@@ -33,6 +34,7 @@ interface EventDetail {
   isGoing: boolean;
   isHosting: boolean;
   isSaved: boolean;
+  externalSource?: string | null;
 }
 
 interface Props {
@@ -163,6 +165,7 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
                 {isPast && (
                   <span className="font-mono text-[9px] uppercase tracking-[2px] bg-orange/20 text-orange border border-orange/40 px-1.5 py-0.5 rounded-sm">Past</span>
                 )}
+                <EventSourceBadge source={event.externalSource} size="sm" />
               </div>
               <h1 className="font-basement font-black text-[clamp(22px,3vw,32px)] uppercase leading-[0.95] text-bone">{event.eventName}</h1>
               <div className="font-mono text-[12px] text-bone/50 mt-2">
@@ -211,7 +214,10 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
                   rel="noopener noreferrer"
                   className="font-mono text-[11px] uppercase tracking-[2px] text-bone/70 border border-bone/20 hover:border-bone/60 hover:text-bone px-3 py-2 rounded-sm transition no-underline"
                 >
-                  Event link →
+                  {event.externalSource === 'partiful'   ? 'RSVP on Partiful →'
+                  : event.externalSource === 'luma'      ? 'RSVP on Luma →'
+                  : event.externalSource === 'eventbrite' ? 'Tickets on Eventbrite →'
+                  : 'Event link →'}
                 </a>
               )}
               <button

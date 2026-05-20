@@ -7,6 +7,7 @@ import PageShell from '../components/PageShell';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventModal from './EventModal';
 import SubmitEventModal from './SubmitEventModal';
+import EventSourceBadge from './EventSourceBadge';
 
 interface EventHost {
   userId: string;
@@ -35,6 +36,7 @@ interface EventCard {
   isGoing: boolean;
   isHosting: boolean;
   isSaved: boolean;
+  externalSource?: string | null;
 }
 
 type Tab = 'all' | 'upcoming' | 'thisWeek' | 'past' | 'saved' | 'mine';
@@ -508,6 +510,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
           {event.isGoing && !event.isHosting && (
             <span className="font-mono text-[9px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm shrink-0">✓ Going</span>
           )}
+          <EventSourceBadge source={event.externalSource} size="xs" />
         </div>
         <div className="font-mono text-[10px] text-bone/40 truncate mt-0.5">
           {event.startTime ? `${event.startTime} ` : ''}
@@ -862,7 +865,10 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
 
       {/* Body */}
       <div className="p-3 flex flex-col gap-2 flex-1">
-        <h3 className="font-mono text-[12px] uppercase font-bold text-bone leading-tight line-clamp-2">{event.eventName}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-mono text-[12px] uppercase font-bold text-bone leading-tight line-clamp-2 flex-1">{event.eventName}</h3>
+          <EventSourceBadge source={event.externalSource} size="xs" />
+        </div>
         <div className="font-mono text-[10px] text-bone/40 truncate">
           {event.startTime ? `${event.startTime} ` : ''}
           {event.city ? `· ${event.city}` : ''}

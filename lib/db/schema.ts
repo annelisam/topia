@@ -112,6 +112,9 @@ export const events = pgTable('events', {
   imageUrl: text('image_url'),
   createdBy: uuid('created_by').references(() => users.id),
   published: boolean('published').default(true),
+  // Set when the event was imported from an external platform via /api/events/import.
+  // Values: 'partiful' | 'luma' | 'eventbrite' | 'other' (manual creates leave it null)
+  externalSource: text('external_source'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
