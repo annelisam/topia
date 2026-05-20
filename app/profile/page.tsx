@@ -7,6 +7,7 @@ import Link from 'next/link';
 import PageShell from '../components/PageShell';
 import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
+import { CheckIcon } from '../components/ui/Icons';
 import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../components/SocialConnect';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
@@ -464,7 +465,7 @@ export default function ProfilePage() {
                              : 'transparent',
                       }}
                     >
-                      {usernameAvailability === 'available' ? '✓ available'
+                      {usernameAvailability === 'available' ? (<span className="inline-flex items-center gap-1"><CheckIcon size={10} /> available</span>)
                         : usernameAvailability === 'taken'  ? '✗ taken'
                         : usernameAvailability === 'invalid' ? '3–30 chars · a–z 0–9 _'
                         : usernameAvailability === 'checking' ? 'checking…'
@@ -1034,7 +1035,7 @@ export default function ProfilePage() {
                     cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE PROFILE'}
+                  {saving ? 'SAVING...' : saved ? (<span className="inline-flex items-center gap-1.5">SAVED <CheckIcon size={11} strokeWidth={2} /></span>) : 'SAVE PROFILE'}
                 </button>
                 <span
                   style={{
@@ -1049,7 +1050,7 @@ export default function ProfilePage() {
                   }}
                 >
                   {autoSaveStatus === 'saving' ? '· auto-saving…' :
-                   autoSaveStatus === 'saved'  ? '✓ auto-saved' :
+                   autoSaveStatus === 'saved'  ? (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckIcon size={9} /> auto-saved</span>) :
                    autoSaveStatus === 'error'  ? '× save failed' : '· auto-save on'}
                 </span>
               </div>

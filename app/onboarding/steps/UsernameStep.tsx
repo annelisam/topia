@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
 import { sanitizeUsername, useUsernameAvailability } from '../usernameAvailability';
+import { CheckIcon } from '../../components/ui/Icons';
 
 interface Props {
   step: number;
@@ -26,12 +27,12 @@ export default function UsernameStep({ step, total, config, privyId, initialValu
     return () => clearTimeout(t);
   }, []);
 
-  const statusLabel: Record<typeof availability, { text: string; color: string }> = {
-    idle:      { text: '',                          color: 'text-bone/30' },
-    checking:  { text: 'checking…',                 color: 'text-bone/40' },
-    available: { text: '✓ available',               color: 'text-green' },
-    taken:     { text: '✗ taken',                   color: 'text-pink' },
-    invalid:   { text: '3–30 chars · a–z 0–9 _',    color: 'text-bone/40' },
+  const statusLabel: Record<typeof availability, { text: ReactNode; color: string }> = {
+    idle:      { text: '',                                                                                                       color: 'text-bone/30' },
+    checking:  { text: 'checking…',                                                                                              color: 'text-bone/40' },
+    available: { text: (<span className="inline-flex items-center gap-1.5"><CheckIcon size={10} /> available</span>),            color: 'text-green' },
+    taken:     { text: '✗ taken',                                                                                                color: 'text-pink' },
+    invalid:   { text: '3–30 chars · a–z 0–9 _',                                                                                 color: 'text-bone/40' },
   };
 
   function submit() {

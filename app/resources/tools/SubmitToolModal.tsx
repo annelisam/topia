@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { CheckIcon } from '../../components/ui/Icons';
 
 const TOOL_CATEGORIES = [
   'AI', 'Audio', 'Video', 'Design', '3D', 'Animation', 'Music',
@@ -123,7 +124,7 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
           </div>
         ) : success ? (
           <div className="p-6 text-center">
-            <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2">Submitted ✓</h2>
+            <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2 inline-flex items-center gap-2">Submitted <CheckIcon size={18} strokeWidth={2.2} /></h2>
             <p className="font-mono text-[12px] text-bone/60 leading-relaxed">
               Your tool is pending review. It will appear in the public list once an admin approves it.
             </p>

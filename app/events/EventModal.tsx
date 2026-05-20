@@ -174,7 +174,7 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
                   <span className="font-mono text-[9px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold">Hosting</span>
                 )}
                 {event.isGoing && !event.isHosting && (
-                  <span className="font-mono text-[9px] uppercase tracking-[2px] bg-green/20 text-green border border-green/40 px-1.5 py-0.5 rounded-sm">✓ Going</span>
+                  <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[2px] bg-green/20 text-green border border-green/40 px-1.5 py-0.5 rounded-sm"><CheckIcon size={8} /> Going</span>
                 )}
                 {isPast && (
                   <span className="font-mono text-[9px] uppercase tracking-[2px] bg-orange/20 text-orange border border-orange/40 px-1.5 py-0.5 rounded-sm">Past</span>

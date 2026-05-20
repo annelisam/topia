@@ -541,7 +541,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
             <span className="font-mono text-[9px] uppercase tracking-[2px] bg-lime/20 text-lime px-1 py-0.5 rounded-sm shrink-0">Hosting</span>
           )}
           {event.isGoing && !event.isHosting && (
-            <span className="font-mono text-[9px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm shrink-0">✓ Going</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm shrink-0"><CheckIcon size={8} /> Going</span>
           )}
           <EventSourceBadge source={event.externalSource} size="xs" />
         </div>
@@ -712,7 +712,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                   <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold">Hosting</span>
                 )}
                 {!ev.isHosting && ev.isGoing && (
-                  <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[2px] bg-green/20 text-green border border-green/40 px-1.5 py-0.5 rounded-sm">✓ Going</span>
+                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[2px] bg-green/20 text-green border border-green/40 px-1.5 py-0.5 rounded-sm"><CheckIcon size={8} /> Going</span>
                 )}
                 {/* Save heart top-right when not hosting/going */}
                 {authenticated && !ev.isHosting && !ev.isGoing && (
@@ -778,7 +778,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                         : 'bg-transparent border-bone/20 text-bone/70 hover:bg-lime hover:text-obsidian hover:border-lime'
                     }`}
                   >
-                    {ev.isGoing ? '✓ Going' : 'RSVP'}
+                    {ev.isGoing ? (<span className="inline-flex items-center gap-1"><CheckIcon size={8} /> Going</span>) : 'RSVP'}
                   </button>
                 )}
               </div>
@@ -844,7 +844,7 @@ function FeaturedRowCompact({
                   <span className="absolute top-1.5 right-1.5 font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1 py-0.5 rounded-sm font-bold">Host</span>
                 )}
                 {!ev.isHosting && ev.isGoing && (
-                  <span className="absolute top-1.5 right-1.5 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm">✓ Going</span>
+                  <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm"><CheckIcon size={7} /> Going</span>
                 )}
                 {/* Title overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-1.5">
@@ -875,7 +875,7 @@ function FeaturedRowCompact({
                         : 'bg-transparent border-bone/20 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
                     }`}
                   >
-                    {ev.isGoing ? '✓' : 'RSVP'}
+                    {ev.isGoing ? (<CheckIcon size={9} />) : 'RSVP'}
                   </button>
                 )}
               </div>
@@ -926,7 +926,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
           <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold">Host</span>
         )}
         {!event.isHosting && event.isGoing && (
-          <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1.5 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm">✓ Going</span>
+          <span className="absolute top-2 right-2 inline-flex items-center gap-1 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1.5 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm"><CheckIcon size={7} /> Going</span>
         )}
       </div>
 
@@ -989,7 +989,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                   }`}
                   title={event.isGoing ? 'Click to un-RSVP' : 'RSVP'}
                 >
-                  {event.isGoing ? '✓' : 'RSVP'}
+                  {event.isGoing ? (<CheckIcon size={9} />) : 'RSVP'}
                 </button>
               )}
               {authenticated && (

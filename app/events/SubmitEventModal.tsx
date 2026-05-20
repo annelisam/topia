@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import { CheckIcon } from '../components/ui/Icons';
 
 interface Props {
   open: boolean;
@@ -183,7 +184,7 @@ export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
           </div>
         ) : success ? (
           <div className="p-6 text-center">
-            <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2">Event created ✓</h2>
+            <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2 inline-flex items-center gap-2">Event created <CheckIcon size={18} strokeWidth={2.2} /></h2>
             <p className="font-mono text-[12px] text-bone/60 leading-relaxed mb-4">
               {importedSource && importedSource !== 'other' ? (
                 <>Imported from <span className="text-bone capitalize">{importedSource}</span>. </>
