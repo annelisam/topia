@@ -36,9 +36,12 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-/* Builds a TV-guide style timeslot string from an episode index.
- * Used purely visually — episodes don't actually air at fixed times. */
-const TIME_SLOTS = ['8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM'];
+/* Format an episode index → "001", "002", "010"… These are on-demand
+ * programs, not scheduled airings, so we show numbers instead of fake
+ * timeslots in the guide. */
+function episodeNo(i: number): string {
+  return String(i + 1).padStart(3, '0');
+}
 
 export default function TVPage() {
   const [tvMode, setTvMode] = useState<'collective' | 'my-channel'>('collective');
@@ -48,15 +51,18 @@ export default function TVPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Player state
+  // Player state — muted by default so autoplay works without a user
+  // gesture (Chrome/Safari block unmuted autoplay). The viewer can unmute
+  // with the volume control once they're ready for sound.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(0.85);
 
-  /* ── Load episodes ───────────────────────────────────── */
+  /* ── Load episodes + auto-select the first one so the channel
+        starts playing the moment the page is ready ────────────── */
   useEffect(() => {
     let cancelled = false;
     fetch('/api/tv/episodes')
@@ -65,6 +71,7 @@ export default function TVPage() {
         if (cancelled) return;
         const eps: Episode[] = json.episodes ?? [];
         setEpisodes(eps);
+        if (eps.length > 0) setActiveEp(eps[0]);
       })
       .catch((err) => console.error('tv episodes load failed', err))
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -212,10 +219,11 @@ export default function TVPage() {
                       ref={videoRef}
                       key={activeEp.id}
                       src={activeEp.videoUrl}
-                      poster={activeEp.thumbnailUrl || undefined}
                       className="w-full h-full object-cover"
                       preload="metadata"
                       playsInline
+                      autoPlay
+                      muted={muted}
                       onPlay={() => setPlaying(true)}
                       onPause={() => setPlaying(false)}
                       onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -377,7 +385,6 @@ export default function TVPage() {
                 ) : filtered.map((item, i) => {
                   const ic = CAT_COLOR[item.category] || CAT_COLOR.Featured;
                   const isActive = activeEp?.id === item.id;
-                  const timeSlot = TIME_SLOTS[i % TIME_SLOTS.length];
                   const dur = item.durationSeconds ? formatTime(item.durationSeconds) : '—:—';
                   return (
                     <div
@@ -390,8 +397,12 @@ export default function TVPage() {
                     >
                       <div className={`w-1 shrink-0 ${ic.dot}`} />
 
-                      <div className="w-16 shrink-0 px-2 py-3 flex items-center border-r border-bone/[0.04]">
-                        <span className={`font-mono text-[13px] ${isActive ? 'text-bone/70' : 'text-bone/25'} transition-colors`}>{timeSlot}</span>
+                      {/* Episode number — replaces the old fake time-slot.
+                          TOPIA TV is on-demand, not scheduled airings. */}
+                      <div className="w-14 shrink-0 px-2 py-3 flex items-center justify-center border-r border-bone/[0.04]">
+                        <span className={`font-basement font-black text-[15px] tracking-wider ${isActive ? ic.text : 'text-bone/30'} transition-colors`}>
+                          {episodeNo(i)}
+                        </span>
                       </div>
 
                       <div className="flex-1 px-3 py-3 min-w-0">
@@ -409,16 +420,6 @@ export default function TVPage() {
                         </div>
                       </div>
 
-                      <div className="w-16 h-12 shrink-0 overflow-hidden my-1 mr-2 rounded-sm bg-bone/[0.04]">
-                        {item.thumbnailUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover opacity-60" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="font-basement text-[14px] text-bone/30">{item.title[0]?.toUpperCase()}</span>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   );
                 })}
