@@ -23,9 +23,11 @@ interface Props {
   initialSocials: Socials;
   onBack: () => void;
   onAdvance: (patch: { bio: string } & Socials) => void;
+  /** Persist current draft state before Privy's OAuth redirect, so it survives the round-trip. */
+  saveDraft?: (patch: { bio: string } & Socials) => Promise<void>;
 }
 
-export default function BioSocialsStep({ step, total, config, initialBio, initialSocials, onBack, onAdvance }: Props) {
+export default function BioSocialsStep({ step, total, config, initialBio, initialSocials, onBack, onAdvance, saveDraft }: Props) {
   const [bio, setBio] = useState(initialBio);
   const [socials, setSocials] = useState<Socials>(initialSocials);
   const bioRef = useRef<HTMLTextAreaElement>(null);
@@ -91,6 +93,7 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
                   value={socials[key]}
                   onChange={(url) => setSocial(key, url)}
                   accent={accentHex}
+                  onBeforeConnect={saveDraft ? () => saveDraft({ bio, ...socials }) : undefined}
                 />
               ))}
           </div>

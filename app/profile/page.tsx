@@ -649,7 +649,14 @@ export default function ProfilePage() {
                   ] satisfies { p: SocialProvider; v: string; set: (s: string) => void }[])
                     .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
                     .map(({ p, v, set }) => (
-                      <SocialConnect key={p} provider={p} value={v} onChange={set} accent={accent} />
+                      <SocialConnect
+                        key={p}
+                        provider={p}
+                        value={v}
+                        onChange={set}
+                        accent={accent}
+                        onBeforeConnect={handleSave}
+                      />
                     ))}
                   {ENABLED_SOCIAL_PROVIDERS.length === 0 && (
                     <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em' }}>

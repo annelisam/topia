@@ -35,6 +35,12 @@ interface Props {
   onChange: (url: string) => void;
   /** Optional accent color for the button border/text. Defaults to lime. */
   accent?: string;
+  /**
+   * Called right before Privy redirects to the provider's OAuth page. Use it
+   * to persist any unsaved form state so it's still there when the user lands
+   * back on this page after authenticating. May return a promise.
+   */
+  onBeforeConnect?: () => void | Promise<void>;
 }
 
 /* ── Privy linked-account shape (tolerant) ─────────────────── */
@@ -148,7 +154,7 @@ function findOAuthAccount(user: unknown, oauthType: ProviderMeta['oauthType']): 
 
 /* ── Component ─────────────────────────────────────────────── */
 
-export default function SocialConnect({ provider, value, onChange, accent = '#e4fe52' }: Props) {
+export default function SocialConnect({ provider, value, onChange, accent = '#e4fe52', onBeforeConnect }: Props) {
   const privy = usePrivy();
   const { ready, authenticated, user } = privy;
   const [busy, setBusy] = useState<'connect' | 'disconnect' | null>(null);
@@ -213,6 +219,11 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     setError(null);
     setBusy('connect');
     try {
+      // Persist unsaved form state before Privy does its full-page redirect
+      // (the SDK doesn't support popup mode for social link methods).
+      if (onBeforeConnect) {
+        await onBeforeConnect();
+      }
       // Wrap in microtask so async throws from Privy SDK still land in our catch
       await Promise.resolve().then(() => callLink());
       // Privy redirects to OAuth; the success effect above completes the round-trip.

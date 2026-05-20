@@ -291,6 +291,15 @@ function OnboardingWizard() {
           }}
           onBack={back}
           onAdvance={(patch) => advance(patch)}
+          saveDraft={async (patch) => {
+            // Persist current draft + advance to next step BEFORE the OAuth
+            // full-page redirect, so the user lands directly on the next step
+            // (tools) with their socials saved. Otherwise the redirect
+            // would bring them back to this step with their bio/socials
+            // potentially lost if the page reloaded mid-flow.
+            dispatch({ type: 'PATCH', patch });
+            await saveDiff(patch);
+          }}
         />
       )}
       {current === 'tools' && (
