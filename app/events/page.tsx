@@ -637,10 +637,13 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
         {events.map((ev, i) => {
           const chip = formatDayChip(ev.dateIso);
           return (
-            <button
+            <div
               key={ev.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onOpen(ev.slug)}
-              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(ev.slug); } }}
+              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-lime/40"
               style={{ opacity: 0, animation: `fadeUp 0.5s ease-out ${i * 80}ms forwards` }}
             >
               {/* Cover */}
@@ -725,7 +728,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                   </button>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -751,10 +754,13 @@ function FeaturedRowCompact({
         {events.map((ev, i) => {
           const chip = formatDayChip(ev.dateIso);
           return (
-            <button
+            <div
               key={ev.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onOpen(ev.slug)}
-              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent snap-start shrink-0 w-[200px]"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(ev.slug); } }}
+              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent snap-start shrink-0 w-[200px] focus:outline-none focus:ring-2 focus:ring-lime/40"
               style={{ opacity: 0, animation: `fadeUp 0.4s ease-out ${i * 50}ms forwards` }}
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.04]">
@@ -810,7 +816,7 @@ function FeaturedRowCompact({
                   </button>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
