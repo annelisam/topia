@@ -1,59 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { CheckIcon } from '../../components/ui/Icons';
-
-interface WorldInvite {
-  id: string;
-  role: string;
-  createdAt: string;
-  worldTitle: string;
-  worldSlug: string;
-  worldImageUrl: string | null;
-  inviterName: string | null;
-  inviterUsername: string | null;
-  inviterAvatar: string | null;
-}
-interface EventInvite {
-  id: string;
-  createdAt: string;
-  eventName: string;
-  eventSlug: string;
-  eventImageUrl: string | null;
-  eventDate: string | null;
-  inviterName: string | null;
-  inviterUsername: string | null;
-  inviterAvatar: string | null;
-}
+import { useOverview } from './DashboardOverviewContext';
 
 export default function PendingInvitationsWidget() {
-  const { authenticated, user } = usePrivy();
-  const [worldInvites, setWorldInvites] = useState<WorldInvite[]>([]);
-  const [eventInvites, setEventInvites] = useState<EventInvite[]>([]);
+  const { user } = usePrivy();
+  const { data, loading, dismissWorldInvitation, dismissEventInvitation } = useOverview();
   const [busy, setBusy] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
 
-  async function load() {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(`/api/dashboard/invitations?privyId=${encodeURIComponent(user.id)}`);
-      const json = await res.json();
-      setWorldInvites(json.worldInvitations ?? []);
-      setEventInvites(json.eventInvitations ?? []);
-    } catch (err) {
-      console.error('invitations load failed', err);
-    } finally {
-      setLoaded(true);
-    }
-  }
+  // While loading, render nothing (it's a conditional block — no skeleton needed; it just doesn't appear if there's nothing)
+  if (loading || !data) return null;
 
-  useEffect(() => {
-    if (authenticated && user?.id) load();
-    else setLoaded(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, user?.id]);
+  const worldInvites = data.invitations.worldInvitations;
+  const eventInvites = data.invitations.eventInvitations;
+  const total = worldInvites.length + eventInvites.length;
+  if (total === 0) return null;
 
   async function respondWorld(id: string, action: 'accept' | 'decline') {
     if (!user?.id || busy) return;
@@ -64,7 +28,7 @@ export default function PendingInvitationsWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ privyId: user.id, invitationId: id, action }),
       });
-      setWorldInvites((list) => list.filter((i) => i.id !== id));
+      dismissWorldInvitation(id);
     } catch (err) {
       console.error('respond world invite failed', err);
     } finally {
@@ -72,28 +36,13 @@ export default function PendingInvitationsWidget() {
     }
   }
 
-  async function respondEvent(id: string, action: 'accept' | 'decline') {
+  async function dismissEvent(id: string) {
     if (!user?.id || busy) return;
     setBusy(id);
-    try {
-      // Event host invitations: try generic endpoint; if missing, decline is just local hide
-      const res = await fetch('/api/events/hosts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId: user.id, invitationId: id, action }),
-      });
-      if (res.ok || res.status === 404) {
-        setEventInvites((list) => list.filter((i) => i.id !== id));
-      }
-    } catch (err) {
-      console.error('respond event invite failed', err);
-    } finally {
-      setBusy(null);
-    }
+    // No accept endpoint surfaced here yet — just dismiss locally
+    dismissEventInvitation(id);
+    setBusy(null);
   }
-
-  const total = worldInvites.length + eventInvites.length;
-  if (!loaded || total === 0) return null;
 
   return (
     <div className="border border-pink/30 rounded-lg overflow-hidden mb-6 bg-obsidian">
@@ -164,7 +113,7 @@ export default function PendingInvitationsWidget() {
                 View
               </Link>
               <button
-                onClick={() => respondEvent(inv.id, 'decline')}
+                onClick={() => dismissEvent(inv.id)}
                 disabled={busy === inv.id}
                 className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border border-bone/20 px-2.5 py-1.5 rounded-sm cursor-pointer transition disabled:opacity-50"
               >

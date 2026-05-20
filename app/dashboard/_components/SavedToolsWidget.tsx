@@ -1,57 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePrivy } from '@privy-io/react-auth';
 import { faviconUrl } from '../../resources/tools/favicon';
 import { StarIcon } from '../../components/ui/Icons';
-
-interface SavedTool {
-  id: string;
-  name: string;
-  slug: string;
-  url: string | null;
-  category: string | null;
-}
+import { useOverview } from './DashboardOverviewContext';
 
 export default function SavedToolsWidget() {
-  const { authenticated, user } = usePrivy();
-  const [tools, setTools] = useState<SavedTool[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!authenticated || !user?.id) { setLoading(false); return; }
-    (async () => {
-      try {
-        const savedRes = await fetch(`/api/tools/save?privyId=${encodeURIComponent(user.id)}`);
-        const { savedToolSlugs } = await savedRes.json();
-        if (!Array.isArray(savedToolSlugs) || savedToolSlugs.length === 0) {
-          setTools([]);
-          return;
-        }
-        const toolsRes = await fetch('/api/tools');
-        const { tools: allTools } = await toolsRes.json();
-        const map = new Map<string, SavedTool>();
-        for (const t of allTools as SavedTool[]) map.set(t.slug, t);
-        const resolved = (savedToolSlugs as string[])
-          .map((slug) => map.get(slug))
-          .filter((x): x is SavedTool => Boolean(x));
-        setTools(resolved);
-      } catch (err) {
-        console.error('Failed to load saved tools', err);
-        setTools([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [authenticated, user?.id]);
+  const { data, loading } = useOverview();
 
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden">
+    <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
       <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 flex items-center gap-2">
           <span className="text-lime/80"><StarIcon size={11} filled /></span>
-          Saved tools{tools && tools.length > 0 && <span className="text-bone/30">· {tools.length}</span>}
+          Saved tools{data && data.savedTools.length > 0 && <span className="text-bone/30">· {data.savedTools.length}</span>}
         </span>
         <Link
           href="/resources/tools"
@@ -62,9 +24,19 @@ export default function SavedToolsWidget() {
       </div>
 
       <div className="bg-obsidian p-4">
-        {loading ? (
-          <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30">loading…</p>
-        ) : !tools || tools.length === 0 ? (
+        {loading || !data ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 border border-bone/10 rounded-sm px-3 py-2">
+                <div className="w-7 h-7 rounded-sm bg-bone/[0.06] animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <div className="h-3 w-24 bg-bone/[0.06] rounded animate-pulse" />
+                  <div className="h-2.5 w-16 bg-bone/[0.04] rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : data.savedTools.length === 0 ? (
           <p className="font-mono text-[11px] text-bone/40 leading-relaxed">
             Click <StarIcon size={10} filled={false} className="inline align-middle" /> on any tool in{' '}
             <Link href="/resources/tools" className="text-lime underline">/resources/tools</Link>{' '}
@@ -72,7 +44,7 @@ export default function SavedToolsWidget() {
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {tools.slice(0, 8).map((t) => {
+            {data.savedTools.slice(0, 8).map((t) => {
               const fav = faviconUrl(t.url, 32);
               return (
                 <Link

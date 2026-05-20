@@ -1,23 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
 import { useDashboard } from './_components/DashboardContext';
+import { useOverview } from './_components/DashboardOverviewContext';
 import SavedToolsWidget from './_components/SavedToolsWidget';
 import ProfileCompletionWidget from './_components/ProfileCompletionWidget';
 import PendingInvitationsWidget from './_components/PendingInvitationsWidget';
 import UpcomingEventsWidget from './_components/UpcomingEventsWidget';
 import ActivityFeedWidget from './_components/ActivityFeedWidget';
 import RecentlyViewedWorldsWidget from './_components/RecentlyViewedWorlds';
-
-interface Stats {
-  followers: number;
-  following: number;
-  worlds: number;
-  events: number;
-  deltas: { followers?: number; worlds?: number; events?: number };
-}
 
 function Delta({ n }: { n: number | undefined }) {
   if (!n || n <= 0) return null;
@@ -28,16 +19,8 @@ function Delta({ n }: { n: number | undefined }) {
 
 export default function DashboardOverviewPage() {
   const { profile, worldMemberships, hostedEvents } = useDashboard();
-  const { user } = usePrivy();
-  const [stats, setStats] = useState<Stats | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    fetch(`/api/dashboard/stats?privyId=${encodeURIComponent(user.id)}`)
-      .then((r) => r.json())
-      .then((json) => setStats(json as Stats))
-      .catch(console.error);
-  }, [user?.id]);
+  const { data: overview } = useOverview();
+  const stats = overview?.stats ?? null;
 
   const displayName = profile?.name || profile?.username || 'creator';
   const initial = (displayName[0] || '?').toUpperCase();
@@ -92,7 +75,7 @@ export default function DashboardOverviewPage() {
           <div className="px-5 py-3 flex items-center gap-0 overflow-x-auto lg:flex-1">
             {([
               { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
-              { label: 'Events',    value: hostedEvents.length,      delta: stats?.deltas.events,    href: '/events' },
+              { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events,    href: '/events' },
               { label: 'Builder',   value: builderCount,             delta: undefined,                href: null },
               { label: 'Followers', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
               { label: 'Following', value: stats?.following ?? 0,    delta: undefined,                href: null },

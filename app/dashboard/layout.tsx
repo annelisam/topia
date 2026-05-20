@@ -11,6 +11,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { DashboardContext } from './_components/DashboardContext';
 import type { HostedEvent } from './_components/DashboardContext';
 import DashboardSidebar from './_components/DashboardSidebar';
+import { DashboardOverviewProvider } from './_components/DashboardOverviewContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { ready, authenticated } = usePrivy();
@@ -51,19 +52,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <DashboardContext.Provider value={{ profile, worldMemberships, hostedEvents }}>
-      <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
-        {/* Subtle texture overlays */}
-        <div className="grain-overlay" />
-        <div className="scanlines-overlay" />
+      <DashboardOverviewProvider>
+        <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
+          {/* Subtle texture overlays */}
+          <div className="grain-overlay" />
+          <div className="scanlines-overlay" />
 
-        <Navigation />
-        <DashboardSidebar />
-        <main className="pt-28 sm:pt-24 sm:ml-56 px-4 sm:px-8 pb-16 md:pb-8">
-          <div className="max-w-6xl">{children}</div>
-        </main>
-        <ColorSlider />
-        <ThemeToggle />
-      </div>
+          <Navigation />
+          <DashboardSidebar />
+          <main className="pt-28 sm:pt-24 sm:ml-56 px-4 sm:px-8 pb-16 md:pb-8">
+            <div className="max-w-6xl">{children}</div>
+          </main>
+          <ColorSlider />
+          <ThemeToggle />
+        </div>
+      </DashboardOverviewProvider>
     </DashboardContext.Provider>
   );
 }

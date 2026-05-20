@@ -1,19 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePrivy } from '@privy-io/react-auth';
-
-interface Notif {
-  id: string;
-  type: string;
-  read: boolean;
-  createdAt: string;
-  actorName: string | null;
-  actorUsername: string | null;
-  actorAvatar: string | null;
-  metadata: Record<string, unknown> | null;
-}
+import { useOverview, NotifItem } from './DashboardOverviewContext';
 
 function relativeTime(iso: string): string {
   const now = Date.now();
@@ -31,7 +19,7 @@ function relativeTime(iso: string): string {
   return `${w}w`;
 }
 
-function describe(n: Notif): { verb: string; objectLabel: string | null; objectHref: string | null } {
+function describe(n: NotifItem): { verb: string; objectLabel: string | null; objectHref: string | null } {
   const meta = (n.metadata ?? {}) as Record<string, string | undefined>;
   switch (n.type) {
     case 'follow':
@@ -60,30 +48,17 @@ function describe(n: Notif): { verb: string; objectLabel: string | null; objectH
 }
 
 export default function ActivityFeedWidget() {
-  const { authenticated, user } = usePrivy();
-  const [notifs, setNotifs] = useState<Notif[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const { data, loading } = useOverview();
 
-  useEffect(() => {
-    if (!authenticated || !user?.id) { setLoaded(true); return; }
-    fetch(`/api/notifications?privyId=${encodeURIComponent(user.id)}`)
-      .then((r) => r.json())
-      .then((json) => setNotifs((json.notifications as Notif[]) ?? []))
-      .catch(console.error)
-      .finally(() => setLoaded(true));
-  }, [authenticated, user?.id]);
+  if (loading || !data) return <ActivitySkeleton />;
 
-  if (!loaded) return null;
-  if (notifs.length === 0) return null;
-
-  // Trim to last 7 days
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const recent = notifs.filter((n) => new Date(n.createdAt).getTime() >= cutoff).slice(0, 8);
+  const recent = data.notifications.filter((n) => new Date(n.createdAt).getTime() >= cutoff).slice(0, 8);
   if (recent.length === 0) return null;
   const unread = recent.filter((n) => !n.read).length;
 
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden mb-6 bg-obsidian">
+    <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
       <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 flex items-center gap-2">
           Activity · last 7d
@@ -96,7 +71,6 @@ export default function ActivityFeedWidget() {
           const actorHref = n.actorUsername ? `/profile/${n.actorUsername}` : null;
           return (
             <div key={n.id} className={`flex items-center gap-3 px-4 py-2.5 ${n.read ? '' : 'bg-bone/[0.02]'}`}>
-              {/* Actor avatar */}
               {actorHref ? (
                 <Link href={actorHref} className="shrink-0 no-underline">
                   {n.actorAvatar ? (
@@ -110,7 +84,6 @@ export default function ActivityFeedWidget() {
                 </Link>
               ) : null}
 
-              {/* Text */}
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-[12px] text-bone truncate">
                   {actorHref ? (
@@ -134,6 +107,25 @@ export default function ActivityFeedWidget() {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function ActivitySkeleton() {
+  return (
+    <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
+      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2">
+        <div className="h-3 w-32 bg-bone/[0.06] rounded animate-pulse" />
+      </div>
+      <div className="divide-y divide-bone/[0.04]">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+            <div className="w-7 h-7 rounded-full bg-bone/[0.06] animate-pulse shrink-0" />
+            <div className="flex-1 h-3 bg-bone/[0.04] rounded animate-pulse" />
+            <div className="h-2.5 w-6 bg-bone/[0.04] rounded animate-pulse shrink-0" />
+          </div>
+        ))}
       </div>
     </div>
   );
