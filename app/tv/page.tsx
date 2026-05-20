@@ -51,14 +51,17 @@ export default function TVPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Player state — muted by default so autoplay works without a user
-  // gesture (Chrome/Safari block unmuted autoplay). The viewer can unmute
-  // with the volume control once they're ready for sound.
+  // Player state. TOPIA TV is intentionally NOT muted by default — this
+  // is a TV channel, sound is the point. We try unmuted autoplay first;
+  // if the browser refuses (Chrome/Safari may block when there's been no
+  // recent user gesture on the domain), we fall back to muted + show a
+  // small "Tap to unmute" overlay. See attemptAutoplay() below.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [needsUnmute, setNeedsUnmute] = useState(false);
   const [volume, setVolume] = useState(0.85);
 
   /* ── Load episodes + auto-select the first one so the channel
@@ -93,14 +96,35 @@ export default function TVPage() {
     return list;
   }, [episodes, activeCategory, searchQuery]);
 
-  /* ── Reset / sync player when active episode changes ─ */
+  /* ── Reset + try to autoplay when the active episode changes ──
+        Strategy: ask the browser to play unmuted. If it refuses (the
+        autoplay-with-sound policy), we mute + retry, which always
+        works. The "Tap to unmute" overlay then nudges the viewer to
+        restore sound. */
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeEp) return;
-    v.load();
     setCurrentTime(0);
     setDuration(0);
     setPlaying(false);
+    setNeedsUnmute(false);
+    v.muted = false;
+    v.volume = volume;
+    v.load();
+    const tryPlay = async () => {
+      try {
+        await v.play();
+        setMuted(false);
+      } catch {
+        // Browser blocked unmuted autoplay — fall back to muted
+        v.muted = true;
+        setMuted(true);
+        setNeedsUnmute(true);
+        try { await v.play(); } catch { /* user will press play manually */ }
+      }
+    };
+    void tryPlay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEp?.id]);
 
   /* ── Player controls ────────────────────────────────── */
@@ -125,6 +149,7 @@ export default function TVPage() {
     if (!v) return;
     v.muted = !v.muted;
     setMuted(v.muted);
+    if (!v.muted) setNeedsUnmute(false);
   }
   function changeVolume(val: number) {
     const v = videoRef.current;
@@ -214,7 +239,12 @@ export default function TVPage() {
               <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ border: '3px solid #2a2a2a', boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)' }}>
                 <div className="relative w-full h-full rounded overflow-hidden bg-[#111]">
                   {activeEp ? (
-                    // Real video — keeps event handlers tied to ref
+                    // Real video — keeps event handlers tied to the ref.
+                    // Autoplay is managed imperatively in the effect on
+                    // activeEp.id (we attempt unmuted; on rejection we
+                    // mute + retry and show the "Tap to unmute" overlay).
+                    // We omit the JSX `muted` prop so React doesn't keep
+                    // flipping it back during reconciles.
                     <video
                       ref={videoRef}
                       key={activeEp.id}
@@ -222,8 +252,6 @@ export default function TVPage() {
                       className="w-full h-full object-cover"
                       preload="metadata"
                       playsInline
-                      autoPlay
-                      muted={muted}
                       onPlay={() => setPlaying(true)}
                       onPause={() => setPlaying(false)}
                       onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -250,6 +278,26 @@ export default function TVPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* "Tap to unmute" affordance — only when the browser
+                      forced us to mute the autoplay. Click → unmutes and
+                      hides itself. */}
+                  {activeEp && playing && needsUnmute && (
+                    <button
+                      onClick={() => {
+                        const v = videoRef.current;
+                        if (!v) return;
+                        v.muted = false;
+                        v.volume = volume || 0.85;
+                        setMuted(false);
+                        setNeedsUnmute(false);
+                      }}
+                      className="absolute top-3 right-3 z-[6] inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[2px] bg-lime text-obsidian px-2.5 py-1.5 rounded-sm cursor-pointer transition hover:opacity-90 border-none animate-pulse"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                      Tap to unmute
+                    </button>
+                  )}
 
                   {/* Center play button overlay when paused + episode loaded */}
                   {activeEp && !playing && (
@@ -420,6 +468,24 @@ export default function TVPage() {
                         </div>
                       </div>
 
+                      {/* Thumbnail — prefer an explicit thumbnailUrl image
+                          when set, otherwise render the video's first frame
+                          via <video preload="metadata">. No placeholder
+                          GIFs, no extra storage step. */}
+                      <div className="w-16 h-12 shrink-0 overflow-hidden my-1 mr-2 rounded-sm bg-bone/[0.04]">
+                        {item.thumbnailUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover opacity-80" />
+                        ) : (
+                          <video
+                            src={item.videoUrl}
+                            className="w-full h-full object-cover opacity-80"
+                            preload="metadata"
+                            muted
+                            playsInline
+                          />
+                        )}
+                      </div>
                     </div>
                   );
                 })}

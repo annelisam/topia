@@ -52,7 +52,7 @@ const PLAN: EpisodePlan[] = [
     episodeNumber: 1,
     partNumber: 1,
     guestName: 'C.Y Lee',
-    thumbnailUrl: '/gif/spiral.gif',
+    thumbnailUrl: null,
   },
   {
     localPath: `${HOME}/TOPIAVIEW EP 001. _ PATRONS FOR THE CULTURE, C.Y LEE (PART II).mp4`,
@@ -65,7 +65,7 @@ const PLAN: EpisodePlan[] = [
     episodeNumber: 1,
     partNumber: 2,
     guestName: 'C.Y Lee',
-    thumbnailUrl: '/gif/spiral.gif',
+    thumbnailUrl: null,
   },
 ];
 
