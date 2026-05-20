@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       link: events.link,
       imageUrl: events.imageUrl,
       createdBy: events.createdBy,
+      externalSource: events.externalSource,
       published: events.published,
       createdAt: events.createdAt,
       creatorName: users.name,
@@ -108,25 +109,29 @@ export async function GET(request: NextRequest) {
       const hostsMap = await getHostsForEvents(eventIds);
       const rsvpMap = await getRsvpCounts(eventIds);
 
-      // Check if viewer has RSVP'd
+      // Viewer-specific flags: rsvp, host, saved (interested). One lookup,
+      // three parallel checks. We also peek at savedEventSlugs CSV to derive
+      // the saved/interested flag.
       let userRsvped = false;
-      if (viewerPrivyId) {
-        const [viewer] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, viewerPrivyId));
-        if (viewer) {
-          const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps)
-            .where(and(eq(eventRsvps.eventId, results[0].id), eq(eventRsvps.userId, viewer.id)));
-          userRsvped = !!rsvp;
-        }
-      }
-
-      // Check if viewer is a host
       let isHost = false;
+      let isSaved = false;
       if (viewerPrivyId) {
-        const [viewer] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, viewerPrivyId));
+        const [viewer] = await db
+          .select({ id: users.id, savedEventSlugs: users.savedEventSlugs })
+          .from(users).where(eq(users.privyId, viewerPrivyId));
         if (viewer) {
-          const [host] = await db.select({ id: eventHosts.id }).from(eventHosts)
-            .where(and(eq(eventHosts.eventId, results[0].id), eq(eventHosts.userId, viewer.id)));
-          isHost = !!host;
+          const [[rsvp], [host]] = await Promise.all([
+            db.select({ id: eventRsvps.id }).from(eventRsvps)
+              .where(and(eq(eventRsvps.eventId, results[0].id), eq(eventRsvps.userId, viewer.id))),
+            db.select({ id: eventHosts.id }).from(eventHosts)
+              .where(and(eq(eventHosts.eventId, results[0].id), eq(eventHosts.userId, viewer.id))),
+          ]);
+          userRsvped = !!rsvp;
+          // External events suppress the auto-host flag (submitter ≠ host),
+          // mirroring the overview API's logic.
+          isHost = !!host || (results[0].createdBy === viewer.id && !results[0].externalSource);
+          const saved = (viewer.savedEventSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+          isSaved = saved.includes(results[0].slug);
         }
       }
 
@@ -136,6 +141,7 @@ export async function GET(request: NextRequest) {
         rsvpCount: rsvpMap[e.id] || 0,
         userRsvped,
         isHost,
+        isSaved,
       }));
 
       return NextResponse.json({ events: enriched });

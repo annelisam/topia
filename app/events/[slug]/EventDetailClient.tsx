@@ -9,6 +9,7 @@ import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
 import CommentSection from '../../components/CommentSection';
+import { CheckIcon, StarIcon } from '../../components/ui/Icons';
 
 interface EventHost {
   userId: string;
@@ -42,6 +43,8 @@ interface EventDetail {
   rsvpCount: number;
   userRsvped: boolean;
   isHost: boolean;
+  isSaved: boolean;
+  externalSource?: string | null;
 }
 
 const markdownComponents = {
@@ -208,6 +211,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
 
   useEffect(() => {
@@ -264,6 +268,28 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       console.error('RSVP error:', err);
     } finally {
       setRsvpLoading(false);
+    }
+  };
+
+  // "Interested" — toggles the event slug in users.savedEventSlugs CSV.
+  // Doubles as a way to unlock comments without committing to an RSVP.
+  const handleSaveToggle = async () => {
+    if (!event || !privyUser?.id) { login(); return; }
+    const next = !event.isSaved;
+    setEvent({ ...event, isSaved: next }); // optimistic
+    setSaveLoading(true);
+    try {
+      const res = await fetch('/api/events/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: privyUser.id, slug: event.slug, action: next ? 'save' : 'unsave' }),
+      });
+      if (!res.ok) throw new Error('save failed');
+    } catch (err) {
+      console.error('save error:', err);
+      setEvent({ ...event, isSaved: !next }); // revert
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -484,19 +510,65 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
-          {/* RSVP button — for non-hosts on non-past events */}
-          {!isPast && !event.isHost && (
+          {/* Native RSVP — only shown for non-external events. External
+              events render the platform-specific CTA further down instead. */}
+          {!isPast && !event.isHost && !(event.externalSource && event.link) && (
             <div className="mb-8">
               <button
                 onClick={handleRsvp}
                 disabled={rsvpLoading}
-                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold"
-                style={event.userRsvped
-                  ? { backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: rsvpLoading ? 0.5 : 1 }
-                  : { backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: rsvpLoading ? 0.5 : 1 }
-                }
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold border-none"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: rsvpLoading ? 0.5 : 1 }}
               >
-                {rsvpLoading ? '...' : event.userRsvped ? 'Going \u2713' : 'RSVP'}
+                {rsvpLoading ? '...' : event.userRsvped ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>) : 'RSVP'}
+              </button>
+            </div>
+          )}
+          {/* Interested \u2605 \u2014 separate row to stay backward-compatible with
+              the original button placement. Shows only for non-host, non-
+              past events. Doubles as the unlock for the comments composer. */}
+          {!isPast && !event.isHost && !(event.externalSource && event.link) && (
+            <div className="mb-8 -mt-6">
+              <button
+                onClick={handleSaveToggle}
+                disabled={saveLoading}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer transition border"
+                style={event.isSaved
+                  ? { borderColor: 'var(--foreground)', backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: saveLoading ? 0.5 : 1 }
+                  : { borderColor: 'var(--border-color)', backgroundColor: 'transparent', color: 'var(--foreground)', opacity: saveLoading ? 0.5 : 1 }}
+                title={event.isSaved ? 'Click to remove from saved' : 'Mark interested \u2014 saves it + unlocks comments'}
+              >
+                <StarIcon size={12} filled={event.isSaved} />
+                {event.isSaved ? 'Interested' : 'Interested?'}
+              </button>
+            </div>
+          )}
+          {/* External-event RSVP CTA (replaces the local RSVP for imports
+              from Partiful/Luma/Posh) \u2014 still pairs with the Interested \u2605. */}
+          {!isPast && !event.isHost && event.externalSource && event.link && (
+            <div className="mb-8 flex flex-col sm:flex-row gap-2 -mt-6">
+              <a
+                href={event.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center font-mono text-[12px] uppercase tracking-widest px-4 py-3 rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              >
+                {event.externalSource === 'partiful' ? 'RSVP on Partiful \u2192'
+                : event.externalSource === 'luma'    ? 'RSVP on Luma \u2192'
+                : event.externalSource === 'posh'    ? 'Tickets on Posh \u2192'
+                : 'Open event \u2192'}
+              </a>
+              <button
+                onClick={handleSaveToggle}
+                disabled={saveLoading}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer transition border"
+                style={event.isSaved
+                  ? { borderColor: 'var(--foreground)', backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: saveLoading ? 0.5 : 1 }
+                  : { borderColor: 'var(--border-color)', backgroundColor: 'transparent', color: 'var(--foreground)', opacity: saveLoading ? 0.5 : 1 }}
+              >
+                <StarIcon size={12} filled={event.isSaved} />
+                {event.isSaved ? 'Interested' : 'Interested?'}
               </button>
             </div>
           )}
@@ -537,7 +609,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             slug={event.slug}
             kind="event"
             title="The chat"
-            gateHint="RSVP or hit ★ to mark this event 'interested' — then come back to leave a comment."
+            gateHint="RSVP or hit ★ Interested above to unlock the chat. (Hosts can always comment.)"
           />
         </div>
       </div>

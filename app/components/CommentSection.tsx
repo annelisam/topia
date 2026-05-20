@@ -17,6 +17,9 @@ export interface CommentItem {
   authorName: string | null;
   authorUsername: string | null;
   authorAvatarUrl: string | null;
+  /** Set by /api/events/comments — true when the comment author hosts the
+   *  event. Renders a small lime HOSTING badge next to the handle. */
+  isHost?: boolean;
 }
 
 interface Props {
@@ -235,11 +238,16 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
                   {c.authorUsername ? (
                     <Link href={`/profile/${c.authorUsername}`} className="font-mono text-[11px] text-bone font-bold no-underline hover:text-lime">@{c.authorUsername}</Link>
                   ) : (
                     <span className="font-mono text-[11px] text-bone/60 font-bold">{c.authorName || 'anon'}</span>
+                  )}
+                  {c.isHost && (
+                    <span className="font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold leading-none">
+                      Host
+                    </span>
                   )}
                   {kind === 'tool' && c.rating != null && (
                     <span className="flex items-center gap-0.5 text-lime">
