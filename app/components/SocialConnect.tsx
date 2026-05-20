@@ -13,14 +13,16 @@ const ALL_PROVIDERS: SocialProvider[] = ['twitter', 'instagram', 'linkedin', 'sp
  * NEXT_PUBLIC_SOCIAL_PROVIDERS env var (comma-separated). Flip each one on
  * as you finish setting it up in Privy → Login Methods.
  *
- * Example: NEXT_PUBLIC_SOCIAL_PROVIDERS="twitter,linkedin"
+ * Example: NEXT_PUBLIC_SOCIAL_PROVIDERS="twitter,linkedin,farcaster"
  *
- * Default if unset: ['twitter'] only — that's the one Privy ships with
- * managed OAuth credentials out of the box.
+ * Default if unset: ['twitter', 'farcaster'] — both ship with Privy-managed
+ * OAuth credentials out of the box. Add Instagram / LinkedIn / Spotify by
+ * setting the env var once you've registered developer apps with those
+ * platforms and added the credentials to Privy.
  */
 export const ENABLED_SOCIAL_PROVIDERS: SocialProvider[] = (() => {
   const raw = process.env.NEXT_PUBLIC_SOCIAL_PROVIDERS;
-  if (!raw) return ['twitter'];
+  if (!raw) return ['twitter', 'farcaster'];
   return raw
     .split(',')
     .map((s) => s.trim().toLowerCase())
