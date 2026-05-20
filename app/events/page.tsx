@@ -201,12 +201,12 @@ export default function EventsPage() {
 
   const activeEvent = activeSlug ? events.find((e) => e.slug === activeSlug) ?? null : null;
 
-  // Featured: next 3 upcoming events that have a cover image
+  // Featured: next upcoming events that have a cover image.
+  // Grid view shows a compact scroll (6 items); list view shows a 3-up hero.
   const featured = useMemo(() => {
-    return events
-      .filter((e) => e.dateIso && e.dateIso >= today && e.imageUrl)
-      .slice(0, 3);
-  }, [events, today]);
+    const pool = events.filter((e) => e.dateIso && e.dateIso >= today && e.imageUrl);
+    return viewMode === 'grid' ? pool.slice(0, 8) : pool.slice(0, 3);
+  }, [events, today, viewMode]);
 
   const showFeatured = !search && !selectedCity && (tab === 'all' || tab === 'upcoming' || tab === 'thisWeek');
 
@@ -376,11 +376,12 @@ export default function EventsPage() {
                 })}
               </div>
 
-              {/* ─── Featured carousel (3 large cards) ─── */}
+              {/* ─── Featured row — compact in grid view, hero in list view ─── */}
               {!loading && showFeatured && featured.length > 0 && (
                 <FeaturedRow
                   events={featured}
                   authenticated={authenticated}
+                  compact={viewMode === 'grid'}
                   onOpen={(slug) => setActiveSlug(slug)}
                   onToggleRsvp={(eventId, going) => toggleRsvp(eventId, going)}
                   onToggleSave={(slug, saved) => toggleSave(slug, saved)}
@@ -605,17 +606,22 @@ function EventsGridSkeleton() {
   );
 }
 
-/* ── Featured row (top 3 upcoming with covers) ───────────────────── */
+/* ── Featured row ──────────────────────────────────────────────── */
+/* Two shapes:
+   - hero: 3 large 16:10 image cards, full-bleed treatment (list view)
+   - compact: horizontal scroll of ~240px cards (grid view, to not steal the show) */
 
 interface FeaturedRowProps {
   events: EventCard[];
   authenticated: boolean;
+  compact?: boolean;
   onOpen: (slug: string) => void;
   onToggleRsvp: (eventId: string, going: boolean) => Promise<void>;
   onToggleSave: (slug: string, saved: boolean) => Promise<void>;
 }
 
-function FeaturedRow({ events, authenticated, onOpen, onToggleRsvp, onToggleSave }: FeaturedRowProps) {
+function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onToggleSave }: FeaturedRowProps) {
+  if (compact) return <FeaturedRowCompact events={events} authenticated={authenticated} onOpen={onOpen} onToggleRsvp={onToggleRsvp} onToggleSave={onToggleSave} />;
   return (
     <div className="bg-obsidian border-b border-bone/[0.06] p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -711,6 +717,91 @@ function FeaturedRow({ events, authenticated, onOpen, onToggleRsvp, onToggleSave
                     }`}
                   >
                     {ev.isGoing ? '✓ Going' : 'RSVP'}
+                  </button>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Featured row · compact (horizontal scroll) ─────────────────── */
+
+function FeaturedRowCompact({
+  events, authenticated, onOpen, onToggleRsvp, onToggleSave,
+}: Omit<FeaturedRowProps, 'compact'>) {
+  return (
+    <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[3px] text-lime">◉ FEATURED</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">next up</span>
+        </div>
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/20 hidden sm:inline">scroll →</span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1" style={{ scrollbarWidth: 'thin' }}>
+        {events.map((ev, i) => {
+          const chip = formatDayChip(ev.dateIso);
+          return (
+            <button
+              key={ev.id}
+              onClick={() => onOpen(ev.slug)}
+              className="group relative overflow-hidden rounded-md border border-bone/10 hover:border-lime/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent snap-start shrink-0 w-[200px]"
+              style={{ opacity: 0, animation: `fadeUp 0.4s ease-out ${i * 50}ms forwards` }}
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.04]">
+                {ev.imageUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={ev.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/20 to-transparent pointer-events-none" />
+                {/* Date chip */}
+                <div className="absolute top-1.5 left-1.5 bg-obsidian/85 backdrop-blur-sm border border-bone/20 rounded-sm px-1.5 py-0.5 text-center min-w-[36px]">
+                  <div className="font-basement text-[12px] leading-none text-bone">{chip.day}</div>
+                  <div className="font-mono text-[8px] uppercase tracking-[2px] text-bone/60">{chip.mon}</div>
+                </div>
+                {/* Save heart */}
+                {authenticated && !ev.isHosting && !ev.isGoing && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void onToggleSave(ev.slug, !ev.isSaved); }}
+                    className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full border flex items-center justify-center transition cursor-pointer ${
+                      ev.isSaved ? 'bg-bone text-obsidian border-bone' : 'bg-obsidian/60 backdrop-blur-sm border-bone/30 text-bone/70 hover:text-bone hover:border-bone'
+                    }`}
+                    title={ev.isSaved ? 'Saved' : 'Save'}
+                  >
+                    <StarIcon size={9} filled={ev.isSaved} />
+                  </button>
+                )}
+                {/* Hosting / Going status pill */}
+                {ev.isHosting && (
+                  <span className="absolute top-1.5 right-1.5 font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1 py-0.5 rounded-sm font-bold">Host</span>
+                )}
+                {!ev.isHosting && ev.isGoing && (
+                  <span className="absolute top-1.5 right-1.5 font-mono text-[8px] uppercase tracking-[2px] text-green border border-green/40 px-1 py-0.5 rounded-sm bg-obsidian/60 backdrop-blur-sm">✓ Going</span>
+                )}
+                {/* Title overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-1.5">
+                  <h3 className="font-basement font-black text-[12px] uppercase leading-[0.95] text-bone line-clamp-2">{ev.eventName}</h3>
+                </div>
+              </div>
+              {/* Small footer with quick action */}
+              <div className="px-2 py-1.5 flex items-center justify-between gap-1 bg-bone/[0.02] border-t border-bone/[0.04]">
+                <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/40 truncate">
+                  {ev.startTime ? `${ev.startTime}` : ''}{ev.city ? ` · ${ev.city}` : ''}
+                </span>
+                {authenticated && !ev.isHosting && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
+                    className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 rounded-sm border transition cursor-pointer shrink-0 ${
+                      ev.isGoing
+                        ? 'bg-green/15 border-green/40 text-green'
+                        : 'bg-transparent border-bone/20 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
+                    }`}
+                  >
+                    {ev.isGoing ? '✓' : 'RSVP'}
                   </button>
                 )}
               </div>
