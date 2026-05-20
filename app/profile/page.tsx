@@ -11,6 +11,7 @@ import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '..
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
 import { useAutoSave } from './_components/useAutoSave';
+import { useUsernameAvailability } from '../onboarding/usernameAvailability';
 
 const ACCENT_COLORS = ['#BFFF00','#3B82F6','#EC4899','#F97316','#22C55E','#E8E0D0'];
 
@@ -96,6 +97,9 @@ export default function ProfilePage() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [path, setPath] = useState<UserPath | ''>('');
+  const [pronouns, setPronouns] = useState('');
+  const [customLinks, setCustomLinks] = useState<{ label: string; url: string }[]>([]);
+  const [avatarDragging, setAvatarDragging] = useState(false);
 
   // Tools from DB
   const [allTools, setAllTools]     = useState<Tool[]>([]);
@@ -144,6 +148,8 @@ export default function ProfilePage() {
           if (saved.socialSubstack)   setSocialSubstack(saved.socialSubstack);
           if (saved.socialFarcaster)  setSocialFarcaster(saved.socialFarcaster);
           if (saved.path)            setPath(saved.path as UserPath);
+          if (saved.pronouns)        setPronouns(saved.pronouns);
+          if (Array.isArray(saved.customLinks)) setCustomLinks(saved.customLinks);
           if (saved.roleTags)        setSelectedRoles(saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean));
           if (saved.toolSlugs)       setSelectedTools(saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean));
         } else {
@@ -157,9 +163,19 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [ready, authenticated, user]);
 
+  // Live username availability — only triggers when typed value differs from saved
+  const usernameAvailability = useUsernameAvailability(username, user?.id);
+
   // Auto-save: debounced sync of any field change. Skips the initial hydration.
   const autoSaveStatus = useAutoSave(
-    { name, username, bio, avatarUrl, socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster, path, roleTags: selectedRoles, toolSlugs: selectedTools },
+    {
+      name, username, bio, avatarUrl, pronouns,
+      socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster,
+      customLinks,
+      path,
+      roleTags: selectedRoles,
+      toolSlugs: selectedTools,
+    },
     { privyId: user?.id ?? null, skipInitial: true, delayMs: 800 },
   );
 
@@ -308,19 +324,38 @@ export default function ProfilePage() {
 
               {/* Avatar panel */}
               <div
-                className="flex-shrink-0 flex items-center justify-center p-6 sm:p-8"
+                className={`flex-shrink-0 flex flex-col items-center justify-center p-6 sm:p-8 transition-colors ${avatarDragging ? 'bg-lime/10' : ''}`}
                 style={{
                   width: 'auto',
                   minWidth: 180,
-                  backgroundColor: '#111',
+                  backgroundColor: avatarDragging ? undefined : '#111',
                   borderRight: '1px solid rgba(255,255,255,0.08)',
-                  backgroundImage: CROSSHATCH,
+                  backgroundImage: avatarDragging ? undefined : CROSSHATCH,
+                }}
+                onDragEnter={(e) => { e.preventDefault(); setAvatarDragging(true); }}
+                onDragOver={(e) => { e.preventDefault(); setAvatarDragging(true); }}
+                onDragLeave={(e) => {
+                  // Avoid flicker on child enter/leave by checking relatedTarget
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setAvatarDragging(false);
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  setAvatarDragging(false);
+                  const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
+                  if (!file) return;
+                  try {
+                    const resized = await resizeImage(file);
+                    setAvatarUrl(resized);
+                  } catch {
+                    console.error('Failed to process dropped image');
+                  }
                 }}
               >
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="relative group"
-                  title="Upload photo"
+                  title="Click or drop an image"
                   style={{ width: 120, height: 120 }}
                 >
                   {/* Corner marks */}
@@ -329,7 +364,7 @@ export default function ProfilePage() {
                   <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l" style={{ borderColor: accent }} />
                   <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r" style={{ borderColor: accent }} />
 
-                  <div className="w-full h-full rounded-full overflow-hidden border border-dashed" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>
+                  <div className={`w-full h-full rounded-full overflow-hidden border ${avatarDragging ? 'border-lime border-2' : 'border-dashed'}`} style={{ borderColor: avatarDragging ? undefined : 'rgba(255,255,255,0.2)' }}>
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -351,6 +386,12 @@ export default function ProfilePage() {
                     </span>
                   </div>
                 </button>
+                <p
+                  className="mt-3 text-center"
+                  style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.12em', color: avatarDragging ? '#e4fe52' : 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, transition: 'color 200ms' }}
+                >
+                  {avatarDragging ? 'drop to upload' : 'click or drop image'}
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -407,6 +448,52 @@ export default function ProfilePage() {
                       }}
                     />
                   </div>
+                  {/* Live availability indicator */}
+                  {username && (
+                    <p
+                      className="mt-1"
+                      style={{
+                        fontFamily: 'GT Zirkon, sans-serif',
+                        fontSize: 10,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase' as const,
+                        color: usernameAvailability === 'available' ? '#00FF88'
+                             : usernameAvailability === 'taken'    ? '#FF5BD7'
+                             : usernameAvailability === 'invalid'  ? 'rgba(255,255,255,0.4)'
+                             : usernameAvailability === 'checking' ? 'rgba(255,255,255,0.4)'
+                             : 'transparent',
+                      }}
+                    >
+                      {usernameAvailability === 'available' ? '✓ available'
+                        : usernameAvailability === 'taken'  ? '✗ taken'
+                        : usernameAvailability === 'invalid' ? '3–30 chars · a–z 0–9 _'
+                        : usernameAvailability === 'checking' ? 'checking…'
+                        : ''}
+                    </p>
+                  )}
+                </div>
+                {/* Pronouns */}
+                <div>
+                  <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
+                    PRONOUNS · OPTIONAL
+                  </label>
+                  <input
+                    type="text"
+                    value={pronouns}
+                    onChange={(e) => setPronouns(e.target.value.slice(0, 24))}
+                    placeholder="she/her · they/them · he/him"
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
+                      fontFamily: 'GT Zirkon, sans-serif',
+                      fontSize: 13,
+                      color: '#fff',
+                      padding: '6px 0',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
                 <div>
                   <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
@@ -414,9 +501,10 @@ export default function ProfilePage() {
                   </label>
                   <textarea
                     value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    onChange={(e) => setBio(e.target.value.slice(0, 280))}
                     placeholder="Tell your story..."
                     rows={3}
+                    maxLength={280}
                     style={{
                       width: '100%',
                       background: 'transparent',
@@ -430,6 +518,18 @@ export default function ProfilePage() {
                       resize: 'none',
                     }}
                   />
+                  <div
+                    className="text-right mt-1"
+                    style={{
+                      fontFamily: 'GT Zirkon, sans-serif',
+                      fontSize: 9,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase' as const,
+                      color: bio.length > 260 ? (bio.length >= 280 ? '#FF5BD7' : 'rgba(228,254,82,0.7)') : 'rgba(255,255,255,0.25)',
+                    }}
+                  >
+                    {bio.length}/280
+                  </div>
                 </div>
                 {avatarUrl && (
                   <button
@@ -443,36 +543,71 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ▸ Section tabs */}
-            <div
-              className="flex overflow-x-auto"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#0a0a0a' }}
-            >
-              {TABS.map((tab, i) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveSection(tab.key)}
-                  className="flex-shrink-0 transition-colors"
-                  style={{
-                    fontFamily: 'GT Zirkon, sans-serif',
-                    fontSize: 10,
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase' as const,
-                    color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.3)',
-                    padding: '10px 16px',
-                    borderBottom: activeSection === tab.key ? `2px solid ${accent}` : '2px solid transparent',
-                    borderRight: i < TABS.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                    background: activeSection === tab.key ? 'rgba(255,255,255,0.03)' : 'transparent',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {/* ▸ Section tabs + content — horizontal on mobile, sidebar on desktop */}
+            <div className="flex flex-col sm:flex-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {/* Mobile horizontal tabs */}
+              <div
+                className="flex sm:hidden overflow-x-auto"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#0a0a0a' }}
+              >
+                {TABS.map((tab, i) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveSection(tab.key)}
+                    className="flex-shrink-0 transition-colors"
+                    style={{
+                      fontFamily: 'GT Zirkon, sans-serif',
+                      fontSize: 10,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase' as const,
+                      color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.3)',
+                      padding: '10px 16px',
+                      borderBottom: activeSection === tab.key ? `2px solid ${accent}` : '2px solid transparent',
+                      borderRight: i < TABS.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                      background: activeSection === tab.key ? 'rgba(255,255,255,0.03)' : 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-            {/* ▸ Section content */}
-            <div style={{ backgroundColor: '#0f0f0f', minHeight: 300 }}>
+              {/* Desktop left sidebar */}
+              <nav
+                className="hidden sm:flex flex-col shrink-0"
+                style={{
+                  width: 160,
+                  borderRight: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: '#0a0a0a',
+                  padding: '8px 0',
+                }}
+              >
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveSection(tab.key)}
+                    className="transition-colors text-left"
+                    style={{
+                      fontFamily: 'GT Zirkon, sans-serif',
+                      fontSize: 11,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase' as const,
+                      color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.4)',
+                      padding: '10px 16px',
+                      borderLeft: activeSection === tab.key ? `2px solid ${accent}` : '2px solid transparent',
+                      background: activeSection === tab.key ? 'rgba(255,255,255,0.04)' : 'transparent',
+                      cursor: 'pointer',
+                      fontWeight: activeSection === tab.key ? 700 : 400,
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+
+              {/* ▸ Section content */}
+              <div className="flex-1" style={{ backgroundColor: '#0f0f0f', minHeight: 300 }}>
 
               {/* ── IDENTITY (same as above fields, but shown as read-only summary when not active) ── */}
               {activeSection === 'identity' && (
@@ -487,6 +622,8 @@ export default function ProfilePage() {
                     avatarUrl={avatarUrl}
                     path={path}
                     roleTags={selectedRoles}
+                    pronouns={pronouns}
+                    customLinks={customLinks}
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -756,6 +893,93 @@ export default function ProfilePage() {
                       />
                     </div>
                   ))}
+
+                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginTop: 24, marginBottom: 8 }}>
+                    CUSTOM LINKS — YOUR OWN LABELS
+                  </p>
+                  {customLinks.length === 0 && (
+                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
+                      Anything else you want to point people to. Music release, portfolio, newsletter…
+                    </p>
+                  )}
+                  <div className="space-y-2">
+                    {customLinks.map((link, idx) => (
+                      <div key={idx} className="flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
+                        <input
+                          type="text"
+                          value={link.label}
+                          onChange={(e) => {
+                            const next = [...customLinks];
+                            next[idx] = { ...next[idx], label: e.target.value.slice(0, 20) };
+                            setCustomLinks(next);
+                          }}
+                          placeholder="LABEL"
+                          maxLength={20}
+                          style={{
+                            width: 100,
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                            fontFamily: 'GT Zirkon, sans-serif',
+                            fontSize: 10,
+                            letterSpacing: '0.12em',
+                            color: '#fff',
+                            padding: '4px 0',
+                            outline: 'none',
+                            textTransform: 'uppercase' as const,
+                          }}
+                        />
+                        <input
+                          type="url"
+                          value={link.url}
+                          onChange={(e) => {
+                            const next = [...customLinks];
+                            next[idx] = { ...next[idx], url: e.target.value };
+                            setCustomLinks(next);
+                          }}
+                          placeholder="https://"
+                          style={{
+                            flex: 1,
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                            fontFamily: 'GT Zirkon, sans-serif',
+                            fontSize: 12,
+                            color: '#fff',
+                            padding: '4px 0',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          onClick={() => setCustomLinks(customLinks.filter((_, i) => i !== idx))}
+                          className="hover:opacity-70 transition"
+                          style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+                          aria-label="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {customLinks.length < 10 && (
+                    <button
+                      onClick={() => setCustomLinks([...customLinks, { label: '', url: '' }])}
+                      className="mt-3 hover:opacity-70 transition"
+                      style={{
+                        fontFamily: 'GT Zirkon, sans-serif',
+                        fontSize: 10,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase' as const,
+                        color: 'rgba(255,255,255,0.4)',
+                        background: 'none',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + add link
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -778,6 +1002,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
             {/* ▸ Action bar */}

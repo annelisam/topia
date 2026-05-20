@@ -37,6 +37,8 @@ interface PublicProfile {
   toolSlugs: string | null;
   path: string | null;
   verifiedProviders: string | null;
+  pronouns: string | null;
+  customLinks: { label: string; url: string }[] | null;
   createdAt: string;
 }
 
@@ -312,7 +314,14 @@ export default function PublicProfilePage() {
                     <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
                       <div className="py-1 border-b border-bone/[0.04]">
                         <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">full name</span>
-                        <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-bone mt-0.5">{profile.name || username}</h1>
+                        <div className="flex items-baseline gap-2 mt-0.5">
+                          <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-bone">{profile.name || username}</h1>
+                          {profile.pronouns && (
+                            <span className="font-mono text-[10px] lowercase tracking-wider text-bone/40">
+                              ({profile.pronouns})
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="py-1 border-b border-bone/[0.04] flex items-center justify-between">
                         <div>
@@ -396,6 +405,36 @@ export default function PublicProfilePage() {
                                   </a>
                                 );
                               })}
+                              {/* Custom links — render inline as small labeled pills */}
+                              {Array.isArray(profile.customLinks) && profile.customLinks
+                                .filter((l) => l?.url && l?.label)
+                                .slice(0, 6)
+                                .map((cl, idx) => (
+                                  <a
+                                    key={`custom-${idx}`}
+                                    href={cl.url.startsWith('http') ? cl.url : `https://${cl.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-[10px] uppercase tracking-[1px] text-bone/50 hover:text-bone hover:border-bone/40 border border-bone/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
+                                    title={cl.label}
+                                  >
+                                    {cl.label}
+                                  </a>
+                                ))}
+                            </div>
+                          ) : Array.isArray(profile.customLinks) && profile.customLinks.length > 0 ? (
+                            <div className="flex items-center flex-wrap gap-3">
+                              {profile.customLinks.filter((l) => l?.url && l?.label).slice(0, 6).map((cl, idx) => (
+                                <a
+                                  key={`custom-${idx}`}
+                                  href={cl.url.startsWith('http') ? cl.url : `https://${cl.url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-[10px] uppercase tracking-[1px] text-bone/50 hover:text-bone hover:border-bone/40 border border-bone/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
+                                >
+                                  {cl.label}
+                                </a>
+                              ))}
                             </div>
                           ) : (
                             <span className="font-mono text-[11px] text-bone/20">—</span>

@@ -10,13 +10,15 @@ interface Props {
   avatarUrl: string;
   path: UserPath | '';
   roleTags: string[];
+  pronouns?: string;
+  customLinks?: { label: string; url: string }[];
 }
 
 /**
  * Mini passport preview that mirrors what the public /profile/[username]
  * page will look like. Reflects the user's current edits in real time.
  */
-export default function ProfilePreviewCard({ name, username, bio, avatarUrl, path, roleTags }: Props) {
+export default function ProfilePreviewCard({ name, username, bio, avatarUrl, path, roleTags, pronouns, customLinks }: Props) {
   const config = path ? PATH_CONFIG[path] : PATH_CONFIG.anchor; // default visual until path picked
   const accent = config.hex;
   const accentTextOn = config.textOn;
@@ -57,8 +59,13 @@ export default function ProfilePreviewCard({ name, username, bio, avatarUrl, pat
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-basement text-[18px] uppercase leading-none text-bone truncate">
-            {name || (username ? `@${username}` : 'YOUR NAME')}
+          <div className="flex items-baseline gap-2">
+            <div className="font-basement text-[18px] uppercase leading-none text-bone truncate">
+              {name || (username ? `@${username}` : 'YOUR NAME')}
+            </div>
+            {pronouns && (
+              <span className="font-mono text-[9px] lowercase tracking-wider text-bone/40">({pronouns})</span>
+            )}
           </div>
           {username && <div className="font-mono text-[10px] text-bone/40 mt-0.5">@{username}</div>}
           {path && (
@@ -79,7 +86,7 @@ export default function ProfilePreviewCard({ name, username, bio, avatarUrl, pat
 
       {/* Role tags */}
       {roleTags.length > 0 && (
-        <div className="px-4 pb-4 flex flex-wrap gap-1">
+        <div className="px-4 pb-3 flex flex-wrap gap-1">
           {roleTags.slice(0, 6).map((r) => (
             <span key={r} className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm">
               {r.replace(/-/g, ' ')}
@@ -88,6 +95,17 @@ export default function ProfilePreviewCard({ name, username, bio, avatarUrl, pat
           {roleTags.length > 6 && (
             <span className="font-mono text-[9px] text-bone/30">+{roleTags.length - 6}</span>
           )}
+        </div>
+      )}
+
+      {/* Custom links */}
+      {customLinks && customLinks.filter((l) => l?.label && l?.url).length > 0 && (
+        <div className="px-4 pb-4 flex flex-wrap gap-1.5">
+          {customLinks.filter((l) => l?.label && l?.url).slice(0, 6).map((cl, i) => (
+            <span key={i} className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/60 rounded-sm">
+              {cl.label}
+            </span>
+          ))}
         </div>
       )}
 

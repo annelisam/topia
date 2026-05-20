@@ -34,6 +34,8 @@ export async function GET(
         toolSlugs:        users.toolSlugs,
         path:             users.path,
         verifiedProviders: users.verifiedProviders,
+        pronouns:         users.pronouns,
+        customLinks:      users.customLinks,
         createdAt:        users.createdAt,
       })
       .from(users)

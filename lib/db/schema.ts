@@ -25,6 +25,8 @@ export const users = pgTable('users', {
   savedToolSlugs: text('saved_tool_slugs'), // Comma-separated tool slugs user has bookmarked
   path: text('path'),                 // 'worldbuilder' | 'catalyst' | 'anchor' — null until onboarding
   verifiedProviders: text('verified_providers'), // CSV of OAuth-verified social providers e.g. 'twitter,linkedin'
+  pronouns: text('pronouns'),         // Optional free-text e.g. 'she/her', 'they/them'
+  customLinks: jsonb('custom_links'), // Array of {label, url} pairs for arbitrary user links
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

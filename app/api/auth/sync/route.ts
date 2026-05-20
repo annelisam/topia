@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     const socialLinkedin    = norm(body, 'socialLinkedin');
     const socialSubstack    = norm(body, 'socialSubstack');
     const socialFarcaster   = norm(body, 'socialFarcaster');
+    const pronouns          = norm(body, 'pronouns');
+    // customLinks is structured (array of {label, url}); pass through if present
+    const customLinks       = 'customLinks' in body ? body.customLinks : undefined;
     const roleTags          = 'roleTags'  in body ? body.roleTags  : undefined;
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
     const path              = norm(body, 'path');
@@ -83,6 +86,8 @@ export async function POST(request: NextRequest) {
           socialLinkedin:   socialLinkedin  !== undefined ? socialLinkedin  : prev.socialLinkedin,
           socialSubstack:   socialSubstack  !== undefined ? socialSubstack  : prev.socialSubstack,
           socialFarcaster:  socialFarcaster !== undefined ? socialFarcaster : prev.socialFarcaster,
+          pronouns:         pronouns        !== undefined ? pronouns        : prev.pronouns,
+          ...(customLinks !== undefined && { customLinks }),
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
           path:             path            !== undefined ? path            : prev.path,
@@ -115,6 +120,8 @@ export async function POST(request: NextRequest) {
         socialLinkedin:   socialLinkedin  ?? null,
         socialSubstack:   socialSubstack  ?? null,
         socialFarcaster:  socialFarcaster ?? null,
+        pronouns:         pronouns        ?? null,
+        customLinks:      customLinks     ?? null,
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
         path:             path            ?? null,
