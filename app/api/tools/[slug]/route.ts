@@ -39,7 +39,43 @@ export async function GET(
       })
       .map(({ id, username, name, avatarUrl }) => ({ id, username, name, avatarUrl }));
 
-    // 3. Worlds whose `tools` CSV mentions this tool (by slug or by name)
+    // 3. Related tools — co-occurrence in users' toolSlugs.
+    // For every user who uses THIS tool, count the other tools they use;
+    // the most common other tools are "related".
+    const cooccurCount: Record<string, number> = {};
+    for (const u of allUsers) {
+      if (!u.toolSlugs) continue;
+      const userSlugs = u.toolSlugs.split(',').map((s) => s.trim()).filter(Boolean);
+      if (!userSlugs.includes(slug)) continue;
+      for (const other of userSlugs) {
+        if (other === slug) continue;
+        cooccurCount[other] = (cooccurCount[other] ?? 0) + 1;
+      }
+    }
+    const topRelatedSlugs = Object.entries(cooccurCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([s]) => s);
+
+    let related: { slug: string; name: string; url: string | null; category: string | null; score: number }[] = [];
+    if (topRelatedSlugs.length > 0) {
+      // Single batch query for the metadata of related tools
+      const { inArray } = await import('drizzle-orm');
+      const rows = await db
+        .select({ slug: tools.slug, name: tools.name, url: tools.url, category: tools.category })
+        .from(tools)
+        .where(inArray(tools.slug, topRelatedSlugs));
+      const byslug = new Map(rows.map((r) => [r.slug, r]));
+      related = topRelatedSlugs
+        .map((s) => {
+          const t = byslug.get(s);
+          if (!t) return null;
+          return { ...t, score: cooccurCount[s] };
+        })
+        .filter((x): x is { slug: string; name: string; url: string | null; category: string | null; score: number } => x !== null);
+    }
+
+    // 4. Worlds whose `tools` CSV mentions this tool (by slug or by name)
     const allWorlds = await db
       .select({
         id: worlds.id,
@@ -66,6 +102,7 @@ export async function GET(
       tool,
       users: toolUsers,
       worlds: toolWorlds,
+      related,
     });
   } catch (error) {
     console.error('Tool detail fetch error:', error);

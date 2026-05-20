@@ -1,71 +1,58 @@
-'use client';
+import type { Metadata } from 'next';
+import { db } from '@/lib/db';
+import { tools } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import ToolFullPageClient from './ToolFullPageClient';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import PageShell from '../../../components/PageShell';
-import ToolDetail, { ToolDetailData } from '../ToolDetail';
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
 
-export default function ToolFullPage() {
-  const params = useParams();
-  const router = useRouter();
-  const slug = (params?.slug as string) ?? '';
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const [tool] = await db
+      .select({ name: tools.name, description: tools.description, category: tools.category })
+      .from(tools)
+      .where(eq(tools.slug, slug))
+      .limit(1);
 
-  const [data, setData] = useState<ToolDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+    if (!tool) {
+      return {
+        title: 'Tool not found · TOPIA',
+        description: 'This tool could not be found.',
+      };
+    }
 
-  useEffect(() => {
-    if (!slug) return;
-    fetch(`/api/tools/${encodeURIComponent(slug)}`)
-      .then(async (r) => {
-        if (r.status === 404) { setNotFound(true); return null; }
-        if (!r.ok) return null;
-        return r.json();
-      })
-      .then((d) => { if (d && d.tool) setData(d as ToolDetailData); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [slug]);
+    const title = `${tool.name} · TOPIA Tools`;
+    const description =
+      tool.description?.slice(0, 200)
+      ?? `${tool.name}${tool.category ? ` — ${tool.category}` : ''}. Discover creators and worlds using ${tool.name} on TOPIA.`;
+    const faviconImg = `https://www.google.com/s2/favicons?domain=${slug}&sz=128`;
 
-  return (
-    <PageShell>
-      <section className="min-h-screen bg-obsidian px-4 md:px-6 py-4 md:py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-4 flex items-center justify-between">
-            <button
-              onClick={() => router.back()}
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border-none cursor-pointer"
-            >
-              ← back
-            </button>
-            <Link
-              href="/resources/tools"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone no-underline"
-            >
-              all tools
-            </Link>
-          </div>
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        siteName: 'TOPIA',
+        images: [{ url: faviconImg, alt: tool.name }],
+      },
+      twitter: {
+        card: 'summary',
+        title,
+        description,
+        images: [faviconImg],
+      },
+    };
+  } catch {
+    return { title: 'TOPIA Tools' };
+  }
+}
 
-          {loading && (
-            <div className="text-center py-16">
-              <span className="font-mono text-[11px] uppercase tracking-[3px] text-bone/40">loading…</span>
-            </div>
-          )}
-          {notFound && !loading && (
-            <div className="text-center py-16">
-              <p className="font-mono text-[12px] uppercase tracking-[2px] text-bone/40">Tool not found.</p>
-              <Link
-                href="/resources/tools"
-                className="inline-block mt-3 font-mono text-[11px] uppercase tracking-[2px] text-lime hover:opacity-80 no-underline"
-              >
-                ← back to tools
-              </Link>
-            </div>
-          )}
-          {data && !loading && <ToolDetail data={data} fullPage />}
-        </div>
-      </section>
-    </PageShell>
-  );
+export default async function ToolFullPage({ params }: PageProps) {
+  const { slug } = await params;
+  return <ToolFullPageClient slug={slug} />;
 }

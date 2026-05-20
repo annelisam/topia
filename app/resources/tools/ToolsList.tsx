@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import LoadingBar from '../../components/LoadingBar';
 import { faviconUrl } from './favicon';
+import { fuzzyMatch } from './fuzzy';
 import ToolModal from './ToolModal';
+import SubmitToolModal from './SubmitToolModal';
 
 interface ToolUser {
   username: string | null;
@@ -46,51 +47,84 @@ function parseCategories(s: string | null): string[] {
   return s.split(',').map((c) => c.trim()).filter(Boolean);
 }
 
+interface TrendingTool {
+  id: string;
+  slug: string;
+  name: string;
+  url: string | null;
+  category: string | null;
+  score?: number;
+}
+
 export default function ToolsList() {
-  const [tools, setTools] = useState<Tool[]>([]);
+  const [allTools, setAllTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
   const [modalSlug, setModalSlug] = useState<string | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout>(undefined);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [trending, setTrending] = useState<TrendingTool[]>([]);
+  const [newest, setNewest] = useState<TrendingTool[]>([]);
+  const initialFetchedRef = useRef(false);
 
-  // Debounce search input
+  // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy
   useEffect(() => {
-    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(debounceRef.current);
-  }, [search]);
-
-  // Fetch
-  useEffect(() => {
-    const fetchTools = async () => {
-      setLoading(true);
+    if (initialFetchedRef.current) return;
+    initialFetchedRef.current = true;
+    (async () => {
       try {
-        const params = new URLSearchParams();
-        if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
-        if (debouncedSearch) params.append('search', debouncedSearch);
-        if (sortBy !== 'name_asc' && sortBy !== 'popular') params.append('sort', sortBy);
-        const response = await fetch(`/api/tools?${params}`);
+        const response = await fetch('/api/tools');
         const data = await response.json();
-        let list: Tool[] = data.tools || [];
-        if (sortBy === 'popular') {
-          list = [...list].sort((a, b) => (b.userCount ?? 0) - (a.userCount ?? 0));
-        }
-        setTools(list);
+        setAllTools((data.tools as Tool[]) || []);
       } catch (error) {
         console.error('Error fetching tools:', error);
       } finally {
         setLoading(false);
       }
-    };
-    fetchTools();
-  }, [selectedCategory, debouncedSearch, sortBy]);
+    })();
+  }, []);
+
+  // Trending + newest
+  useEffect(() => {
+    fetch('/api/tools/trending')
+      .then((r) => r.json())
+      .then(({ trending, newest }) => {
+        setTrending(trending ?? []);
+        setNewest(newest ?? []);
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
-    if (!loading && tools.length > 0) setInitialLoad(false);
-  }, [loading, tools]);
+    if (!loading && allTools.length > 0) setInitialLoad(false);
+  }, [loading, allTools]);
+
+  // Apply category filter + fuzzy search + sort client-side
+  const tools = useMemo(() => {
+    let list: Tool[] = allTools;
+
+    if (selectedCategory && selectedCategory !== 'all') {
+      list = list.filter((t) => parseCategories(t.category).some((c) => c.toLowerCase().includes(selectedCategory.toLowerCase())));
+    }
+
+    if (search) {
+      list = fuzzyMatch(search, list, (t) => [t.name, t.description ?? '', t.category ?? '']);
+    }
+
+    if (search) {
+      // Fuzzy returns sorted by relevance — preserve order.
+      return list;
+    }
+
+    switch (sortBy) {
+      case 'name_desc': return [...list].sort((a, b) => b.name.localeCompare(a.name));
+      case 'newest':    return list; // server already sorted; fall through (no createdAt on client)
+      case 'popular':   return [...list].sort((a, b) => (b.userCount ?? 0) - (a.userCount ?? 0));
+      default:          return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+  }, [allTools, selectedCategory, search, sortBy]);
 
   return (
     <div className="min-h-screen bg-obsidian text-bone">
@@ -157,6 +191,62 @@ export default function ToolsList() {
               })}
             </div>
 
+            {/* ─── ROW 3.5: Trending & new (only when not filtering/searching) ─── */}
+            {!search && selectedCategory === 'all' && (trending.length > 0 || newest.length > 0) && (
+              <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {trending.length > 0 && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">
+                      ◉ trending now
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {trending.slice(0, 6).map((t) => {
+                        const fav = faviconUrl(t.url, 32);
+                        return (
+                          <button
+                            key={t.slug}
+                            onClick={() => setModalSlug(t.slug)}
+                            className="inline-flex items-center gap-2 border border-bone/15 hover:border-lime/50 px-2.5 py-1.5 rounded-sm transition cursor-pointer bg-bone/[0.02]"
+                          >
+                            {fav && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                            )}
+                            <span className="font-mono text-[11px] text-bone">{t.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {newest.length > 0 && (
+                  <div>
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">
+                      ✦ new this month
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {newest.slice(0, 6).map((t) => {
+                        const fav = faviconUrl(t.url, 32);
+                        return (
+                          <button
+                            key={t.slug}
+                            onClick={() => setModalSlug(t.slug)}
+                            className="inline-flex items-center gap-2 border border-bone/15 hover:border-pink/50 px-2.5 py-1.5 rounded-sm transition cursor-pointer bg-bone/[0.02]"
+                          >
+                            {fav && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                            )}
+                            <span className="font-mono text-[11px] text-bone">{t.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ─── ROW 4: Grid ─── */}
             <div className="bg-obsidian p-4 md:p-6 min-h-[400px]">
               {loading && initialLoad ? (
@@ -166,8 +256,8 @@ export default function ToolsList() {
               ) : tools.length === 0 && !loading ? (
                 <div className="text-center py-16">
                   <p className="font-mono text-[13px] uppercase tracking-[2px] text-bone/40">
-                    {debouncedSearch
-                      ? `no tools matching "${debouncedSearch}"${selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}.`
+                    {search
+                      ? `no tools matching "${search}"${selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}.`
                       : 'no tools found.'}
                   </p>
                 </div>
@@ -261,18 +351,26 @@ export default function ToolsList() {
             {/* ─── ROW 5: Footer / submit CTA ─── */}
             <div className="bg-obsidian border-t border-bone/[0.04] px-4 py-3 flex items-center justify-between">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/20">topia://tools</span>
-              <Link
-                href="/dashboard/submit-tool"
-                className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-lime transition no-underline"
+              <button
+                onClick={() => setSubmitOpen(true)}
+                className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-lime transition bg-transparent border-none cursor-pointer"
               >
                 + submit a tool
-              </Link>
+              </button>
             </div>
           </div>
         </div>
       </section>
 
       <ToolModal slug={modalSlug} onClose={() => setModalSlug(null)} />
+      <SubmitToolModal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        onSubmitted={(t) => {
+          // Add the new tool to the local list so it shows up immediately
+          if (t) setAllTools((prev) => [t, ...prev]);
+        }}
+      />
     </div>
   );
 }

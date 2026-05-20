@@ -16,6 +16,7 @@ import PulseLayer from '../../components/profile/PulseLayer';
 import ProfileTV from '../../components/profile/ProfileTV';
 import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
+import ToolkitLayer from '../../components/profile/ToolkitLayer';
 
 interface PublicProfile {
   id: string;
@@ -38,7 +39,7 @@ interface PublicProfile {
   createdAt: string;
 }
 
-interface ResolvedTool { name: string; slug: string; category: string | null; }
+interface ResolvedTool { name: string; slug: string; category: string | null; url?: string | null; }
 interface WorldMembership { worldId: string; worldTitle: string; worldSlug: string; worldCategory: string | null; worldImageUrl: string | null; role: string; }
 interface HostedEvent { id: string; eventName: string; slug: string; date: string | null; city: string | null; imageUrl: string | null }
 
@@ -50,6 +51,7 @@ const SECTIONS = [
   { id: 'pulse',    label: 'PULSE' },
   { id: 'tv',       label: 'TV' },
   { id: 'worlds',   label: 'WORLDS' },
+  { id: 'toolkit',  label: 'TOOLKIT' },
   { id: 'guestbook',label: 'GUESTBOOK' },
 ] as const;
 
@@ -239,6 +241,7 @@ export default function PublicProfilePage() {
       case 'pulse':     return <PulseLayer config={config} />;
       case 'tv':        return <ProfileTV config={config} handle={`@${username}`} />;
       case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} />;
+      case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
       case 'guestbook': return <GuestbookLayer config={config} />;
       default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} />;
     }

@@ -52,7 +52,7 @@ export async function GET(
       const slugList = user.toolSlugs.split(',').map((s) => s.trim()).filter(Boolean);
       if (slugList.length === 0) return [];
       return db
-        .select({ name: tools.name, slug: tools.slug, category: tools.category })
+        .select({ name: tools.name, slug: tools.slug, category: tools.category, url: tools.url })
         .from(tools)
         .where(inArray(tools.slug, slugList));
     })();

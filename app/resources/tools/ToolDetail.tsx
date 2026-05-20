@@ -18,6 +18,7 @@ export interface ToolDetailData {
   };
   users: { id: string; username: string | null; name: string | null; avatarUrl: string | null }[];
   worlds: { id: string; title: string; slug: string; category: string | null; imageUrl: string | null }[];
+  related?: { slug: string; name: string; url: string | null; category: string | null; score: number }[];
 }
 
 interface Props {
@@ -36,27 +37,34 @@ function parseCategories(s: string | null): string[] {
 }
 
 export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props) {
-  const { tool, users, worlds } = data;
+  const { tool, users, worlds, related = [] } = data;
   const { authenticated, user } = usePrivy();
   const [saved, setSaved] = useState(false);
+  const [using, setUsing] = useState(false);
   const [savePending, setSavePending] = useState(false);
+  const [usePending, setUsePending] = useState(false);
   const favicon = faviconUrl(tool.url, 128);
   const categories = parseCategories(tool.category);
 
-  // Initial saved state
+  // Initial saved/using state
   useEffect(() => {
     if (!authenticated || !user?.id) return;
     fetch(`/api/tools/save?privyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
-      .then(({ savedToolSlugs }) => setSaved(Array.isArray(savedToolSlugs) && savedToolSlugs.includes(tool.slug)))
+      .then(({ savedToolSlugs, toolSlugs }) => {
+        setSaved(Array.isArray(savedToolSlugs) && savedToolSlugs.includes(tool.slug));
+        setUsing(Array.isArray(toolSlugs) && toolSlugs.includes(tool.slug));
+      })
       .catch(console.error);
   }, [authenticated, user?.id, tool.slug]);
 
-  async function toggleSave() {
-    if (!authenticated || !user?.id || savePending) return;
-    setSavePending(true);
-    const wasSaved = saved;
-    setSaved(!wasSaved); // optimistic
+  async function toggle(target: 'saved' | 'using') {
+    if (!authenticated || !user?.id) return;
+    const isUsing = target === 'using';
+    const currentlyOn = isUsing ? using : saved;
+    if (isUsing ? usePending : savePending) return;
+    if (isUsing) setUsePending(true); else setSavePending(true);
+    if (isUsing) setUsing(!currentlyOn); else setSaved(!currentlyOn); // optimistic
     try {
       const res = await fetch('/api/tools/save', {
         method: 'POST',
@@ -64,16 +72,18 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
         body: JSON.stringify({
           privyId: user.id,
           slug: tool.slug,
-          action: wasSaved ? 'unsave' : 'save',
+          action: currentlyOn ? 'unsave' : 'save',
+          target,
         }),
       });
       const json = await res.json();
-      setSaved(Boolean(json?.saved));
+      if (isUsing) setUsing(Boolean(json?.enabled));
+      else setSaved(Boolean(json?.enabled));
     } catch (err) {
-      console.error('save toggle failed', err);
-      setSaved(wasSaved); // revert
+      console.error(`${target} toggle failed`, err);
+      if (isUsing) setUsing(currentlyOn); else setSaved(currentlyOn); // revert
     } finally {
-      setSavePending(false);
+      if (isUsing) setUsePending(false); else setSavePending(false);
     }
   }
 
@@ -135,18 +145,32 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           {authenticated && (
-            <button
-              onClick={toggleSave}
-              disabled={savePending}
-              className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
-                saved
-                  ? 'bg-lime border-lime text-obsidian'
-                  : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
-              }`}
-              title={saved ? 'Saved — click to remove' : 'Save to your dashboard'}
-            >
-              {savePending ? '…' : saved ? '★ saved' : '☆ save'}
-            </button>
+            <>
+              <button
+                onClick={() => toggle('using')}
+                disabled={usePending}
+                className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
+                  using
+                    ? 'bg-bone text-obsidian border-bone'
+                    : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
+                }`}
+                title={using ? "I use this — click to remove from my profile" : 'Add to my toolkit (shows on my profile)'}
+              >
+                {usePending ? '…' : using ? '✓ in my kit' : '+ I use this'}
+              </button>
+              <button
+                onClick={() => toggle('saved')}
+                disabled={savePending}
+                className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
+                  saved
+                    ? 'bg-lime border-lime text-obsidian'
+                    : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
+                }`}
+                title={saved ? 'Saved — click to remove' : 'Save to your dashboard'}
+              >
+                {savePending ? '…' : saved ? '★ saved' : '☆ save'}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -252,6 +276,40 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
             </div>
           )}
         </div>
+
+        {/* Related tools (co-occurrence) */}
+        {related.length > 0 && (
+          <div className="md:col-span-3">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-3">
+              creators using {tool.name} also use
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {related.map((r) => {
+                const rFavicon = faviconUrl(r.url, 64);
+                return (
+                  <Link
+                    key={r.slug}
+                    href={`/resources/tools/${r.slug}`}
+                    className="flex items-center gap-3 border border-bone/10 hover:border-lime/40 px-3 py-2 rounded-sm transition no-underline"
+                  >
+                    <span className="w-8 h-8 shrink-0 rounded-sm border border-bone/10 bg-bone/[0.04] overflow-hidden flex items-center justify-center">
+                      {rFavicon ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={rFavicon} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="font-basement text-sm text-bone/30">{r.name[0]?.toUpperCase()}</span>
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{r.name}</div>
+                      <div className="font-mono text-[10px] text-bone/30 truncate">{r.score} shared creator{r.score !== 1 ? 's' : ''}</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
