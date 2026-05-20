@@ -21,7 +21,8 @@ export const users = pgTable('users', {
   socialFarcaster: text('social_farcaster'),
   role: text('role').default('user'), // 'user', 'artist', 'admin'
   roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
-  toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table
+  toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table (tools I USE)
+  savedToolSlugs: text('saved_tool_slugs'), // Comma-separated tool slugs user has bookmarked
   path: text('path'),                 // 'worldbuilder' | 'catalyst' | 'anchor' — null until onboarding
   verifiedProviders: text('verified_providers'), // CSV of OAuth-verified social providers e.g. 'twitter,linkedin'
   createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useDashboard } from './_components/DashboardContext';
+import SavedToolsWidget from './_components/SavedToolsWidget';
 
 export default function DashboardOverviewPage() {
   const { profile, worldMemberships, hostedEvents } = useDashboard();
@@ -46,6 +47,11 @@ export default function DashboardOverviewPage() {
             + Create World
           </Link>
         </div>
+      </div>
+
+      {/* Saved tools */}
+      <div className="mb-6">
+        <SavedToolsWidget />
       </div>
 
       {/* Profile card */}
