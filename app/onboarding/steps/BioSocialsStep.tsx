@@ -46,8 +46,6 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
   const SOCIAL_FIELDS: { key: keyof Socials; label: string; placeholder: string }[] = [
     { key: 'socialWebsite',    label: 'WEB',   placeholder: 'yoursite.com' },
     { key: 'socialSoundcloud', label: 'SC',    placeholder: 'soundcloud.com/handle' },
-    { key: 'socialSpotify',    label: 'SPOT',  placeholder: 'open.spotify.com/...' },
-    { key: 'socialLinkedin',   label: 'LI',    placeholder: 'linkedin.com/in/handle' },
     { key: 'socialSubstack',   label: 'SUB',   placeholder: 'handle.substack.com' },
   ];
 
@@ -88,6 +86,18 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
             provider="instagram"
             value={socials.socialInstagram}
             onChange={(url) => setSocial('socialInstagram', url)}
+            accent={accentHex}
+          />
+          <SocialConnect
+            provider="linkedin"
+            value={socials.socialLinkedin}
+            onChange={(url) => setSocial('socialLinkedin', url)}
+            accent={accentHex}
+          />
+          <SocialConnect
+            provider="spotify"
+            value={socials.socialSpotify}
+            onChange={(url) => setSocial('socialSpotify', url)}
             accent={accentHex}
           />
         </div>

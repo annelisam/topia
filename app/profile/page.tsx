@@ -643,6 +643,8 @@ export default function ProfilePage() {
                   </p>
                   <SocialConnect provider="twitter"   value={socialTwitter}   onChange={setSocialTwitter}   accent={accent} />
                   <SocialConnect provider="instagram" value={socialInstagram} onChange={setSocialInstagram} accent={accent} />
+                  <SocialConnect provider="linkedin"  value={socialLinkedin}  onChange={setSocialLinkedin}  accent={accent} />
+                  <SocialConnect provider="spotify"   value={socialSpotify}   onChange={setSocialSpotify}   accent={accent} />
 
                   <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8, marginTop: 24 }}>
                     LINKS — PASTE URLs
@@ -650,8 +652,6 @@ export default function ProfilePage() {
                   {[
                     { label: 'Website',     value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',              icon: <SocialIcon type="website" /> },
                     { label: 'SoundCloud',  value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle',     icon: <SocialIcon type="soundcloud" /> },
-                    { label: 'Spotify',     value: socialSpotify,    set: setSocialSpotify,    placeholder: 'https://open.spotify.com/artist/…', icon: <SocialIcon type="spotify" /> },
-                    { label: 'LinkedIn',    value: socialLinkedin,   set: setSocialLinkedin,   placeholder: 'https://linkedin.com/in/handle',    icon: <SocialIcon type="linkedin" /> },
                     { label: 'Substack',    value: socialSubstack,   set: setSocialSubstack,   placeholder: 'https://handle.substack.com',       icon: <SocialIcon type="substack" /> },
                   ].map(({ label, value, set, placeholder, icon }, i) => (
                     <div key={label} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>

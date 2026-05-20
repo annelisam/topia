@@ -4,11 +4,11 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useEffect, useState } from 'react';
 import { SocialIcon } from './SocialIcons';
 
-export type SocialProvider = 'twitter' | 'instagram';
+export type SocialProvider = 'twitter' | 'instagram' | 'linkedin' | 'spotify';
 
 interface Props {
   provider: SocialProvider;
-  /** Current stored URL (from DB). When non-empty, the connect button switches to "Connected as @handle". */
+  /** Current stored URL (from DB). When non-empty, switches to "Connected as @handle". */
   value: string;
   /** Update the URL. Called with the constructed profile URL after connect, or '' after disconnect. */
   onChange: (url: string) => void;
@@ -16,80 +16,158 @@ interface Props {
   accent?: string;
 }
 
-/* ── helpers ───────────────────────────────────────────────── */
-
-/**
- * Pull the username out of a stored profile URL (e.g. https://x.com/foo → foo).
- * Tolerant of formats the user may have pasted previously.
- */
-function handleFromUrl(provider: SocialProvider, url: string): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url.includes('://') ? url : `https://${url}`);
-    const seg = u.pathname.split('/').filter(Boolean)[0];
-    if (!seg) return null;
-    return seg.replace(/^@/, '');
-  } catch {
-    return null;
-  }
-}
-
-function urlFor(provider: SocialProvider, handle: string): string {
-  if (provider === 'twitter')   return `https://x.com/${handle}`;
-  if (provider === 'instagram') return `https://instagram.com/${handle}`;
-  return '';
-}
-
-const LABEL: Record<SocialProvider, { display: string; iconType: string }> = {
-  twitter:   { display: 'X (Twitter)', iconType: 'twitter' },
-  instagram: { display: 'Instagram',   iconType: 'instagram' },
-};
-
-/* ── Privy account extraction ──────────────────────────────── */
+/* ── Privy linked-account shape (tolerant) ─────────────────── */
 
 interface OAuthAccount {
   type: string;
   subject?: string;
   username?: string;
   name?: string;
+  vanityName?: string;
 }
 
-function findOAuthAccount(user: unknown, providerType: 'twitter_oauth' | 'instagram_oauth'): OAuthAccount | null {
-  const u = user as { linkedAccounts?: OAuthAccount[]; twitter?: OAuthAccount; instagram?: OAuthAccount } | null;
+/* ── Provider metadata table ───────────────────────────────── */
+
+interface ProviderMeta {
+  display: string;
+  iconType: string;
+  shortLabel: string;
+  oauthType: 'twitter_oauth' | 'instagram_oauth' | 'linkedin_oauth' | 'spotify_oauth';
+  /** Build the canonical public-profile URL from a Privy linked account. */
+  buildUrl: (a: OAuthAccount) => string;
+  /** Visible label shown next to the green dot. */
+  buildLabel: (a: OAuthAccount) => string;
+  /** Best-effort: pull a display handle out of an existing pasted URL (for legacy data). */
+  parseHandle: (url: string) => string | null;
+}
+
+function parsePathHandle(url: string): string | null {
+  try {
+    const u = new URL(url.includes('://') ? url : `https://${url}`);
+    const seg = u.pathname.split('/').filter(Boolean)[0];
+    return seg ? seg.replace(/^@/, '') : null;
+  } catch { return null; }
+}
+
+const PROVIDER_META: Record<SocialProvider, ProviderMeta> = {
+  twitter: {
+    display:    'X (Twitter)',
+    iconType:   'twitter',
+    shortLabel: 'x',
+    oauthType:  'twitter_oauth',
+    buildUrl:   (a) => a.username ? `https://x.com/${a.username}` : '',
+    buildLabel: (a) => a.username ? `@${a.username}` : 'Connected',
+    parseHandle: parsePathHandle,
+  },
+  instagram: {
+    display:    'Instagram',
+    iconType:   'instagram',
+    shortLabel: 'instagram',
+    oauthType:  'instagram_oauth',
+    buildUrl:   (a) => a.username ? `https://instagram.com/${a.username}` : '',
+    buildLabel: (a) => a.username ? `@${a.username}` : 'Connected',
+    parseHandle: parsePathHandle,
+  },
+  linkedin: {
+    display:    'LinkedIn',
+    iconType:   'linkedin',
+    shortLabel: 'linkedin',
+    oauthType:  'linkedin_oauth',
+    buildUrl:   (a) => {
+      if (a.vanityName) return `https://linkedin.com/in/${a.vanityName}`;
+      if (a.subject)    return `https://linkedin.com/in/${a.subject}`;
+      return '';
+    },
+    buildLabel: (a) => a.name || a.vanityName || 'Connected',
+    parseHandle: (url) => {
+      try {
+        const u = new URL(url.includes('://') ? url : `https://${url}`);
+        const parts = u.pathname.split('/').filter(Boolean);
+        const inIdx = parts.indexOf('in');
+        return inIdx >= 0 ? (parts[inIdx + 1] ?? null) : null;
+      } catch { return null; }
+    },
+  },
+  spotify: {
+    display:    'Spotify',
+    iconType:   'spotify',
+    shortLabel: 'spotify',
+    oauthType:  'spotify_oauth',
+    buildUrl:   (a) => a.subject ? `https://open.spotify.com/user/${a.subject}` : '',
+    buildLabel: (a) => a.name || 'Connected',
+    parseHandle: (url) => {
+      try {
+        const u = new URL(url.includes('://') ? url : `https://${url}`);
+        const parts = u.pathname.split('/').filter(Boolean);
+        const userIdx = parts.indexOf('user');
+        return userIdx >= 0 ? (parts[userIdx + 1] ?? null) : null;
+      } catch { return null; }
+    },
+  },
+};
+
+/* ── Helpers ───────────────────────────────────────────────── */
+
+function findOAuthAccount(user: unknown, oauthType: ProviderMeta['oauthType']): OAuthAccount | null {
+  const u = user as {
+    linkedAccounts?: OAuthAccount[];
+    twitter?: OAuthAccount;
+    instagram?: OAuthAccount;
+    linkedin?: OAuthAccount;
+    spotify?: OAuthAccount;
+  } | null;
   if (!u) return null;
-  if (providerType === 'twitter_oauth'  && u.twitter)   return u.twitter as OAuthAccount;
-  if (providerType === 'instagram_oauth' && u.instagram) return u.instagram as OAuthAccount;
-  return u.linkedAccounts?.find((a) => a.type === providerType) ?? null;
+  // Convenience getters on user object (when available)
+  if (oauthType === 'twitter_oauth'   && u.twitter)   return u.twitter;
+  if (oauthType === 'instagram_oauth' && u.instagram) return u.instagram;
+  if (oauthType === 'linkedin_oauth'  && u.linkedin)  return u.linkedin;
+  if (oauthType === 'spotify_oauth'   && u.spotify)   return u.spotify;
+  return u.linkedAccounts?.find((a) => a.type === oauthType) ?? null;
 }
 
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function SocialConnect({ provider, value, onChange, accent = '#e4fe52' }: Props) {
-  const { ready, authenticated, user, linkTwitter, linkInstagram, unlinkTwitter, unlinkInstagram } = usePrivy();
+  const privy = usePrivy();
+  const { ready, authenticated, user } = privy;
   const [busy, setBusy] = useState<'connect' | 'disconnect' | null>(null);
 
-  const oauthType = provider === 'twitter' ? 'twitter_oauth' : 'instagram_oauth';
-  const linked = findOAuthAccount(user, oauthType);
-  const linkedHandle = linked?.username ?? handleFromUrl(provider, value);
+  const meta = PROVIDER_META[provider];
+  const linked = findOAuthAccount(user, meta.oauthType);
   const isConnected = Boolean(linked || value);
 
-  // When Privy linking finishes, push the constructed URL up to the parent so it gets saved
+  const linkedLabel  = linked ? meta.buildLabel(linked) : null;
+  const legacyHandle = !linked && value ? meta.parseHandle(value) : null;
+  const displayLabel = linkedLabel ?? (legacyHandle ? `@${legacyHandle}` : (value ? 'Connected' : ''));
+
+  // When Privy linking finishes, push the constructed URL up to parent for persistence
   useEffect(() => {
-    if (!ready || !authenticated) return;
-    if (linked?.username) {
-      const expected = urlFor(provider, linked.username);
-      if (expected !== value) onChange(expected);
-      if (busy === 'connect') setBusy(null);
-    }
+    if (!ready || !authenticated || !linked) return;
+    const expected = meta.buildUrl(linked);
+    if (expected && expected !== value) onChange(expected);
+    if (busy === 'connect') setBusy(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linked?.username, ready, authenticated]);
+  }, [linked?.subject, linked?.username, ready, authenticated]);
+
+  function callLink() {
+    if (provider === 'twitter')   return privy.linkTwitter();
+    if (provider === 'instagram') return privy.linkInstagram();
+    if (provider === 'linkedin')  return privy.linkLinkedIn();
+    if (provider === 'spotify')   return privy.linkSpotify();
+  }
+
+  async function callUnlink(subject: string) {
+    if (provider === 'twitter')   return privy.unlinkTwitter(subject);
+    if (provider === 'instagram') return privy.unlinkInstagram(subject);
+    if (provider === 'linkedin')  return privy.unlinkLinkedIn(subject);
+    if (provider === 'spotify')   return privy.unlinkSpotify(subject);
+  }
 
   async function handleConnect() {
     setBusy('connect');
     try {
-      if (provider === 'twitter')   linkTwitter();
-      if (provider === 'instagram') linkInstagram();
-      // Privy redirects to the OAuth flow; the effect above completes the loop.
+      callLink();
+      // Privy redirects to OAuth; the effect above completes the round-trip.
     } catch (err) {
       console.error(`link ${provider} failed`, err);
       setBusy(null);
@@ -99,10 +177,7 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
   async function handleDisconnect() {
     setBusy('disconnect');
     try {
-      if (linked?.subject) {
-        if (provider === 'twitter')   await unlinkTwitter(linked.subject);
-        if (provider === 'instagram') await unlinkInstagram(linked.subject);
-      }
+      if (linked?.subject) await callUnlink(linked.subject);
       onChange('');
     } catch (err) {
       console.error(`unlink ${provider} failed`, err);
@@ -110,8 +185,6 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
       setBusy(null);
     }
   }
-
-  const meta = LABEL[provider];
 
   return (
     <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
@@ -145,7 +218,7 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
               className="truncate"
               style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 13, color: '#fff' }}
             >
-              {linkedHandle ? `@${linkedHandle}` : 'Connected'}
+              {displayLabel || 'Connected'}
             </span>
             {value && (
               <a
@@ -200,7 +273,7 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
             cursor: busy ? 'not-allowed' : 'pointer',
           }}
         >
-          {busy === 'connect' ? 'opening…' : `+ connect ${provider === 'twitter' ? 'x' : 'instagram'}`}
+          {busy === 'connect' ? 'opening…' : `+ connect ${meta.shortLabel}`}
         </button>
       )}
     </div>
