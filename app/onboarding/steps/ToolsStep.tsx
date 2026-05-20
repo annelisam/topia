@@ -115,7 +115,7 @@ export default function ToolsStep({ step, total, config, initialValue, onBack, o
                     className="w-3 h-3 border flex items-center justify-center shrink-0"
                     style={{ borderColor: on ? accent : 'rgba(245,240,232,0.2)', backgroundColor: on ? accent : 'transparent' }}
                   >
-                    {on && <span className="text-[8px] text-obsidian">✓</span>}
+                    {on && <span style={{ color: '#1a1a1a' }}><svg width="7" height="7" viewBox="0 0 10 10" aria-hidden="true"><polyline points="1.5,5.5 4,8 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" fill="none" /></svg></span>}
                   </span>
                   <span className="font-mono text-[13px] text-bone">{tool.name}</span>
                 </span>

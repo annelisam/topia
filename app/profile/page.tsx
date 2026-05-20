@@ -621,7 +621,7 @@ export default function ProfilePage() {
                                   justifyContent: 'center',
                                 }}
                               >
-                                {isSelected && <span style={{ fontSize: 8, color: '#0a0a0a' }}>✓</span>}
+                                {isSelected && <svg width="7" height="7" viewBox="0 0 10 10" aria-hidden="true" style={{ color: '#0a0a0a' }}><polyline points="1.5,5.5 4,8 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" fill="none" /></svg>}
                               </span>
                               <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 12, color: '#fff' }}>{tool.name}</span>
                             </div>

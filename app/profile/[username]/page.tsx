@@ -8,6 +8,7 @@ import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import { SocialIcon } from '../../components/SocialIcons';
+import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
 import IdentityLayer from '../../components/profile/IdentityLayer';
 import WorldLayer from '../../components/profile/WorldLayer';
@@ -375,23 +376,9 @@ export default function PublicProfilePage() {
                                           @{link.handle}
                                         </span>
                                       )}
-                                      {/* Straight-edged check mark (two-stroke polyline) */}
-                                      <svg
-                                        width="9"
-                                        height="9"
-                                        viewBox="0 0 10 10"
-                                        aria-label="verified"
-                                        style={{ flexShrink: 0 }}
-                                      >
-                                        <polyline
-                                          points="1.5,5.5 4,8 8.5,2.5"
-                                          stroke={config.hex}
-                                          strokeWidth="1.8"
-                                          strokeLinecap="square"
-                                          strokeLinejoin="miter"
-                                          fill="none"
-                                        />
-                                      </svg>
+                                      <span style={{ color: config.hex }} aria-label="verified">
+                                        <CheckIcon size={9} strokeWidth={1.8} />
+                                      </span>
                                     </a>
                                   );
                                 }

@@ -67,7 +67,31 @@ export default function ToolsList() {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [trending, setTrending] = useState<TrendingTool[]>([]);
   const [newest, setNewest] = useState<TrendingTool[]>([]);
+  const [visibleCount, setVisibleCount] = useState(24);
   const initialFetchedRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Set of slugs added in the last 30 days (from /api/tools/trending newest)
+  const newSlugSet = useMemo(() => new Set(newest.map((t) => t.slug)), [newest]);
+
+  // Reset paging whenever the filter set changes
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [search, selectedCategory, sortBy]);
+
+  // Keyboard shortcut: '/' focuses search (unless an input is already focused)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy
   useEffect(() => {
@@ -149,14 +173,26 @@ export default function ToolsList() {
             </div>
 
             {/* ─── ROW 2: Search + sort + count ─── */}
-            <div className="bg-obsidian border-t border-b border-bone/[0.06] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="search tools…"
-                className="flex-1 bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone placeholder:text-bone/25 px-3 py-1.5 rounded-sm outline-none transition-colors"
-              />
+            <div className="bg-obsidian border-t border-b border-bone/[0.06] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-[var(--nav-height,56px)] z-30">
+              <div className="relative flex-1">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="search tools…  press /"
+                  className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone placeholder:text-bone/25 px-3 py-1.5 pr-10 rounded-sm outline-none transition-colors"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] text-bone/40 hover:text-bone transition bg-transparent border-none cursor-pointer w-5 h-5 flex items-center justify-center"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -255,23 +291,53 @@ export default function ToolsList() {
                 </div>
               ) : tools.length === 0 && !loading ? (
                 <div className="text-center py-16">
-                  <p className="font-mono text-[13px] uppercase tracking-[2px] text-bone/40">
+                  <p className="font-mono text-[13px] uppercase tracking-[2px] text-bone/40 mb-4">
                     {search
-                      ? `no tools matching "${search}"${selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}.`
-                      : 'no tools found.'}
+                      ? `no tools matching "${search}"${selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}`
+                      : 'no tools found'}
                   </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {search && (
+                      <button
+                        onClick={() => setSearch('')}
+                        className="font-mono text-[11px] uppercase tracking-[2px] text-lime border border-lime/30 hover:bg-lime hover:text-obsidian px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
+                      >
+                        clear search
+                      </button>
+                    )}
+                    {selectedCategory !== 'all' && (
+                      <button
+                        onClick={() => setSelectedCategory('all')}
+                        className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/20 hover:border-bone/60 px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
+                      >
+                        reset category
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setSubmitOpen(true)}
+                      className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/20 hover:border-bone/60 px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
+                    >
+                      + submit a tool
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
-                  {tools.map((tool) => {
+                  {tools.slice(0, visibleCount).map((tool) => {
                     const categories = parseCategories(tool.category);
                     const favicon = faviconUrl(tool.url, 64);
+                    const isNew = newSlugSet.has(tool.slug);
                     return (
                       <button
                         key={tool.id}
                         onClick={() => setModalSlug(tool.slug)}
-                        className="text-left bg-bone/[0.02] hover:bg-bone/[0.06] border border-bone/10 hover:border-lime/40 rounded-md p-4 transition-all flex flex-col gap-3 cursor-pointer"
+                        className="relative text-left bg-bone/[0.02] hover:bg-bone/[0.06] border border-bone/10 hover:border-lime/40 rounded-md p-4 transition-all flex flex-col gap-3 cursor-pointer"
                       >
+                        {isNew && (
+                          <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] bg-pink/15 text-pink border border-pink/30 px-1.5 py-0.5 rounded-sm">
+                            ✦ new
+                          </span>
+                        )}
                         <div className="flex items-start gap-3">
                           <div className="shrink-0 w-10 h-10 rounded-sm border border-bone/10 bg-bone/[0.04] overflow-hidden flex items-center justify-center">
                             {favicon ? (
@@ -284,7 +350,7 @@ export default function ToolsList() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <h3 className="font-mono text-[13px] uppercase font-bold text-bone truncate">{tool.name}</h3>
-                              {tool.featured && (
+                              {tool.featured && !isNew && (
                                 <span className="font-mono text-[9px] uppercase tracking-wider text-lime/80 shrink-0">★</span>
                               )}
                             </div>
@@ -344,6 +410,29 @@ export default function ToolsList() {
                       </button>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Load more */}
+              {!loading && tools.length > visibleCount && (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">
+                    showing {visibleCount} of {tools.length}
+                  </span>
+                  <button
+                    onClick={() => setVisibleCount((n) => n + 24)}
+                    className="font-mono text-[11px] uppercase tracking-[2px] text-bone/70 hover:text-bone border border-bone/20 hover:border-bone/60 px-4 py-2 rounded-sm bg-transparent cursor-pointer transition"
+                  >
+                    load more →
+                  </button>
+                  {tools.length > visibleCount + 24 && (
+                    <button
+                      onClick={() => setVisibleCount(tools.length)}
+                      className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-bone/70 bg-transparent border-none cursor-pointer transition"
+                    >
+                      show all {tools.length}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

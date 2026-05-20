@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { faviconUrl } from './favicon';
+import { CheckIcon, StarIcon } from '../../components/ui/Icons';
 
 export interface ToolDetailData {
   tool: {
@@ -149,26 +150,26 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
               <button
                 onClick={() => toggle('using')}
                 disabled={usePending}
-                className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
                   using
                     ? 'bg-bone text-obsidian border-bone'
                     : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
                 }`}
                 title={using ? "I use this — click to remove from my profile" : 'Add to my toolkit (shows on my profile)'}
               >
-                {usePending ? '…' : using ? '✓ in my kit' : '+ I use this'}
+                {usePending ? '…' : using ? (<><CheckIcon size={10} /> in my kit</>) : '+ I use this'}
               </button>
               <button
                 onClick={() => toggle('saved')}
                 disabled={savePending}
-                className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
                   saved
                     ? 'bg-lime border-lime text-obsidian'
                     : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
                 }`}
                 title={saved ? 'Saved — click to remove' : 'Save to your dashboard'}
               >
-                {savePending ? '…' : saved ? '★ saved' : '☆ save'}
+                {savePending ? '…' : saved ? (<><StarIcon size={10} filled /> saved</>) : (<><StarIcon size={10} filled={false} /> save</>)}
               </button>
             </>
           )}
