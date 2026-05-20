@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Navigation />
         <DashboardSidebar />
         <main className="pt-28 sm:pt-24 sm:ml-56 px-4 sm:px-8 pb-16 md:pb-8">
-          <div className="max-w-4xl">{children}</div>
+          <div className="max-w-6xl">{children}</div>
         </main>
         <ColorSlider />
         <ThemeToggle />
