@@ -61,90 +61,81 @@ export default function DashboardSidebar() {
     <div ref={switcherRef} className="relative px-3 pb-3">
       <button
         onClick={() => setSwitcherOpen(!switcherOpen)}
-        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border transition hover:opacity-80"
-        style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-sm border bg-bone/[0.02] border-bone/15 text-bone hover:border-lime/40 hover:bg-bone/[0.05] transition cursor-pointer"
       >
         {currentWorld ? (
           <>
             {currentWorld.worldImageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={currentWorld.worldImageUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-basement text-[11px] bg-lime text-obsidian">
                 {currentWorld.worldTitle[0]?.toUpperCase()}
               </div>
             )}
-            <span className="font-mono text-[11px] font-bold truncate flex-1 text-left">{currentWorld.worldTitle}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-bold truncate flex-1 text-left">{currentWorld.worldTitle}</span>
           </>
         ) : (
           <>
             {profile?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={profile.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: 'var(--foreground)' }}>
-                <span className="font-mono text-[12px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center bg-lime">
+                <span className="font-basement text-[12px] text-obsidian">{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
               </div>
             )}
-            <span className="font-mono text-[11px] font-bold truncate flex-1 text-left">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider font-bold truncate flex-1 text-left">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
           </>
         )}
-        <span className="font-mono text-[13px] opacity-40 shrink-0" style={{ transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}>▾</span>
+        <span className="font-mono text-[12px] text-bone/40 shrink-0" style={{ transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}>▾</span>
       </button>
 
       {/* Dropdown */}
       {switcherOpen && (
-        <div
-          className="absolute left-3 right-3 top-full mt-1 border rounded-lg overflow-hidden shadow-lg z-30"
-          style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
-        >
+        <div className="absolute left-3 right-3 top-full mt-1 border border-bone/15 rounded-sm overflow-hidden shadow-2xl z-30 bg-obsidian">
           {/* Personal option */}
           <Link
             href="/dashboard"
             onClick={() => setSwitcherOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 transition hover:opacity-70 border-b"
-            style={{
-              borderColor: 'var(--border-color)',
-              backgroundColor: !currentWorld ? 'var(--surface)' : 'transparent',
-              color: 'var(--foreground)',
-            }}
+            className={`flex items-center gap-2 px-3 py-2 transition border-b border-bone/10 no-underline ${!currentWorld ? 'bg-bone/[0.06]' : 'hover:bg-bone/[0.03]'}`}
           >
             {profile?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={profile.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: 'var(--foreground)' }}>
-                <span className="font-mono text-[12px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center bg-lime">
+                <span className="font-basement text-[12px] text-obsidian">{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
               </div>
             )}
-            <span className="font-mono text-[11px] flex-1 truncate">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
-            {!currentWorld && <span className="font-mono text-[12px] opacity-40">●</span>}
+            <span className="font-mono text-[11px] uppercase tracking-wider flex-1 truncate text-bone">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
+            {!currentWorld && <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" />}
           </Link>
 
           {/* World options */}
           {sortedWorlds.length > 0 && (
             <div className="py-1">
-              <p className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-30 px-3 py-1" style={{ color: 'var(--foreground)' }}>Worlds</p>
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 px-3 py-1.5">Worlds · {sortedWorlds.length}</p>
               {sortedWorlds.map((w) => (
                 <Link
                   key={w.worldId}
                   href={`/dashboard/worlds/${w.worldSlug}`}
                   onClick={() => setSwitcherOpen(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 transition hover:opacity-70"
-                  style={{
-                    backgroundColor: currentWorldSlug === w.worldSlug ? 'var(--surface)' : 'transparent',
-                    color: 'var(--foreground)',
-                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 transition no-underline ${currentWorldSlug === w.worldSlug ? 'bg-bone/[0.06]' : 'hover:bg-bone/[0.03]'}`}
                 >
                   {w.worldImageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={w.worldImageUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                    <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-basement text-[11px] bg-lime text-obsidian">
                       {w.worldTitle[0]?.toUpperCase()}
                     </div>
                   )}
-                  <span className="font-mono text-[11px] flex-1 truncate">{w.worldTitle}</span>
-                  <span className="font-mono text-[11px] uppercase tracking-wider opacity-30 shrink-0">
-                    {w.role === 'owner' ? 'Owner' : w.role === 'world_builder' ? 'Builder' : 'Collab'}
+                  <span className="font-mono text-[11px] uppercase tracking-wider flex-1 truncate text-bone">{w.worldTitle}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-bone/30 shrink-0">
+                    {w.role === 'owner' ? 'OWN' : w.role === 'world_builder' ? 'BLD' : 'COL'}
                   </span>
-                  {currentWorldSlug === w.worldSlug && <span className="font-mono text-[12px] opacity-40">●</span>}
+                  {currentWorldSlug === w.worldSlug && <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" />}
                 </Link>
               ))}
             </div>
@@ -161,54 +152,79 @@ export default function DashboardSidebar() {
 
   const navSection = (
     <nav className="flex-1 overflow-y-auto px-2">
+      <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 px-2 py-1 mt-1">
+        {currentWorld ? 'Manage' : 'Personal'}
+      </p>
       {navItems.map((item) => (
         <Link
           key={item.href}
           href={item.href}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors mb-0.5"
-          style={{
-            backgroundColor: isActive(item.href) ? 'var(--foreground)' : 'transparent',
-            color: isActive(item.href) ? 'var(--background)' : 'var(--foreground)',
-          }}
+          className={`flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors mb-0.5 no-underline ${
+            isActive(item.href) ? 'bg-lime text-obsidian font-bold' : 'text-bone/60 hover:text-bone hover:bg-bone/[0.04]'
+          }`}
         >
           <span className="font-mono text-[11px] uppercase tracking-wider">{item.label}</span>
         </Link>
       ))}
+
+      {/* Quick links section */}
+      {!currentWorld && (
+        <>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 px-2 py-1 mt-4">Quick</p>
+          {[
+            { label: 'Tools', href: '/resources/tools' },
+            { label: 'Worlds', href: '/worlds' },
+            { label: 'Events', href: '/events' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-bone/40 hover:text-bone hover:bg-bone/[0.04] transition-colors mb-0.5 no-underline"
+            >
+              <span className="font-mono text-[11px] uppercase tracking-wider">{item.label} →</span>
+            </Link>
+          ))}
+        </>
+      )}
     </nav>
   );
 
   /* ── Bottom links ─────────────────────────────────────── */
   const bottomLinks = (
-    <div className="px-2 pb-6 pt-3 border-t" style={{ borderColor: 'var(--border-color)' }}>
-      {currentWorld && (
+    <div className="px-2 pb-6 pt-3 border-t border-bone/[0.06]">
+      {currentWorld ? (
         <a
           href={`/worlds/${currentWorld.worldSlug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors"
-          style={{ color: 'var(--foreground)', opacity: 0.5 }}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-bone/40 hover:text-bone hover:bg-bone/[0.04] transition no-underline"
         >
           <span className="font-mono text-[11px] uppercase tracking-wider">View World ↗</span>
         </a>
-      )}
-      {!currentWorld && (
-        <Link
-          href="/profile"
-          className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors"
-          style={{ color: 'var(--foreground)', opacity: 0.5 }}
-        >
-          <span className="font-mono text-[11px] uppercase tracking-wider">Edit Profile</span>
-        </Link>
+      ) : (
+        <>
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-bone/40 hover:text-bone hover:bg-bone/[0.04] transition no-underline"
+          >
+            <span className="font-mono text-[11px] uppercase tracking-wider">Edit Profile</span>
+          </Link>
+          {profile?.username && (
+            <Link
+              href={`/profile/${profile.username}`}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-bone/40 hover:text-bone hover:bg-bone/[0.04] transition no-underline"
+            >
+              <span className="font-mono text-[11px] uppercase tracking-wider">View Profile ↗</span>
+            </Link>
+          )}
+        </>
       )}
     </div>
   );
 
   /* ── Desktop sidebar ─────────────────────────────────── */
   const desktopSidebar = (
-    <aside
-      className="hidden sm:flex flex-col fixed top-0 left-0 h-full w-56 pt-16 z-20 border-r"
-      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}
-    >
+    <aside className="hidden sm:flex flex-col fixed top-0 left-0 h-full w-56 pt-16 z-20 border-r border-bone/[0.06] bg-obsidian">
       {/* Switcher */}
       <div className="pt-3">
         {contextSwitcher}
@@ -221,27 +237,20 @@ export default function DashboardSidebar() {
 
   /* ── Mobile tab bar ──────────────────────────────────── */
   const mobileTabs = (
-    <div
-      className="sm:hidden fixed top-16 left-0 right-0 z-20 border-b overflow-x-auto"
-      style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
-    >
-      <div className="flex items-center gap-0.5 px-3 py-1.5">
+    <div className="sm:hidden fixed top-16 left-0 right-0 z-20 border-b border-bone/[0.06] overflow-x-auto bg-obsidian">
+      <div className="flex items-center gap-0.5 px-3 py-1.5" style={{ scrollbarWidth: 'none' }}>
         {/* Mobile context indicator */}
-        {currentWorld ? (
+        {currentWorld && (
           <Link
             href="/dashboard"
-            className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2 py-1 rounded opacity-40 hover:opacity-80 transition"
-            style={{ color: 'var(--foreground)' }}
+            className="shrink-0 font-mono text-[12px] uppercase tracking-wider px-2 py-1 rounded text-bone/40 hover:text-bone transition no-underline"
           >
             ←
           </Link>
-        ) : null}
+        )}
 
         {currentWorld && (
-          <span
-            className="shrink-0 font-mono text-[12px] font-bold uppercase tracking-wider px-1 truncate max-w-[80px] opacity-50"
-            style={{ color: 'var(--foreground)' }}
-          >
+          <span className="shrink-0 font-mono text-[11px] font-bold uppercase tracking-wider px-1 truncate max-w-[80px] text-bone/50">
             {currentWorld.worldTitle}
           </span>
         )}
@@ -251,12 +260,9 @@ export default function DashboardSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
-            style={{
-              backgroundColor: isActive(item.href) ? 'var(--foreground)' : 'transparent',
-              color: isActive(item.href) ? 'var(--background)' : 'var(--foreground)',
-              opacity: isActive(item.href) ? 1 : 0.5,
-            }}
+            className={`shrink-0 font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm transition-colors no-underline ${
+              isActive(item.href) ? 'bg-lime text-obsidian font-bold' : 'text-bone/40 hover:text-bone'
+            }`}
           >
             {item.label}
           </Link>
@@ -265,16 +271,12 @@ export default function DashboardSidebar() {
         {/* On personal view, show world shortcuts */}
         {!currentWorld && sortedWorlds.length > 0 && (
           <>
-            <span className="shrink-0 w-px h-4 mx-1" style={{ backgroundColor: 'var(--border-color)' }} />
+            <span className="shrink-0 w-px h-4 mx-1 bg-bone/15" />
             {sortedWorlds.map((w) => (
               <Link
                 key={w.worldId}
                 href={`/dashboard/worlds/${w.worldSlug}`}
-                className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
-                style={{
-                  color: 'var(--foreground)',
-                  opacity: 0.4,
-                }}
+                className="shrink-0 font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm text-bone/40 hover:text-bone transition no-underline"
               >
                 {w.worldTitle}
               </Link>

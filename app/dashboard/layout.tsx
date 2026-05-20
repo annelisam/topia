@@ -36,9 +36,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!ready || loading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
+      <div className="min-h-screen bg-obsidian text-bone">
         <Navigation />
-        <LoadingBar />
+        <div className="flex items-center justify-center pt-40">
+          <LoadingBar text="LOADING DASHBOARD" />
+        </div>
       </div>
     );
   }
@@ -49,11 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <DashboardContext.Provider value={{ profile, worldMemberships, hostedEvents }}>
-      <div
-        className="min-h-screen overflow-x-hidden relative z-10"
-        style={{ backgroundColor: 'var(--page-bg)' }}
-      >
-        {/* Grain overlay for dashboard */}
+      <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
+        {/* Subtle texture overlays */}
         <div className="grain-overlay" />
         <div className="scanlines-overlay" />
 
