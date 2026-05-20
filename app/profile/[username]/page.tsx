@@ -159,7 +159,8 @@ export default function PublicProfilePage() {
     .filter((l) => l.url)
     .map((l) => ({
       ...l,
-      handle: l.verified ? handleFromUrl(l.type, l.url)?.toLowerCase() ?? null : null,
+      // Preserve the case as the provider stored it (e.g. @AnneliSam stays as-is).
+      handle: l.verified ? handleFromUrl(l.type, l.url) ?? null : null,
     }))
     // Verified (OAuth-linked) profiles first; pasted links after. Stable within each group.
     .sort((a, b) => Number(b.verified) - Number(a.verified)) : [];
@@ -365,24 +366,29 @@ export default function PublicProfilePage() {
                                       <SocialIcon type={link.type} size={12} />
                                       {link.handle && (
                                         <span
-                                          className="font-mono lowercase tracking-[1px]"
+                                          className="font-mono tracking-[1px]"
                                           style={{ fontSize: 10, color: config.hex }}
                                         >
                                           @{link.handle}
                                         </span>
                                       )}
-                                      <span
-                                        className="font-mono"
-                                        style={{
-                                          fontSize: 9,
-                                          color: config.hex,
-                                          fontWeight: 900,
-                                          lineHeight: 1,
-                                        }}
+                                      {/* Straight-edged check mark (two-stroke polyline) */}
+                                      <svg
+                                        width="9"
+                                        height="9"
+                                        viewBox="0 0 10 10"
                                         aria-label="verified"
+                                        style={{ flexShrink: 0 }}
                                       >
-                                        ✓
-                                      </span>
+                                        <polyline
+                                          points="1.5,5.5 4,8 8.5,2.5"
+                                          stroke={config.hex}
+                                          strokeWidth="1.8"
+                                          strokeLinecap="square"
+                                          strokeLinejoin="miter"
+                                          fill="none"
+                                        />
+                                      </svg>
                                     </a>
                                   );
                                 }
