@@ -10,7 +10,7 @@ export default function DashboardEventsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl font-bold uppercase" style={{ color: 'var(--foreground)' }}>Events</h1>
-        <Link href="/dashboard/create-event" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
+        <Link href="/events/create" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
           + Create Event
         </Link>
       </div>
@@ -18,7 +18,7 @@ export default function DashboardEventsPage() {
       {hostedEvents.length === 0 ? (
         <div className="border rounded-xl p-10 text-center" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[13px] opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>You haven&apos;t hosted any events yet</p>
-          <Link href="/dashboard/create-event" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/events/create" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             Create an Event
           </Link>
         </div>

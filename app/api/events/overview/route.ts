@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
       cityRows,
       myRsvps,
       myHosting,
+      allSavedRows,
     ] = await Promise.all([
       // Hosts per event with user info
       eventIds.length === 0
@@ -121,6 +122,12 @@ export async function GET(request: NextRequest) {
             .from(eventHosts)
             .where(and(eq(eventHosts.userId, user.id), inArray(eventHosts.eventId, eventIds)))
         : Promise.resolve([] as { eventId: string }[]),
+
+      // All users' saved-events CSVs — used to compute an "interested" count
+      // per event by slug. Cheap at current scale; revisit when it isn't.
+      db
+        .select({ savedEventSlugs: users.savedEventSlugs })
+        .from(users),
     ]);
 
     // Build host map
@@ -131,6 +138,18 @@ export async function GET(request: NextRequest) {
     }
     const rsvpCountMap: Record<string, number> = {};
     for (const r of rsvpCounts) rsvpCountMap[r.eventId] = r.value;
+
+    // Interested-count map: slug → number of users who bookmarked it
+    const interestedBySlug: Record<string, number> = {};
+    for (const row of allSavedRows) {
+      const csv = row.savedEventSlugs;
+      if (!csv) continue;
+      for (const raw of csv.split(',')) {
+        const s = raw.trim();
+        if (!s) continue;
+        interestedBySlug[s] = (interestedBySlug[s] ?? 0) + 1;
+      }
+    }
 
     // Attach hosts + counts + my-RSVP + my-hosting + my-saved
     const myRsvpSet = new Set(myRsvps.map((r) => r.eventId));
@@ -151,6 +170,7 @@ export async function GET(request: NextRequest) {
       ...e,
       hosts: hostMap[e.id] ?? [],
       rsvpCount: rsvpCountMap[e.id] ?? 0,
+      interestedCount: interestedBySlug[e.slug] ?? 0,
       isGoing: myRsvpSet.has(e.id),
       isHosting: myHostingSet.has(e.id),
       isSaved: mySavedSlugs.has(e.slug),

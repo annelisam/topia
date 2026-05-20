@@ -34,9 +34,10 @@ type Mode = 'manual' | 'import';
 /**
  * Quick-create event modal. Two flows:
  *   - manual: type fields directly
- *   - import: paste a URL from Partiful / Luma / Eventbrite (or any
- *     OG-tagged page), we fetch + extract title/date/cover/etc.
- * For deep editing, the modal links to /dashboard/create-event.
+ *   - import: paste a URL from Partiful / Luma / Posh — we fetch +
+ *     extract title/date/cover/etc.
+ * For deep editing, the modal links to /events/create (full editor,
+ * outside the dashboard chrome).
  */
 export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
   const { authenticated, user } = usePrivy();
@@ -163,7 +164,7 @@ export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-6 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[1500] flex items-center justify-center px-3 sm:px-6 py-6 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(10,10,10,0.75)' }}
       onClick={onClose}
     >
@@ -224,13 +225,13 @@ export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
               <div className="p-5 md:p-6">
                 <h2 className="font-basement font-black text-[clamp(20px,2vw,26px)] uppercase text-bone mb-1">Import event</h2>
                 <p className="font-mono text-[11px] text-bone/40 mb-4 leading-relaxed">
-                  Paste a link from <span className="text-bone">Partiful</span>, <span className="text-bone">Luma</span>, or <span className="text-bone">Eventbrite</span> — we&apos;ll auto-fill title, date, cover image, and description. Any OG-tagged page works too.
+                  Paste a link from <span className="text-bone">Partiful</span>, <span className="text-bone">Luma</span>, or <span className="text-bone">Posh</span> — we&apos;ll auto-fill title, date, cover image, and description.
                 </p>
                 <input
                   type="url"
                   value={importUrl}
                   onChange={(e) => setImportUrl(e.target.value)}
-                  placeholder="https://lu.ma/abc · https://partiful.com/e/xyz · https://eventbrite.com/e/…"
+                  placeholder="https://lu.ma/abc · https://partiful.com/e/xyz · https://posh.vip/e/…"
                   className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone placeholder:text-bone/25 px-3 py-2 rounded-sm outline-none transition-colors"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleImport(); } }}
                 />
@@ -240,7 +241,7 @@ export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
                   {[
                     { name: 'Partiful', host: 'partiful.com', accent: '#FF5BD7' },
                     { name: 'Luma',     host: 'lu.ma',        accent: '#4F46FF' },
-                    { name: 'Eventbrite', host: 'eventbrite.com', accent: '#FF5C34' },
+                    { name: 'Posh',     host: 'posh.vip',     accent: '#00FF88' },
                   ].map((p) => (
                     <span
                       key={p.name}
@@ -362,7 +363,7 @@ export default function SubmitEventModal({ open, onClose, onCreated }: Props) {
 
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <Link
-                    href="/dashboard/create-event"
+                    href="/events/create"
                     className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone no-underline"
                   >
                     use full editor →

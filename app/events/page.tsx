@@ -8,6 +8,7 @@ import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventModal from './EventModal';
 import SubmitEventModal from './SubmitEventModal';
 import EventSourceBadge from './EventSourceBadge';
+import EventCover from './EventCover';
 
 interface EventHost {
   userId: string;
@@ -33,6 +34,7 @@ interface EventCard {
   description: string | null;
   hosts: EventHost[];
   rsvpCount: number;
+  interestedCount: number;
   isGoing: boolean;
   isHosting: boolean;
   isSaved: boolean;
@@ -66,16 +68,26 @@ function formatDayChip(iso: string | null): { day: string; mon: string; year: st
   } catch { return { day: '—', mon: '', year: '' }; }
 }
 
+/** Build a compact attendance string for an event card.
+ * External events hide the RSVP count (we can't track it — it lives on the
+ * source platform) and surface "interested" instead. */
+function attendanceLine(ev: { rsvpCount: number; interestedCount: number; externalSource?: string | null }): string {
+  const parts: string[] = [];
+  if (!ev.externalSource && ev.rsvpCount > 0) parts.push(`${ev.rsvpCount} going`);
+  if (ev.interestedCount > 0) parts.push(`${ev.interestedCount} interested`);
+  return parts.join(' · ');
+}
+
 function externalLinkLabel(source: string | null | undefined): string {
-  if (source === 'partiful')   return 'RSVP on Partiful →';
-  if (source === 'luma')       return 'RSVP on Luma →';
-  if (source === 'eventbrite') return 'Tickets on Eventbrite →';
+  if (source === 'partiful') return 'RSVP on Partiful →';
+  if (source === 'luma')     return 'RSVP on Luma →';
+  if (source === 'posh')     return 'Tickets on Posh →';
   return 'Open event →';
 }
 function externalLinkShort(source: string | null | undefined): string {
-  if (source === 'partiful')   return 'Partiful →';
-  if (source === 'luma')       return 'Luma →';
-  if (source === 'eventbrite') return 'Tickets →';
+  if (source === 'partiful') return 'Partiful →';
+  if (source === 'luma')     return 'Luma →';
+  if (source === 'posh')     return 'Posh →';
   return 'Open →';
 }
 
@@ -267,7 +279,10 @@ export default function EventsPage() {
 
   async function toggleSave(slug: string, saved: boolean) {
     if (!user?.id) return;
-    setEvents((list) => list.map((e) => e.slug === slug ? { ...e, isSaved: saved } : e));
+    setEvents((list) => list.map((e) => e.slug === slug
+      ? { ...e, isSaved: saved, interestedCount: Math.max(0, e.interestedCount + (saved ? 1 : -1)) }
+      : e
+    ));
     try {
       await fetch('/api/events/save', {
         method: 'POST',
@@ -276,7 +291,10 @@ export default function EventsPage() {
       });
     } catch (err) {
       console.error('save event failed', err);
-      setEvents((list) => list.map((e) => e.slug === slug ? { ...e, isSaved: !saved } : e));
+      setEvents((list) => list.map((e) => e.slug === slug
+        ? { ...e, isSaved: !saved, interestedCount: Math.max(0, e.interestedCount + (saved ? -1 : 1)) }
+        : e
+      ));
     }
   }
 
@@ -512,8 +530,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
 
       {/* Thumbnail */}
       {event.imageUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={event.imageUrl} alt="" className="w-10 h-10 rounded-sm object-cover shrink-0" />
+        <EventCover src={event.imageUrl} className="w-10 h-10 rounded-sm object-cover shrink-0" />
       ) : null}
 
       {/* Title + meta */}
@@ -531,7 +548,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
         <div className="font-mono text-[10px] text-bone/40 truncate mt-0.5">
           {event.startTime ? `${event.startTime} ` : ''}
           {event.city ? `· ${event.city}` : ''}
-          {event.rsvpCount > 0 ? ` · ${event.rsvpCount} going` : ''}
+          {attendanceLine(event) ? ` · ${attendanceLine(event)}` : ''}
         </div>
       </div>
 
@@ -678,10 +695,8 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
               {/* Cover */}
               <div className="relative aspect-[16/10] overflow-hidden bg-bone/[0.04]">
                 {ev.imageUrl && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
+                  <EventCover
                     src={ev.imageUrl}
-                    alt=""
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 )}
@@ -742,7 +757,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                       )}
                     </span>
                   ))}
-                  <span className="font-mono text-[10px] text-bone/30 pl-3">{ev.rsvpCount} going</span>
+                  <span className="font-mono text-[10px] text-bone/30 pl-3">{attendanceLine(ev) || (ev.externalSource ? '— external' : '— no rsvps yet')}</span>
                 </div>
                 {ev.externalSource && ev.link ? (
                   <a
@@ -804,8 +819,7 @@ function FeaturedRowCompact({
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.04]">
                 {ev.imageUrl && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={ev.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <EventCover src={ev.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/20 to-transparent pointer-events-none" />
                 {/* Date chip */}
@@ -889,10 +903,8 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
       {/* Cover or fallback */}
       <div className="relative aspect-[16/10] overflow-hidden bg-bone/[0.03]">
         {event.imageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <EventCover
             src={event.imageUrl}
-            alt=""
             className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isPast ? 'grayscale opacity-60' : ''}`}
           />
         ) : (
@@ -951,8 +963,8 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                 ))}
               </div>
             )}
-            {event.rsvpCount > 0 && (
-              <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30">{event.rsvpCount} going</span>
+            {attendanceLine(event) && (
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30">{attendanceLine(event)}</span>
             )}
           </div>
           {(authenticated || (event.externalSource && event.link)) && (

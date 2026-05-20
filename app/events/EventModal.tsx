@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventSourceBadge from './EventSourceBadge';
+import EventCover from './EventCover';
 
 interface EventHost {
   userId: string;
@@ -31,6 +32,7 @@ interface EventDetail {
   description: string | null;
   hosts: EventHost[];
   rsvpCount: number;
+  interestedCount: number;
   isGoing: boolean;
   isHosting: boolean;
   isSaved: boolean;
@@ -104,15 +106,22 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
     } catch { /* clipboard not available */ }
   }
 
+  // Sits ABOVE the top nav (z-1000) so the panel isn't covered. We also
+  // pin the panel to start just below the nav (top var) so the nav stays
+  // visible and clickable — the user can still escape.
   return (
     <div
-      className="fixed inset-0 z-[100] backdrop-blur-sm"
-      style={{ backgroundColor: 'rgba(10,10,10,0.65)' }}
+      className="fixed inset-0 z-[1500] backdrop-blur-sm"
+      style={{ backgroundColor: 'rgba(10,10,10,0.7)' }}
       onClick={onClose}
     >
       <div
-        className="absolute right-0 top-0 bottom-0 w-full sm:max-w-md md:max-w-lg bg-obsidian text-bone border-l border-bone/[0.08] overflow-hidden flex flex-col shadow-2xl"
-        style={{ animation: 'slideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1)' }}
+        className="absolute right-0 w-full sm:max-w-md md:max-w-lg bg-obsidian text-bone border-l border-bone/[0.08] overflow-hidden flex flex-col shadow-2xl"
+        style={{
+          top: 'var(--nav-height, 56px)',
+          bottom: 0,
+          animation: 'slideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <style jsx>{`
@@ -121,19 +130,22 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
             to   { transform: translateX(0);    opacity: 1; }
           }
         `}</style>
-        {/* Accent strip */}
-        <div className="px-4 py-2 flex items-center justify-between shrink-0" style={{ backgroundColor: accent }}>
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/60">topia://events</span>
+        {/* Minimal top bar — single accent line + tiny actions. No big lime strip. */}
+        <div className="px-4 py-2 flex items-center justify-between shrink-0 border-b border-bone/[0.06]">
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40" style={{ borderLeft: `2px solid ${accent}`, paddingLeft: 8 }}>
+            event
+          </span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(`/events/${event.slug}`)}
-              className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/70 hover:text-obsidian transition bg-transparent border-none cursor-pointer"
+              className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone transition bg-transparent border-none cursor-pointer"
+              title="Open full page"
             >
-              ⛶ expand
+              ⛶
             </button>
             <button
               onClick={onClose}
-              className="font-mono text-[14px] text-obsidian/70 hover:text-obsidian transition bg-transparent border-none cursor-pointer w-5 h-5 leading-none flex items-center justify-center"
+              className="font-mono text-[16px] text-bone/40 hover:text-bone transition bg-transparent border-none cursor-pointer w-5 h-5 leading-none flex items-center justify-center"
               aria-label="Close"
             >
               ×
@@ -143,19 +155,18 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
 
         {/* Scrollable body */}
         <div className="overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-          {/* Image */}
+          {/* Cover — tighter aspect, less visual weight */}
           {event.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={event.imageUrl} alt={event.eventName} className="w-full aspect-[2/1] object-cover" />
+            <EventCover src={event.imageUrl} alt={event.eventName} className="w-full aspect-[5/2] object-cover" />
           ) : (
-            <div className="w-full aspect-[2/1] bg-bone/[0.03] flex items-center justify-center">
-              <span className="font-basement font-black text-[clamp(60px,10vw,160px)] leading-none text-bone/10 uppercase">
+            <div className="w-full aspect-[5/2] bg-bone/[0.03] flex items-center justify-center">
+              <span className="font-basement font-black text-[clamp(48px,8vw,120px)] leading-none text-bone/10 uppercase">
                 {event.eventName[0]?.toUpperCase()}
               </span>
             </div>
           )}
 
-          <div className="p-5 md:p-6 space-y-5">
+          <div className="p-4 md:p-5 space-y-4">
             {/* Title + meta */}
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -191,9 +202,9 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-4 py-2 rounded-sm border bg-lime text-obsidian border-lime hover:opacity-90 transition no-underline"
                 >
-                  {event.externalSource === 'partiful'   ? 'RSVP on Partiful →'
-                  : event.externalSource === 'luma'      ? 'RSVP on Luma →'
-                  : event.externalSource === 'eventbrite' ? 'Tickets on Eventbrite →'
+                  {event.externalSource === 'partiful' ? 'RSVP on Partiful →'
+                  : event.externalSource === 'luma'    ? 'RSVP on Luma →'
+                  : event.externalSource === 'posh'    ? 'Tickets on Posh →'
                   : 'Open event →'}
                 </a>
               ) : authenticated && !isPast && (
@@ -293,11 +304,23 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
               </div>
             )}
 
-            {/* RSVP count */}
-            <div className="border-t border-bone/[0.06] pt-4 flex items-center justify-between">
+            {/* Attendance — RSVPs (TOPIA-tracked) + interested (saves). For
+                external events we suppress the going count since RSVPs live
+                on Partiful/Luma/Posh and we can't read them. */}
+            <div className="border-t border-bone/[0.06] pt-4 flex items-center gap-4">
+              {!event.externalSource && (
+                <span className="font-mono text-[11px] text-bone/40">
+                  <span className="text-bone">{event.rsvpCount}</span> {event.rsvpCount === 1 ? 'person' : 'people'} going
+                </span>
+              )}
               <span className="font-mono text-[11px] text-bone/40">
-                {event.rsvpCount} {event.rsvpCount === 1 ? 'person' : 'people'} going
+                <span className="text-bone">{event.interestedCount}</span> interested
               </span>
+              {event.externalSource && (
+                <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 ml-auto">
+                  rsvps on {event.externalSource}
+                </span>
+              )}
             </div>
 
             {/* Description preview */}

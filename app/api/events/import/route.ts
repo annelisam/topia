@@ -10,8 +10,10 @@ import * as cheerio from 'cheerio';
  * shape the client can drop into the create-event form.
  *
  * Supports: Luma (lu.ma, luma.com), Partiful (partiful.com),
- * Eventbrite (eventbrite.com), and generic OG-tagged pages.
+ * and Posh (posh.vip). Other hosts are rejected — too many ship empty
+ * client-rendered pages or weird metadata that yields garbage events.
  */
+const ALLOWED_HOSTS = new Set<'luma' | 'partiful' | 'posh'>(['luma', 'partiful', 'posh']);
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
@@ -25,11 +27,16 @@ export async function POST(request: NextRequest) {
     catch { return NextResponse.json({ error: 'Invalid URL' }, { status: 400 }); }
 
     const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    const source =
+    const source: 'luma' | 'partiful' | 'posh' | null =
       host === 'lu.ma' || host.endsWith('.lu.ma') || host === 'luma.com' || host.endsWith('.luma.com') ? 'luma'
       : host === 'partiful.com' || host.endsWith('.partiful.com') ? 'partiful'
-      : host === 'eventbrite.com' || host.endsWith('.eventbrite.com') || host.endsWith('.eventbrite.co.uk') ? 'eventbrite'
-      : 'other';
+      : host === 'posh.vip' || host.endsWith('.posh.vip') ? 'posh'
+      : null;
+    if (!source || !ALLOWED_HOSTS.has(source)) {
+      return NextResponse.json({
+        error: 'Only Luma (lu.ma), Partiful, and Posh links are supported right now. Try pasting from one of those — or use the manual editor.',
+      }, { status: 400 });
+    }
 
     // Fetch the page server-side
     const res = await fetch(parsed.toString(), {

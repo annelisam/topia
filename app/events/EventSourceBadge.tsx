@@ -14,9 +14,9 @@ export default function EventSourceBadge({
   if (!source || source === 'other') return null;
 
   const config: Record<string, { label: string; color: string }> = {
-    partiful:   { label: 'PARTIFUL',  color: '#FF5BD7' },
-    luma:       { label: 'LUMA',      color: '#4F46FF' },
-    eventbrite: { label: 'EVENTBRITE', color: '#FF5C34' },
+    partiful: { label: 'PARTIFUL', color: '#FF5BD7' },
+    luma:     { label: 'LUMA',     color: '#4F46FF' },
+    posh:     { label: 'POSH',     color: '#00FF88' },
   };
   const cfg = config[source];
   if (!cfg) return null;

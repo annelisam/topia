@@ -107,7 +107,7 @@ export default function DashboardOverviewPage() {
               + World
             </Link>
             <Link
-              href="/dashboard/create-event"
+              href="/events/create"
               className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/15 hover:border-lime/50 hover:text-bone px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Event
