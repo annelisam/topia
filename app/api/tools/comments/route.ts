@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, tools, toolComments } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { getReactionsForTargets } from '@/lib/reactions';
 
 /**
  * Tool comments + 1–5 ratings. Write is gated to users who have the tool
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         id: toolComments.id,
         body: toolComments.body,
         rating: toolComments.rating,
+        parentId: toolComments.parentId,
         createdAt: toolComments.createdAt,
         authorId: toolComments.userId,
         authorName: authors.name,
@@ -40,26 +42,44 @@ export async function GET(request: NextRequest) {
       .from(toolComments)
       .leftJoin(authors, eq(toolComments.userId, authors.id))
       .where(eq(toolComments.toolId, tool.id))
-      .orderBy(desc(toolComments.createdAt));
+      .orderBy(asc(toolComments.createdAt));
 
-    const rated = rows.filter((r) => r.rating != null);
-    const averageRating = rated.length === 0
+    // Only top-level comments contribute to the average rating (replies
+    // never carry ratings anyway).
+    const topLevelRated = rows.filter((r) => r.parentId == null && r.rating != null);
+    const averageRating = topLevelRated.length === 0
       ? null
-      : Math.round((rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length) * 10) / 10;
+      : Math.round((topLevelRated.reduce((s, r) => s + (r.rating ?? 0), 0) / topLevelRated.length) * 10) / 10;
 
-    // Can the viewer post? Requires the tool in their kit.
+    // Resolve viewer + kit + reactions
+    let viewerId: string | null = null;
     let canPost = false;
     if (viewerPrivyId) {
-      const [viewer] = await db.select({ toolSlugs: users.toolSlugs }).from(users).where(eq(users.privyId, viewerPrivyId)).limit(1);
-      const kit = (viewer?.toolSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-      canPost = kit.includes(tool.slug);
+      const [viewer] = await db.select({ id: users.id, toolSlugs: users.toolSlugs }).from(users).where(eq(users.privyId, viewerPrivyId)).limit(1);
+      if (viewer) {
+        viewerId = viewer.id;
+        const kit = (viewer.toolSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+        canPost = kit.includes(tool.slug);
+      }
     }
+    const reactionsByTarget = await getReactionsForTargets('tool_comment', rows.map((r) => r.id), viewerId);
+
+    // Nest replies under their parent (one-level deep)
+    type Annotated = typeof rows[number] & { reactions: typeof reactionsByTarget[string]; replies: Annotated[] };
+    const annotated: Annotated[] = rows.map((r) => ({ ...r, reactions: reactionsByTarget[r.id] ?? [], replies: [] }));
+    const byId = new Map(annotated.map((c) => [c.id, c]));
+    const topLevel: Annotated[] = [];
+    for (const c of annotated) {
+      if (c.parentId && byId.has(c.parentId)) byId.get(c.parentId)!.replies.push(c);
+      else topLevel.push(c);
+    }
+    topLevel.sort((a, b) => (b.createdAt instanceof Date ? b.createdAt.getTime() : 0) - (a.createdAt instanceof Date ? a.createdAt.getTime() : 0));
 
     return NextResponse.json({
-      comments: rows,
+      comments: topLevel,
       canPost,
       averageRating,
-      ratingCount: rated.length,
+      ratingCount: topLevelRated.length,
     });
   } catch (error) {
     console.error('GET tool comments error:', error);
@@ -69,7 +89,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, slug, body, rating } = await request.json();
+    const { privyId, slug, body, rating, parentId } = await request.json();
     if (!privyId || !slug) return NextResponse.json({ error: 'Missing privyId or slug' }, { status: 400 });
     if (!body?.trim() && rating == null) return NextResponse.json({ error: 'Body or rating required' }, { status: 400 });
     if (rating != null && (typeof rating !== 'number' || rating < 1 || rating > 5)) {
@@ -87,11 +107,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Add this tool to your kit to leave a comment.' }, { status: 403 });
     }
 
+    // Replies: validate parent belongs to same tool; flatten any nested
+    // parents so threads stay one-level deep. Replies never carry a rating.
+    let resolvedParentId: string | null = null;
+    let effectiveRating: number | null = rating ?? null;
+    if (parentId) {
+      const [parent] = await db
+        .select({ id: toolComments.id, toolId: toolComments.toolId, parentId: toolComments.parentId })
+        .from(toolComments).where(eq(toolComments.id, parentId)).limit(1);
+      if (!parent || parent.toolId !== tool.id) {
+        return NextResponse.json({ error: 'Invalid parent comment' }, { status: 400 });
+      }
+      resolvedParentId = parent.parentId ?? parent.id;
+      effectiveRating = null; // replies don't rate
+    }
+
     const [inserted] = await db.insert(toolComments).values({
       toolId: tool.id,
       userId: user.id,
       body: body?.trim() || null,
-      rating: rating ?? null,
+      rating: effectiveRating,
+      parentId: resolvedParentId,
     }).returning();
 
     return NextResponse.json({ comment: inserted }, { status: 201 });

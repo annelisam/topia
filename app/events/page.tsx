@@ -869,13 +869,15 @@ function FeaturedRowCompact({
                 ) : authenticated && !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
-                    className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 rounded-sm border transition cursor-pointer shrink-0 ${
+                    className={`font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer shrink-0 inline-flex items-center justify-center ${
+                      // Match the compact save-star (w-6 h-6) so going state
+                      // is a square icon button, not a stubby pill.
                       ev.isGoing
-                        ? 'bg-green/15 border-green/40 text-green'
-                        : 'bg-transparent border-bone/20 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
+                        ? 'w-6 h-6 bg-green/15 border-green/40 text-green'
+                        : 'px-1.5 py-0.5 bg-transparent border-bone/20 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
                     }`}
                   >
-                    {ev.isGoing ? (<CheckIcon size={9} />) : 'RSVP'}
+                    {ev.isGoing ? (<CheckIcon size={10} />) : 'RSVP'}
                   </button>
                 )}
               </div>
@@ -982,14 +984,17 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
               ) : !isPast && authenticated && (
                 <button
                   onClick={onToggleRsvp}
-                  className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border transition cursor-pointer ${
+                  className={`font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer inline-flex items-center justify-center ${
+                    // Match the save-star button's 24×24 square footprint
+                    // when collapsed to just the checkmark icon; expand to
+                    // pill width when the label is "RSVP".
                     event.isGoing
-                      ? 'bg-green/15 border-green/40 text-green'
-                      : 'bg-transparent border-bone/15 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
+                      ? 'w-6 h-6 bg-green/15 border-green/40 text-green'
+                      : 'px-2 py-1 bg-transparent border-bone/15 text-bone/60 hover:bg-lime hover:text-obsidian hover:border-lime'
                   }`}
                   title={event.isGoing ? 'Click to un-RSVP' : 'RSVP'}
                 >
-                  {event.isGoing ? (<CheckIcon size={9} />) : 'RSVP'}
+                  {event.isGoing ? (<CheckIcon size={10} />) : 'RSVP'}
                 </button>
               )}
               {authenticated && (

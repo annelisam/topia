@@ -11,10 +11,7 @@ import { CheckIcon } from '../components/ui/Icons';
 import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../components/SocialConnect';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
-import { useAutoSave } from './_components/useAutoSave';
-import { useUsernameAvailability } from '../onboarding/usernameAvailability';
-
-const ACCENT_COLORS = ['#BFFF00','#3B82F6','#EC4899','#F97316','#22C55E','#E8E0D0'];
+import HandleChangeModal from './_components/HandleChangeModal';
 
 const ROLE_TAGS = [
   { slug: 'music',             label: 'Music' },
@@ -39,14 +36,9 @@ const ROLE_TAGS = [
   { slug: 'researcher',        label: 'Researcher' },
 ];
 
-interface Tool {
-  id: string;
-  name: string;
-  slug: string;
-  category: string | null;
-}
+interface Tool { id: string; name: string; slug: string; category: string | null; }
 
-// Resize image to max 256×256 and return a base64 data URL
+/** Resize image to a max 256×256 JPEG data URL (kept as-is — used for avatars). */
 function resizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -57,8 +49,7 @@ function resizeImage(file: File): Promise<string> {
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
       const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = w; canvas.height = h;
       canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL('image/jpeg', 0.85));
@@ -68,8 +59,21 @@ function resizeImage(file: File): Promise<string> {
   });
 }
 
-/* ── Crosshatch SVG data URI ─────────────────────────── */
-const CROSSHATCH = `url("data:image/svg+xml,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l8 8M8 0l-8 8' stroke='%23fff' stroke-opacity='0.04' stroke-width='0.5'/%3E%3C/svg%3E")`;
+/** Section header — used across all blocks for visual consistency. */
+function Section({ label, sub, children, id }: { label: string; sub?: string; children: React.ReactNode; id?: string }) {
+  return (
+    <section id={id} className="border-t border-bone/[0.06] pt-6 mt-6 first:border-t-0 first:mt-0 first:pt-0">
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="font-mono text-[11px] uppercase tracking-[3px] text-bone/80">{label}</h2>
+        {sub && <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">{sub}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+const fieldLabel = 'block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1.5';
+const fieldInput = 'w-full bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[13px] text-bone placeholder:text-bone/25 outline-none transition-colors';
 
 export default function ProfilePage() {
   const {
@@ -83,10 +87,11 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile fields
-  const [name, setName]                   = useState('');
-  const [username, setUsername]           = useState('');
-  const [bio, setBio]                     = useState('');
-  const [avatarUrl, setAvatarUrl]         = useState('');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [socialWebsite, setSocialWebsite] = useState('');
   const [socialTwitter, setSocialTwitter] = useState('');
   const [socialInstagram, setSocialInstagram] = useState('');
@@ -103,24 +108,33 @@ export default function ProfilePage() {
   const [avatarDragging, setAvatarDragging] = useState(false);
 
   // Tools from DB
-  const [allTools, setAllTools]     = useState<Tool[]>([]);
+  const [allTools, setAllTools] = useState<Tool[]>([]);
   const [toolSearch, setToolSearch] = useState('');
   const [toolsLoading, setToolsLoading] = useState(true);
 
   // UI state
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'identity'|'path'|'roles'|'tools'|'social'|'accounts'>('identity');
+  const [handleModalOpen, setHandleModalOpen] = useState(false);
+
+  // Dirty tracking — gates the save button + warns on navigation
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('');
+  const currentSnapshot = JSON.stringify({
+    name, username, bio, avatarUrl, pronouns,
+    socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster,
+    customLinks, path, selectedRoles, selectedTools,
+  });
+  const isDirty = initialSnapshot !== '' && initialSnapshot !== currentSnapshot;
 
   // Redirect if not authenticated
   useEffect(() => {
     if (ready && !authenticated) router.push('/');
   }, [ready, authenticated, router]);
 
-  // Fetch all tools from DB on mount
+  // Fetch all tools
   useEffect(() => {
     fetch('/api/tools')
       .then((r) => r.json())
@@ -135,79 +149,106 @@ export default function ProfilePage() {
     fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then(({ user: saved }) => {
+        let loadedName = '';
+        let loadedUsername = '';
+        let loadedBio = '';
+        let loadedAvatar = '';
+        let loadedPronouns = '';
+        let loadedPath: UserPath | '' = '';
+        let loadedWebsite = '';
+        let loadedTwitter = '';
+        let loadedInstagram = '';
+        let loadedSoundcloud = '';
+        let loadedSpotify = '';
+        let loadedLinkedin = '';
+        let loadedSubstack = '';
+        let loadedFarcaster = '';
+        let loadedCustomLinks: { label: string; url: string }[] = [];
+        let loadedRoles: string[] = [];
+        let loadedTools: string[] = [];
+
         if (saved) {
-          if (saved.name)            setName(saved.name);
-          if (saved.username)        setUsername(saved.username);
-          if (saved.bio)             setBio(saved.bio);
-          if (saved.avatarUrl)       setAvatarUrl(saved.avatarUrl);
-          if (saved.socialWebsite)    setSocialWebsite(saved.socialWebsite);
-          if (saved.socialTwitter)    setSocialTwitter(saved.socialTwitter);
-          if (saved.socialInstagram)  setSocialInstagram(saved.socialInstagram);
-          if (saved.socialSoundcloud) setSocialSoundcloud(saved.socialSoundcloud);
-          if (saved.socialSpotify)    setSocialSpotify(saved.socialSpotify);
-          if (saved.socialLinkedin)   setSocialLinkedin(saved.socialLinkedin);
-          if (saved.socialSubstack)   setSocialSubstack(saved.socialSubstack);
-          if (saved.socialFarcaster)  setSocialFarcaster(saved.socialFarcaster);
-          if (saved.path)            setPath(saved.path as UserPath);
-          if (saved.pronouns)        setPronouns(saved.pronouns);
-          if (Array.isArray(saved.customLinks)) setCustomLinks(saved.customLinks);
-          if (saved.roleTags)        setSelectedRoles(saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean));
-          if (saved.toolSlugs)       setSelectedTools(saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean));
+          if (saved.name)            loadedName = saved.name;
+          if (saved.username)        loadedUsername = saved.username;
+          if (saved.bio)             loadedBio = saved.bio;
+          if (saved.avatarUrl)       loadedAvatar = saved.avatarUrl;
+          if (saved.socialWebsite)    loadedWebsite = saved.socialWebsite;
+          if (saved.socialTwitter)    loadedTwitter = saved.socialTwitter;
+          if (saved.socialInstagram)  loadedInstagram = saved.socialInstagram;
+          if (saved.socialSoundcloud) loadedSoundcloud = saved.socialSoundcloud;
+          if (saved.socialSpotify)    loadedSpotify = saved.socialSpotify;
+          if (saved.socialLinkedin)   loadedLinkedin = saved.socialLinkedin;
+          if (saved.socialSubstack)   loadedSubstack = saved.socialSubstack;
+          if (saved.socialFarcaster)  loadedFarcaster = saved.socialFarcaster;
+          if (saved.path)            loadedPath = saved.path as UserPath;
+          if (saved.pronouns)        loadedPronouns = saved.pronouns;
+          if (Array.isArray(saved.customLinks)) loadedCustomLinks = saved.customLinks;
+          if (saved.roleTags)        loadedRoles = saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (saved.toolSlugs)       loadedTools = saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean);
         } else {
-          const googleName   = user.google?.name;
-          const googleAvatar = (user.google as any)?.picture ?? (user.google as any)?.photoUrl;
-          if (googleName)   setName(googleName);
-          if (googleAvatar) setAvatarUrl(googleAvatar);
+          // First-time profile: fall back to Google name/avatar if present.
+          const googleName = user.google?.name;
+          const googleAvatar = (user.google as { picture?: string; photoUrl?: string } | undefined)?.picture
+                            ?? (user.google as { picture?: string; photoUrl?: string } | undefined)?.photoUrl;
+          if (googleName) loadedName = googleName;
+          if (googleAvatar) loadedAvatar = googleAvatar;
         }
+
+        setName(loadedName);
+        setUsername(loadedUsername);
+        setOriginalUsername(loadedUsername);
+        setBio(loadedBio);
+        setAvatarUrl(loadedAvatar);
+        setSocialWebsite(loadedWebsite);
+        setSocialTwitter(loadedTwitter);
+        setSocialInstagram(loadedInstagram);
+        setSocialSoundcloud(loadedSoundcloud);
+        setSocialSpotify(loadedSpotify);
+        setSocialLinkedin(loadedLinkedin);
+        setSocialSubstack(loadedSubstack);
+        setSocialFarcaster(loadedFarcaster);
+        setPath(loadedPath);
+        setPronouns(loadedPronouns);
+        setCustomLinks(loadedCustomLinks);
+        setSelectedRoles(loadedRoles);
+        setSelectedTools(loadedTools);
+
+        // Snapshot for dirty tracking — must mirror currentSnapshot exactly
+        setInitialSnapshot(JSON.stringify({
+          name: loadedName, username: loadedUsername, bio: loadedBio, avatarUrl: loadedAvatar, pronouns: loadedPronouns,
+          socialWebsite: loadedWebsite, socialTwitter: loadedTwitter, socialInstagram: loadedInstagram,
+          socialSoundcloud: loadedSoundcloud, socialSpotify: loadedSpotify, socialLinkedin: loadedLinkedin,
+          socialSubstack: loadedSubstack, socialFarcaster: loadedFarcaster,
+          customLinks: loadedCustomLinks, path: loadedPath, selectedRoles: loadedRoles, selectedTools: loadedTools,
+        }));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [ready, authenticated, user]);
 
-  // Live username availability — only triggers when typed value differs from saved
-  const usernameAvailability = useUsernameAvailability(username, user?.id);
-
-  // Auto-save: debounced sync of any field change. Skips the initial hydration.
-  const autoSaveStatus = useAutoSave(
-    {
-      name, username, bio, avatarUrl, pronouns,
-      socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster,
-      customLinks,
-      path,
-      roleTags: selectedRoles,
-      toolSlugs: selectedTools,
-    },
-    { privyId: user?.id ?? null, skipInitial: true, delayMs: 800 },
-  );
+  // Warn on navigation away with unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    function onBeforeUnload(e: BeforeUnloadEvent) { e.preventDefault(); e.returnValue = ''; }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
 
   // Linked accounts
   const linkedAccounts = user?.linkedAccounts ?? [];
   const canUnlink = linkedAccounts.length > 1;
-
   const emailAccount  = linkedAccounts.find((a) => a.type === 'email')        as { type: 'email';        address: string }                              | undefined;
   const phoneAccount  = linkedAccounts.find((a) => a.type === 'phone')        as { type: 'phone';        number: string }                               | undefined;
   const googleAccount = linkedAccounts.find((a) => a.type === 'google_oauth') as { type: 'google_oauth'; subject: string; email?: string }              | undefined;
   const walletAccount = linkedAccounts.find((a) => a.type === 'wallet')       as { type: 'wallet';       address: string }                              | undefined;
 
-  const toggleRole = (slug: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(slug) ? prev.filter((r) => r !== slug) : [...prev, slug]
-    );
-  };
-
-  const toggleTool = (slug: string) => {
-    setSelectedTools((prev) =>
-      prev.includes(slug) ? prev.filter((t) => t !== slug) : [...prev, slug]
-    );
-  };
+  const toggleRole = (slug: string) => setSelectedRoles((p) => p.includes(slug) ? p.filter((r) => r !== slug) : [...p, slug]);
+  const toggleTool = (slug: string) => setSelectedTools((p) => p.includes(slug) ? p.filter((t) => t !== slug) : [...p, slug]);
 
   const filteredTools = allTools.filter((t) => {
     if (!toolSearch) return true;
     const q = toolSearch.toLowerCase();
-    return (
-      t.name.toLowerCase().includes(q) ||
-      (t.category?.toLowerCase().includes(q) ?? false)
-    );
+    return t.name.toLowerCase().includes(q) || (t.category?.toLowerCase().includes(q) ?? false);
   });
 
   const handleSave = async () => {
@@ -220,23 +261,15 @@ export default function ProfilePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          privyId:         user.id,
-          email:           emailAccount?.address ?? googleAccount?.email ?? null,
-          phone:           phoneAccount?.number ?? null,
-          walletAddress:   walletAccount?.address ?? null,
-          name,
-          username,
-          bio,
-          avatarUrl,
-          socialWebsite,
-          socialTwitter,
-          socialInstagram,
-          socialSoundcloud,
-          socialSpotify,
-          socialLinkedin,
-          socialSubstack,
-          socialFarcaster,
-          roleTags:  selectedRoles.join(',') || null,
+          privyId: user.id,
+          email: emailAccount?.address ?? googleAccount?.email ?? null,
+          phone: phoneAccount?.number ?? null,
+          walletAddress: walletAccount?.address ?? null,
+          name, username, bio, avatarUrl, pronouns,
+          socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster,
+          customLinks,
+          path: path || null,
+          roleTags: selectedRoles.join(',') || null,
           toolSlugs: selectedTools.join(',') || null,
         }),
       });
@@ -245,8 +278,11 @@ export default function ProfilePage() {
         setSaveError((body as { error?: string }).error ?? 'Save failed — please try again.');
         return;
       }
+      // Reset dirty snapshot to current
+      setInitialSnapshot(currentSnapshot);
+      setOriginalUsername(username);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 2500);
     } catch {
       setSaveError('Network error — please check your connection.');
     } finally {
@@ -257,12 +293,7 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const resized = await resizeImage(file);
-      setAvatarUrl(resized);
-    } catch {
-      console.error('Failed to process image');
-    }
+    try { setAvatarUrl(await resizeImage(file)); } catch { console.error('Failed to process image'); }
   };
 
   const handleUnlink = async (type: string, fn: () => Promise<unknown>) => {
@@ -271,72 +302,73 @@ export default function ProfilePage() {
     try { await fn(); } finally { setUnlinking(null); }
   };
 
-  // Random accent color for header
-  const accent = ACCENT_COLORS[Math.floor((username || 'x').charCodeAt(0) % ACCENT_COLORS.length)];
-
   if (!ready || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0a' }}>
+      <div className="min-h-screen flex items-center justify-center bg-obsidian">
         <LoadingBar />
       </div>
     );
   }
 
-  const TABS: { key: typeof activeSection; label: string }[] = [
-    { key: 'identity', label: 'IDENTITY' },
-    { key: 'path',     label: 'PATH' },
-    { key: 'roles',    label: 'ROLES' },
-    { key: 'tools',    label: 'TOOLS' },
-    { key: 'social',   label: 'SOCIAL' },
-    { key: 'accounts', label: 'ACCOUNTS' },
-  ];
+  const handleChanged = username !== originalUsername;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0a0a0a' }}>
+    <div className="min-h-screen bg-obsidian text-bone">
       <PageShell>
-        <main className="max-w-[900px] mx-auto px-3 sm:px-4 pt-4 pb-16">
-
-          {/* ── PASSPORT CARD ─────────────────────────────────── */}
-          <div style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-
-            {/* ▸ Accent header strip */}
-            <div className="flex items-center justify-between px-3 sm:px-4 py-2" style={{ backgroundColor: accent }}>
-              <span style={{ fontFamily: 'Basement Grotesque, sans-serif', fontSize: 11, letterSpacing: '0.12em', color: '#0a0a0a', textTransform: 'uppercase' as const }}>
-                TOPIA — EDIT PROFILE
-              </span>
-              <div className="flex items-center gap-3">
-                {username && (
-                  <Link
-                    href={`/profile/${username}`}
-                    style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.1em', color: '#0a0a0a', textTransform: 'uppercase' as const, opacity: 0.7 }}
-                    className="hover:opacity-100 transition"
-                  >
-                    VIEW PROFILE →
-                  </Link>
-                )}
-                <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.1em', color: '#0a0a0a', opacity: 0.5 }}>
-                  {new Date().toISOString().slice(0, 10)}
-                </span>
-              </div>
+        {/* ── Sticky top action bar — sits below the nav ────────── */}
+        <div
+          className="sticky z-30 backdrop-blur-md border-b border-bone/[0.06]"
+          style={{ top: 'var(--nav-height, 56px)', backgroundColor: 'rgba(10,10,10,0.88)' }}
+        >
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/50 hover:text-bone transition no-underline"
+            >
+              ← Dashboard
+            </Link>
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 ml-auto">
+              {saving ? 'Saving…'
+                : saved ? (<span className="text-green inline-flex items-center gap-1.5"><CheckIcon size={9} /> Saved</span>)
+                : isDirty ? 'Unsaved changes'
+                : 'All saved'}
+            </span>
+            <button
+              onClick={handleSave}
+              disabled={saving || !isDirty}
+              className="font-mono text-[11px] uppercase tracking-[2px] px-4 py-1.5 rounded-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-none bg-lime text-obsidian hover:opacity-90"
+              style={{
+                boxShadow: !saving && isDirty ? '0 0 0 1px rgba(228,254,82,0.4), 0 6px 24px -8px rgba(228,254,82,0.5)' : 'none',
+              }}
+            >
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save changes →'}
+            </button>
+          </div>
+          {username && (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-2 -mt-1 flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25">Public:</span>
+              <Link
+                href={`/profile/${username}`}
+                className="font-mono text-[11px] text-bone/60 hover:text-lime no-underline transition truncate"
+              >
+                topia.so/profile/@{username}
+              </Link>
             </div>
+          )}
+        </div>
 
-            {/* ▸ ID section: avatar + identity fields */}
-            <div className="flex flex-col sm:flex-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* ── Body ───────────────────────────────────────────────── */}
+        <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-24">
 
-              {/* Avatar panel */}
+          {/* ─── 1. IDENTITY ─── */}
+          <Section label="Identity" sub="how you show up">
+            <div className="flex flex-col sm:flex-row gap-5">
+              {/* Avatar drop zone */}
               <div
-                className={`flex-shrink-0 flex flex-col items-center justify-center p-6 sm:p-8 transition-colors ${avatarDragging ? 'bg-lime/10' : ''}`}
-                style={{
-                  width: 'auto',
-                  minWidth: 180,
-                  backgroundColor: avatarDragging ? undefined : '#111',
-                  borderRight: '1px solid rgba(255,255,255,0.08)',
-                  backgroundImage: avatarDragging ? undefined : CROSSHATCH,
-                }}
+                className={`relative shrink-0 self-center sm:self-start group ${avatarDragging ? 'ring-2 ring-lime' : ''}`}
                 onDragEnter={(e) => { e.preventDefault(); setAvatarDragging(true); }}
                 onDragOver={(e) => { e.preventDefault(); setAvatarDragging(true); }}
                 onDragLeave={(e) => {
-                  // Avoid flicker on child enter/leave by checking relatedTarget
                   if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                   setAvatarDragging(false);
                 }}
@@ -345,816 +377,425 @@ export default function ProfilePage() {
                   setAvatarDragging(false);
                   const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
                   if (!file) return;
-                  try {
-                    const resized = await resizeImage(file);
-                    setAvatarUrl(resized);
-                  } catch {
-                    console.error('Failed to process dropped image');
-                  }
+                  try { setAvatarUrl(await resizeImage(file)); } catch { console.error('drop failed'); }
                 }}
               >
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative group"
+                  className="block w-28 h-28 rounded-full overflow-hidden border-2 border-dashed border-bone/20 hover:border-lime/50 transition bg-bone/[0.03] cursor-pointer"
                   title="Click or drop an image"
-                  style={{ width: 120, height: 120 }}
                 >
-                  {/* Corner marks */}
-                  <span className="absolute top-0 left-0 w-3 h-3 border-t border-l" style={{ borderColor: accent }} />
-                  <span className="absolute top-0 right-0 w-3 h-3 border-t border-r" style={{ borderColor: accent }} />
-                  <span className="absolute bottom-0 left-0 w-3 h-3 border-b border-l" style={{ borderColor: accent }} />
-                  <span className="absolute bottom-0 right-0 w-3 h-3 border-b border-r" style={{ borderColor: accent }} />
-
-                  <div className={`w-full h-full rounded-full overflow-hidden border ${avatarDragging ? 'border-lime border-2' : 'border-dashed'}`} style={{ borderColor: avatarDragging ? undefined : 'rgba(255,255,255,0.2)' }}>
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#1a1a1a' }}>
-                        <span style={{ fontFamily: 'Basement Grotesque, sans-serif', fontSize: 32, color: 'rgba(255,255,255,0.15)' }}>
-                          {name ? name[0].toUpperCase() : '?'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hover overlay */}
-                  <div
-                    className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-                  >
-                    <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.12em', color: '#fff', textTransform: 'uppercase' as const }}>
-                      {avatarUrl ? 'CHANGE' : 'UPLOAD'}
-                    </span>
-                  </div>
+                  {avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="font-basement text-[36px] text-bone/20">{name ? name[0].toUpperCase() : '?'}</span>
+                    </div>
+                  )}
                 </button>
-                <p
-                  className="mt-3 text-center"
-                  style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.12em', color: avatarDragging ? '#e4fe52' : 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, transition: 'color 200ms' }}
-                >
-                  {avatarDragging ? 'drop to upload' : 'click or drop image'}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                <p className="text-center mt-2 font-mono text-[9px] uppercase tracking-[2px] text-bone/30">
+                  {avatarDragging ? 'drop' : 'click or drop'}
                 </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
+                {avatarUrl && (
+                  <button
+                    onClick={() => setAvatarUrl('')}
+                    className="block mx-auto mt-1 font-mono text-[9px] uppercase tracking-[2px] text-bone/30 hover:text-pink bg-transparent border-none cursor-pointer"
+                  >
+                    × Remove photo
+                  </button>
+                )}
               </div>
 
               {/* Identity fields */}
-              <div className="flex-1 p-4 sm:p-6 space-y-4" style={{ backgroundColor: '#0f0f0f' }}>
+              <div className="flex-1 space-y-4 min-w-0">
                 <div>
-                  <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
-                    DISPLAY NAME
-                  </label>
+                  <label className={fieldLabel}>Display name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your display name"
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'Basement Grotesque, sans-serif',
-                      fontSize: 18,
-                      color: '#fff',
-                      padding: '6px 0',
-                      outline: 'none',
-                    }}
+                    className={fieldInput}
                   />
                 </div>
+
+                {/* Handle — locked behind a confirm modal */}
                 <div>
-                  <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
-                    USERNAME
-                  </label>
-                  <div className="flex items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>@</span>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      placeholder="handle"
-                      style={{
-                        flex: 1,
-                        background: 'transparent',
-                        border: 'none',
-                        fontFamily: 'GT Zirkon, sans-serif',
-                        fontSize: 13,
-                        color: '#fff',
-                        padding: '6px 0',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-                  {/* Live availability indicator */}
-                  {username && (
-                    <p
-                      className="mt-1"
-                      style={{
-                        fontFamily: 'GT Zirkon, sans-serif',
-                        fontSize: 10,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase' as const,
-                        color: usernameAvailability === 'available' ? '#00FF88'
-                             : usernameAvailability === 'taken'    ? '#FF5BD7'
-                             : usernameAvailability === 'invalid'  ? 'rgba(255,255,255,0.4)'
-                             : usernameAvailability === 'checking' ? 'rgba(255,255,255,0.4)'
-                             : 'transparent',
-                      }}
+                  <label className={fieldLabel}>Handle</label>
+                  <div className="flex items-center bg-bone/[0.04] border border-bone/15 rounded-sm px-3 py-2">
+                    <span className="font-mono text-[13px] text-bone/25 mr-1">@</span>
+                    <span className={`flex-1 font-mono text-[13px] truncate ${username ? 'text-bone' : 'text-bone/30'}`}>
+                      {username || 'pick a handle'}
+                    </span>
+                    {handleChanged && (
+                      <span className="font-mono text-[9px] uppercase tracking-[2px] text-lime/80 mr-2">
+                        ◆ changed
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setHandleModalOpen(true)}
+                      className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
                     >
-                      {usernameAvailability === 'available' ? (<span className="inline-flex items-center gap-1"><CheckIcon size={10} /> available</span>)
-                        : usernameAvailability === 'taken'  ? '✗ taken'
-                        : usernameAvailability === 'invalid' ? '3–30 chars · a–z 0–9 _'
-                        : usernameAvailability === 'checking' ? 'checking…'
-                        : ''}
-                    </p>
-                  )}
+                      {username ? '✎ change' : '+ set handle'}
+                    </button>
+                  </div>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[2px] text-bone/25">
+                    your public URL · changes break old links
+                  </p>
                 </div>
-                {/* Pronouns */}
+
                 <div>
-                  <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
-                    PRONOUNS · OPTIONAL
-                  </label>
+                  <label className={fieldLabel}>Pronouns · optional</label>
                   <input
                     type="text"
                     value={pronouns}
                     onChange={(e) => setPronouns(e.target.value.slice(0, 24))}
                     placeholder="she/her · they/them · he/him"
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 13,
-                      color: '#fff',
-                      padding: '6px 0',
-                      outline: 'none',
-                    }}
+                    className={fieldInput}
                   />
                 </div>
+
                 <div>
-                  <label style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
-                    BIO / DECLARATION
-                  </label>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <label className={`${fieldLabel} mb-0`}>Bio · declaration</label>
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${bio.length > 260 ? (bio.length >= 280 ? 'text-pink' : 'text-lime/70') : 'text-bone/25'}`}>
+                      {bio.length}/280
+                    </span>
+                  </div>
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value.slice(0, 280))}
-                    placeholder="Tell your story..."
+                    placeholder="Tell your story…"
                     rows={3}
                     maxLength={280}
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 13,
-                      color: 'rgba(255,255,255,0.7)',
-                      padding: '6px 0',
-                      outline: 'none',
-                      resize: 'none',
-                    }}
+                    className={`${fieldInput} resize-none leading-relaxed`}
                   />
-                  <div
-                    className="text-right mt-1"
-                    style={{
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 9,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase' as const,
-                      color: bio.length > 260 ? (bio.length >= 280 ? '#FF5BD7' : 'rgba(228,254,82,0.7)') : 'rgba(255,255,255,0.25)',
-                    }}
-                  >
-                    {bio.length}/280
-                  </div>
                 </div>
-                {avatarUrl && (
-                  <button
-                    onClick={() => setAvatarUrl('')}
-                    style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, background: 'none', border: 'none', cursor: 'pointer' }}
-                    className="hover:opacity-70 transition"
-                  >
-                    REMOVE PHOTO
-                  </button>
-                )}
               </div>
             </div>
+          </Section>
 
-            {/* ▸ Section tabs + content — horizontal on mobile, sidebar on desktop */}
-            <div className="flex flex-col sm:flex-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              {/* Mobile horizontal tabs */}
-              <div
-                className="flex sm:hidden overflow-x-auto"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#0a0a0a' }}
-              >
-                {TABS.map((tab, i) => (
+          {/* ─── 2. PATH ─── */}
+          <Section label="Path" sub="drives your accent color">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(['worldbuilder', 'catalyst', 'anchor'] as const).map((p) => {
+                const cfg = PATH_CONFIG[p];
+                const selected = path === p;
+                const icon = p === 'worldbuilder' ? '◆' : p === 'catalyst' ? '⬡' : '◎';
+                const tagline = p === 'worldbuilder' ? 'I build worlds.' : p === 'catalyst' ? 'I shape worlds.' : 'I move through worlds.';
+                return (
                   <button
-                    key={tab.key}
-                    onClick={() => setActiveSection(tab.key)}
-                    className="flex-shrink-0 transition-colors"
-                    style={{
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 10,
-                      letterSpacing: '0.14em',
-                      textTransform: 'uppercase' as const,
-                      color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.3)',
-                      padding: '10px 16px',
-                      borderBottom: activeSection === tab.key ? `2px solid ${accent}` : '2px solid transparent',
-                      borderRight: i < TABS.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                      background: activeSection === tab.key ? 'rgba(255,255,255,0.03)' : 'transparent',
-                      cursor: 'pointer',
-                    }}
+                    key={p}
+                    onClick={() => setPath(p)}
+                    className={`text-left p-4 rounded-md border transition cursor-pointer ${
+                      selected ? `${cfg.bg} ${cfg.textOn} border-transparent` : 'bg-transparent border-bone/15 text-bone hover:border-bone/40'
+                    }`}
                   >
-                    {tab.label}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-basement font-black text-[24px] leading-none ${selected ? cfg.textOn : 'text-bone/40'}`}>{icon}</span>
+                      <span className={`font-mono text-[10px] uppercase tracking-[2px] ${selected ? `${cfg.textOn} opacity-60` : 'text-bone/25'}`}>{cfg.label}</span>
+                    </div>
+                    <div className={`font-basement font-black text-[clamp(14px,1.5vw,18px)] uppercase ${selected ? cfg.textOn : 'text-bone'}`}>{tagline}</div>
                   </button>
-                ))}
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* ─── 3. ROLES ─── */}
+          <Section label="Roles" sub="what you do — pick any">
+            <div className="flex flex-wrap gap-1.5">
+              {ROLE_TAGS.map(({ slug, label }) => {
+                const on = selectedRoles.includes(slug);
+                return (
+                  <button
+                    key={slug}
+                    onClick={() => toggleRole(slug)}
+                    className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
+                      on
+                        ? 'bg-lime text-obsidian border-lime'
+                        : 'bg-transparent text-bone/60 border-bone/15 hover:text-bone hover:border-bone/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* ─── 4. TOOLS ─── */}
+          <Section label="Tools" sub={selectedTools.length > 0 ? `${selectedTools.length} in your kit` : 'in your kit'}>
+            {/* Selected tools as pills */}
+            {selectedTools.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {selectedTools.map((slug) => {
+                  const tool = allTools.find((t) => t.slug === slug);
+                  if (!tool) return null;
+                  return (
+                    <button
+                      key={slug}
+                      onClick={() => toggleTool(slug)}
+                      title="Click to remove"
+                      className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm bg-lime text-obsidian cursor-pointer transition hover:opacity-90 border-none"
+                    >
+                      {tool.name}
+                      <span className="opacity-60">×</span>
+                    </button>
+                  );
+                })}
               </div>
+            )}
 
-              {/* Desktop left sidebar */}
-              <nav
-                className="hidden sm:flex flex-col shrink-0"
-                style={{
-                  width: 160,
-                  borderRight: '1px solid rgba(255,255,255,0.08)',
-                  backgroundColor: '#0a0a0a',
-                  padding: '8px 0',
-                }}
-              >
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveSection(tab.key)}
-                    className="transition-colors text-left"
-                    style={{
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 11,
-                      letterSpacing: '0.14em',
-                      textTransform: 'uppercase' as const,
-                      color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.4)',
-                      padding: '10px 16px',
-                      borderLeft: activeSection === tab.key ? `2px solid ${accent}` : '2px solid transparent',
-                      background: activeSection === tab.key ? 'rgba(255,255,255,0.04)' : 'transparent',
-                      cursor: 'pointer',
-                      fontWeight: activeSection === tab.key ? 700 : 400,
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
+            {/* Search */}
+            <input
+              type="text"
+              value={toolSearch}
+              onChange={(e) => setToolSearch(e.target.value)}
+              placeholder="Search tools…"
+              className={`${fieldInput} mb-2`}
+            />
 
-              {/* ▸ Section content */}
-              <div className="flex-1" style={{ backgroundColor: '#0f0f0f', minHeight: 300 }}>
-
-              {/* ── IDENTITY (same as above fields, but shown as read-only summary when not active) ── */}
-              {activeSection === 'identity' && (
-                <div className="p-4 sm:p-6 space-y-4" style={{ backgroundImage: CROSSHATCH }}>
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    LIVE PREVIEW — REFLECTS YOUR EDITS IN REAL TIME
-                  </p>
-                  <ProfilePreviewCard
-                    name={name}
-                    username={username}
-                    bio={bio}
-                    avatarUrl={avatarUrl}
-                    path={path}
-                    roleTags={selectedRoles}
-                    pronouns={pronouns}
-                    customLinks={customLinks}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>NAME</span>
-                      <p style={{ fontFamily: 'Basement Grotesque, sans-serif', fontSize: 16, color: '#fff', marginTop: 2 }}>{name || '—'}</p>
-                    </div>
-                    <div>
-                      <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>HANDLE</span>
-                      <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 13, color: accent, marginTop: 2 }}>@{username || '...'}</p>
-                    </div>
-                  </div>
-                  {bio && (
-                    <div>
-                      <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>DECLARATION</span>
-                      <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4, lineHeight: 1.5, fontStyle: 'italic' }}>
-                        &ldquo;{bio}&rdquo;
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── PATH ── */}
-              {activeSection === 'path' && (
-                <div className="p-4 sm:p-6 space-y-4">
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 12 }}>
-                    HOW DO YOU SHOW UP? · DRIVES YOUR PROFILE ACCENT COLOR
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {(['worldbuilder', 'catalyst', 'anchor'] as const).map((p) => {
-                      const cfg = PATH_CONFIG[p];
-                      const selected = path === p;
-                      const icon = p === 'worldbuilder' ? '◆' : p === 'catalyst' ? '⬡' : '◎';
-                      const tagline = p === 'worldbuilder' ? 'I build worlds.' : p === 'catalyst' ? 'I shape worlds.' : 'I move through worlds.';
-                      return (
-                        <button
-                          key={p}
-                          onClick={() => setPath(p)}
-                          className={`text-left p-4 border transition cursor-pointer ${
-                            selected ? `${cfg.bg} ${cfg.textOn} border-transparent` : 'bg-transparent border-bone/15 text-bone hover:border-bone/40'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className={`font-basement font-black text-[24px] leading-none ${selected ? cfg.textOn : 'text-bone/40'}`}>{icon}</span>
-                            <span className={`font-mono text-[10px] uppercase tracking-[2px] ${selected ? `${cfg.textOn} opacity-60` : 'text-bone/25'}`}>{cfg.label}</span>
-                          </div>
-                          <div className={`font-basement font-black text-[clamp(14px,1.5vw,18px)] uppercase ${selected ? cfg.textOn : 'text-bone'}`}>{tagline}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {!path && (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>
-                      Pick one. You can change this later.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* ── ROLES ── */}
-              {activeSection === 'roles' && (
-                <div className="p-4 sm:p-6">
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 16 }}>
-                    SELECT ALL THAT APPLY — WHAT YOU DO
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {ROLE_TAGS.map(({ slug, label }, i) => {
-                      const isSelected = selectedRoles.includes(slug);
-                      const tagColor = ACCENT_COLORS[i % ACCENT_COLORS.length];
-                      return (
-                        <button
-                          key={slug}
-                          onClick={() => toggleRole(slug)}
-                          className="transition-all"
+            {/* Result list */}
+            {toolsLoading ? (
+              <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 py-4 text-center">loading…</p>
+            ) : filteredTools.length === 0 ? (
+              <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 py-4 text-center">no tools match</p>
+            ) : (
+              <div className="max-h-[280px] overflow-y-auto border border-bone/[0.06] rounded-sm divide-y divide-bone/[0.04]" style={{ scrollbarWidth: 'thin' }}>
+                {filteredTools.map((tool) => {
+                  const on = selectedTools.includes(tool.slug);
+                  return (
+                    <button
+                      key={tool.slug}
+                      onClick={() => toggleTool(tool.slug)}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-left transition cursor-pointer border-none ${on ? 'bg-bone/[0.04]' : 'bg-transparent hover:bg-bone/[0.02]'}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className="w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors"
                           style={{
-                            fontFamily: 'GT Zirkon, sans-serif',
-                            fontSize: 11,
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase' as const,
-                            padding: '6px 14px',
-                            border: `1px solid ${isSelected ? tagColor : 'rgba(255,255,255,0.12)'}`,
-                            backgroundColor: isSelected ? tagColor : 'transparent',
-                            color: isSelected ? '#0a0a0a' : 'rgba(255,255,255,0.5)',
-                            cursor: 'pointer',
+                            backgroundColor: on ? '#e4fe52' : 'transparent',
+                            borderColor: on ? '#e4fe52' : 'rgba(245,240,232,0.2)',
                           }}
                         >
-                          {label}
-                        </button>
-                      );
-                    })}
+                          {on && <CheckIcon size={9} className="text-obsidian" />}
+                        </span>
+                        <span className="font-mono text-[12px] text-bone truncate">{tool.name}</span>
+                      </div>
+                      {tool.category && (
+                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 shrink-0 ml-2">{tool.category}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+
+          {/* ─── 5. SOCIAL ─── */}
+          <Section label="Social" sub="verified accounts + links">
+            <div className="space-y-4">
+              {/* Verified provider connections (Twitter, Farcaster, etc.) */}
+              {ENABLED_SOCIAL_PROVIDERS.length > 0 && (
+                <div>
+                  <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">Verified accounts</span>
+                  <div className="space-y-3">
+                    {([
+                      { p: 'twitter'   as const, v: socialTwitter,   set: setSocialTwitter   },
+                      { p: 'instagram' as const, v: socialInstagram, set: setSocialInstagram },
+                      { p: 'linkedin'  as const, v: socialLinkedin,  set: setSocialLinkedin  },
+                      { p: 'spotify'   as const, v: socialSpotify,   set: setSocialSpotify   },
+                      { p: 'farcaster' as const, v: socialFarcaster, set: setSocialFarcaster },
+                    ] satisfies { p: SocialProvider; v: string; set: (s: string) => void }[])
+                      .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
+                      .map(({ p, v, set }) => (
+                        <SocialConnect
+                          key={p}
+                          provider={p}
+                          value={v}
+                          onChange={set}
+                          accent="#e4fe52"
+                          onBeforeConnect={handleSave}
+                        />
+                      ))}
                   </div>
                 </div>
               )}
 
-              {/* ── TOOLS ── */}
-              {activeSection === 'tools' && (
-                <div className="p-4 sm:p-6">
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 12 }}>
-                    SELECT FROM THE TOPIA TOOLS LIBRARY
-                  </p>
-
-                  {/* Selected tools */}
-                  {selectedTools.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {selectedTools.map((slug, i) => {
-                        const tool = allTools.find((t) => t.slug === slug);
-                        if (!tool) return null;
-                        const tagColor = ACCENT_COLORS[i % ACCENT_COLORS.length];
-                        return (
-                          <button
-                            key={slug}
-                            onClick={() => toggleTool(slug)}
-                            title="Click to remove"
-                            style={{
-                              fontFamily: 'GT Zirkon, sans-serif',
-                              fontSize: 11,
-                              letterSpacing: '0.08em',
-                              textTransform: 'uppercase' as const,
-                              padding: '5px 12px',
-                              border: `1px solid ${tagColor}`,
-                              backgroundColor: tagColor,
-                              color: '#0a0a0a',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            {tool.name}
-                            <span style={{ opacity: 0.6 }}>×</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Search input */}
-                  <input
-                    type="text"
-                    value={toolSearch}
-                    onChange={(e) => setToolSearch(e.target.value)}
-                    placeholder="Search tools..."
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'GT Zirkon, sans-serif',
-                      fontSize: 12,
-                      color: '#fff',
-                      padding: '8px 0',
-                      marginBottom: 12,
-                      outline: 'none',
-                    }}
-                  />
-
-                  {/* Ledger-style tool list */}
-                  {toolsLoading ? (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Loading tools...</p>
-                  ) : filteredTools.length === 0 ? (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>No tools match your search</p>
-                  ) : (
-                    <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      {filteredTools.map((tool) => {
-                        const isSelected = selectedTools.includes(tool.slug);
-                        return (
-                          <button
-                            key={tool.slug}
-                            onClick={() => toggleTool(tool.slug)}
-                            className="w-full flex items-center justify-between transition-colors hover:bg-white/[0.03]"
-                            style={{
-                              padding: '8px 12px',
-                              borderBottom: '1px solid rgba(255,255,255,0.04)',
-                              backgroundColor: isSelected ? 'rgba(255,255,255,0.04)' : 'transparent',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span
-                                style={{
-                                  width: 12,
-                                  height: 12,
-                                  flexShrink: 0,
-                                  border: `1px solid ${isSelected ? accent : 'rgba(255,255,255,0.2)'}`,
-                                  backgroundColor: isSelected ? accent : 'transparent',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                {isSelected && <svg width="7" height="7" viewBox="0 0 10 10" aria-hidden="true" style={{ color: '#0a0a0a' }}><polyline points="1.5,5.5 4,8 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" fill="none" /></svg>}
-                              </span>
-                              <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 12, color: '#fff' }}>{tool.name}</span>
-                            </div>
-                            {tool.category && (
-                              <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
-                                {tool.category}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── SOCIAL ── */}
-              {activeSection === 'social' && (
-                <div className="p-4 sm:p-6 space-y-5">
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    CONNECTED PROFILES — VERIFIED ACCOUNTS
-                  </p>
-                  {([
-                    { p: 'twitter'   as const, v: socialTwitter,   set: setSocialTwitter   },
-                    { p: 'instagram' as const, v: socialInstagram, set: setSocialInstagram },
-                    { p: 'linkedin'  as const, v: socialLinkedin,  set: setSocialLinkedin  },
-                    { p: 'spotify'   as const, v: socialSpotify,   set: setSocialSpotify   },
-                    { p: 'farcaster' as const, v: socialFarcaster, set: setSocialFarcaster },
-                  ] satisfies { p: SocialProvider; v: string; set: (s: string) => void }[])
-                    .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
-                    .map(({ p, v, set }) => (
-                      <SocialConnect
-                        key={p}
-                        provider={p}
-                        value={v}
-                        onChange={set}
-                        accent={accent}
-                        onBeforeConnect={handleSave}
-                      />
-                    ))}
-                  {ENABLED_SOCIAL_PROVIDERS.length === 0 && (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em' }}>
-                      No social providers enabled yet. Enable each in dashboard.privy.io and add to NEXT_PUBLIC_SOCIAL_PROVIDERS.
-                    </p>
-                  )}
-
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8, marginTop: 24 }}>
-                    LINKS — PASTE URLs
-                  </p>
+              {/* Plain URL fields */}
+              <div>
+                <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">Links</span>
+                <div className="space-y-2.5">
                   {[
-                    { label: 'Website',     value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',              icon: <SocialIcon type="website" /> },
-                    { label: 'SoundCloud',  value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle',     icon: <SocialIcon type="soundcloud" /> },
-                    { label: 'Substack',    value: socialSubstack,   set: setSocialSubstack,   placeholder: 'https://handle.substack.com',       icon: <SocialIcon type="substack" /> },
-                  ].map(({ label, value, set, placeholder, icon }, i) => (
-                    <div key={label} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
-                      <label className="flex items-center gap-2" style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, marginBottom: 6 }}>
-                        <span style={{ color: ACCENT_COLORS[i % ACCENT_COLORS.length], opacity: 0.7 }}>{icon}</span>
-                        {label}
-                      </label>
+                    { key: 'website',    label: 'Website',    value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',          icon: <SocialIcon type="website" /> },
+                    { key: 'soundcloud', label: 'SoundCloud', value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle', icon: <SocialIcon type="soundcloud" /> },
+                    { key: 'substack',   label: 'Substack',   value: socialSubstack,   set: setSocialSubstack,   placeholder: 'https://handle.substack.com',   icon: <SocialIcon type="substack" /> },
+                  ].map(({ key, label, value, set, placeholder, icon }) => (
+                    <div key={key} className="flex items-center gap-2 bg-bone/[0.03] border border-bone/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
+                      <span className="text-bone/40 shrink-0 w-4 flex items-center justify-center">{icon}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 w-20 shrink-0">{label}</span>
                       <input
                         type="url"
                         value={value}
                         onChange={(e) => set(e.target.value)}
                         placeholder={placeholder}
-                        style={{
-                          width: '100%',
-                          background: 'transparent',
-                          border: 'none',
-                          fontFamily: 'GT Zirkon, sans-serif',
-                          fontSize: 12,
-                          color: '#fff',
-                          padding: '4px 0',
-                          outline: 'none',
-                        }}
+                        className="flex-1 bg-transparent border-none outline-none font-mono text-[12px] text-bone placeholder:text-bone/20"
                       />
                     </div>
                   ))}
-
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginTop: 24, marginBottom: 8 }}>
-                    CUSTOM LINKS — YOUR OWN LABELS
-                  </p>
-                  {customLinks.length === 0 && (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
-                      Anything else you want to point people to. Music release, portfolio, newsletter…
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {customLinks.map((link, idx) => (
-                      <div key={idx} className="flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
-                        <input
-                          type="text"
-                          value={link.label}
-                          onChange={(e) => {
-                            const next = [...customLinks];
-                            next[idx] = { ...next[idx], label: e.target.value.slice(0, 20) };
-                            setCustomLinks(next);
-                          }}
-                          placeholder="LABEL"
-                          maxLength={20}
-                          style={{
-                            width: 100,
-                            background: 'transparent',
-                            border: 'none',
-                            borderBottom: '1px solid rgba(255,255,255,0.1)',
-                            fontFamily: 'GT Zirkon, sans-serif',
-                            fontSize: 10,
-                            letterSpacing: '0.12em',
-                            color: '#fff',
-                            padding: '4px 0',
-                            outline: 'none',
-                            textTransform: 'uppercase' as const,
-                          }}
-                        />
-                        <input
-                          type="url"
-                          value={link.url}
-                          onChange={(e) => {
-                            const next = [...customLinks];
-                            next[idx] = { ...next[idx], url: e.target.value };
-                            setCustomLinks(next);
-                          }}
-                          placeholder="https://"
-                          style={{
-                            flex: 1,
-                            background: 'transparent',
-                            border: 'none',
-                            borderBottom: '1px solid rgba(255,255,255,0.1)',
-                            fontFamily: 'GT Zirkon, sans-serif',
-                            fontSize: 12,
-                            color: '#fff',
-                            padding: '4px 0',
-                            outline: 'none',
-                          }}
-                        />
-                        <button
-                          onClick={() => setCustomLinks(customLinks.filter((_, i) => i !== idx))}
-                          className="hover:opacity-70 transition"
-                          style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
-                          aria-label="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  {customLinks.length < 10 && (
-                    <button
-                      onClick={() => setCustomLinks([...customLinks, { label: '', url: '' }])}
-                      className="mt-3 hover:opacity-70 transition"
-                      style={{
-                        fontFamily: 'GT Zirkon, sans-serif',
-                        fontSize: 10,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase' as const,
-                        color: 'rgba(255,255,255,0.4)',
-                        background: 'none',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      + add link
-                    </button>
-                  )}
                 </div>
-              )}
+              </div>
 
-              {/* ── ACCOUNTS ── */}
-              {activeSection === 'accounts' && (
-                <div className="p-4 sm:p-6">
-                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    CONNECTED ACCOUNTS — AUTHENTICATION METHODS
-                  </p>
-                  {!canUnlink && (
-                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginBottom: 12 }}>
-                      Add another account before removing this one
-                    </p>
-                  )}
-                  <div>
-                    <AccountRow label="EMAIL"  value={emailAccount?.address ?? null}   isLinked={!!emailAccount}  unlinking={unlinking === 'email'}  canUnlink={canUnlink} onConnect={linkEmail}  onUnlink={() => handleUnlink('email',  () => unlinkEmail(emailAccount!.address))} accent={accent} />
-                    <AccountRow label="PHONE"  value={phoneAccount?.number ?? null}    isLinked={!!phoneAccount}  unlinking={unlinking === 'phone'}  canUnlink={canUnlink} onConnect={linkPhone}  onUnlink={() => handleUnlink('phone',  () => unlinkPhone(phoneAccount!.number))} accent={accent} />
-                    <AccountRow label="GOOGLE" value={googleAccount?.email ?? (googleAccount ? 'Connected' : null)} isLinked={!!googleAccount} unlinking={unlinking === 'google'} canUnlink={canUnlink} onConnect={linkGoogle} onUnlink={() => handleUnlink('google', () => unlinkGoogle(googleAccount!.subject))} accent={accent} />
-                    <AccountRow label="WALLET" value={walletAccount ? `${walletAccount.address.slice(0,6)}...${walletAccount.address.slice(-4)}` : null} isLinked={!!walletAccount} unlinking={unlinking === 'wallet'} canUnlink={canUnlink} onConnect={linkWallet} onUnlink={() => handleUnlink('wallet', () => unlinkWallet(walletAccount!.address))} accent={accent} />
-                  </div>
+              {/* Custom labeled links */}
+              <div>
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">Custom links</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/20">{customLinks.length}/10</span>
                 </div>
-              )}
+                {customLinks.length === 0 && (
+                  <p className="font-mono text-[11px] text-bone/30 mb-2">Newsletter, portfolio, music release… anything else.</p>
+                )}
+                <div className="space-y-1.5">
+                  {customLinks.map((link, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={link.label}
+                        onChange={(e) => {
+                          const next = [...customLinks];
+                          next[idx] = { ...next[idx], label: e.target.value.slice(0, 20) };
+                          setCustomLinks(next);
+                        }}
+                        placeholder="LABEL"
+                        maxLength={20}
+                        className="w-28 bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] text-bone outline-none transition-colors"
+                      />
+                      <input
+                        type="url"
+                        value={link.url}
+                        onChange={(e) => {
+                          const next = [...customLinks];
+                          next[idx] = { ...next[idx], url: e.target.value };
+                          setCustomLinks(next);
+                        }}
+                        placeholder="https://"
+                        className="flex-1 bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none transition-colors"
+                      />
+                      <button
+                        onClick={() => setCustomLinks(customLinks.filter((_, i) => i !== idx))}
+                        className="w-7 h-7 flex items-center justify-center font-mono text-[14px] text-bone/30 hover:text-pink bg-transparent border border-bone/10 rounded-sm cursor-pointer transition"
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {customLinks.length < 10 && (
+                  <button
+                    onClick={() => setCustomLinks([...customLinks, { label: '', url: '' }])}
+                    className="mt-2 font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone bg-transparent border border-bone/15 hover:border-bone/40 rounded-sm px-3 py-1.5 cursor-pointer transition"
+                  >
+                    + add link
+                  </button>
+                )}
               </div>
             </div>
+          </Section>
 
-            {/* ▸ Action bar */}
-            {saveError && (
-              <div className="px-4 py-2" style={{ backgroundColor: 'rgba(192,57,43,0.15)', borderTop: '1px solid rgba(192,57,43,0.3)' }}>
-                <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: '#e74c3c', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
-                  ✗ {saveError}
-                </p>
-              </div>
+          {/* ─── 6. ACCOUNTS ─── */}
+          <Section label="Accounts" sub="auth methods · email / phone / google / wallet">
+            {!canUnlink && (
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">
+                Add a second account before removing this one
+              </p>
             )}
-            <div
-              className="flex items-center justify-between px-3 sm:px-4 py-3"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#0a0a0a' }}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="transition-all hover:brightness-110 disabled:opacity-40"
-                  style={{
-                    fontFamily: 'GT Zirkon, sans-serif',
-                    fontSize: 11,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase' as const,
-                    padding: '8px 20px',
-                    backgroundColor: accent,
-                    color: '#0a0a0a',
-                    border: 'none',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {saving ? 'SAVING...' : saved ? (<span className="inline-flex items-center gap-1.5">SAVED <CheckIcon size={11} strokeWidth={2} /></span>) : 'SAVE PROFILE'}
-                </button>
-                <span
-                  style={{
-                    fontFamily: 'GT Zirkon, sans-serif',
-                    fontSize: 10,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase' as const,
-                    color: autoSaveStatus === 'saving' ? 'rgba(255,255,255,0.4)' :
-                           autoSaveStatus === 'saved'  ? '#00FF88' :
-                           autoSaveStatus === 'error'  ? '#FF5BD7' : 'rgba(255,255,255,0.2)',
-                    transition: 'color 200ms',
-                  }}
-                >
-                  {autoSaveStatus === 'saving' ? '· auto-saving…' :
-                   autoSaveStatus === 'saved'  ? (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckIcon size={9} /> auto-saved</span>) :
-                   autoSaveStatus === 'error'  ? '× save failed' : '· auto-save on'}
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/onboarding?from=profile"
-                  className="hover:opacity-70 transition no-underline"
-                  style={{
-                    fontFamily: 'GT Zirkon, sans-serif',
-                    fontSize: 10,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase' as const,
-                    color: 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  ↺ REDO INTRO
-                </Link>
-                <button
-                  onClick={logout}
-                  className="hover:opacity-70 transition"
-                  style={{
-                    fontFamily: 'GT Zirkon, sans-serif',
-                    fontSize: 10,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase' as const,
-                    color: 'rgba(255,255,255,0.3)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  LOG OUT
-                </button>
-              </div>
+            <div className="divide-y divide-bone/[0.06]">
+              <AccountRow label="EMAIL"  value={emailAccount?.address ?? null}   isLinked={!!emailAccount}  unlinking={unlinking === 'email'}  canUnlink={canUnlink} onConnect={linkEmail}  onUnlink={() => handleUnlink('email',  () => unlinkEmail(emailAccount!.address))} />
+              <AccountRow label="PHONE"  value={phoneAccount?.number ?? null}    isLinked={!!phoneAccount}  unlinking={unlinking === 'phone'}  canUnlink={canUnlink} onConnect={linkPhone}  onUnlink={() => handleUnlink('phone',  () => unlinkPhone(phoneAccount!.number))} />
+              <AccountRow label="GOOGLE" value={googleAccount?.email ?? (googleAccount ? 'Connected' : null)} isLinked={!!googleAccount} unlinking={unlinking === 'google'} canUnlink={canUnlink} onConnect={linkGoogle} onUnlink={() => handleUnlink('google', () => unlinkGoogle(googleAccount!.subject))} />
+              <AccountRow label="WALLET" value={walletAccount ? `${walletAccount.address.slice(0,6)}…${walletAccount.address.slice(-4)}` : null} isLinked={!!walletAccount} unlinking={unlinking === 'wallet'} canUnlink={canUnlink} onConnect={linkWallet} onUnlink={() => handleUnlink('wallet', () => unlinkWallet(walletAccount!.address))} />
             </div>
+          </Section>
 
-            {/* ▸ MRZ barcode strip */}
-            <div
-              className="px-3 py-2 overflow-hidden"
-              style={{
-                backgroundColor: '#111',
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-                fontFamily: 'monospace',
-                fontSize: 9,
-                letterSpacing: '0.25em',
-                color: 'rgba(255,255,255,0.12)',
-                lineHeight: 1.3,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {(() => {
-                const src = (username || 'TOPIA').toUpperCase();
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<';
-                let line = 'P<TOPIA<';
-                for (let i = 0; i < 50; i++) line += chars[(src.charCodeAt(i % src.length) * 7 + i * 13) % chars.length];
-                return <>{line}<br />{line.split('').reverse().join('')}</>;
-              })()}
+          {/* ─── 7. PREVIEW + EXTRAS ─── */}
+          <Section label="Preview" sub="what others see">
+            <ProfilePreviewCard
+              name={name}
+              username={username}
+              bio={bio}
+              avatarUrl={avatarUrl}
+              path={path}
+              roleTags={selectedRoles}
+              pronouns={pronouns}
+              customLinks={customLinks}
+            />
+            <div className="flex flex-wrap items-center gap-3 mt-4 text-[11px]">
+              <Link
+                href="/onboarding?from=profile"
+                className="font-mono uppercase tracking-[2px] text-bone/50 hover:text-bone no-underline transition"
+              >
+                ↺ Redo intro
+              </Link>
+              <button
+                onClick={logout}
+                className="font-mono uppercase tracking-[2px] text-bone/30 hover:text-pink bg-transparent border-none cursor-pointer transition"
+              >
+                Log out
+              </button>
             </div>
-          </div>
+          </Section>
+
+          {/* Save error banner */}
+          {saveError && (
+            <div className="mt-6 px-3 py-2 bg-pink/10 border border-pink/30 rounded-sm">
+              <p className="font-mono text-[11px] uppercase tracking-[2px] text-pink/90">✗ {saveError}</p>
+            </div>
+          )}
         </main>
+
+        {/* Handle change modal */}
+        <HandleChangeModal
+          open={handleModalOpen}
+          currentHandle={username}
+          privyId={user?.id ?? null}
+          onClose={() => setHandleModalOpen(false)}
+          onConfirm={(newHandle) => setUsername(newHandle)}
+        />
       </PageShell>
     </div>
   );
 }
 
-function AccountRow({ label, value, isLinked, unlinking, canUnlink, onConnect, onUnlink, accent }: {
+/* ── Account row helper ───────────────────────────────────────── */
+function AccountRow({ label, value, isLinked, unlinking, canUnlink, onConnect, onUnlink }: {
   label: string; value: string | null; isLinked: boolean; unlinking: boolean;
-  canUnlink: boolean; onConnect: () => void; onUnlink: () => void; accent: string;
+  canUnlink: boolean; onConnect: () => void; onUnlink: () => void;
 }) {
   return (
-    <div className="flex justify-between items-center py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' as const }}>
-        {label}
-      </span>
-      <div className="flex items-center gap-4">
+    <div className="flex justify-between items-center py-2.5 gap-3">
+      <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 shrink-0">{label}</span>
+      <div className="flex items-center gap-3 min-w-0">
         {isLinked ? (
           <>
-            <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: '#fff' }}>{value}</span>
+            <span className="font-mono text-[11px] text-bone truncate">{value}</span>
             <button
               onClick={onUnlink}
               disabled={!canUnlink || unlinking}
-              className="transition hover:opacity-70 disabled:opacity-20 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 10, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, background: 'none', border: 'none', cursor: 'pointer' }}
+              className="font-mono text-[9px] uppercase tracking-[2px] text-bone/40 hover:text-pink disabled:opacity-20 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer transition shrink-0"
             >
-              {unlinking ? 'REMOVING...' : 'REMOVE'}
+              {unlinking ? 'removing…' : 'remove'}
             </button>
           </>
         ) : (
           <button
             onClick={onConnect}
-            className="transition hover:brightness-110"
-            style={{
-              fontFamily: 'GT Zirkon, sans-serif',
-              fontSize: 10,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase' as const,
-              color: accent,
-              background: 'none',
-              border: `1px solid ${accent}`,
-              padding: '4px 10px',
-              cursor: 'pointer',
-            }}
+            className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-transparent border border-bone/15 hover:border-lime/50 hover:text-lime text-bone/60 rounded-sm cursor-pointer transition"
           >
-            + CONNECT
+            + connect
           </button>
         )}
       </div>
