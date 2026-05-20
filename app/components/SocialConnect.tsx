@@ -131,9 +131,12 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
   const privy = usePrivy();
   const { ready, authenticated, user } = privy;
   const [busy, setBusy] = useState<'connect' | 'disconnect' | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const meta = PROVIDER_META[provider];
   const linked = findOAuthAccount(user, meta.oauthType);
+  // After a successful unlink, Privy's user state may take a render or two to update.
+  // We treat "value empty AND no linked account" as fully disconnected.
   const isConnected = Boolean(linked || value);
 
   const linkedLabel  = linked ? meta.buildLabel(linked) : null;
@@ -149,6 +152,14 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linked?.subject, linked?.username, ready, authenticated]);
 
+  // Safety net: if the OAuth popup is dismissed / blocked / the user closes the tab,
+  // Privy never fires success or error. Reset busy after 15s so the button isn't stuck.
+  useEffect(() => {
+    if (busy !== 'connect') return;
+    const t = setTimeout(() => setBusy(null), 15_000);
+    return () => clearTimeout(t);
+  }, [busy]);
+
   function callLink() {
     if (provider === 'twitter')   return privy.linkTwitter();
     if (provider === 'instagram') return privy.linkInstagram();
@@ -163,24 +174,40 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     if (provider === 'spotify')   return privy.unlinkSpotify(subject);
   }
 
+  function readableError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message);
+    return 'Something went wrong — try again in a moment.';
+  }
+
   async function handleConnect() {
+    setError(null);
     setBusy('connect');
     try {
       callLink();
-      // Privy redirects to OAuth; the effect above completes the round-trip.
+      // Privy redirects to OAuth; the success effect above completes the round-trip.
     } catch (err) {
       console.error(`link ${provider} failed`, err);
+      setError(readableError(err));
       setBusy(null);
     }
   }
 
   async function handleDisconnect() {
+    setError(null);
     setBusy('disconnect');
     try {
-      if (linked?.subject) await callUnlink(linked.subject);
+      if (linked?.subject) {
+        await callUnlink(linked.subject);
+      }
       onChange('');
     } catch (err) {
       console.error(`unlink ${provider} failed`, err);
+      // If the account isn't actually linked on Privy's side (e.g. they
+      // already revoked it elsewhere) we still want to clear the stale URL.
+      onChange('');
+      setError(readableError(err));
     } finally {
       setBusy(null);
     }
@@ -275,6 +302,20 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
         >
           {busy === 'connect' ? 'opening…' : `+ connect ${meta.shortLabel}`}
         </button>
+      )}
+
+      {error && (
+        <div
+          className="mt-2"
+          style={{
+            fontFamily: 'GT Zirkon, sans-serif',
+            fontSize: 10,
+            letterSpacing: '0.06em',
+            color: '#FF5BD7',
+          }}
+        >
+          {error}
+        </div>
       )}
     </div>
   );
