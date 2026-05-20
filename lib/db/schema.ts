@@ -327,3 +327,32 @@ export const reactions = pgTable('reactions', {
   emoji:      text('emoji').notNull(),         // unicode character, e.g. '❤️', '🔥'
   createdAt:  timestamp('created_at').defaultNow().notNull(),
 });
+
+/* ────────────────────────────────────────────────────────────────────
+ * Topia TV episodes — videos that play on /tv. Stored as URLs pointing
+ * at Vercel Blob (videos themselves) plus optional poster/thumbnail
+ * URLs. Categories drive the colored accent in the TV guide.
+ *
+ * For multi-part episodes (e.g. "Ep 001 Part I" + "Part II") we store
+ * each part as its own row, grouped by `seriesSlug`. Sort order within
+ * a series uses `episodeNumber` + `partNumber`.
+ * ──────────────────────────────────────────────────────────────────── */
+export const tvEpisodes = pgTable('tv_episodes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category').notNull(),          // 'Featured' | 'Live' | 'Series' | 'Replays'
+  seriesSlug: text('series_slug'),               // groups multi-episode runs
+  seriesTitle: text('series_title'),             // human-readable series name
+  episodeNumber: integer('episode_number'),
+  partNumber: integer('part_number'),
+  videoUrl: text('video_url').notNull(),         // Vercel Blob URL
+  thumbnailUrl: text('thumbnail_url'),           // poster image; nullable → fall back to a default gif
+  durationSeconds: integer('duration_seconds'),
+  guestName: text('guest_name'),                 // optional guest tag, e.g. "C.Y Lee"
+  publishedAt: timestamp('published_at').defaultNow(),
+  published: boolean('published').default(true),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
