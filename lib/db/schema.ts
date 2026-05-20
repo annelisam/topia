@@ -23,6 +23,7 @@ export const users = pgTable('users', {
   roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
   toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table (tools I USE)
   savedToolSlugs: text('saved_tool_slugs'), // Comma-separated tool slugs user has bookmarked
+  savedEventSlugs: text('saved_event_slugs'), // Comma-separated event slugs user has bookmarked
   path: text('path'),                 // 'worldbuilder' | 'catalyst' | 'anchor' — null until onboarding
   verifiedProviders: text('verified_providers'), // CSV of OAuth-verified social providers e.g. 'twitter,linkedin'
   pronouns: text('pronouns'),         // Optional free-text e.g. 'she/her', 'they/them'

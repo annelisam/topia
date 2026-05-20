@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useDashboard } from './_components/DashboardContext';
 import { useOverview } from './_components/DashboardOverviewContext';
 import SavedToolsWidget from './_components/SavedToolsWidget';
+import SavedEventsWidget from './_components/SavedEventsWidget';
 import ProfileCompletionWidget from './_components/ProfileCompletionWidget';
 import PendingInvitationsWidget from './_components/PendingInvitationsWidget';
 import UpcomingEventsWidget from './_components/UpcomingEventsWidget';
@@ -149,6 +150,7 @@ export default function DashboardOverviewPage() {
         {/* SIDE COLUMN — ambient / passive context */}
         <aside className="space-y-6 min-w-0">
           <ActivityFeedWidget />
+          <SavedEventsWidget />
           <RecentlyViewedWorldsWidget />
         </aside>
       </div>
