@@ -501,7 +501,12 @@ export default function PublicProfilePage() {
                 </div>
 
                 {/* ═══ ROW 4 — ACTIVE SECTION CONTENT ═══ */}
-                <div className="bg-obsidian overflow-hidden h-[260px] md:h-[280px]">
+                {/* Was fixed-height (h-280px + overflow-hidden) which cropped
+                    longer sections like a guestbook with drawings. Switching
+                    to min-height lets content flow naturally; the layers
+                    that need internal scrolling already declare their own
+                    overflow-y-auto. */}
+                <div className="bg-obsidian min-h-[260px] md:min-h-[420px]">
                   {renderSection()}
                 </div>
 
