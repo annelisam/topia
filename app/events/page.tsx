@@ -37,6 +37,9 @@ interface EventCard {
   isHosting: boolean;
   isSaved: boolean;
   externalSource?: string | null;
+  sharerName?: string | null;
+  sharerUsername?: string | null;
+  sharerAvatarUrl?: string | null;
 }
 
 type Tab = 'all' | 'upcoming' | 'thisWeek' | 'past' | 'saved' | 'mine';
@@ -61,6 +64,19 @@ function formatDayChip(iso: string | null): { day: string; mon: string; year: st
       year: String(d.getUTCFullYear()),
     };
   } catch { return { day: '—', mon: '', year: '' }; }
+}
+
+function externalLinkLabel(source: string | null | undefined): string {
+  if (source === 'partiful')   return 'RSVP on Partiful →';
+  if (source === 'luma')       return 'RSVP on Luma →';
+  if (source === 'eventbrite') return 'Tickets on Eventbrite →';
+  return 'Open event →';
+}
+function externalLinkShort(source: string | null | undefined): string {
+  if (source === 'partiful')   return 'Partiful →';
+  if (source === 'luma')       return 'Luma →';
+  if (source === 'eventbrite') return 'Tickets →';
+  return 'Open →';
 }
 
 function dateGroupKey(iso: string | null, isPast: boolean): string {
@@ -543,21 +559,34 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
       )}
 
       {/* Actions (don't bubble click) */}
-      {authenticated && (
-        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          {!isPast && (
-            <button
-              onClick={onToggleRsvp}
-              className={`inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1.5 rounded-sm border transition cursor-pointer ${
-                event.isGoing
-                  ? 'bg-green/15 border-green/40 text-green'
-                  : 'bg-transparent border-bone/15 text-bone/60 hover:border-lime/50 hover:text-lime'
-              }`}
-              title={event.isGoing ? 'Click to un-RSVP' : 'RSVP — going'}
+      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+        {!isPast && event.externalSource ? (
+          // External event: link to the source platform instead of TOPIA RSVP
+          event.link && (
+            <a
+              href={event.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1.5 rounded-sm border border-bone/15 text-bone/60 hover:border-lime/50 hover:text-lime transition no-underline"
+              title={`Opens on ${event.externalSource}`}
             >
-              {event.isGoing ? (<><CheckIcon size={9} /> Going</>) : 'RSVP'}
-            </button>
-          )}
+              {externalLinkLabel(event.externalSource)}
+            </a>
+          )
+        ) : !isPast && authenticated ? (
+          <button
+            onClick={onToggleRsvp}
+            className={`inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1.5 rounded-sm border transition cursor-pointer ${
+              event.isGoing
+                ? 'bg-green/15 border-green/40 text-green'
+                : 'bg-transparent border-bone/15 text-bone/60 hover:border-lime/50 hover:text-lime'
+            }`}
+            title={event.isGoing ? 'Click to un-RSVP' : 'RSVP — going'}
+          >
+            {event.isGoing ? (<><CheckIcon size={9} /> Going</>) : 'RSVP'}
+          </button>
+        ) : null}
+        {authenticated && (
           <button
             onClick={onToggleSave}
             className={`inline-flex items-center justify-center w-7 h-7 rounded-sm border transition cursor-pointer ${
@@ -569,8 +598,8 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
           >
             <StarIcon size={11} filled={event.isSaved} />
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -715,7 +744,17 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                   ))}
                   <span className="font-mono text-[10px] text-bone/30 pl-3">{ev.rsvpCount} going</span>
                 </div>
-                {authenticated && !ev.isHosting && (
+                {ev.externalSource && ev.link ? (
+                  <a
+                    href={ev.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm border bg-transparent border-bone/20 text-bone/70 hover:border-lime/50 hover:text-lime transition no-underline"
+                  >
+                    {externalLinkLabel(ev.externalSource)}
+                  </a>
+                ) : authenticated && !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
                     className={`font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm border transition cursor-pointer ${
@@ -803,7 +842,17 @@ function FeaturedRowCompact({
                 <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/40 truncate">
                   {ev.startTime ? `${ev.startTime}` : ''}{ev.city ? ` · ${ev.city}` : ''}
                 </span>
-                {authenticated && !ev.isHosting && (
+                {ev.externalSource && ev.link ? (
+                  <a
+                    href={ev.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 rounded-sm border bg-transparent border-bone/20 text-bone/60 hover:border-lime/50 hover:text-lime transition no-underline shrink-0"
+                  >
+                    {externalLinkShort(ev.externalSource)}
+                  </a>
+                ) : authenticated && !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
                     className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 rounded-sm border transition cursor-pointer shrink-0 ${
@@ -906,9 +955,19 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
               <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30">{event.rsvpCount} going</span>
             )}
           </div>
-          {authenticated && (
+          {(authenticated || (event.externalSource && event.link)) && (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              {!isPast && (
+              {!isPast && event.externalSource && event.link ? (
+                <a
+                  href={event.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border bg-transparent border-bone/15 text-bone/60 hover:border-lime/50 hover:text-lime transition no-underline"
+                  title={`Opens on ${event.externalSource}`}
+                >
+                  {externalLinkShort(event.externalSource)}
+                </a>
+              ) : !isPast && authenticated && (
                 <button
                   onClick={onToggleRsvp}
                   className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border transition cursor-pointer ${
@@ -921,17 +980,19 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                   {event.isGoing ? '✓' : 'RSVP'}
                 </button>
               )}
-              <button
-                onClick={onToggleSave}
-                className={`inline-flex items-center justify-center w-6 h-6 rounded-sm border transition cursor-pointer ${
-                  event.isSaved
-                    ? 'bg-bone text-obsidian border-bone'
-                    : 'bg-transparent border-bone/15 text-bone/40 hover:border-bone/60 hover:text-bone'
-                }`}
-                title={event.isSaved ? 'Saved' : 'Save'}
-              >
-                <StarIcon size={10} filled={event.isSaved} />
-              </button>
+              {authenticated && (
+                <button
+                  onClick={onToggleSave}
+                  className={`inline-flex items-center justify-center w-6 h-6 rounded-sm border transition cursor-pointer ${
+                    event.isSaved
+                      ? 'bg-bone text-obsidian border-bone'
+                      : 'bg-transparent border-bone/15 text-bone/40 hover:border-bone/60 hover:text-bone'
+                  }`}
+                  title={event.isSaved ? 'Saved' : 'Save'}
+                >
+                  <StarIcon size={10} filled={event.isSaved} />
+                </button>
+              )}
             </div>
           )}
         </div>

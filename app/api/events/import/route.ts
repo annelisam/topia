@@ -53,18 +53,22 @@ export async function POST(request: NextRequest) {
     const meta = (name: string) => $(`meta[name="${name}"]`).attr('content');
 
     // ── Try JSON-LD schema.org/Event (Luma + Eventbrite expose this) ──
+    interface JsonLdImageObj { url?: string; contentUrl?: string }
+    interface JsonLdAddress { addressLocality?: string; streetAddress?: string; addressRegion?: string; addressCountry?: string }
+    interface JsonLdLocation {
+      '@type'?: string | string[];
+      name?: string;
+      address?: string | JsonLdAddress;
+    }
     interface JsonLdEvent {
       '@type'?: string | string[];
       name?: string;
       description?: string;
-      image?: string | string[] | { url?: string };
+      image?: string | string[] | JsonLdImageObj | JsonLdImageObj[];
       startDate?: string;
       endDate?: string;
       url?: string;
-      location?: {
-        name?: string;
-        address?: string | { addressLocality?: string; streetAddress?: string; addressRegion?: string };
-      } | string;
+      location?: JsonLdLocation | JsonLdLocation[] | string;
     }
     // Collect all JSON-LD blocks first, then find the Event entry.
     // (Doing it via $.each closure trips up TS narrowing on the local let.)
@@ -100,12 +104,22 @@ export async function POST(request: NextRequest) {
       ?? meta('description')
       ?? '';
 
-    let imageUrl: string | null = null;
-    if (jsonLd?.image) {
-      if (typeof jsonLd.image === 'string') imageUrl = jsonLd.image;
-      else if (Array.isArray(jsonLd.image) && typeof jsonLd.image[0] === 'string') imageUrl = jsonLd.image[0];
-      else if (typeof jsonLd.image === 'object' && 'url' in jsonLd.image) imageUrl = jsonLd.image.url ?? null;
+    // Image: schema.org lets `image` be string, string[], object{url|contentUrl},
+    // or array of such objects. Eventbrite often ships an array of objects.
+    function pickImage(img: JsonLdEvent['image']): string | null {
+      if (!img) return null;
+      if (typeof img === 'string') return img;
+      if (Array.isArray(img)) {
+        for (const item of img) {
+          const u = pickImage(item as JsonLdEvent['image']);
+          if (u) return u;
+        }
+        return null;
+      }
+      if (typeof img === 'object') return img.url ?? img.contentUrl ?? null;
+      return null;
     }
+    let imageUrl: string | null = pickImage(jsonLd?.image);
     imageUrl = imageUrl ?? og('image') ?? og('image:url') ?? tw('image') ?? null;
 
     // Date/time from JSON-LD if present
@@ -132,21 +146,37 @@ export async function POST(request: NextRequest) {
       } catch { /* ignore */ }
     }
 
-    // Location → city
+    // Location → city + address.
+    // Schema.org allows location to be a single object, string, or array.
+    // Eventbrite/Luma sometimes nest a Place. Prefer addressLocality (the
+    // actual city) over .name (which is usually the venue name).
     let city: string | null = null;
     let address: string | null = null;
-    if (jsonLd?.location) {
-      const loc = jsonLd.location;
+    {
+      const rawLoc = jsonLd?.location;
+      const loc: JsonLdLocation | string | undefined = Array.isArray(rawLoc) ? rawLoc[0] : rawLoc;
       if (typeof loc === 'string') {
         city = loc;
-      } else {
-        city = loc.name ?? null;
+      } else if (loc) {
+        const venueName = loc.name ?? null;
         if (loc.address) {
-          if (typeof loc.address === 'string') address = loc.address;
-          else {
-            city = loc.address.addressLocality ?? city;
-            address = loc.address.streetAddress ?? null;
+          if (typeof loc.address === 'string') {
+            address = loc.address;
+          } else {
+            city = loc.address.addressLocality ?? null;
+            address = [loc.address.streetAddress, loc.address.addressRegion]
+              .filter(Boolean).join(', ') || null;
           }
+        }
+        // If we couldn't extract a structured city, fall back to venue name —
+        // it's at least *something* the user can edit before saving.
+        if (!city) city = venueName;
+        // If we got both, surface "Venue · Street" as the address line so the
+        // venue name isn't lost (it's often what attendees actually need).
+        if (venueName && address && !address.includes(venueName)) {
+          address = `${venueName} · ${address}`;
+        } else if (venueName && !address) {
+          address = venueName;
         }
       }
     }

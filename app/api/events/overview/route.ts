@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
       ? and(eq(events.published, true), eq(events.city, cityFilter))
       : eq(events.published, true);
 
-    // Pull events
+    // Pull events (left-join users on createdBy so we can show "Shared by @x"
+    // attribution on external events)
     const eventRows = await db
       .select({
         id: events.id,
@@ -52,8 +53,12 @@ export async function GET(request: NextRequest) {
         description: events.description,
         createdBy: events.createdBy,
         externalSource: events.externalSource,
+        sharerName: users.name,
+        sharerUsername: users.username,
+        sharerAvatarUrl: users.avatarUrl,
       })
       .from(events)
+      .leftJoin(users, eq(events.createdBy, users.id))
       .where(where)
       .orderBy(asc(events.dateIso));
 
@@ -129,10 +134,14 @@ export async function GET(request: NextRequest) {
 
     // Attach hosts + counts + my-RSVP + my-hosting + my-saved
     const myRsvpSet = new Set(myRsvps.map((r) => r.eventId));
+    // Only mark events I'm hosting if (a) I have an eventHosts row OR
+    // (b) I'm the createdBy AND the event isn't external (external events
+    // are *shared*, not hosted — the real host lives on Partiful/Luma/etc.).
     const myHostingSet = new Set([
       ...myHosting.map((h) => h.eventId),
-      // Also count events where I'm the creator
-      ...(user ? eventRows.filter((e) => e.createdBy === user!.id).map((e) => e.id) : []),
+      ...(user
+        ? eventRows.filter((e) => e.createdBy === user!.id && !e.externalSource).map((e) => e.id)
+        : []),
     ]);
     const mySavedSlugs = new Set(
       (user?.savedEventSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean),

@@ -270,13 +270,18 @@ export async function POST(request: NextRequest) {
       externalSource: data.externalSource || null,
     }).returning();
 
-    // Auto-create host row for the creator
-    await db.insert(eventHosts).values({
-      eventId: result[0].id,
-      userId: user.id,
-      role: 'creator',
-      worldId: data.worldId || null,
-    });
+    // Auto-create host row for the creator — BUT only for original events.
+    // External events (imported from Partiful/Luma/Eventbrite) are shared by
+    // the submitter, not hosted by them. The real host lives on the source
+    // platform. We still track the submitter via events.createdBy.
+    if (!data.externalSource) {
+      await db.insert(eventHosts).values({
+        eventId: result[0].id,
+        userId: user.id,
+        role: 'creator',
+        worldId: data.worldId || null,
+      });
+    }
 
     return NextResponse.json({ event: result[0] }, { status: 201 });
   } catch (error) {

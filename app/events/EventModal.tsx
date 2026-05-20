@@ -35,6 +35,9 @@ interface EventDetail {
   isHosting: boolean;
   isSaved: boolean;
   externalSource?: string | null;
+  sharerName?: string | null;
+  sharerUsername?: string | null;
+  sharerAvatarUrl?: string | null;
 }
 
 interface Props {
@@ -181,7 +184,19 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
 
             {/* Action row */}
             <div className="flex flex-wrap items-center gap-2">
-              {authenticated && !isPast && (
+              {!isPast && event.externalSource && event.link ? (
+                <a
+                  href={event.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-4 py-2 rounded-sm border bg-lime text-obsidian border-lime hover:opacity-90 transition no-underline"
+                >
+                  {event.externalSource === 'partiful'   ? 'RSVP on Partiful →'
+                  : event.externalSource === 'luma'      ? 'RSVP on Luma →'
+                  : event.externalSource === 'eventbrite' ? 'Tickets on Eventbrite →'
+                  : 'Open event →'}
+                </a>
+              ) : authenticated && !isPast && (
                 <button
                   onClick={handleRsvp}
                   disabled={rsvpPending}
@@ -207,17 +222,14 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
                   <StarIcon size={10} filled={event.isSaved} /> {event.isSaved ? 'Saved' : 'Save'}
                 </button>
               )}
-              {event.link && (
+              {event.link && !event.externalSource && (
                 <a
                   href={event.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-[11px] uppercase tracking-[2px] text-bone/70 border border-bone/20 hover:border-bone/60 hover:text-bone px-3 py-2 rounded-sm transition no-underline"
                 >
-                  {event.externalSource === 'partiful'   ? 'RSVP on Partiful →'
-                  : event.externalSource === 'luma'      ? 'RSVP on Luma →'
-                  : event.externalSource === 'eventbrite' ? 'Tickets on Eventbrite →'
-                  : 'Event link →'}
+                  Event link →
                 </a>
               )}
               <button
@@ -228,8 +240,33 @@ export default function EventModal({ event, onClose, onToggleRsvp, onToggleSave 
               </button>
             </div>
 
+            {/* Shared by (external events only — no real host on TOPIA) */}
+            {event.externalSource && event.sharerUsername && (
+              <div>
+                <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">Shared by</span>
+                <Link
+                  href={`/profile/${event.sharerUsername}`}
+                  className="inline-flex items-center gap-2 border border-bone/10 hover:border-bone/40 px-2.5 py-1.5 rounded-sm transition no-underline"
+                >
+                  {event.sharerAvatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={event.sharerAvatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-bone/10 flex items-center justify-center">
+                      <span className="font-basement text-[10px] text-bone/40">{(event.sharerName || event.sharerUsername)[0]?.toUpperCase()}</span>
+                    </div>
+                  )}
+                  <span className="font-mono text-[11px] text-bone">@{event.sharerUsername}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30">· submitter</span>
+                </Link>
+                <p className="font-mono text-[10px] text-bone/30 mt-2 leading-snug">
+                  This event is hosted on {event.externalSource}. TOPIA tracks it but RSVPs and details live on the source.
+                </p>
+              </div>
+            )}
+
             {/* Hosts */}
-            {event.hosts.length > 0 && (
+            {!event.externalSource && event.hosts.length > 0 && (
               <div>
                 <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">Hosted by</span>
                 <div className="flex flex-wrap gap-2">
