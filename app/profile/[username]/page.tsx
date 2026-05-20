@@ -245,7 +245,7 @@ export default function PublicProfilePage() {
       case 'tv':        return <ProfileTV config={config} handle={`@${username}`} />;
       case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
-      case 'guestbook': return <GuestbookLayer config={config} />;
+      case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
       default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} />;
     }
   }

@@ -257,3 +257,45 @@ export const worldProjects = pgTable('world_projects', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+/* ────────────────────────────────────────────────────────────────────
+ * Guestbook entries — drawings, text messages, gifs left on a user's
+ * public profile. Visibility is always public; the *write* permission
+ * is gated by follow relationship (enforced at the API layer):
+ *   - drawing → mutual follow only
+ *   - message / gif → at least one-way follow
+ * ──────────────────────────────────────────────────────────────────── */
+export const guestbookEntries = pgTable('guestbook_entries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  profileUserId: uuid('profile_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  authorUserId:  uuid('author_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  kind: text('kind').notNull(),                 // 'drawing' | 'message' | 'gif'
+  body: text('body'),                           // text content / caption
+  imageUrl: text('image_url'),                  // drawing PNG OR gif URL (Vercel Blob or Giphy CDN)
+  giphyId: text('giphy_id'),                    // for Giphy attribution
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/* Tool comments + optional 1–5 rating. Only users who have the tool in
+ * their kit (users.tool_slugs contains tool.slug) can post — enforced at
+ * the API layer. Public read. */
+export const toolComments = pgTable('tool_comments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  toolId: uuid('tool_id').references(() => tools.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  body: text('body'),
+  rating: integer('rating'),                    // nullable 1..5
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/* Event comments + optional gif. Only users who RSVP'd or have the event
+ * slug in savedEventSlugs (interested) can post — enforced at the API. */
+export const eventComments = pgTable('event_comments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  userId:  uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  body: text('body'),
+  imageUrl: text('image_url'),                  // gif URL
+  giphyId: text('giphy_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { faviconUrl } from './favicon';
 import { CheckIcon, StarIcon } from '../../components/ui/Icons';
+import CommentSection from '../../components/CommentSection';
 
 export interface ToolDetailData {
   tool: {
@@ -276,6 +277,17 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
               ))}
             </div>
           )}
+        </div>
+
+        {/* Reviews + comments — only kit-owners can post */}
+        <div className="md:col-span-3">
+          <CommentSection
+            endpoint="/api/tools/comments"
+            slug={tool.slug}
+            kind="tool"
+            title="Reviews"
+            gateHint={`Add ${tool.name} to your kit on the "I use this" button above to leave a review.`}
+          />
         </div>
 
         {/* Related tools (co-occurrence) */}

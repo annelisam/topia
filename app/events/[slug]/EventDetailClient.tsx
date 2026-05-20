@@ -8,6 +8,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
+import CommentSection from '../../components/CommentSection';
 
 interface EventHost {
   userId: string;
@@ -529,6 +530,15 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               </ReactMarkdown>
             </section>
           )}
+
+          {/* Comments — RSVP'd or interested users can post */}
+          <CommentSection
+            endpoint="/api/events/comments"
+            slug={event.slug}
+            kind="event"
+            title="The chat"
+            gateHint="RSVP or hit ★ to mark this event 'interested' — then come back to leave a comment."
+          />
         </div>
       </div>
 
