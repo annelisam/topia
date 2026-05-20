@@ -12,6 +12,7 @@ import WorldGlobe from '../../components/WorldGlobe';
 import { SocialIcon } from '../../components/SocialIcons';
 import ProjectContent from '../../components/ProjectContent';
 import { markdownComponents } from '../../components/ProjectContent';
+import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -216,6 +217,9 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .then(data => setWorldEvents(data.events || []))
       .catch(console.error);
   }, [world?.id]);
+
+  // Record this world view for the dashboard's "Recently viewed" widget
+  useRecordWorldView(world ? { slug: world.slug, title: world.title, imageUrl: world.imageUrl } : null);
 
   const handleSelectProject = useCallback((proj: { id: string; name: string; slug: string } | null) => {
     if (!proj) { setSelectedProject(null); return; }

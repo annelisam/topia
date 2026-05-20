@@ -8,6 +8,9 @@ import PageShell from '../components/PageShell';
 import LoadingBar from '../components/LoadingBar';
 import { SocialIcon } from '../components/SocialIcons';
 import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../components/SocialConnect';
+import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
+import ProfilePreviewCard from './_components/ProfilePreviewCard';
+import { useAutoSave } from './_components/useAutoSave';
 
 const ACCENT_COLORS = ['#BFFF00','#3B82F6','#EC4899','#F97316','#22C55E','#E8E0D0'];
 
@@ -92,6 +95,7 @@ export default function ProfilePage() {
   const [socialFarcaster, setSocialFarcaster] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [path, setPath] = useState<UserPath | ''>('');
 
   // Tools from DB
   const [allTools, setAllTools]     = useState<Tool[]>([]);
@@ -104,7 +108,7 @@ export default function ProfilePage() {
   const [saved, setSaved]         = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'identity'|'roles'|'tools'|'social'|'accounts'>('identity');
+  const [activeSection, setActiveSection] = useState<'identity'|'path'|'roles'|'tools'|'social'|'accounts'>('identity');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -139,6 +143,7 @@ export default function ProfilePage() {
           if (saved.socialLinkedin)   setSocialLinkedin(saved.socialLinkedin);
           if (saved.socialSubstack)   setSocialSubstack(saved.socialSubstack);
           if (saved.socialFarcaster)  setSocialFarcaster(saved.socialFarcaster);
+          if (saved.path)            setPath(saved.path as UserPath);
           if (saved.roleTags)        setSelectedRoles(saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean));
           if (saved.toolSlugs)       setSelectedTools(saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean));
         } else {
@@ -151,6 +156,12 @@ export default function ProfilePage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [ready, authenticated, user]);
+
+  // Auto-save: debounced sync of any field change. Skips the initial hydration.
+  const autoSaveStatus = useAutoSave(
+    { name, username, bio, avatarUrl, socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster, path, roleTags: selectedRoles, toolSlugs: selectedTools },
+    { privyId: user?.id ?? null, skipInitial: true, delayMs: 800 },
+  );
 
   // Linked accounts
   const linkedAccounts = user?.linkedAccounts ?? [];
@@ -256,6 +267,7 @@ export default function ProfilePage() {
 
   const TABS: { key: typeof activeSection; label: string }[] = [
     { key: 'identity', label: 'IDENTITY' },
+    { key: 'path',     label: 'PATH' },
     { key: 'roles',    label: 'ROLES' },
     { key: 'tools',    label: 'TOOLS' },
     { key: 'social',   label: 'SOCIAL' },
@@ -466,8 +478,16 @@ export default function ProfilePage() {
               {activeSection === 'identity' && (
                 <div className="p-4 sm:p-6 space-y-4" style={{ backgroundImage: CROSSHATCH }}>
                   <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    EDIT YOUR CORE IDENTITY FIELDS ABOVE. THIS SECTION SHOWS A PREVIEW.
+                    LIVE PREVIEW — REFLECTS YOUR EDITS IN REAL TIME
                   </p>
+                  <ProfilePreviewCard
+                    name={name}
+                    username={username}
+                    bio={bio}
+                    avatarUrl={avatarUrl}
+                    path={path}
+                    roleTags={selectedRoles}
+                  />
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <span style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>NAME</span>
@@ -485,6 +505,43 @@ export default function ProfilePage() {
                         &ldquo;{bio}&rdquo;
                       </p>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── PATH ── */}
+              {activeSection === 'path' && (
+                <div className="p-4 sm:p-6 space-y-4">
+                  <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 12 }}>
+                    HOW DO YOU SHOW UP? · DRIVES YOUR PROFILE ACCENT COLOR
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(['worldbuilder', 'catalyst', 'anchor'] as const).map((p) => {
+                      const cfg = PATH_CONFIG[p];
+                      const selected = path === p;
+                      const icon = p === 'worldbuilder' ? '◆' : p === 'catalyst' ? '⬡' : '◎';
+                      const tagline = p === 'worldbuilder' ? 'I build worlds.' : p === 'catalyst' ? 'I shape worlds.' : 'I move through worlds.';
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPath(p)}
+                          className={`text-left p-4 border transition cursor-pointer ${
+                            selected ? `${cfg.bg} ${cfg.textOn} border-transparent` : 'bg-transparent border-bone/15 text-bone hover:border-bone/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-basement font-black text-[24px] leading-none ${selected ? cfg.textOn : 'text-bone/40'}`}>{icon}</span>
+                            <span className={`font-mono text-[10px] uppercase tracking-[2px] ${selected ? `${cfg.textOn} opacity-60` : 'text-bone/25'}`}>{cfg.label}</span>
+                          </div>
+                          <div className={`font-basement font-black text-[clamp(14px,1.5vw,18px)] uppercase ${selected ? cfg.textOn : 'text-bone'}`}>{tagline}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!path && (
+                    <p style={{ fontFamily: 'GT Zirkon, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>
+                      Pick one. You can change this later.
+                    </p>
                   )}
                 </div>
               )}
@@ -735,24 +792,42 @@ export default function ProfilePage() {
               className="flex items-center justify-between px-3 sm:px-4 py-3"
               style={{ borderTop: '1px solid rgba(255,255,255,0.08)', backgroundColor: '#0a0a0a' }}
             >
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="transition-all hover:brightness-110 disabled:opacity-40"
-                style={{
-                  fontFamily: 'GT Zirkon, sans-serif',
-                  fontSize: 11,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase' as const,
-                  padding: '8px 20px',
-                  backgroundColor: accent,
-                  color: '#0a0a0a',
-                  border: 'none',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE PROFILE'}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="transition-all hover:brightness-110 disabled:opacity-40"
+                  style={{
+                    fontFamily: 'GT Zirkon, sans-serif',
+                    fontSize: 11,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase' as const,
+                    padding: '8px 20px',
+                    backgroundColor: accent,
+                    color: '#0a0a0a',
+                    border: 'none',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {saving ? 'SAVING...' : saved ? 'SAVED ✓' : 'SAVE PROFILE'}
+                </button>
+                <span
+                  style={{
+                    fontFamily: 'GT Zirkon, sans-serif',
+                    fontSize: 10,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase' as const,
+                    color: autoSaveStatus === 'saving' ? 'rgba(255,255,255,0.4)' :
+                           autoSaveStatus === 'saved'  ? '#00FF88' :
+                           autoSaveStatus === 'error'  ? '#FF5BD7' : 'rgba(255,255,255,0.2)',
+                    transition: 'color 200ms',
+                  }}
+                >
+                  {autoSaveStatus === 'saving' ? '· auto-saving…' :
+                   autoSaveStatus === 'saved'  ? '✓ auto-saved' :
+                   autoSaveStatus === 'error'  ? '× save failed' : '· auto-save on'}
+                </span>
+              </div>
               <div className="flex items-center gap-4">
                 <Link
                   href="/onboarding?from=profile"

@@ -1,12 +1,43 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useDashboard } from './_components/DashboardContext';
 import SavedToolsWidget from './_components/SavedToolsWidget';
 import ProfileCompletionWidget from './_components/ProfileCompletionWidget';
+import PendingInvitationsWidget from './_components/PendingInvitationsWidget';
+import UpcomingEventsWidget from './_components/UpcomingEventsWidget';
+import ActivityFeedWidget from './_components/ActivityFeedWidget';
+import RecentlyViewedWorldsWidget from './_components/RecentlyViewedWorlds';
+
+interface Stats {
+  followers: number;
+  following: number;
+  worlds: number;
+  events: number;
+  deltas: { followers?: number; worlds?: number; events?: number };
+}
+
+function Delta({ n }: { n: number | undefined }) {
+  if (!n || n <= 0) return null;
+  return (
+    <span className="font-mono text-[9px] uppercase tracking-[2px] text-lime/80 ml-1">+{n} mo</span>
+  );
+}
 
 export default function DashboardOverviewPage() {
   const { profile, worldMemberships, hostedEvents } = useDashboard();
+  const { user } = usePrivy();
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/dashboard/stats?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((json) => setStats(json as Stats))
+      .catch(console.error);
+  }, [user?.id]);
 
   const displayName = profile?.name || profile?.username || 'creator';
   const initial = (displayName[0] || '?').toUpperCase();
@@ -40,15 +71,20 @@ export default function DashboardOverviewPage() {
 
         {/* Stats bar */}
         <div className="bg-obsidian border-t border-b border-bone/[0.04] px-4 py-3 flex items-center gap-0 overflow-x-auto">
-          {[
-            { label: 'Worlds',  value: worldMemberships.length, href: '/worlds' },
-            { label: 'Events',  value: hostedEvents.length,      href: '/events' },
-            { label: 'Builder', value: builderCount,             href: null },
-          ].map((stat, i, arr) => {
+          {([
+            { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
+            { label: 'Events',    value: hostedEvents.length,      delta: stats?.deltas.events,    href: '/events' },
+            { label: 'Builder',   value: builderCount,             delta: undefined,                href: null },
+            { label: 'Followers', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
+            { label: 'Following', value: stats?.following ?? 0,    delta: undefined,                href: null },
+          ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
             const inner = (
               <div className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-bone/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
                 <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">{stat.label}</span>
-                <span className="font-mono text-[20px] md:text-[24px] text-bone font-bold leading-none mt-1">{stat.value}</span>
+                <span className="font-mono text-[20px] md:text-[24px] text-bone font-bold leading-none mt-1 flex items-baseline">
+                  {stat.value}
+                  <Delta n={stat.delta} />
+                </span>
               </div>
             );
             return stat.href ? (
@@ -60,8 +96,20 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
+      {/* Pending invitations (urgent, near the top) */}
+      <PendingInvitationsWidget />
+
       {/* Profile completion (hides when fully complete) */}
       <ProfileCompletionWidget />
+
+      {/* Upcoming events */}
+      <UpcomingEventsWidget />
+
+      {/* Activity feed */}
+      <ActivityFeedWidget />
+
+      {/* Recently viewed */}
+      <RecentlyViewedWorldsWidget />
 
       {/* ─── Quick actions ─── */}
       <div className="mb-6">
@@ -108,7 +156,7 @@ export default function DashboardOverviewPage() {
               <Link
                 key={w.worldId}
                 href={`/dashboard/worlds/${w.worldSlug}`}
-                className="bg-obsidian border-b border-bone/[0.06] sm:border-b-0 sm:nth-[odd]:border-r sm:nth-[odd]:border-bone/[0.06] hover:bg-bone/[0.03] transition px-4 py-3 flex items-center gap-3 no-underline"
+                className="bg-obsidian border-b border-bone/[0.06] sm:border-b-0 hover:bg-bone/[0.03] transition px-4 py-3 flex items-center gap-3 no-underline"
               >
                 {w.worldImageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
