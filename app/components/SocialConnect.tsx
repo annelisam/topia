@@ -175,17 +175,25 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
   }
 
   function readableError(err: unknown): string {
-    if (err instanceof Error) return err.message;
-    if (typeof err === 'string') return err;
-    if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message);
-    return 'Something went wrong — try again in a moment.';
+    const raw =
+      err instanceof Error ? err.message
+      : typeof err === 'string' ? err
+      : err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message)
+      : '';
+    // Privy throws "Login with X not allowed" when the provider isn't enabled in the dashboard.
+    if (/login with .* not allowed/i.test(raw)) {
+      return `${meta.display} isn't enabled yet — turn it on in dashboard.privy.io → Login Methods.`;
+    }
+    if (!raw) return 'Something went wrong — try again in a moment.';
+    return raw;
   }
 
   async function handleConnect() {
     setError(null);
     setBusy('connect');
     try {
-      callLink();
+      // Wrap in microtask so async throws from Privy SDK still land in our catch
+      await Promise.resolve().then(() => callLink());
       // Privy redirects to OAuth; the success effect above completes the round-trip.
     } catch (err) {
       console.error(`link ${provider} failed`, err);
