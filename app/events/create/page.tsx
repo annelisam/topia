@@ -118,44 +118,37 @@ export default function CreateEventPage() {
   const generateSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-  /** Cover media constraints. Stored as a data URL in events.image_url.
-   * Postgres `text` will accept anything, but we cap raw video at 6 MB
-   * (≈ 8 MB base64) and max 10 seconds so we don't blow up the row. */
-  const MAX_VIDEO_BYTES = 6 * 1024 * 1024;
+  /** Cover media constraints. Files are uploaded to Vercel Blob via
+   * /api/events/cover-upload and only the resulting URL is stored in
+   * events.image_url. That sidesteps Vercel's 4.5 MB JSON-body limit and
+   * lets the browser stream the video with byte-range requests. */
+  const MAX_VIDEO_BYTES = 25 * 1024 * 1024;   // generous — CDN-served
   const MAX_VIDEO_SECONDS = 10;
-  const MAX_GIF_BYTES = 6 * 1024 * 1024;
+  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
-    return new Promise((resolve) => {
+  // Compress a still image to a 1:1 JPEG Blob (kept client-side because
+  // it's basically free and shrinks the upload by 10–50×).
+  const compressImageToBlob = (file: File, maxWidth = 1200, quality = 0.85): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
+      img.onerror = () => reject(new Error('Could not decode image'));
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const w = img.width;
-        const h = img.height;
-        // For 1:1 crop — take the center square
-        const size = Math.min(w, h);
-        const sx = (w - size) / 2;
-        const sy = (h - size) / 2;
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
         const outSize = Math.min(size, maxWidth);
         canvas.width = outSize;
         canvas.height = outSize;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, sx, sy, size, size, 0, 0, outSize, outSize);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas encode failed')), 'image/jpeg', quality);
       };
       img.src = URL.createObjectURL(file);
     });
   };
 
-  // Read a File as a data URL (for gifs + videos we don't transcode)
-  const readAsDataURL = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onerror = () => reject(r.error);
-    r.onload = () => resolve(r.result as string);
-    r.readAsDataURL(file);
-  });
-
-  // Probe a video file's duration before accepting it
+  // Probe a video file's duration before uploading
   const getVideoDuration = (file: File): Promise<number> => new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const v = document.createElement('video');
@@ -166,6 +159,18 @@ export default function CreateEventPage() {
     v.src = url;
   });
 
+  // Upload a Blob/File to our cover-upload route, return the public URL
+  const uploadToBlob = async (file: Blob, filename: string): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file, filename);
+    const res = await fetch('/api/events/cover-upload', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || 'Upload failed');
+    return json.url as string;
+  };
+
+  const [uploading, setUploading] = useState(false);
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -175,9 +180,10 @@ export default function CreateEventPage() {
     const isGif = file.type === 'image/gif';
 
     try {
+      setUploading(true);
       if (isVideo) {
         if (file.size > MAX_VIDEO_BYTES) {
-          setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB. Trim it or compress first.`);
+          setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB. Compress first.`);
           return;
         }
         const duration = await getVideoDuration(file);
@@ -185,27 +191,36 @@ export default function CreateEventPage() {
           setError(`Video too long — max ${MAX_VIDEO_SECONDS}s (this one is ${duration.toFixed(1)}s).`);
           return;
         }
-        setImageUrl(await readAsDataURL(file));
+        const url = await uploadToBlob(file, file.name);
+        setImageUrl(url);
       } else if (isGif) {
-        if (file.size > MAX_GIF_BYTES) {
-          setError(`GIF too large — max ${Math.round(MAX_GIF_BYTES / 1024 / 1024)} MB. Try a smaller GIF.`);
+        if (file.size > MAX_IMAGE_BYTES) {
+          setError(`GIF too large — max ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`);
           return;
         }
-        setImageUrl(await readAsDataURL(file));
+        const url = await uploadToBlob(file, file.name);
+        setImageUrl(url);
       } else {
-        // Still image — compress to 1:1 JPEG
-        setImageUrl(await compressImage(file));
+        // Still image — compress, then upload
+        const compressed = await compressImageToBlob(file);
+        const url = await uploadToBlob(compressed, 'cover.jpg');
+        setImageUrl(url);
       }
     } catch (err) {
       console.error('cover upload failed', err);
-      setError(err instanceof Error ? err.message : 'Could not read that file');
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
     }
     // Reset the input so re-selecting the same file works
     e.target.value = '';
   };
 
-  // Sniff the data URL to decide which preview element to render
-  const coverIsVideo = imageUrl.startsWith('data:video/');
+  // Sniff the URL to decide which preview element to render. Now that
+  // covers are real blob URLs, we check the extension; legacy data: URLs
+  // still work via the data:video/ prefix.
+  const coverIsVideo = imageUrl.startsWith('data:video/') ||
+    /\.(mp4|mov|webm)(\?|#|$)/i.test(imageUrl);
 
   const insertMarkdown = (before: string, after: string, placeholder: string) => {
     const textarea = document.getElementById('description-editor') as HTMLTextAreaElement;
@@ -356,15 +371,16 @@ export default function CreateEventPage() {
             )}
             <div>
               <label
-                className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert"
+                className={`inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest transition-all rounded-lg theme-hover-invert ${uploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
                 style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
-                {imageUrl ? 'Change Cover' : 'Upload Cover'}
+                {uploading ? 'Uploading…' : imageUrl ? 'Change Cover' : 'Upload Cover'}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
                   onChange={handleImageUpload}
                   className="hidden"
+                  disabled={uploading}
                 />
               </label>
             </div>

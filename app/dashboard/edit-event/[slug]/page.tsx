@@ -203,16 +203,27 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
     });
   };
 
-  // Cover media constraints — mirrors /events/create
-  const MAX_VIDEO_BYTES = 6 * 1024 * 1024;
+  // Cover-media constraints — mirrors /events/create. Files go to Vercel
+  // Blob via /api/events/cover-upload; we only store the returned URL.
+  const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
   const MAX_VIDEO_SECONDS = 10;
-  const MAX_GIF_BYTES = 6 * 1024 * 1024;
+  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  const readAsDataURL = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onerror = () => reject(r.error);
-    r.onload = () => resolve(r.result as string);
-    r.readAsDataURL(file);
+  const compressImageToBlob = (file: File, maxWidth = 1200, quality = 0.85): Promise<Blob> => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('Could not decode image'));
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const sz = Math.min(img.width, img.height);
+      const sx = (img.width - sz) / 2;
+      const sy = (img.height - sz) / 2;
+      const outSize = Math.min(sz, maxWidth);
+      canvas.width = outSize;
+      canvas.height = outSize;
+      canvas.getContext('2d')?.drawImage(img, sx, sy, sz, sz, 0, 0, outSize, outSize);
+      canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas encode failed')), 'image/jpeg', quality);
+    };
+    img.src = URL.createObjectURL(file);
   });
 
   const getVideoDuration = (file: File): Promise<number> => new Promise((resolve, reject) => {
@@ -225,6 +236,17 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
     v.src = url;
   });
 
+  const uploadToBlob = async (file: Blob, filename: string): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file, filename);
+    const res = await fetch('/api/events/cover-upload', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || 'Upload failed');
+    return json.url as string;
+  };
+
+  const [uploading, setUploading] = useState(false);
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -232,34 +254,29 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
     const isVideo = file.type.startsWith('video/');
     const isGif = file.type === 'image/gif';
     try {
+      setUploading(true);
       if (isVideo) {
-        if (file.size > MAX_VIDEO_BYTES) {
-          setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB.`);
-          return;
-        }
+        if (file.size > MAX_VIDEO_BYTES) { setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB.`); return; }
         const duration = await getVideoDuration(file);
-        if (duration > MAX_VIDEO_SECONDS + 0.2) {
-          setError(`Video too long — max ${MAX_VIDEO_SECONDS}s (this one is ${duration.toFixed(1)}s).`);
-          return;
-        }
-        setImageUrl(await readAsDataURL(file));
+        if (duration > MAX_VIDEO_SECONDS + 0.2) { setError(`Video too long — max ${MAX_VIDEO_SECONDS}s.`); return; }
+        setImageUrl(await uploadToBlob(file, file.name));
       } else if (isGif) {
-        if (file.size > MAX_GIF_BYTES) {
-          setError(`GIF too large — max ${Math.round(MAX_GIF_BYTES / 1024 / 1024)} MB.`);
-          return;
-        }
-        setImageUrl(await readAsDataURL(file));
+        if (file.size > MAX_IMAGE_BYTES) { setError(`GIF too large — max ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`); return; }
+        setImageUrl(await uploadToBlob(file, file.name));
       } else {
-        setImageUrl(await compressImage(file));
+        const compressed = await compressImageToBlob(file);
+        setImageUrl(await uploadToBlob(compressed, 'cover.jpg'));
       }
     } catch (err) {
       console.error('cover upload failed', err);
-      setError(err instanceof Error ? err.message : 'Could not read that file');
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
     }
     e.target.value = '';
   };
 
-  const coverIsVideo = imageUrl.startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/.test(imageUrl.toLowerCase());
+  const coverIsVideo = imageUrl.startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/i.test(imageUrl);
 
   const insertMarkdown = (before: string, after: string, placeholder: string) => {
     const textarea = document.getElementById('description-editor') as HTMLTextAreaElement;
@@ -385,13 +402,14 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                 <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[13px] transition hover:opacity-80" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
               </div>
             )}
-            <label className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-              {imageUrl ? 'Change Cover' : 'Upload Cover'}
+            <label className={`inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest transition-all rounded-lg theme-hover-invert ${uploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`} style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+              {uploading ? 'Uploading…' : imageUrl ? 'Change Cover' : 'Upload Cover'}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
                 onChange={handleImageUpload}
                 className="hidden"
+                disabled={uploading}
               />
             </label>
           </div>
