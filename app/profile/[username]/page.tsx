@@ -30,6 +30,7 @@ interface PublicProfile {
   socialSpotify: string | null;
   socialLinkedin: string | null;
   socialSubstack: string | null;
+  socialFarcaster: string | null;
   roleTags: string | null;
   toolSlugs: string | null;
   path: string | null;
@@ -115,15 +116,48 @@ export default function PublicProfilePage() {
   const verifiedSet = new Set(
     (profile?.verifiedProviders ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   );
+
+  /** Pull a display handle from one of our stored URLs. */
+  function handleFromUrl(type: string, url: string | null): string | null {
+    if (!url) return null;
+    try {
+      const u = new URL(url.includes('://') ? url : `https://${url}`);
+      const parts = u.pathname.split('/').filter(Boolean);
+      switch (type) {
+        case 'twitter':
+        case 'instagram':
+        case 'farcaster':
+          return parts[0]?.replace(/^@/, '') ?? null;
+        case 'linkedin': {
+          const i = parts.indexOf('in');
+          return i >= 0 ? (parts[i + 1] ?? null) : null;
+        }
+        case 'spotify': {
+          const i = parts.indexOf('user');
+          return i >= 0 ? (parts[i + 1] ?? null) : null;
+        }
+        case 'soundcloud':
+          return parts[0] ?? null;
+        case 'substack':
+          return u.hostname.replace(/^www\./, '').split('.')[0] || null;
+        default:
+          return null;
+      }
+    } catch { return null; }
+  }
+
   const socialLinks = profile ? [
     { type: 'website',    url: profile.socialWebsite,    label: 'WEB',  verified: false },
     { type: 'twitter',    url: profile.socialTwitter,    label: 'X',    verified: verifiedSet.has('twitter') },
     { type: 'instagram',  url: profile.socialInstagram,  label: 'IG',   verified: verifiedSet.has('instagram') },
+    { type: 'farcaster',  url: profile.socialFarcaster,  label: 'FC',   verified: verifiedSet.has('farcaster') },
     { type: 'soundcloud', url: profile.socialSoundcloud, label: 'SC',   verified: false },
     { type: 'spotify',    url: profile.socialSpotify,    label: 'SPOT', verified: verifiedSet.has('spotify') },
     { type: 'linkedin',   url: profile.socialLinkedin,   label: 'LI',   verified: verifiedSet.has('linkedin') },
     { type: 'substack',   url: profile.socialSubstack,   label: 'SUB',  verified: false },
-  ].filter((l) => l.url) : [];
+  ]
+    .filter((l) => l.url)
+    .map((l) => ({ ...l, handle: l.verified ? handleFromUrl(l.type, l.url) : null })) : [];
 
   const memberSince = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
@@ -309,37 +343,58 @@ export default function PublicProfilePage() {
                         <div className="flex-1 min-w-0">
                           <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block mb-1.5">links</span>
                           {socialLinks.length > 0 ? (
-                            <div className="flex items-center flex-wrap gap-3">
-                              {socialLinks.map((link) => (
-                                <a
-                                  key={link.type}
-                                  href={link.url!}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`relative transition-colors ${link.verified ? 'text-bone/70 hover:text-bone' : 'text-bone/30 hover:text-bone/60'}`}
-                                  title={link.verified ? `${link.label} · verified` : link.label}
-                                  style={link.verified ? { color: config.hex } : undefined}
-                                >
-                                  <SocialIcon type={link.type} size={16} />
-                                  {link.verified && (
-                                    <span
-                                      className="absolute -top-1 -right-1.5 flex items-center justify-center rounded-full"
-                                      style={{
-                                        width: 9,
-                                        height: 9,
-                                        backgroundColor: config.hex,
-                                        color: config.textOn === 'text-obsidian' ? '#1a1a1a' : '#f5f0e8',
-                                        fontSize: 7,
-                                        fontWeight: 900,
-                                        lineHeight: 1,
-                                      }}
-                                      aria-label="verified"
+                            <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
+                              {socialLinks.map((link) => {
+                                if (link.verified) {
+                                  // Verified: pill with icon + ✓ + @handle, in path color
+                                  return (
+                                    <a
+                                      key={link.type}
+                                      href={link.url!}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border transition-all hover:bg-bone/[0.04] no-underline"
+                                      style={{ borderColor: `${config.hex}40`, color: config.hex }}
+                                      title={`${link.label} · verified`}
                                     >
-                                      ✓
-                                    </span>
-                                  )}
-                                </a>
-                              ))}
+                                      <SocialIcon type={link.type} size={12} />
+                                      {link.handle && (
+                                        <span
+                                          className="font-mono uppercase tracking-[1px]"
+                                          style={{ fontSize: 10, color: config.hex }}
+                                        >
+                                          @{link.handle}
+                                        </span>
+                                      )}
+                                      <span
+                                        className="font-mono"
+                                        style={{
+                                          fontSize: 9,
+                                          color: config.hex,
+                                          fontWeight: 900,
+                                          lineHeight: 1,
+                                        }}
+                                        aria-label="verified"
+                                      >
+                                        ✓
+                                      </span>
+                                    </a>
+                                  );
+                                }
+                                // Unverified pasted URL — just the icon
+                                return (
+                                  <a
+                                    key={link.type}
+                                    href={link.url!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-bone/30 hover:text-bone/60 transition-colors"
+                                    title={link.label}
+                                  >
+                                    <SocialIcon type={link.type} size={16} />
+                                  </a>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="font-mono text-[11px] text-bone/20">—</span>

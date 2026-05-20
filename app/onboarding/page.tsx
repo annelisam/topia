@@ -30,6 +30,7 @@ export interface WizardData {
   socialSpotify: string;
   socialLinkedin: string;
   socialSubstack: string;
+  socialFarcaster: string;
   toolSlugs: string[];
 }
 
@@ -47,6 +48,7 @@ const EMPTY_DATA: WizardData = {
   socialSpotify: '',
   socialLinkedin: '',
   socialSubstack: '',
+  socialFarcaster: '',
   toolSlugs: [],
 };
 
@@ -161,6 +163,7 @@ function OnboardingWizard() {
           socialSpotify: saved.socialSpotify ?? '',
           socialLinkedin: saved.socialLinkedin ?? '',
           socialSubstack: saved.socialSubstack ?? '',
+          socialFarcaster: saved.socialFarcaster ?? '',
           toolSlugs: saved.toolSlugs ? saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
         };
         // ?from=profile means user clicked "Redo intro" — start at welcome no matter what
@@ -288,6 +291,7 @@ function OnboardingWizard() {
             socialSpotify: state.data.socialSpotify,
             socialLinkedin: state.data.socialLinkedin,
             socialSubstack: state.data.socialSubstack,
+            socialFarcaster: state.data.socialFarcaster,
           }}
           onBack={back}
           onAdvance={(patch) => advance(patch)}

@@ -4,9 +4,9 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useEffect, useState } from 'react';
 import { SocialIcon } from './SocialIcons';
 
-export type SocialProvider = 'twitter' | 'instagram' | 'linkedin' | 'spotify';
+export type SocialProvider = 'twitter' | 'instagram' | 'linkedin' | 'spotify' | 'farcaster';
 
-const ALL_PROVIDERS: SocialProvider[] = ['twitter', 'instagram', 'linkedin', 'spotify'];
+const ALL_PROVIDERS: SocialProvider[] = ['twitter', 'instagram', 'linkedin', 'spotify', 'farcaster'];
 
 /**
  * Which providers should actually render in the UI. Driven by the
@@ -51,6 +51,9 @@ interface OAuthAccount {
   username?: string;
   name?: string;
   vanityName?: string;
+  /** Farcaster-only */
+  fid?: number;
+  displayName?: string;
 }
 
 /* ── Provider metadata table ───────────────────────────────── */
@@ -59,7 +62,7 @@ interface ProviderMeta {
   display: string;
   iconType: string;
   shortLabel: string;
-  oauthType: 'twitter_oauth' | 'instagram_oauth' | 'linkedin_oauth' | 'spotify_oauth';
+  oauthType: 'twitter_oauth' | 'instagram_oauth' | 'linkedin_oauth' | 'spotify_oauth' | 'farcaster';
   /** Build the canonical public-profile URL from a Privy linked account. */
   buildUrl: (a: OAuthAccount) => string;
   /** Visible label shown next to the green dot. */
@@ -131,6 +134,19 @@ const PROVIDER_META: Record<SocialProvider, ProviderMeta> = {
       } catch { return null; }
     },
   },
+  farcaster: {
+    display:    'Farcaster',
+    iconType:   'farcaster',
+    shortLabel: 'farcaster',
+    oauthType:  'farcaster',
+    buildUrl:   (a) => {
+      if (a.username) return `https://warpcast.com/${a.username}`;
+      if (a.fid)      return `https://warpcast.com/~/profiles/${a.fid}`;
+      return '';
+    },
+    buildLabel: (a) => a.username ? `@${a.username}` : (a.displayName || a.name || 'Connected'),
+    parseHandle: parsePathHandle,
+  },
 };
 
 /* ── Mapping: provider → social column name in DB ──────────── */
@@ -140,6 +156,7 @@ const SOCIAL_FIELD_NAME: Record<SocialProvider, string> = {
   instagram: 'socialInstagram',
   linkedin:  'socialLinkedin',
   spotify:   'socialSpotify',
+  farcaster: 'socialFarcaster',
 };
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -151,6 +168,7 @@ function findOAuthAccount(user: unknown, oauthType: ProviderMeta['oauthType']): 
     instagram?: OAuthAccount;
     linkedin?: OAuthAccount;
     spotify?: OAuthAccount;
+    farcaster?: OAuthAccount;
   } | null;
   if (!u) return null;
   // Convenience getters on user object (when available)
@@ -158,6 +176,7 @@ function findOAuthAccount(user: unknown, oauthType: ProviderMeta['oauthType']): 
   if (oauthType === 'instagram_oauth' && u.instagram) return u.instagram;
   if (oauthType === 'linkedin_oauth'  && u.linkedin)  return u.linkedin;
   if (oauthType === 'spotify_oauth'   && u.spotify)   return u.spotify;
+  if (oauthType === 'farcaster'       && u.farcaster) return u.farcaster;
   return u.linkedAccounts?.find((a) => a.type === oauthType) ?? null;
 }
 
@@ -223,6 +242,7 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     if (provider === 'instagram') return privy.linkInstagram();
     if (provider === 'linkedin')  return privy.linkLinkedIn();
     if (provider === 'spotify')   return privy.linkSpotify();
+    if (provider === 'farcaster') return privy.linkFarcaster();
   }
 
   async function callUnlink(subject: string) {
@@ -230,6 +250,12 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     if (provider === 'instagram') return privy.unlinkInstagram(subject);
     if (provider === 'linkedin')  return privy.unlinkLinkedIn(subject);
     if (provider === 'spotify')   return privy.unlinkSpotify(subject);
+    if (provider === 'farcaster') {
+      // Farcaster identifies linked accounts by numeric FID, not a string subject
+      const fid = linked?.fid;
+      if (!fid) throw new Error('No Farcaster fid found to unlink');
+      return privy.unlinkFarcaster(fid);
+    }
   }
 
   function readableError(err: unknown): string {
@@ -269,8 +295,9 @@ export default function SocialConnect({ provider, value, onChange, accent = '#e4
     setError(null);
     setBusy('disconnect');
     try {
-      if (linked?.subject) {
-        await callUnlink(linked.subject);
+      // Farcaster uses fid (number); other providers use subject (string).
+      if (linked && (linked.subject || linked.fid)) {
+        await callUnlink(linked.subject ?? '');
       }
       onChange('');
       await persistToDb(null, 'unverify');

@@ -12,6 +12,7 @@ export const SOCIAL_PLATFORMS = [
   { key: 'spotify', label: 'Spotify', placeholder: 'https://open.spotify.com/artist/...' },
   { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/handle' },
   { key: 'substack', label: 'Substack', placeholder: 'https://handle.substack.com' },
+  { key: 'farcaster', label: 'Farcaster', placeholder: 'https://warpcast.com/handle' },
 ] as const;
 
 /* ── SocialIcon ──────────────────────────────────────────────── */
@@ -66,6 +67,13 @@ export function SocialIcon({ type, size = 18 }: { type: string; size?: number })
           <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z" />
         </svg>
       );
+    case 'farcaster':
+      return (
+        <svg width={s} height={s} viewBox="0 0 1000 1000" fill="currentColor">
+          <path d="M257.778 155.556h484.444v688.889h-71.111V528.889h-.697c-7.86-87.212-81.156-155.556-170.414-155.556-89.258 0-162.554 68.344-170.414 155.556h-.697v315.556h-71.111V155.556z" />
+          <path d="M128.889 253.333l28.889 97.778h24.444v395.556c-12.273 0-22.222 9.949-22.222 22.222v26.667h-4.444c-12.273 0-22.222 9.949-22.222 22.222v26.667h248.889v-26.667c0-12.273-9.949-22.222-22.222-22.222h-4.444v-26.667c0-12.273-9.949-22.222-22.222-22.222h-26.667V253.333H128.889zM675.556 746.667c-12.273 0-22.222 9.949-22.222 22.222v26.667h-4.444c-12.273 0-22.222 9.949-22.222 22.222v26.667h248.889v-26.667c0-12.273-9.949-22.222-22.222-22.222h-4.444v-26.667c0-12.273-9.949-22.222-22.222-22.222V351.111h24.444l28.889-97.778H702.222v493.334h-26.666z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -81,6 +89,7 @@ const SOCIAL_LABELS: Record<string, string> = {
   spotify: 'Spotify',
   linkedin: 'LinkedIn',
   substack: 'Substack',
+  farcaster: 'Farcaster',
 };
 
 export function SocialIconLink({ type, url }: { type: string; url: string }) {

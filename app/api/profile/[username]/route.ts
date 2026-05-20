@@ -29,6 +29,7 @@ export async function GET(
         socialSpotify:    users.socialSpotify,
         socialLinkedin:   users.socialLinkedin,
         socialSubstack:   users.socialSubstack,
+        socialFarcaster:  users.socialFarcaster,
         roleTags:         users.roleTags,
         toolSlugs:        users.toolSlugs,
         path:             users.path,

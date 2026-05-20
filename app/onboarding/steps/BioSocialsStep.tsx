@@ -13,6 +13,7 @@ interface Socials {
   socialSpotify: string;
   socialLinkedin: string;
   socialSubstack: string;
+  socialFarcaster: string;
 }
 
 interface Props {
@@ -84,6 +85,7 @@ export default function BioSocialsStep({ step, total, config, initialBio, initia
               { p: 'instagram' as const, key: 'socialInstagram' as const },
               { p: 'linkedin'  as const, key: 'socialLinkedin'  as const },
               { p: 'spotify'   as const, key: 'socialSpotify'   as const },
+              { p: 'farcaster' as const, key: 'socialFarcaster' as const },
             ] satisfies { p: SocialProvider; key: keyof Socials }[])
               .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
               .map(({ p, key }) => (

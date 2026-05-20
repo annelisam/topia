@@ -89,6 +89,7 @@ export default function ProfilePage() {
   const [socialSpotify, setSocialSpotify] = useState('');
   const [socialLinkedin, setSocialLinkedin] = useState('');
   const [socialSubstack, setSocialSubstack] = useState('');
+  const [socialFarcaster, setSocialFarcaster] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
@@ -137,6 +138,7 @@ export default function ProfilePage() {
           if (saved.socialSpotify)    setSocialSpotify(saved.socialSpotify);
           if (saved.socialLinkedin)   setSocialLinkedin(saved.socialLinkedin);
           if (saved.socialSubstack)   setSocialSubstack(saved.socialSubstack);
+          if (saved.socialFarcaster)  setSocialFarcaster(saved.socialFarcaster);
           if (saved.roleTags)        setSelectedRoles(saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean));
           if (saved.toolSlugs)       setSelectedTools(saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean));
         } else {
@@ -205,6 +207,7 @@ export default function ProfilePage() {
           socialSpotify,
           socialLinkedin,
           socialSubstack,
+          socialFarcaster,
           roleTags:  selectedRoles.join(',') || null,
           toolSlugs: selectedTools.join(',') || null,
         }),
@@ -646,6 +649,7 @@ export default function ProfilePage() {
                     { p: 'instagram' as const, v: socialInstagram, set: setSocialInstagram },
                     { p: 'linkedin'  as const, v: socialLinkedin,  set: setSocialLinkedin  },
                     { p: 'spotify'   as const, v: socialSpotify,   set: setSocialSpotify   },
+                    { p: 'farcaster' as const, v: socialFarcaster, set: setSocialFarcaster },
                   ] satisfies { p: SocialProvider; v: string; set: (s: string) => void }[])
                     .filter(({ p }) => ENABLED_SOCIAL_PROVIDERS.includes(p))
                     .map(({ p, v, set }) => (

@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     const socialSpotify     = norm(body, 'socialSpotify');
     const socialLinkedin    = norm(body, 'socialLinkedin');
     const socialSubstack    = norm(body, 'socialSubstack');
+    const socialFarcaster   = norm(body, 'socialFarcaster');
     const roleTags          = 'roleTags'  in body ? body.roleTags  : undefined;
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
     const path              = norm(body, 'path');
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
           socialSpotify:    socialSpotify   !== undefined ? socialSpotify   : prev.socialSpotify,
           socialLinkedin:   socialLinkedin  !== undefined ? socialLinkedin  : prev.socialLinkedin,
           socialSubstack:   socialSubstack  !== undefined ? socialSubstack  : prev.socialSubstack,
+          socialFarcaster:  socialFarcaster !== undefined ? socialFarcaster : prev.socialFarcaster,
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
           path:             path            !== undefined ? path            : prev.path,
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
         socialSpotify:    socialSpotify   ?? null,
         socialLinkedin:   socialLinkedin  ?? null,
         socialSubstack:   socialSubstack  ?? null,
+        socialFarcaster:  socialFarcaster ?? null,
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
         path:             path            ?? null,
