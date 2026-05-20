@@ -325,7 +325,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
 
           {isPast && (
             <span
-              className="inline-block px-3 py-1 rounded-full font-mono text-[10px] uppercase tracking-widest font-bold mb-5"
+              className="inline-block px-3 py-1 rounded-full font-mono text-[13px] uppercase tracking-widest font-bold mb-5"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: 0.6 }}
             >
               Past Event
@@ -506,7 +506,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           {/* Description */}
           {event.description && (
             <section className="mb-10">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
+              <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
                 About
               </p>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>

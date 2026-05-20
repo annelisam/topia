@@ -9,7 +9,7 @@ import LoadingBar from '../../components/LoadingBar';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 const TOOL_CATEGORIES = [
   'AI', 'Audio', 'Video', 'Design', '3D', 'Animation', 'Music',

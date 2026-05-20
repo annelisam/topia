@@ -17,32 +17,32 @@ export default function DashboardOverviewPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{worldMemberships.length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Worlds</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Worlds</p>
         </div>
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{hostedEvents.length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Events</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Events</p>
         </div>
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{worldMemberships.filter(w => w.role === 'world_builder' || w.role === 'owner').length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Builder Roles</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Builder Roles</p>
         </div>
       </div>
 
       {/* Quick actions */}
       <div className="mb-8">
-        <p className="block font-mono text-[9px] uppercase tracking-[0.2em] mb-1.5 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Quick Actions</p>
+        <p className="block font-mono text-[12px] uppercase tracking-[0.2em] mb-1.5 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Quick Actions</p>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/create-event" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/dashboard/create-event" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             + Create Event
           </Link>
-          <Link href="/dashboard/submit-tool" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/dashboard/submit-tool" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             + Submit Tool
           </Link>
-          <Link href="/dashboard/submit-grant" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/dashboard/submit-grant" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             + Submit Grant
           </Link>
-          <Link href="/dashboard/create-world" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
+          <Link href="/dashboard/create-world" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
             + Create World
           </Link>
         </div>
@@ -50,7 +50,7 @@ export default function DashboardOverviewPage() {
 
       {/* Profile card */}
       <div className="border rounded-xl p-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-        <p className="block font-mono text-[9px] uppercase tracking-[0.2em] mb-3 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Profile</p>
+        <p className="block font-mono text-[12px] uppercase tracking-[0.2em] mb-3 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Profile</p>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full overflow-hidden border shrink-0" style={{ borderColor: 'var(--foreground)' }}>
             {profile?.avatarUrl ? (
@@ -72,7 +72,7 @@ export default function DashboardOverviewPage() {
               </p>
             )}
           </div>
-          <Link href="/profile" className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition shrink-0" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/profile" className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition shrink-0" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             Edit
           </Link>
         </div>

@@ -17,7 +17,7 @@ export function ToolPicker({ allTools, selected, onToggle, search, setSearch }: 
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selected.map(name => (
             <button key={name} type="button" onClick={() => onToggle(name)} className="flex items-center gap-1 px-2 py-0.5 border font-mono text-[11px] rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
-              {name}<span className="text-[9px] opacity-40 ml-0.5">×</span>
+              {name}<span className="text-[12px] opacity-40 ml-0.5">×</span>
             </button>
           ))}
         </div>

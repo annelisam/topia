@@ -502,7 +502,7 @@ function ToolTickerCard({ tool }: { tool: Tool }) {
           </div>
           {tool.featured && (
             <span
-              className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
+              className="text-[12px] uppercase tracking-widest px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
               style={{ background: 'var(--foreground)', color: 'var(--background)' }}
             >
               ★
@@ -518,7 +518,7 @@ function ToolTickerCard({ tool }: { tool: Tool }) {
         <div className="flex items-center justify-between">
           {firstTag && (
             <span
-              className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full"
+              className="text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-full"
               style={{ border: '1px solid var(--border-color)', color: 'var(--muted)' }}
             >
               {firstTag}
@@ -530,7 +530,7 @@ function ToolTickerCard({ tool }: { tool: Tool }) {
                 {tool.users.slice(0, 4).map((user, i) => (
                   <div
                     key={i}
-                    className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-[8px] uppercase font-bold"
+                    className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-[11px] uppercase font-bold"
                     style={{
                       border: '2px solid var(--surface)',
                       background: user.avatarUrl ? 'transparent' : 'var(--foreground)',
@@ -547,7 +547,7 @@ function ToolTickerCard({ tool }: { tool: Tool }) {
                 ))}
               </div>
               {tool.userCount > 4 && (
-                <span className="text-[10px] ml-1" style={{ color: 'var(--muted)' }}>
+                <span className="text-[13px] ml-1" style={{ color: 'var(--muted)' }}>
                   +{tool.userCount - 4}
                 </span>
               )}
@@ -588,7 +588,7 @@ function WorldCard({ world }: { world: World }) {
             </div>
           )}
           <div
-            className="absolute bottom-2 left-2 px-2 py-0.5 text-[10px] uppercase tracking-widest rounded-full"
+            className="absolute bottom-2 left-2 px-2 py-0.5 text-[13px] uppercase tracking-widest rounded-full"
             style={{ background: 'var(--color-yellow)', color: '#1a1a1a' }}
           >
             {world.category}
@@ -605,7 +605,7 @@ function WorldCard({ world }: { world: World }) {
             {world.description}
           </p>
           <div
-            className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-widest"
+            className="mt-2 flex items-center gap-2 text-[13px] uppercase tracking-widest"
             style={{ color: 'var(--muted)' }}
           >
             <span>{world.creatorName}</span>
@@ -743,14 +743,14 @@ function EventCardDeck({ events }: { events: Event[] }) {
                 )}
                 {isPast && (
                   <div
-                    className="absolute top-2 right-2 px-2 py-0.5 text-[10px] uppercase tracking-widest rounded-full"
+                    className="absolute top-2 right-2 px-2 py-0.5 text-[13px] uppercase tracking-widest rounded-full"
                     style={{ background: 'var(--foreground)', color: 'var(--background)' }}
                   >
                     Past
                   </div>
                 )}
                 <div
-                  className="absolute bottom-0 left-0 right-0 px-3 md:px-4 py-2 text-[10px] md:text-[11px] uppercase tracking-widest font-bold"
+                  className="absolute bottom-0 left-0 right-0 px-3 md:px-4 py-2 text-[13px] md:text-[11px] uppercase tracking-widest font-bold"
                   style={{
                     background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
                     color: '#fff',
@@ -769,13 +769,13 @@ function EventCardDeck({ events }: { events: Event[] }) {
                 </div>
                 <div className="flex items-center justify-between">
                   {event.city && (
-                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
+                    <span className="text-[13px] uppercase tracking-widest" style={{ color: 'var(--muted)' }}>
                       {event.city}
                     </span>
                   )}
                   {event.rsvpCount > 0 && (
                     <span
-                      className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full"
+                      className="text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-full"
                       style={{ background: 'var(--color-yellow)', color: '#1a1a1a' }}
                     >
                       {event.rsvpCount} going
@@ -913,14 +913,14 @@ export default function HomepageSections() {
           <ScrollReveal>
             <div className="px-6 md:px-12 flex items-center justify-between mt-6">
               <p
-                className="text-[10px] uppercase tracking-[0.3em]"
+                className="text-[13px] uppercase tracking-[0.3em]"
                 style={{ color: 'var(--muted)' }}
               >
                 ← Drag to explore →
               </p>
               <Link
                 href="/worlds"
-                className="text-[10px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
+                className="text-[13px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
                 style={{ color: 'var(--muted)' }}
               >
                 View All →
@@ -951,14 +951,14 @@ export default function HomepageSections() {
           <ScrollReveal>
             <div className="px-6 md:px-12 flex items-center justify-between mt-2">
               <p
-                className="text-[10px] uppercase tracking-[0.3em]"
+                className="text-[13px] uppercase tracking-[0.3em]"
                 style={{ color: 'var(--muted)' }}
               >
                 ← Drag to browse →
               </p>
               <Link
                 href="/resources/tools"
-                className="text-[10px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
+                className="text-[13px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
                 style={{ color: 'var(--muted)' }}
               >
                 View All →
@@ -989,14 +989,14 @@ export default function HomepageSections() {
           <ScrollReveal>
             <div className="px-6 md:px-12 flex items-center justify-between mt-4">
               <p
-                className="text-[10px] uppercase tracking-[0.3em]"
+                className="text-[13px] uppercase tracking-[0.3em]"
                 style={{ color: 'var(--muted)' }}
               >
                 Hover to peek · Click to RSVP
               </p>
               <Link
                 href="/events"
-                className="text-[10px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
+                className="text-[13px] tracking-[0.2em] uppercase transition-opacity hover:opacity-60"
                 style={{ color: 'var(--muted)' }}
               >
                 View All →

@@ -57,7 +57,7 @@ export default function AboutPage() {
       >
         <div className="max-w-3xl w-full relative">
           <span
-            className={`font-mono text-[8px] uppercase tracking-[3px] ${textSub} block mb-6`}
+            className={`font-mono text-[11px] uppercase tracking-[3px] ${textSub} block mb-6`}
           >
             {screen === 1
               ? 'about // origin'
@@ -149,7 +149,7 @@ export default function AboutPage() {
                       <h3 className="font-mono font-bold text-sm uppercase">
                         {m.name}
                       </h3>
-                      <p className="font-mono text-[9px] uppercase tracking-wider opacity-40">
+                      <p className="font-mono text-[12px] uppercase tracking-wider opacity-40">
                         {m.role}
                       </p>
                     </div>

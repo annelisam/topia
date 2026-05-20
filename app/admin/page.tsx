@@ -127,7 +127,7 @@ function generateSlug(name: string): string {
 function Badge({ label, active }: { label: string; active: boolean }) {
   return (
     <span
-      className="font-mono text-[9px] px-2 py-0.5 border"
+      className="font-mono text-[12px] px-2 py-0.5 border"
       style={{
         backgroundColor: active ? '#00FF88' : '#FF5C34',
         color: '#1a1a1a',
@@ -428,7 +428,7 @@ function WorldsTab() {
           </div>
           {form.worldBuilderIds.length > 1 && (
             <div className="mt-2 border border-[#1a1a1a] p-2" style={{ backgroundColor: '#ebe6de' }}>
-              <p className="font-mono text-[10px] uppercase tracking-widest mb-1 opacity-60" style={{ color: '#1a1a1a' }}>Display Order</p>
+              <p className="font-mono text-[13px] uppercase tracking-widest mb-1 opacity-60" style={{ color: '#1a1a1a' }}>Display Order</p>
               {form.worldBuilderIds.map((uid, idx) => {
                 const u = allUsers.find(u => u.id === uid);
                 return (
@@ -1123,7 +1123,7 @@ function UsersTab() {
                 <td className="px-3 py-2">{item.username ? `@${item.username}` : '—'}</td>
                 <td className="px-3 py-2 opacity-60">{item.email || '—'}</td>
                 <td className="px-3 py-2">
-                  <span className="font-mono text-[9px] px-2 py-0.5 border" style={{
+                  <span className="font-mono text-[12px] px-2 py-0.5 border" style={{
                     backgroundColor: item.role === 'admin' ? '#8B5CF6' : item.role === 'artist' ? '#3B82F6' : '#e5e5e5',
                     color: item.role === 'admin' || item.role === 'artist' ? '#fff' : '#1a1a1a',
                     borderColor: '#1a1a1a',
@@ -1135,7 +1135,7 @@ function UsersTab() {
                   {item.worldMemberships.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {item.worldMemberships.map(wm => (
-                        <span key={wm.worldId} className="font-mono text-[9px] px-1.5 py-0.5 border" style={{
+                        <span key={wm.worldId} className="font-mono text-[12px] px-1.5 py-0.5 border" style={{
                           backgroundColor: wm.role === 'world_builder' ? '#00FF88' : '#e5e5e5',
                           color: '#1a1a1a', borderColor: '#1a1a1a',
                         }}>
@@ -1182,7 +1182,7 @@ function UsersTab() {
         <Field label="Creative Roles">
           <div className="flex flex-wrap gap-1.5">
             {ROLE_TAGS.map(slug => (
-              <button key={slug} onClick={() => toggleRole(slug)} className="font-mono text-[10px] uppercase px-2 py-1 border transition-colors" style={{
+              <button key={slug} onClick={() => toggleRole(slug)} className="font-mono text-[13px] uppercase px-2 py-1 border transition-colors" style={{
                 borderColor: '#1a1a1a',
                 backgroundColor: selectedRoles.includes(slug) ? '#1a1a1a' : 'transparent',
                 color: selectedRoles.includes(slug) ? '#f5f0e8' : '#1a1a1a',
@@ -1207,7 +1207,7 @@ function UsersTab() {
             <div className="space-y-1">
               {modal.item.worldMemberships.map(wm => (
                 <div key={wm.worldId} className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] px-1.5 py-0.5 border" style={{
+                  <span className="font-mono text-[12px] px-1.5 py-0.5 border" style={{
                     backgroundColor: wm.role === 'world_builder' ? '#00FF88' : '#e5e5e5',
                     color: '#1a1a1a', borderColor: '#1a1a1a',
                   }}>

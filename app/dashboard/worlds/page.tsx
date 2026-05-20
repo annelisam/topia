@@ -22,7 +22,7 @@ export default function DashboardWorldsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl font-bold uppercase" style={{ color: 'var(--foreground)' }}>Worlds</h1>
         {hasBuilderRole && (
-          <Link href="/dashboard/create-world" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
+          <Link href="/dashboard/create-world" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
             + Create World
           </Link>
         )}
@@ -31,7 +31,7 @@ export default function DashboardWorldsPage() {
       {sortedWorlds.length === 0 ? (
         <div className="border rounded-xl p-10 text-center" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[13px] opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>You haven&apos;t joined any worlds yet</p>
-          <Link href="/worlds" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/worlds" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             Explore Worlds
           </Link>
         </div>
@@ -54,15 +54,15 @@ export default function DashboardWorldsPage() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="font-mono text-[13px] font-bold uppercase truncate" style={{ color: 'var(--foreground)' }}>{wm.worldTitle}</h3>
-                  <span className="font-mono text-[9px] uppercase tracking-wide opacity-40 shrink-0 mt-0.5" style={{ color: 'var(--foreground)' }}>
+                  <span className="font-mono text-[12px] uppercase tracking-wide opacity-40 shrink-0 mt-0.5" style={{ color: 'var(--foreground)' }}>
                     {wm.role === 'owner' ? 'Owner' : wm.role === 'world_builder' ? 'Builder' : 'Collab'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href={`/worlds/${wm.worldSlug}`} className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                  <Link href={`/worlds/${wm.worldSlug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                     View
                   </Link>
-                  <Link href={`/dashboard/worlds/${wm.worldSlug}`} className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
+                  <Link href={`/dashboard/worlds/${wm.worldSlug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
                     Manage
                   </Link>
                 </div>

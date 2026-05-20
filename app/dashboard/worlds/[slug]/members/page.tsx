@@ -135,7 +135,7 @@ export default function WorldMembersPage() {
           <div className="space-y-1.5">
             {sortedMembers.map(m => (
               <div key={m.userId} className="flex items-center gap-3 py-2 px-3 border rounded-lg" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}>
-                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[10px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.5 }}>
+                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.5 }}>
                   {(m.userName || m.userUsername)?.[0]?.toUpperCase() ?? '?'}
                 </div>
                 <span className="font-mono text-[12px] flex-1 truncate" style={{ color: 'var(--foreground)' }}>
@@ -149,14 +149,14 @@ export default function WorldMembersPage() {
                     value={m.role}
                     onChange={(e) => changeRole(m.userId, e.target.value)}
                     disabled={changingRole === m.userId}
-                    className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border rounded-lg bg-transparent cursor-pointer outline-none"
+                    className="font-mono text-[12px] uppercase tracking-widest px-2 py-0.5 border rounded-lg bg-transparent cursor-pointer outline-none"
                     style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: changingRole === m.userId ? 0.4 : 0.7 }}
                   >
                     <option value="world_builder">Builder</option>
                     <option value="collaborator">Collab</option>
                   </select>
                 ) : (
-                  <span className="font-mono text-[8px] uppercase tracking-widest px-2 py-0.5 border rounded-lg shrink-0 opacity-50" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                  <span className="font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border rounded-lg shrink-0 opacity-50" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                     {roleBadge(m.role)}
                   </span>
                 )}
@@ -180,11 +180,11 @@ export default function WorldMembersPage() {
           <div className="space-y-1.5">
             {pendingInvites.map(inv => (
               <div key={inv.invitationId} className="flex items-center gap-3 py-2 px-3 border rounded-lg opacity-60" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}>
-                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[10px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.3 }}>
+                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.3 }}>
                   {(inv.inviteeName || inv.inviteeUsername)?.[0]?.toUpperCase() ?? '?'}
                 </div>
                 <span className="font-mono text-[12px] flex-1" style={{ color: 'var(--foreground)' }}>{inv.inviteeUsername ? `@${inv.inviteeUsername}` : inv.inviteeName || 'Unknown'}</span>
-                <span className="font-mono text-[8px] uppercase tracking-widest px-2 py-0.5 border rounded-lg" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>Pending</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border rounded-lg" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>Pending</span>
               </div>
             ))}
           </div>
@@ -197,7 +197,7 @@ export default function WorldMembersPage() {
           <p className={labelCls} style={{ color: 'var(--foreground)' }}>Invite Member</p>
           <div className="flex gap-0.5 mb-3">
             {(['world_builder', 'collaborator'] as const).map(role => (
-              <button key={role} type="button" onClick={() => setMemberRole(role)} className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded transition-all cursor-pointer" style={memberRole === role ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.3 }}>
+              <button key={role} type="button" onClick={() => setMemberRole(role)} className="font-mono text-[12px] uppercase tracking-widest px-2 py-0.5 rounded transition-all cursor-pointer" style={memberRole === role ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.3 }}>
                 {role === 'world_builder' ? 'Builder' : 'Collaborator'}
               </button>
             ))}
@@ -211,7 +211,7 @@ export default function WorldMembersPage() {
                 ) : (
                   memberSearchResults.filter(u => !members.some(m => m.userId === u.id) && !pendingInvites.some(i => i.inviteeId === u.id)).map(u => (
                     <button key={u.id} type="button" onClick={() => addMember(u)} disabled={addingMember} className="w-full flex items-center gap-2.5 px-3 py-2 hover:opacity-70 transition text-left border-b last:border-b-0 disabled:opacity-40" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[9px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)' }}>
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)' }}>
                         {(u.name || u.username)?.[0]?.toUpperCase() ?? '?'}
                       </div>
                       <span className="font-mono text-[12px] truncate" style={{ color: 'var(--foreground)' }}>
@@ -235,7 +235,7 @@ export default function WorldMembersPage() {
           {!confirmLeave ? (
             <button
               onClick={() => setConfirmLeave(true)}
-              className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
+              className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
               style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
             >
               Leave this world
@@ -245,14 +245,14 @@ export default function WorldMembersPage() {
               <p className="font-mono text-[11px] opacity-60" style={{ color: 'var(--foreground)' }}>Are you sure?</p>
               <button
                 onClick={() => removeMember(currentUserId)}
-                className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-80 transition"
+                className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-80 transition"
                 style={{ backgroundColor: '#FF5C34', color: '#fff' }}
               >
                 Yes, leave
               </button>
               <button
                 onClick={() => setConfirmLeave(false)}
-                className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
+                className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
                 style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
               >
                 Cancel
@@ -265,13 +265,13 @@ export default function WorldMembersPage() {
       {/* Delete world — owner only */}
       {isOwner && (
         <div className="border rounded-xl p-5" style={{ borderColor: '#FF5C34', backgroundColor: 'color-mix(in srgb, #FF5C34 3%, var(--surface))' }}>
-          <p className="block font-mono text-[9px] uppercase tracking-[0.2em] mb-1.5 font-bold" style={{ color: '#FF5C34' }}>Danger Zone</p>
+          <p className="block font-mono text-[12px] uppercase tracking-[0.2em] mb-1.5 font-bold" style={{ color: '#FF5C34' }}>Danger Zone</p>
           <p className="font-mono text-[11px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>
             Permanently delete this world and all its projects, members, and invitations. This cannot be undone.
           </p>
           <div className="flex flex-col gap-3">
             <div>
-              <label className="font-mono text-[10px] opacity-50 mb-1 block" style={{ color: 'var(--foreground)' }}>
+              <label className="font-mono text-[13px] opacity-50 mb-1 block" style={{ color: 'var(--foreground)' }}>
                 Type <strong>DELETE</strong> to confirm
               </label>
               <input
@@ -286,7 +286,7 @@ export default function WorldMembersPage() {
             <button
               onClick={deleteWorld}
               disabled={deleteConfirm !== 'DELETE' || deleting}
-              className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition disabled:opacity-20 w-fit"
+              className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg transition disabled:opacity-20 w-fit"
               style={{ backgroundColor: '#FF5C34', color: '#fff' }}
             >
               {deleting ? 'Deleting...' : 'Delete World'}

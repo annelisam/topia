@@ -433,7 +433,7 @@ export default function WaitlistPage() {
             href="https://www.instagram.com/topia.vision"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
+            className="font-mono text-[13px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
             style={{ color: '#e8e4dc' }}
           >
             Instagram
@@ -442,14 +442,14 @@ export default function WaitlistPage() {
             href="https://x.com/TopiaTV"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
+            className="font-mono text-[13px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
             style={{ color: '#e8e4dc' }}
           >
             X
           </a>
           <a
             href="mailto:contact@topia.vision"
-            className="font-mono text-[10px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
+            className="font-mono text-[13px] sm:text-[11px] uppercase tracking-wide opacity-30 hover:opacity-60 transition"
             style={{ color: '#e8e4dc' }}
           >
             Contact

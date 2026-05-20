@@ -19,15 +19,15 @@ export default function WorldOverviewPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{projects.length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Projects</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Projects</p>
         </div>
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{members.length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Members</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Members</p>
         </div>
         <div className="border rounded-xl p-4" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[28px] font-bold leading-none mb-1" style={{ color: 'var(--foreground)' }}>{pendingInvites.length}</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Pending Invites</p>
+          <p className="font-mono text-[13px] uppercase tracking-widest opacity-40" style={{ color: 'var(--foreground)' }}>Pending Invites</p>
         </div>
       </div>
 
@@ -36,13 +36,13 @@ export default function WorldOverviewPage() {
         <div className="mb-8">
           <p className={labelCls} style={{ color: 'var(--foreground)' }}>Quick Actions</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="./projects" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href="./projects" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               + Add Project
             </Link>
-            <Link href="./members" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href="./members" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               + Invite Member
             </Link>
-            <Link href="./details" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href="./details" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               Edit Details
             </Link>
           </div>

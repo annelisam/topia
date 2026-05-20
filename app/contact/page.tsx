@@ -23,7 +23,7 @@ export default function ContactPage() {
               style={{ backgroundColor: 'var(--accent, #e4fe52)' }}
             >
               <span
-                className="font-mono text-[7px] uppercase tracking-[2px] opacity-50"
+                className="font-mono text-[13px] uppercase tracking-[2px] opacity-50"
                 style={{ color: 'var(--accent-text, #1a1a1a)' }}
               >
                 contact // connect
@@ -36,10 +36,10 @@ export default function ContactPage() {
               </h1>
             </div>
             <div className="bg-obsidian border-l border-bone/[0.04] p-4 flex flex-col justify-end">
-              <span className="font-mono text-[8px] text-bone">
+              <span className="font-mono text-[11px] text-bone">
                 we&apos;re here. let&apos;s talk.
               </span>
-              <span className="font-mono text-[7px] text-bone mt-2">
+              <span className="font-mono text-[13px] text-bone mt-2">
                 culture before tech. depth before data.
               </span>
             </div>
@@ -67,7 +67,7 @@ export default function ContactPage() {
 
             {/* Right — contact links */}
             <div className="bg-obsidian border-l border-bone/[0.04] p-6 md:p-8 flex flex-col justify-center">
-              <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone block mb-6">
+              <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone block mb-6">
                 channels
               </span>
               <div
@@ -83,7 +83,7 @@ export default function ContactPage() {
                     <span className="font-mono text-[13px] text-bone group-hover:text-lime transition-colors">
                       hello@topia.vision
                     </span>
-                    <span className="font-mono text-[8px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
                       email
                     </span>
                   </div>
@@ -98,7 +98,7 @@ export default function ContactPage() {
                     <span className="font-mono text-[13px] text-bone group-hover:text-pink transition-colors">
                       @topia.vision
                     </span>
-                    <span className="font-mono text-[8px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
                       instagram
                     </span>
                   </div>
@@ -113,7 +113,7 @@ export default function ContactPage() {
                     <span className="font-mono text-[13px] text-bone group-hover:text-blue transition-colors">
                       @TopiaTV
                     </span>
-                    <span className="font-mono text-[8px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
                       twitter
                     </span>
                   </div>

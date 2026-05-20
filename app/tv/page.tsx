@@ -48,17 +48,17 @@ export default function TVPage() {
 
             {/* ROW 1 — Header */}
             <div className="p-4 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
-              <span className="font-mono text-[9px] uppercase tracking-[2px] opacity-50" style={{ color: 'var(--accent-text, #1a1a1a)' }}>tv // watch</span>
+              <span className="font-mono text-[12px] uppercase tracking-[2px] opacity-50" style={{ color: 'var(--accent-text, #1a1a1a)' }}>tv // watch</span>
               <h1 className="font-basement font-black text-[clamp(24px,3vw,36px)] leading-[0.85] uppercase mt-1" style={{ color: 'var(--accent-text, #1a1a1a)' }}>TOPIA TV.</h1>
             </div>
             <div className="bg-obsidian px-4 py-3 flex flex-col justify-center">
               <div className="flex items-center gap-2 mb-1">
                 <button onClick={() => setTvMode('collective')}
-                  className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 transition-all bg-transparent border-none cursor-pointer ${tvMode === 'collective' ? 'text-bone bg-bone/15' : 'text-bone/30 hover:text-bone/50'}`}>
+                  className={`font-mono text-[13px] uppercase tracking-wider px-2 py-0.5 transition-all bg-transparent border-none cursor-pointer ${tvMode === 'collective' ? 'text-bone bg-bone/15' : 'text-bone/30 hover:text-bone/50'}`}>
                   Collective
                 </button>
                 <button onClick={() => setTvMode('my-channel')}
-                  className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 transition-all bg-transparent border-none cursor-pointer ${tvMode === 'my-channel' ? 'text-bone bg-bone/15' : 'text-bone/30 hover:text-bone/50'}`}>
+                  className={`font-mono text-[13px] uppercase tracking-wider px-2 py-0.5 transition-all bg-transparent border-none cursor-pointer ${tvMode === 'my-channel' ? 'text-bone bg-bone/15' : 'text-bone/30 hover:text-bone/50'}`}>
                   My Channel
                 </button>
               </div>
@@ -79,7 +79,7 @@ export default function TVPage() {
                   const isActive = activeCategory === cat;
                   return (
                     <button key={cat} onClick={() => setActiveCategory(cat)}
-                      className={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 transition-all bg-transparent border-none cursor-pointer ${isActive ? `${cc ? cc.text : 'text-bone'} bg-bone/15` : 'text-bone/50 hover:text-bone'}`}>
+                      className={`font-mono text-[13px] uppercase tracking-wider px-2 py-1 transition-all bg-transparent border-none cursor-pointer ${isActive ? `${cc ? cc.text : 'text-bone'} bg-bone/15` : 'text-bone/50 hover:text-bone'}`}>
                       {cat}
                     </button>
                   );
@@ -93,7 +93,7 @@ export default function TVPage() {
                   placeholder="search..."
                   className="font-mono text-[11px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 placeholder:text-bone/15 px-2.5 py-1 rounded outline-none w-28 focus:w-40 transition-all"
                 />
-                <span className="font-mono text-[9px] text-bone/15 hidden md:inline shrink-0">{filtered.length} programs</span>
+                <span className="font-mono text-[12px] text-bone/15 hidden md:inline shrink-0">{filtered.length} programs</span>
               </div>
             </div>
 
@@ -117,7 +117,7 @@ export default function TVPage() {
                   <div className="absolute top-3 left-3 z-[5]">
                     {activeVideo && (
                       <div className={`${c?.bg} px-2 py-1 rounded-sm`}>
-                        <span className={`font-mono text-[10px] font-bold uppercase ${c?.textOn}`}>{activeVideo.category}</span>
+                        <span className={`font-mono text-[13px] font-bold uppercase ${c?.textOn}`}>{activeVideo.category}</span>
                       </div>
                     )}
                   </div>
@@ -149,7 +149,7 @@ export default function TVPage() {
                             <button className="text-bone hover:text-bone transition-colors bg-transparent border-none cursor-pointer">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.5 3v18L22 12 11.5 3zm-11 0v18L11 12 .5 3z"/></svg>
                             </button>
-                            <span className="font-mono text-[10px] text-bone">12:34 / {activeVideo.duration}</span>
+                            <span className="font-mono text-[13px] text-bone">12:34 / {activeVideo.duration}</span>
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -170,7 +170,7 @@ export default function TVPage() {
                     ) : (
                       <div>
                         <span className="font-basement font-black text-[clamp(24px,2vw,28px)] uppercase text-bone/60">NOW STREAMING</span>
-                        <span className="font-mono text-[10px] text-bone/25 block mt-1">select a program from the guide →</span>
+                        <span className="font-mono text-[13px] text-bone/25 block mt-1">select a program from the guide →</span>
                       </div>
                     )}
                   </div>
@@ -188,7 +188,7 @@ export default function TVPage() {
               <div className="absolute inset-0 pointer-events-none opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(245,240,232,1) 47px, rgba(245,240,232,1) 48px)' }} />
 
               <div className="relative z-10 px-3 py-2 border-b border-bone/[0.06]">
-                <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25">tv guide // {filtered.length} programs</span>
+                <span className="font-mono text-[12px] uppercase tracking-[2px] text-bone/25">tv guide // {filtered.length} programs</span>
               </div>
 
               <div className="relative z-10">
@@ -206,15 +206,15 @@ export default function TVPage() {
                       <div className={`w-1 shrink-0 ${ic.dot}`} />
 
                       <div className="w-16 shrink-0 px-2 py-3 flex items-center border-r border-bone/[0.04]">
-                        <span className={`font-mono text-[10px] ${isActive ? 'text-bone/70' : 'text-bone/25'} transition-colors`}>{timeSlot}</span>
+                        <span className={`font-mono text-[13px] ${isActive ? 'text-bone/70' : 'text-bone/25'} transition-colors`}>{timeSlot}</span>
                       </div>
 
                       <div className="flex-1 px-3 py-3 min-w-0">
                         <span className={`font-mono text-[12px] font-bold block truncate ${isActive ? ic.text : 'text-bone'} transition-colors`}>{item.title}</span>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-[9px] text-bone/30">{item.category}</span>
-                          <span className="font-mono text-[9px] text-bone/20">·</span>
-                          <span className="font-mono text-[9px] text-bone/30">{item.duration}</span>
+                          <span className="font-mono text-[12px] text-bone/30">{item.category}</span>
+                          <span className="font-mono text-[12px] text-bone/20">·</span>
+                          <span className="font-mono text-[12px] text-bone/30">{item.duration}</span>
                         </div>
                       </div>
 
@@ -228,7 +228,7 @@ export default function TVPage() {
               </div>
 
               <div className="relative z-10 px-3 py-2 border-t border-bone/[0.06]">
-                <span className="font-mono text-[9px] text-bone/15 uppercase tracking-wider">topia://tv</span>
+                <span className="font-mono text-[12px] text-bone/15 uppercase tracking-wider">topia://tv</span>
               </div>
             </div>
 

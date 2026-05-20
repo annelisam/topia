@@ -69,7 +69,7 @@ export default function ColorSlider() {
           onChange={handleChange}
           className="relative w-full h-6 appearance-none bg-transparent cursor-pointer z-10"
         />
-        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 font-mono text-[7px] uppercase tracking-[2px]"
+        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 font-mono text-[13px] uppercase tracking-[2px]"
           style={{ color: 'var(--page-text)', opacity: 0.2 }}
         >
           {current.name}

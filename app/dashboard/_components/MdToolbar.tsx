@@ -9,7 +9,7 @@ export function MdToolbar({ tid, value, onChange }: { tid: string; value: string
     onChange(value.substring(0, s) + before + sel + after + value.substring(e));
     setTimeout(() => { ta.focus(); const pos = s + before.length; ta.setSelectionRange(pos, pos + sel.length); }, 0);
   };
-  const bc = 'px-2 py-1 font-mono text-[10px] border rounded transition hover:opacity-70 cursor-pointer';
+  const bc = 'px-2 py-1 font-mono text-[13px] border rounded transition hover:opacity-70 cursor-pointer';
   const bs = { color: 'var(--foreground)', borderColor: 'var(--border-color)' };
   return (
     <div className="flex flex-wrap gap-1 mb-1.5">

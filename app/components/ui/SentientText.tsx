@@ -103,7 +103,7 @@ export default function SentientText() {
       {whispers.map(w => (
         <span
           key={w.id}
-          className="absolute font-mono text-[10px] md:text-[11px] uppercase tracking-[3px] select-none whitespace-nowrap"
+          className="absolute font-mono text-[13px] md:text-[11px] uppercase tracking-[3px] select-none whitespace-nowrap"
           style={{
             left: `${w.x}%`,
             top: `${w.y}%`,

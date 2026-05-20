@@ -65,14 +65,14 @@ export default function WorldDetailsPage() {
               <div className="mb-2 relative inline-block">
                 <img src={imageUrl} alt="" className="w-20 h-20 rounded-full object-cover border" style={{ borderColor: 'var(--border-color)' }} />
                 {isBuilder && (
-                  <button onClick={() => setImageUrl('')} className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[9px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
+                  <button onClick={() => setImageUrl('')} className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
                 )}
               </div>
             ) : (
               <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>No image</p>
             )}
             {isBuilder && (
-              <label className="inline-block px-3 py-2 border font-mono text-[10px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+              <label className="inline-block px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                 {imageUrl ? 'Change' : 'Upload'}
                 <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setImageUrl(await compressImage(f)); }} className="hidden" />
               </label>
@@ -84,14 +84,14 @@ export default function WorldDetailsPage() {
               <div className="mb-2 relative inline-block">
                 <img src={headerImageUrl} alt="" className="max-w-full h-20 object-cover border rounded-lg" style={{ borderColor: 'var(--border-color)' }} />
                 {isBuilder && (
-                  <button onClick={() => setHeaderImageUrl('')} className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[9px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
+                  <button onClick={() => setHeaderImageUrl('')} className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
                 )}
               </div>
             ) : (
               <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>No header image</p>
             )}
             {isBuilder && (
-              <label className="inline-block px-3 py-2 border font-mono text-[10px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+              <label className="inline-block px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                 {headerImageUrl ? 'Change' : 'Upload'}
                 <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setHeaderImageUrl(await compressImage(f, 1600)); }} className="hidden" />
               </label>
@@ -146,7 +146,7 @@ export default function WorldDetailsPage() {
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {selectedTools.length > 0 ? selectedTools.map(t => (
-                  <span key={t} className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>{t}</span>
+                  <span key={t} className="font-mono text-[13px] uppercase tracking-widest px-2.5 py-1 rounded-full border" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>{t}</span>
                 )) : (
                   <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>None</p>
                 )}

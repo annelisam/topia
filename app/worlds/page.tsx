@@ -326,7 +326,7 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ opacity: transitioning ? 0 : 1, transition: 'opacity 0.2s ease-out' }} />
       {transitioning && (
         <div className="absolute inset-0 flex items-center justify-center z-[3]">
-          <span className="font-mono text-[10px] uppercase tracking-wider animate-pulse" style={{ color: 'var(--foreground)', opacity: 0.3 }}>Loading constellation...</span>
+          <span className="font-mono text-[13px] uppercase tracking-wider animate-pulse" style={{ color: 'var(--foreground)', opacity: 0.3 }}>Loading constellation...</span>
         </div>
       )}
       <div
@@ -339,7 +339,7 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
             <div className="flex items-center gap-2 mb-1.5">
               <div className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[activeColor]}`} />
               {activeData.creatorName && (
-                <span className="font-mono text-[7px] uppercase tracking-[2px]" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
+                <span className="font-mono text-[13px] uppercase tracking-[2px]" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
                   {activeData.creatorName}
                 </span>
               )}
@@ -348,11 +348,11 @@ function GalaxyMap({ worlds, activeWorld, activeData, activeColor, onHover, onSe
               {activeData.title}
             </h3>
             {activeData.description && (
-              <p className="font-mono text-[9px] mt-2 leading-relaxed line-clamp-3" style={{ color: 'var(--foreground)', opacity: 0.45 }}>
+              <p className="font-mono text-[12px] mt-2 leading-relaxed line-clamp-3" style={{ color: 'var(--foreground)', opacity: 0.45 }}>
                 {activeData.description}
               </p>
             )}
-            <span className="font-mono text-[7px] uppercase tracking-[2px] block mt-2" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+            <span className="font-mono text-[13px] uppercase tracking-[2px] block mt-2" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
               click to enter →
             </span>
           </div>
@@ -423,7 +423,7 @@ export default function WorldsPage() {
 
               {/* ROW 1 — Title bar */}
               <div className="p-3 sm:p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
-                <span className="font-mono text-[7px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>
+                <span className="font-mono text-[11px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>
                   worlds // constellation
                 </span>
                 <h1 className="font-basement font-black text-[clamp(32px,5vw,64px)] leading-[0.85] uppercase mt-2" style={{ color: 'var(--accent-text, #1a1a1a)' }}>
@@ -431,9 +431,9 @@ export default function WorldsPage() {
                 </h1>
               </div>
               <div className="p-4 flex items-center justify-between" style={{ backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border-color)' }}>
-                <div>
-                  <span className="font-mono text-[8px] block" style={{ color: 'var(--foreground)' }}>every world is an ecosystem.</span>
-                  <span className="font-mono text-[8px] block" style={{ color: 'var(--foreground)' }}>built by creators, for their communities.</span>
+                <div className="leading-snug">
+                  <span className="font-mono text-[13px] block" style={{ color: 'var(--foreground)' }}>every world is an ecosystem.</span>
+                  <span className="font-mono text-[13px] block opacity-70" style={{ color: 'var(--foreground)' }}>built by creators, for their communities.</span>
                 </div>
                 <div className="w-12 h-12 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 8%, transparent)' }}>
                   <img src="/brand/logo-white.png" alt="" className="w-8 h-8 opacity-40 dark:opacity-40" style={{ filter: isDark ? 'none' : 'invert(1)' }} />
@@ -448,24 +448,24 @@ export default function WorldsPage() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="search..."
-                    className="font-mono text-[9px] bg-transparent rounded outline-none w-32 focus:w-48 transition-all"
+                    className="font-mono text-[12px] bg-transparent rounded outline-none w-32 focus:w-48 transition-all"
                     style={{ color: 'var(--foreground)', border: '1px solid var(--border-color)', padding: '4px 10px' }}
                   />
-                  <span className="font-mono text-[9px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>←</span>
-                  <span className="font-mono text-[10px] tracking-wider">
+                  <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>←</span>
+                  <span className="font-mono text-[13px] tracking-wider">
                     {active ? (
                       <><span style={{ color: 'var(--foreground)', opacity: 0.25 }}>world:</span> <span className={`font-bold ${COLOR_TEXT[activeColor]}`}>{active.title}</span></>
                     ) : (
                       <span style={{ color: 'var(--foreground)', opacity: 0.25 }}>hover a world to explore</span>
                     )}
                   </span>
-                  <span className="font-mono text-[9px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>→</span>
+                  <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>→</span>
                 </div>
                 <div className="flex gap-1.5">
                   {allWorlds.slice(0, 7).map((w, i) => (
                     <div key={w.slug} className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[COLOR_CYCLE[i % COLOR_CYCLE.length]]} ${activeWorld === w.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} />
                   ))}
-                  {allWorlds.length > 7 && <span className="font-mono text-[7px] ml-1" style={{ color: 'var(--foreground)', opacity: 0.15 }}>+{allWorlds.length - 7}</span>}
+                  {allWorlds.length > 7 && <span className="font-mono text-[13px] ml-1" style={{ color: 'var(--foreground)', opacity: 0.15 }}>+{allWorlds.length - 7}</span>}
                 </div>
               </div>
 
@@ -476,7 +476,7 @@ export default function WorldsPage() {
                 <div className="relative h-[250px] sm:h-[300px] md:h-auto md:min-h-[200px]" style={{ backgroundColor: 'var(--surface)' }}>
                   {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-mono text-[10px] uppercase tracking-wider animate-pulse" style={{ color: 'var(--foreground)', opacity: 0.3 }}>Loading constellation...</span>
+                      <span className="font-mono text-[13px] uppercase tracking-wider animate-pulse" style={{ color: 'var(--foreground)', opacity: 0.3 }}>Loading constellation...</span>
                     </div>
                   ) : (
                     <GalaxyMap
@@ -491,11 +491,11 @@ export default function WorldsPage() {
                     />
                   )}
                   <div className="absolute bottom-2 left-3">
-                    <span className="font-mono text-[7px] uppercase tracking-wider" style={{ color: 'var(--foreground)', opacity: 0.15 }}>topia://constellation</span>
+                    <span className="font-mono text-[13px] uppercase tracking-wider" style={{ color: 'var(--foreground)', opacity: 0.15 }}>topia://constellation</span>
                   </div>
                   <button
                     onClick={() => setMapFullscreen(!mapFullscreen)}
-                    className="absolute top-3 right-3 z-[5] font-mono text-[9px] uppercase tracking-wider backdrop-blur-sm px-3 py-1.5 rounded transition-colors hover:opacity-80"
+                    className="absolute top-3 right-3 z-[5] font-mono text-[12px] uppercase tracking-wider backdrop-blur-sm px-3 py-1.5 rounded transition-colors hover:opacity-80"
                     style={{ color: 'var(--foreground)', opacity: 0.5, backgroundColor: 'color-mix(in srgb, var(--background) 60%, transparent)' }}
                   >
                     {mapFullscreen ? '← exit' : '⛶ expand'}
@@ -532,16 +532,16 @@ export default function WorldsPage() {
                           onMouseLeave={() => setActiveWorld(null)}
                         >
                           <div className="w-[28px] shrink-0 flex items-center justify-center">
-                            <span className="font-mono text-[7px]" style={{ color: 'var(--foreground)', opacity: 0.15 }}>{String(i + 1).padStart(2, '0')}</span>
+                            <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.15 }}>{String(i + 1).padStart(2, '0')}</span>
                           </div>
                           <div className={`w-[2px] shrink-0 self-stretch ${COLOR_DOT[color]}`} />
                           <div className="flex-1 px-3 py-2 min-w-0">
-                            <span className={`font-mono text-[10px] uppercase font-bold ${isActive ? COLOR_TEXT[color] : ''} transition-colors truncate block`} style={isActive ? {} : { color: 'var(--foreground)', opacity: 0.5 }}>
+                            <span className={`font-mono text-[13px] uppercase font-bold ${isActive ? COLOR_TEXT[color] : ''} transition-colors truncate block`} style={isActive ? {} : { color: 'var(--foreground)', opacity: 0.5 }}>
                               {world.title}
                             </span>
                           </div>
                           {world.creatorName && (
-                            <span className="font-mono text-[7px] pr-3 shrink-0" style={{ color: 'var(--foreground)', opacity: 0.2 }}>{world.creatorName}</span>
+                            <span className="font-mono text-[13px] pr-3 shrink-0" style={{ color: 'var(--foreground)', opacity: 0.2 }}>{world.creatorName}</span>
                           )}
                         </Link>
                       );
@@ -565,7 +565,7 @@ export default function WorldsPage() {
                       <div className="absolute bottom-0 left-0 right-0 p-5">
                         <div className="flex items-center gap-2 mb-2">
                           <div className={`w-2 h-2 rounded-full ${COLOR_DOT[activeColor]}`} />
-                          {active.creatorName && <span className="font-mono text-[7px] uppercase tracking-wider" style={{ color: 'var(--foreground)', opacity: 0.5 }}>{active.creatorName}</span>}
+                          {active.creatorName && <span className="font-mono text-[13px] uppercase tracking-wider" style={{ color: 'var(--foreground)', opacity: 0.5 }}>{active.creatorName}</span>}
                         </div>
                         <h2 className="font-basement font-black text-[clamp(24px,3vw,36px)] uppercase leading-[0.9]" style={{ color: 'var(--foreground)' }}>
                           {active.title}
@@ -576,12 +576,12 @@ export default function WorldsPage() {
                     {/* Bottom detail bar */}
                     <div className="grid grid-cols-[1fr_auto]" style={{ borderTop: '1px solid var(--border-color)' }}>
                       <div className="p-4">
-                        <p className="font-mono text-[10px] leading-relaxed mb-3" style={{ color: 'var(--foreground)', opacity: 0.4 }}>
+                        <p className="font-mono text-[13px] leading-relaxed mb-3" style={{ color: 'var(--foreground)', opacity: 0.4 }}>
                           {active.description || 'A world in the TOPIA constellation.'}
                         </p>
                         <div className="flex gap-2">
                           {['ecosystem', 'culture', 'community'].map(tag => (
-                            <span key={tag} className="font-mono text-[7px] uppercase tracking-wider px-2 py-0.5 rounded" style={{ color: 'var(--foreground)', opacity: 0.2, border: '1px solid var(--border-color)' }}>{tag}</span>
+                            <span key={tag} className="font-mono text-[13px] uppercase tracking-wider px-2 py-0.5 rounded" style={{ color: 'var(--foreground)', opacity: 0.2, border: '1px solid var(--border-color)' }}>{tag}</span>
                           ))}
                         </div>
                       </div>
@@ -590,7 +590,7 @@ export default function WorldsPage() {
                         className="flex items-center justify-center px-6 no-underline transition-opacity hover:opacity-80"
                         style={{ backgroundColor: `var(--${activeColor === 'lime' ? 'lime' : activeColor})` }}
                       >
-                        <span className="font-mono text-[9px] uppercase tracking-wider font-bold" style={{ color: activeColor === 'lime' || activeColor === 'green' ? '#1a1a1a' : '#f5f0e8' }}>
+                        <span className="font-mono text-[12px] uppercase tracking-wider font-bold" style={{ color: activeColor === 'lime' || activeColor === 'green' ? '#1a1a1a' : '#f5f0e8' }}>
                           enter →
                         </span>
                       </Link>
@@ -606,9 +606,9 @@ export default function WorldsPage() {
                       style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)' }}
                     />
                     <div className="absolute bottom-0 left-0 right-0 z-[4] p-5" style={{ background: `linear-gradient(to top, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface) 40%, transparent), transparent)` }}>
-                      <span className="font-mono text-[8px] uppercase tracking-wider block mb-2" style={{ color: 'var(--foreground)', opacity: 0.3 }}>featured</span>
+                      <span className="font-mono text-[11px] uppercase tracking-wider block mb-2" style={{ color: 'var(--foreground)', opacity: 0.3 }}>featured</span>
                       <span className="font-basement font-black text-[clamp(24px,2.5vw,28px)] uppercase" style={{ color: 'var(--foreground)', opacity: 0.8 }}>EXPLORE THE CONSTELLATION</span>
-                      <span className="font-mono text-[9px] block mt-2" style={{ color: 'var(--foreground)', opacity: 0.25 }}>hover a world to preview</span>
+                      <span className="font-mono text-[12px] block mt-2" style={{ color: 'var(--foreground)', opacity: 0.25 }}>hover a world to preview</span>
                     </div>
                   </div>
                 )}

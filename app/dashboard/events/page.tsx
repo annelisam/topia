@@ -10,7 +10,7 @@ export default function DashboardEventsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl font-bold uppercase" style={{ color: 'var(--foreground)' }}>Events</h1>
-        <Link href="/dashboard/create-event" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
+        <Link href="/dashboard/create-event" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
           + Create Event
         </Link>
       </div>
@@ -18,7 +18,7 @@ export default function DashboardEventsPage() {
       {hostedEvents.length === 0 ? (
         <div className="border rounded-xl p-10 text-center" style={{ borderColor: 'var(--border-color)' }}>
           <p className="font-mono text-[13px] opacity-40 mb-4" style={{ color: 'var(--foreground)' }}>You haven&apos;t hosted any events yet</p>
-          <Link href="/dashboard/create-event" className="font-mono text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+          <Link href="/dashboard/create-event" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
             Create an Event
           </Link>
         </div>
@@ -43,15 +43,15 @@ export default function DashboardEventsPage() {
               <div className="p-4">
                 <h3 className="font-mono text-[13px] font-bold uppercase truncate mb-1" style={{ color: 'var(--foreground)' }}>{ev.eventName}</h3>
                 {(ev.date || ev.city) && (
-                  <p className="font-mono text-[10px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>
+                  <p className="font-mono text-[13px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>
                     {[ev.date, ev.city].filter(Boolean).join(' \u00b7 ')}
                   </p>
                 )}
                 <div className="flex items-center gap-2">
-                  <Link href={`/events/${ev.slug}`} className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                  <Link href={`/events/${ev.slug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                     View
                   </Link>
-                  <Link href={`/dashboard/edit-event/${ev.slug}`} className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
+                  <Link href={`/dashboard/edit-event/${ev.slug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
                     Edit
                   </Link>
                 </div>

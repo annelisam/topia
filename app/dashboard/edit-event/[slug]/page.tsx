@@ -10,7 +10,7 @@ import Navigation from '../../../components/Navigation';
 import LoadingBar from '../../../components/LoadingBar';
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 const markdownComponents = {
   p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
@@ -323,7 +323,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
             {imageUrl && (
               <div className="mb-3 relative inline-block">
                 <img src={imageUrl} alt="preview" className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
-                <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[10px] transition hover:opacity-80" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
+                <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[13px] transition hover:opacity-80" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
               </div>
             )}
             <label className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
@@ -392,10 +392,10 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           {/* Description */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Description</label>
+              <label className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Description</label>
               <div className="flex gap-1">
-                <button type="button" onClick={() => setDescriptionPreview(false)} className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all" style={!descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.4 }}>Write</button>
-                <button type="button" onClick={() => setDescriptionPreview(true)} className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all" style={descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.4 }}>Preview</button>
+                <button type="button" onClick={() => setDescriptionPreview(false)} className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all" style={!descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.4 }}>Write</button>
+                <button type="button" onClick={() => setDescriptionPreview(true)} className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all" style={descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.4 }}>Preview</button>
               </div>
             </div>
             {!descriptionPreview ? (
@@ -435,7 +435,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                       {host.name || host.username || 'Unknown'}
                       {host.worldTitle && <span className="font-normal opacity-50"> · {host.worldTitle}</span>}
                     </p>
-                    <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
+                    <p className="font-mono text-[13px] opacity-40" style={{ color: 'var(--foreground)' }}>
                       {host.role === 'creator' ? 'Creator' : 'Co-host'}
                     </p>
                   </div>
@@ -467,13 +467,13 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                         {u.avatarUrl ? (
                           <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
                         ) : (
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[10px]" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>
                             {(u.name || u.username || '?')[0].toUpperCase()}
                           </div>
                         )}
                         <div>
                           <p className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>{u.name || u.username}</p>
-                          {u.username && <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>@{u.username}</p>}
+                          {u.username && <p className="font-mono text-[13px] opacity-40" style={{ color: 'var(--foreground)' }}>@{u.username}</p>}
                         </div>
                       </button>
                     ))}
@@ -509,7 +509,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                         {r.name || r.username || 'Unknown'}
                       </p>
                       {r.username && (
-                        <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>@{r.username}</p>
+                        <p className="font-mono text-[13px] opacity-40" style={{ color: 'var(--foreground)' }}>@{r.username}</p>
                       )}
                     </div>
                   </div>

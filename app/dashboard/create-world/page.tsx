@@ -9,7 +9,7 @@ import LoadingBar from '../../components/LoadingBar';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 const WORLD_CATEGORIES = [
   'Art', 'Music', 'Film', 'Gaming', 'Fashion', 'Technology',
@@ -173,7 +173,7 @@ export default function CreateWorldPage() {
               onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
               placeholder="https://..."
             />
-            <p className="font-mono text-[10px] opacity-40 mt-1" style={{ color: 'var(--foreground)' }}>
+            <p className="font-mono text-[13px] opacity-40 mt-1" style={{ color: 'var(--foreground)' }}>
               You can update this later from the world edit page.
             </p>
           </div>

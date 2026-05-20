@@ -169,7 +169,7 @@ export default function NotificationBell() {
         </svg>
         {unreadCount > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center font-mono text-[9px] font-bold"
+            className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center font-mono text-[12px] font-bold"
             style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -184,13 +184,13 @@ export default function NotificationBell() {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: 'var(--border-color)' }}>
-            <span className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+            <span className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
               Notifications
             </span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="font-mono text-[10px] uppercase tracking-tight opacity-50 hover:opacity-100 transition"
+                className="font-mono text-[13px] uppercase tracking-tight opacity-50 hover:opacity-100 transition"
                 style={{ color: 'var(--foreground)' }}
               >
                 Mark all read
@@ -252,7 +252,7 @@ export default function NotificationBell() {
                       <img src={n.actorAvatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
-                        <span className="font-mono text-[10px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                        <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
                           {n.actorName?.[0]?.toUpperCase() ?? '?'}
                         </span>
                       </div>
@@ -264,7 +264,7 @@ export default function NotificationBell() {
                     <p className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>
                       {notificationText()}
                     </p>
-                    <p className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>
+                    <p className="font-mono text-[13px] opacity-40" style={{ color: 'var(--foreground)' }}>
                       {timeAgo(n.createdAt)}
                     </p>
                     {/* Accept / Decline buttons for pending invites */}
@@ -278,7 +278,7 @@ export default function NotificationBell() {
                               : respondToInvite(n.metadata!.invitationId!, 'accept');
                           }}
                           disabled={respondingTo === n.metadata.invitationId}
-                          className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg transition hover:opacity-80 disabled:opacity-40"
+                          className="px-3 py-1 font-mono text-[13px] uppercase tracking-widest rounded-lg transition hover:opacity-80 disabled:opacity-40"
                           style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                         >
                           {respondingTo === n.metadata.invitationId ? '...' : 'Accept'}
@@ -291,7 +291,7 @@ export default function NotificationBell() {
                               : respondToInvite(n.metadata!.invitationId!, 'decline');
                           }}
                           disabled={respondingTo === n.metadata.invitationId}
-                          className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest rounded-lg border transition hover:opacity-80 disabled:opacity-40"
+                          className="px-3 py-1 font-mono text-[13px] uppercase tracking-widest rounded-lg border transition hover:opacity-80 disabled:opacity-40"
                           style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                         >
                           Decline
@@ -299,7 +299,7 @@ export default function NotificationBell() {
                       </div>
                     )}
                     {isRespondedInvite && (
-                      <p className="font-mono text-[10px] mt-1 opacity-50" style={{ color: n.type === 'world_invite_accepted_self' ? '#00AA55' : 'var(--foreground)' }}>
+                      <p className="font-mono text-[13px] mt-1 opacity-50" style={{ color: n.type === 'world_invite_accepted_self' ? '#00AA55' : 'var(--foreground)' }}>
                         {n.type === 'world_invite_accepted_self' ? 'Accepted' : 'Declined'}
                       </p>
                     )}

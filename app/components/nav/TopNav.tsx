@@ -43,7 +43,7 @@ export default function TopNav() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="font-mono font-normal text-[10px] tracking-wider uppercase opacity-50 hover:opacity-100 transition-opacity duration-300 bg-transparent border-none cursor-pointer flex items-center gap-2"
+            className="font-mono font-normal text-[13px] tracking-wider uppercase opacity-50 hover:opacity-100 transition-opacity duration-300 bg-transparent border-none cursor-pointer flex items-center gap-2"
             style={{ color: 'var(--page-text)' }}
           >
             Menu{' '}
@@ -69,7 +69,7 @@ export default function TopNav() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between px-4 py-3 font-mono text-[10px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
+                    className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
                     style={{ color: 'var(--page-text)' }}
                   >
                     <span>{link.label}</span>
@@ -81,7 +81,7 @@ export default function TopNav() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-3 font-mono text-[10px] tracking-wider uppercase opacity-30 hover:opacity-60 transition-all duration-200 no-underline"
+                      className="block px-4 py-3 font-mono text-[13px] tracking-wider uppercase opacity-30 hover:opacity-60 transition-all duration-200 no-underline"
                       style={{ color: 'var(--page-text)' }}
                     >
                       {link.label}

@@ -72,7 +72,7 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
             style={{ color: 'var(--page-text)', opacity: 0.4 }}
           >
             {link.icon}
-            <span className="font-mono text-[8px] uppercase tracking-wider">
+            <span className="font-mono text-[11px] uppercase tracking-wider">
               {link.label}
             </span>
           </Link>
@@ -89,7 +89,7 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
-          <span className="font-mono text-[8px] uppercase tracking-wider">Menu</span>
+          <span className="font-mono text-[11px] uppercase tracking-wider">Menu</span>
         </button>
       </div>
     </nav>

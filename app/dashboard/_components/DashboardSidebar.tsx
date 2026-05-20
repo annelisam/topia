@@ -69,7 +69,7 @@ export default function DashboardSidebar() {
             {currentWorld.worldImageUrl ? (
               <img src={currentWorld.worldImageUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[8px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                 {currentWorld.worldTitle[0]?.toUpperCase()}
               </div>
             )}
@@ -81,13 +81,13 @@ export default function DashboardSidebar() {
               <img src={profile.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
               <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: 'var(--foreground)' }}>
-                <span className="font-mono text-[9px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
+                <span className="font-mono text-[12px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
               </div>
             )}
             <span className="font-mono text-[11px] font-bold truncate flex-1 text-left">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
           </>
         )}
-        <span className="font-mono text-[10px] opacity-40 shrink-0" style={{ transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}>▾</span>
+        <span className="font-mono text-[13px] opacity-40 shrink-0" style={{ transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}>▾</span>
       </button>
 
       {/* Dropdown */}
@@ -111,17 +111,17 @@ export default function DashboardSidebar() {
               <img src={profile.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
             ) : (
               <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: 'var(--foreground)' }}>
-                <span className="font-mono text-[9px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
+                <span className="font-mono text-[12px] font-bold" style={{ color: 'var(--background)' }}>{(profile?.name?.[0] || profile?.username?.[0] || '?').toUpperCase()}</span>
               </div>
             )}
             <span className="font-mono text-[11px] flex-1 truncate">{profile?.username ? `@${profile.username}` : profile?.name || 'You'}</span>
-            {!currentWorld && <span className="font-mono text-[9px] opacity-40">●</span>}
+            {!currentWorld && <span className="font-mono text-[12px] opacity-40">●</span>}
           </Link>
 
           {/* World options */}
           {sortedWorlds.length > 0 && (
             <div className="py-1">
-              <p className="font-mono text-[8px] uppercase tracking-[0.2em] opacity-30 px-3 py-1" style={{ color: 'var(--foreground)' }}>Worlds</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-30 px-3 py-1" style={{ color: 'var(--foreground)' }}>Worlds</p>
               {sortedWorlds.map((w) => (
                 <Link
                   key={w.worldId}
@@ -136,15 +136,15 @@ export default function DashboardSidebar() {
                   {w.worldImageUrl ? (
                     <img src={w.worldImageUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[8px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                    <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                       {w.worldTitle[0]?.toUpperCase()}
                     </div>
                   )}
                   <span className="font-mono text-[11px] flex-1 truncate">{w.worldTitle}</span>
-                  <span className="font-mono text-[8px] uppercase tracking-wider opacity-30 shrink-0">
+                  <span className="font-mono text-[11px] uppercase tracking-wider opacity-30 shrink-0">
                     {w.role === 'owner' ? 'Owner' : w.role === 'world_builder' ? 'Builder' : 'Collab'}
                   </span>
-                  {currentWorldSlug === w.worldSlug && <span className="font-mono text-[9px] opacity-40">●</span>}
+                  {currentWorldSlug === w.worldSlug && <span className="font-mono text-[12px] opacity-40">●</span>}
                 </Link>
               ))}
             </div>
@@ -230,7 +230,7 @@ export default function DashboardSidebar() {
         {currentWorld ? (
           <Link
             href="/dashboard"
-            className="shrink-0 font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded opacity-40 hover:opacity-80 transition"
+            className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2 py-1 rounded opacity-40 hover:opacity-80 transition"
             style={{ color: 'var(--foreground)' }}
           >
             ←
@@ -239,7 +239,7 @@ export default function DashboardSidebar() {
 
         {currentWorld && (
           <span
-            className="shrink-0 font-mono text-[9px] font-bold uppercase tracking-wider px-1 truncate max-w-[80px] opacity-50"
+            className="shrink-0 font-mono text-[12px] font-bold uppercase tracking-wider px-1 truncate max-w-[80px] opacity-50"
             style={{ color: 'var(--foreground)' }}
           >
             {currentWorld.worldTitle}
@@ -251,7 +251,7 @@ export default function DashboardSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className="shrink-0 font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
+            className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
             style={{
               backgroundColor: isActive(item.href) ? 'var(--foreground)' : 'transparent',
               color: isActive(item.href) ? 'var(--background)' : 'var(--foreground)',
@@ -270,7 +270,7 @@ export default function DashboardSidebar() {
               <Link
                 key={w.worldId}
                 href={`/dashboard/worlds/${w.worldSlug}`}
-                className="shrink-0 font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
+                className="shrink-0 font-mono text-[13px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors"
                 style={{
                   color: 'var(--foreground)',
                   opacity: 0.4,

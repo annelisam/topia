@@ -27,7 +27,7 @@ export default function Footer() {
 
           {/* Connect */}
           <div>
-            <div className="font-mono text-[10px] tracking-wider uppercase opacity-40 mb-4">
+            <div className="font-mono text-[13px] tracking-wider uppercase opacity-40 mb-4">
               Connect
             </div>
             <div className="flex flex-col gap-3">
@@ -45,7 +45,7 @@ export default function Footer() {
 
           {/* Explore */}
           <div>
-            <div className="font-mono text-[10px] tracking-wider uppercase opacity-40 mb-4">
+            <div className="font-mono text-[13px] tracking-wider uppercase opacity-40 mb-4">
               Explore
             </div>
             <div className="flex flex-col gap-3">
@@ -61,10 +61,10 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 pt-6 border-t border-bone/[0.06] flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="font-mono text-[10px] uppercase tracking-wider opacity-30">
+          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
             &copy; {new Date().getFullYear()} TOPIA. All rights reserved.
           </span>
-          <span className="font-mono text-[10px] uppercase tracking-wider opacity-30">
+          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
             Culture first. Systems second. Ownership always.
           </span>
         </div>

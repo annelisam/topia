@@ -113,7 +113,7 @@ export default function AvatarMenu() {
                       className="w-full h-full flex items-center justify-center"
                       style={{ backgroundColor: 'var(--foreground)' }}
                     >
-                      <span className="font-mono text-[9px] font-bold" style={{ color: 'var(--background)' }}>
+                      <span className="font-mono text-[12px] font-bold" style={{ color: 'var(--background)' }}>
                         {initial}
                       </span>
                     </div>
@@ -157,7 +157,7 @@ export default function AvatarMenu() {
 
           {/* 3. My Worlds (builders first, then collaborators) */}
           <div className="px-4 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-wider opacity-50 mb-2" style={{ color: 'var(--foreground)' }}>
+            <div className="font-mono text-[13px] uppercase tracking-wider opacity-50 mb-2" style={{ color: 'var(--foreground)' }}>
               MY WORLDS
             </div>
             {sortedWorlds.length === 0 ? (
@@ -178,7 +178,7 @@ export default function AvatarMenu() {
                     </Link>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span
-                        className="font-mono text-[9px] uppercase opacity-40"
+                        className="font-mono text-[12px] uppercase opacity-40"
                         style={{ color: 'var(--foreground)' }}
                       >
                         {wm.role === 'owner' ? 'OWNER' : wm.role === 'world_builder' ? 'BUILDER' : 'COLLAB'}

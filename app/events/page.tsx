@@ -78,7 +78,7 @@ export default function EventsPage() {
                 style={{ backgroundColor: 'var(--accent, #e4fe52)' }}
               >
                 <span
-                  className="font-mono text-[7px] uppercase tracking-[2px]"
+                  className="font-mono text-[13px] uppercase tracking-[2px]"
                   style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}
                 >
                   events // gatherings
@@ -92,12 +92,12 @@ export default function EventsPage() {
               </div>
               <div className="bg-obsidian p-4 flex items-center justify-between border-l border-bone/[0.04]">
                 <div>
-                  <span className="font-mono text-[8px] text-bone block">every event tells a story.</span>
-                  <span className="font-mono text-[8px] text-bone block">gatherings, launches, sessions, rituals.</span>
+                  <span className="font-mono text-[11px] text-bone block">every event tells a story.</span>
+                  <span className="font-mono text-[11px] text-bone block">gatherings, launches, sessions, rituals.</span>
                 </div>
                 <Link
                   href="/dashboard/create-event"
-                  className="font-mono text-[9px] uppercase tracking-[2px] px-3 py-1.5 rounded no-underline transition-opacity hover:opacity-80 shrink-0 ml-3"
+                  className="font-mono text-[12px] uppercase tracking-[2px] px-3 py-1.5 rounded no-underline transition-opacity hover:opacity-80 shrink-0 ml-3"
                   style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
                 >
                   + create
@@ -112,10 +112,10 @@ export default function EventsPage() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="search..."
-                    className="font-mono text-[9px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 placeholder:text-bone/15 px-2.5 py-1 rounded outline-none w-32 focus:w-48 transition-all"
+                    className="font-mono text-[12px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 placeholder:text-bone/15 px-2.5 py-1 rounded outline-none w-32 focus:w-48 transition-all"
                   />
-                  <span className="font-mono text-[9px] text-bone/30">←</span>
-                  <span className="font-mono text-[10px] text-bone/50 tracking-wider truncate">
+                  <span className="font-mono text-[12px] text-bone/30">←</span>
+                  <span className="font-mono text-[13px] text-bone/50 tracking-wider truncate">
                     {preview ? (
                       <>
                         <span className="text-bone/25">event:</span>{' '}
@@ -127,10 +127,10 @@ export default function EventsPage() {
                       <span className="text-bone/25">hover an event to preview</span>
                     )}
                   </span>
-                  <span className="font-mono text-[9px] text-bone/30">→</span>
+                  <span className="font-mono text-[12px] text-bone/30">→</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="font-mono text-[8px] text-bone/30 uppercase tracking-[2px] hidden sm:inline">
+                  <span className="font-mono text-[11px] text-bone/30 uppercase tracking-[2px] hidden sm:inline">
                     <span className="text-bone/50">{upcoming.length}</span> upcoming
                     <span className="text-bone/15"> / </span>
                     <span className="text-bone/50">{past.length}</span> past
@@ -138,7 +138,7 @@ export default function EventsPage() {
                   <select
                     value={selectedCity}
                     onChange={e => setSelectedCity(e.target.value)}
-                    className="font-mono text-[9px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 px-2.5 py-1 rounded outline-none cursor-pointer transition-colors"
+                    className="font-mono text-[12px] bg-transparent border border-bone/[0.06] focus:border-bone/20 text-bone/60 px-2.5 py-1 rounded outline-none cursor-pointer transition-colors"
                   >
                     <option value="" className="bg-obsidian">all locations</option>
                     {cities.map(c => (
@@ -174,13 +174,13 @@ export default function EventsPage() {
                 <div className="relative z-10">
                   {loading ? (
                     <div className="flex items-center justify-center min-h-[240px]">
-                      <span className="font-mono text-[10px] text-bone/30 uppercase tracking-[2px]">
+                      <span className="font-mono text-[13px] text-bone/30 uppercase tracking-[2px]">
                         Loading events...
                       </span>
                     </div>
                   ) : allSorted.length === 0 ? (
                     <div className="flex items-center justify-center min-h-[240px]">
-                      <span className="font-mono text-[10px] text-bone/30 uppercase tracking-[2px]">
+                      <span className="font-mono text-[13px] text-bone/30 uppercase tracking-[2px]">
                         {selectedCity ? `no events in ${selectedCity}` : 'no events yet'}
                       </span>
                     </div>
@@ -200,7 +200,7 @@ export default function EventsPage() {
                           onMouseLeave={() => setHoveredEvent(null)}
                         >
                           <div className="w-[28px] shrink-0 flex items-center justify-center">
-                            <span className="font-mono text-[7px] text-bone/15">
+                            <span className="font-mono text-[13px] text-bone/15">
                               {String(i + 1).padStart(2, '0')}
                             </span>
                           </div>
@@ -210,20 +210,20 @@ export default function EventsPage() {
                           />
                           <div className="flex-1 px-3 py-2 min-w-0">
                             <span
-                              className={`font-mono text-[10px] uppercase font-bold transition-colors truncate block ${
+                              className={`font-mono text-[13px] uppercase font-bold transition-colors truncate block ${
                                 isActive ? (isPast ? 'text-orange' : 'text-bone') : 'text-bone/50'
                               }`}
                             >
                               {event.eventName}
                             </span>
-                            <span className="font-mono text-[7px] text-bone/25 uppercase tracking-[1.5px] block mt-0.5 truncate">
+                            <span className="font-mono text-[13px] text-bone/25 uppercase tracking-[1.5px] block mt-0.5 truncate">
                               {event.date || 'tbd'}
                               {event.city ? ` · ${event.city}` : ''}
                               {isPast ? ' · past' : ''}
                             </span>
                           </div>
                           {event.rsvpCount != null && event.rsvpCount > 0 && (
-                            <span className="font-mono text-[7px] text-bone/25 pr-3 shrink-0 uppercase tracking-[1.5px]">
+                            <span className="font-mono text-[13px] text-bone/25 pr-3 shrink-0 uppercase tracking-[1.5px]">
                               {event.rsvpCount} going
                             </span>
                           )}
@@ -269,12 +269,12 @@ export default function EventsPage() {
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: previewIsPast ? 'var(--orange)' : 'var(--accent)' }}
                           />
-                          <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/50">
+                          <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone/50">
                             {preview.date || 'date tbd'}
                             {preview.startTime ? ` · ${preview.startTime}` : ''}
                           </span>
                           {previewIsPast && (
-                            <span className="font-mono text-[7px] uppercase tracking-[2px] text-orange/70">
+                            <span className="font-mono text-[13px] uppercase tracking-[2px] text-orange/70">
                               past
                             </span>
                           )}
@@ -283,7 +283,7 @@ export default function EventsPage() {
                           {preview.eventName}
                         </h2>
                         {preview.city && (
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/40 block mt-2">
+                          <span className="font-mono text-[12px] uppercase tracking-[2px] text-bone/40 block mt-2">
                             {preview.city}
                           </span>
                         )}
@@ -304,38 +304,38 @@ export default function EventsPage() {
                                   {host.avatarUrl ? (
                                     <img src={host.avatarUrl} alt="" className="w-full h-full object-cover" />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-bone/15 font-mono text-[8px] text-bone/70">
+                                    <div className="w-full h-full flex items-center justify-center bg-bone/15 font-mono text-[11px] text-bone/70">
                                       {(host.name || host.username || '?')[0]?.toUpperCase()}
                                     </div>
                                   )}
                                 </div>
                               ))}
                             </div>
-                            <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/40 truncate">
+                            <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone/40 truncate">
                               hosted by {preview.hosts[0].name || preview.hosts[0].username}
                               {preview.hosts.length > 1 ? ` +${preview.hosts.length - 1}` : ''}
                             </span>
                           </div>
                         ) : (
-                          <p className="font-mono text-[10px] text-bone/40 leading-relaxed mb-3">
+                          <p className="font-mono text-[13px] text-bone/40 leading-relaxed mb-3">
                             An event in the TOPIA constellation.
                           </p>
                         )}
                         <div className="flex gap-2 flex-wrap">
-                          <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
+                          <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
                             {preview.rsvpCount || 0} going
                           </span>
                           {preview.city && (
-                            <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
+                            <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
                               {preview.city}
                             </span>
                           )}
                           {previewIsPast ? (
-                            <span className="font-mono text-[7px] uppercase tracking-[2px] text-orange/70 border border-orange/30 px-2 py-0.5 rounded">
+                            <span className="font-mono text-[13px] uppercase tracking-[2px] text-orange/70 border border-orange/30 px-2 py-0.5 rounded">
                               past
                             </span>
                           ) : (
-                            <span className="font-mono text-[7px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
+                            <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone/30 border border-bone/[0.08] px-2 py-0.5 rounded">
                               upcoming
                             </span>
                           )}
@@ -347,7 +347,7 @@ export default function EventsPage() {
                         style={{ backgroundColor: previewIsPast ? 'var(--orange)' : 'var(--accent)' }}
                       >
                         <span
-                          className="font-mono text-[9px] uppercase tracking-wider font-bold"
+                          className="font-mono text-[12px] uppercase tracking-wider font-bold"
                           style={{ color: previewIsPast ? '#f5f0e8' : 'var(--accent-text)' }}
                         >
                           enter →
@@ -377,13 +377,13 @@ export default function EventsPage() {
                       style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)' }}
                     />
                     <div className="absolute bottom-0 left-0 right-0 z-[4] bg-gradient-to-t from-obsidian/90 via-obsidian/40 to-transparent p-5">
-                      <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30 block mb-2">
+                      <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 block mb-2">
                         upcoming
                       </span>
                       <span className="font-basement font-black text-[clamp(24px,2.5vw,28px)] uppercase text-bone/80 block">
                         DISCOVER GATHERINGS
                       </span>
-                      <span className="font-mono text-[9px] text-bone/25 block mt-2">
+                      <span className="font-mono text-[12px] text-bone/25 block mt-2">
                         hover an event to preview
                       </span>
                     </div>

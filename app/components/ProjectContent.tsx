@@ -124,7 +124,7 @@ export default function ProjectContent({
       {/* Tools used */}
       {toolTags.length > 0 && (
         <div className="mb-5">
-          <p className="font-mono text-[9px] uppercase tracking-[0.2em] mb-2 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Tools Used</p>
+          <p className="font-mono text-[12px] uppercase tracking-[0.2em] mb-2 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Tools Used</p>
           <div className="flex flex-wrap gap-1.5">
             {toolTags.map(tag => {
               const toolName = tag.replace('tool:', '');
@@ -133,7 +133,7 @@ export default function ProjectContent({
                 <a
                   key={tag}
                   href={`/resources/tools#${toolSlug}`}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border hover:opacity-70 transition inline-flex items-center gap-1"
+                  className="font-mono text-[13px] uppercase tracking-widest px-2.5 py-1 rounded-full border hover:opacity-70 transition inline-flex items-center gap-1"
                   style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
@@ -151,7 +151,7 @@ export default function ProjectContent({
           {regularTags.map(tag => (
             <span
               key={tag}
-              className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full border"
+              className="font-mono text-[13px] uppercase tracking-widest px-2.5 py-1 rounded-full border"
               style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
             >
               {tag}

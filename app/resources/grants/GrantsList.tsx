@@ -216,7 +216,7 @@ export default function GrantsList() {
                           </h3>
                           {closed && (
                             <span
-                              className="px-2 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold tracking-wide flex-shrink-0"
+                              className="px-2 py-0.5 rounded-full font-mono text-[13px] uppercase font-bold tracking-wide flex-shrink-0"
                               style={{ backgroundColor: '#C63A1E', color: '#fff' }}
                             >
                               CLOSED

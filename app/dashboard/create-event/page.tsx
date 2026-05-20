@@ -10,7 +10,7 @@ import Navigation from '../../components/Navigation';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
 
 /* ── Markdown preview components ──────────────────────────────── */
 
@@ -266,13 +266,13 @@ export default function CreateEventPage() {
           {/* Event Image (1:1) */}
           <div className="mb-6">
             <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Image</label>
-            <p className="font-mono text-[10px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>Square 1:1 ratio. Will be cropped to square if needed.</p>
+            <p className="font-mono text-[13px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>Square 1:1 ratio. Will be cropped to square if needed.</p>
             {imageUrl && (
               <div className="mb-3 relative inline-block">
                 <img src={imageUrl} alt="preview" className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
                 <button
                   onClick={() => setImageUrl('')}
-                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[10px] transition hover:opacity-80"
+                  className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[13px] transition hover:opacity-80"
                   style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                 >
                   ×
@@ -438,7 +438,7 @@ export default function CreateEventPage() {
           {myWorlds.length > 0 && (
             <div className="mb-6">
               <label className={labelCls} style={{ color: 'var(--foreground)' }}>Host as World</label>
-              <p className="font-mono text-[10px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>Optionally host this event as one of your worlds</p>
+              <p className="font-mono text-[13px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>Optionally host this event as one of your worlds</p>
               <select
                 value={worldId}
                 onChange={(e) => setWorldId(e.target.value)}
@@ -456,12 +456,12 @@ export default function CreateEventPage() {
           {/* Description with markdown editor */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Description</label>
+              <label className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Description</label>
               <div className="flex gap-1">
                 <button
                   type="button"
                   onClick={() => setDescriptionPreview(false)}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
+                  className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={!descriptionPreview
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -472,7 +472,7 @@ export default function CreateEventPage() {
                 <button
                   type="button"
                   onClick={() => setDescriptionPreview(true)}
-                  className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
+                  className="font-mono text-[13px] uppercase tracking-widest px-2 py-0.5 rounded-lg transition-all"
                   style={descriptionPreview
                     ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' }
                     : { color: 'var(--foreground)', opacity: 0.4 }
@@ -495,7 +495,7 @@ export default function CreateEventPage() {
                   className={inputCls}
                   style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)', resize: 'vertical', minHeight: '150px' }}
                 />
-                <p className="font-mono text-[10px] mt-1 opacity-30" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[13px] mt-1 opacity-30" style={{ color: 'var(--foreground)' }}>
                   Supports Markdown formatting
                 </p>
               </>

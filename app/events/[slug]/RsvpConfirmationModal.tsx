@@ -62,7 +62,7 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, onC
         )}
 
         {/* Share buttons */}
-        <p className="font-mono text-[10px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
+        <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
           Share with friends
         </p>
 

@@ -9,8 +9,8 @@ import LoadingBar from '../../components/LoadingBar';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
-const requiredCls = 'block font-mono text-[10px] uppercase tracking-[0.15em] mb-1.5 font-bold';
+const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+const requiredCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold';
 
 const GRANT_CATEGORIES = [
   'Art', 'Music', 'Film', 'Technology', 'Gaming', 'Fashion',
@@ -545,7 +545,7 @@ export default function SubmitGrantPage() {
                     >
                       {tag}
                       {!isKnown && (
-                        <span className="text-[9px] opacity-60 ml-0.5" style={{ color: 'var(--background)' }}>new</span>
+                        <span className="text-[12px] opacity-60 ml-0.5" style={{ color: 'var(--background)' }}>new</span>
                       )}
                       <button
                         type="button"
@@ -593,13 +593,13 @@ export default function SubmitGrantPage() {
                       style={{ color: 'var(--foreground)' }}
                     >
                       <span>{tag}</span>
-                      <span className="font-mono text-[9px] opacity-40 uppercase">existing</span>
+                      <span className="font-mono text-[12px] opacity-40 uppercase">existing</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            <p className="font-mono text-[10px] opacity-35 mt-1" style={{ color: 'var(--foreground)' }}>
+            <p className="font-mono text-[13px] opacity-35 mt-1" style={{ color: 'var(--foreground)' }}>
               Press Enter or comma to add. You can create new tags or use existing ones.
             </p>
           </div>

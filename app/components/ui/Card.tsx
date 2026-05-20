@@ -52,7 +52,7 @@ export function CardHeader({ children, className = '' }: { children: ReactNode; 
 
 export function CardSub({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <span className={`font-mono text-[9px] font-normal uppercase tracking-wider opacity-50 block ${className}`}>
+    <span className={`font-mono text-[12px] font-normal uppercase tracking-wider opacity-50 block ${className}`}>
       {children}
     </span>
   );

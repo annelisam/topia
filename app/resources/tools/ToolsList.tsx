@@ -123,7 +123,7 @@ export default function ToolsList() {
                 <span className="font-mono text-[13px]" style={{ width: '1em', display: 'inline-block' }}>{showCategories ? '−' : '+'}</span>
                 FILTER BY CATEGORY
                 {selectedCategory !== 'all' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] lowercase" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                  <span className="px-2 py-0.5 rounded-full text-[13px] lowercase" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                     {selectedCategory}
                   </span>
                 )}
@@ -257,7 +257,7 @@ export default function ToolsList() {
                                 {u.avatarUrl ? (
                                   <img src={u.avatarUrl} alt={u.name || u.username} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center font-mono text-[9px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                                  <div className="w-full h-full flex items-center justify-center font-mono text-[12px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                                     {(u.name || u.username || '?')[0]?.toUpperCase()}
                                   </div>
                                 )}
@@ -268,7 +268,7 @@ export default function ToolsList() {
                                 className="relative w-6 h-6 rounded-full border overflow-hidden"
                                 style={{ borderColor: 'var(--background)', zIndex: 4 - i }}
                               >
-                                <div className="w-full h-full flex items-center justify-center font-mono text-[9px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                                <div className="w-full h-full flex items-center justify-center font-mono text-[12px] font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                                   {(u.name || '?')[0]?.toUpperCase()}
                                 </div>
                               </div>
@@ -276,7 +276,7 @@ export default function ToolsList() {
                           ))}
                           {(tool.userCount ?? 0) > 4 && (
                             <div
-                              className="relative w-6 h-6 rounded-full border flex items-center justify-center font-mono text-[8px] font-bold"
+                              className="relative w-6 h-6 rounded-full border flex items-center justify-center font-mono text-[11px] font-bold"
                               style={{ borderColor: 'var(--background)', backgroundColor: 'var(--foreground)', color: 'var(--background)', zIndex: 0 }}
                             >
                               +{(tool.userCount ?? 0) - 4}

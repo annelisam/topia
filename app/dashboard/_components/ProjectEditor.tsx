@@ -118,11 +118,11 @@ export function ProjectEditor({
             {imageUrl && (
               <div className="mb-2 relative inline-block">
                 <img src={imageUrl} alt="" className="max-w-full h-24 object-cover border rounded-lg" style={{ borderColor: 'var(--border-color)' }} />
-                <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[9px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
+                <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
               </div>
             )}
             <div className="flex gap-2 items-center">
-              <label className="shrink-0 px-3 py-2 border font-mono text-[10px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+              <label className="shrink-0 px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                 Upload
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </label>
@@ -132,7 +132,7 @@ export function ProjectEditor({
           <div>
             <label className={labelCls} style={{ color: 'var(--foreground)' }}>Video URL</label>
             <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="YouTube, Vimeo, etc." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-            <p className="font-mono text-[9px] mt-1 opacity-25" style={{ color: 'var(--foreground)' }}>YouTube, Vimeo, Instagram, TikTok</p>
+            <p className="font-mono text-[12px] mt-1 opacity-25" style={{ color: 'var(--foreground)' }}>YouTube, Vimeo, Instagram, TikTok</p>
           </div>
         </div>
 
@@ -169,15 +169,15 @@ export function ProjectEditor({
             {regularTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-1.5">
                 {regularTags.map(t => (
-                  <button key={t} type="button" onClick={() => setTags(tags.filter(x => x !== t))} className="flex items-center gap-0.5 px-2 py-0.5 border font-mono text-[10px] rounded-full transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-                    {t}<span className="text-[8px] opacity-40">×</span>
+                  <button key={t} type="button" onClick={() => setTags(tags.filter(x => x !== t))} className="flex items-center gap-0.5 px-2 py-0.5 border font-mono text-[13px] rounded-full transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                    {t}<span className="text-[11px] opacity-40">×</span>
                   </button>
                 ))}
               </div>
             )}
             <div className="flex gap-1.5">
               <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }} placeholder="Add tag..." className={inputCls + ' flex-1'} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-              <button type="button" onClick={addTag} className="px-2.5 py-2 border font-mono text-[10px] uppercase rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>+</button>
+              <button type="button" onClick={addTag} className="px-2.5 py-2 border font-mono text-[13px] uppercase rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>+</button>
             </div>
           </div>
           <div>
@@ -196,7 +196,7 @@ export function ProjectEditor({
               <button type="button" onClick={() => removeLink(i)} className="font-mono text-[13px] opacity-30 hover:opacity-100 transition px-1" style={{ color: 'var(--foreground)' }}>×</button>
             </div>
           ))}
-          <button type="button" onClick={addLink} className="font-mono text-[10px] uppercase tracking-widest opacity-40 hover:opacity-80 transition" style={{ color: 'var(--foreground)' }}>+ Add link</button>
+          <button type="button" onClick={addLink} className="font-mono text-[13px] uppercase tracking-widest opacity-40 hover:opacity-80 transition" style={{ color: 'var(--foreground)' }}>+ Add link</button>
         </div>
 
         {/* Actions */}
