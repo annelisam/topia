@@ -203,12 +203,63 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
     });
   };
 
+  // Cover media constraints — mirrors /events/create
+  const MAX_VIDEO_BYTES = 6 * 1024 * 1024;
+  const MAX_VIDEO_SECONDS = 10;
+  const MAX_GIF_BYTES = 6 * 1024 * 1024;
+
+  const readAsDataURL = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(r.error);
+    r.onload = () => resolve(r.result as string);
+    r.readAsDataURL(file);
+  });
+
+  const getVideoDuration = (file: File): Promise<number> => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration); };
+    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read video metadata')); };
+    v.src = url;
+  });
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const compressed = await compressImage(file);
-    setImageUrl(compressed);
+    setError('');
+    const isVideo = file.type.startsWith('video/');
+    const isGif = file.type === 'image/gif';
+    try {
+      if (isVideo) {
+        if (file.size > MAX_VIDEO_BYTES) {
+          setError(`Video too large — max ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB.`);
+          return;
+        }
+        const duration = await getVideoDuration(file);
+        if (duration > MAX_VIDEO_SECONDS + 0.2) {
+          setError(`Video too long — max ${MAX_VIDEO_SECONDS}s (this one is ${duration.toFixed(1)}s).`);
+          return;
+        }
+        setImageUrl(await readAsDataURL(file));
+      } else if (isGif) {
+        if (file.size > MAX_GIF_BYTES) {
+          setError(`GIF too large — max ${Math.round(MAX_GIF_BYTES / 1024 / 1024)} MB.`);
+          return;
+        }
+        setImageUrl(await readAsDataURL(file));
+      } else {
+        setImageUrl(await compressImage(file));
+      }
+    } catch (err) {
+      console.error('cover upload failed', err);
+      setError(err instanceof Error ? err.message : 'Could not read that file');
+    }
+    e.target.value = '';
   };
+
+  const coverIsVideo = imageUrl.startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/.test(imageUrl.toLowerCase());
 
   const insertMarkdown = (before: string, after: string, placeholder: string) => {
     const textarea = document.getElementById('description-editor') as HTMLTextAreaElement;
@@ -317,18 +368,31 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
             Edit Event
           </h1>
 
-          {/* Event Image */}
+          {/* Event Cover (image · gif · short video) */}
           <div className="mb-6">
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Image</label>
+            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Event Cover</label>
+            <p className="font-mono text-[13px] opacity-30 mb-2" style={{ color: 'var(--foreground)' }}>
+              Square 1:1. JPG/PNG cropped to center. GIFs and short MP4/MOV (≤ 10s, ≤ 6 MB) play silently on the card.
+            </p>
             {imageUrl && (
               <div className="mb-3 relative inline-block">
-                <img src={imageUrl} alt="preview" className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
+                {coverIsVideo ? (
+                  <video src={imageUrl} className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} autoPlay loop muted playsInline />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={imageUrl} alt="preview" className="w-32 h-32 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
+                )}
                 <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full font-mono text-[13px] transition hover:opacity-80" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
               </div>
             )}
             <label className="inline-block px-4 py-2 border font-mono text-[12px] uppercase tracking-widest cursor-pointer transition-all rounded-lg theme-hover-invert" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-              {imageUrl ? 'Change Image' : 'Upload Image'}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              {imageUrl ? 'Change Cover' : 'Upload Cover'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
             </label>
           </div>
 

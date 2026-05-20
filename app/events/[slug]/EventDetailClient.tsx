@@ -310,11 +310,26 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               className="w-full rounded-2xl overflow-hidden mb-6 border"
               style={{ aspectRatio: '1', borderColor: 'var(--border-color)' }}
             >
-              <img
-                src={event.imageUrl}
-                alt={event.eventName}
-                className="w-full h-full object-cover"
-              />
+              {/* Sniff data:video/* and remote .mp4/.mov/.webm — render a
+                  silent looping autoplay clip; otherwise render as <img>. */}
+              {(event.imageUrl.toLowerCase().startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/.test(event.imageUrl.toLowerCase())) ? (
+                <video
+                  src={event.imageUrl}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={event.imageUrl}
+                  alt={event.eventName}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
           )}
 
