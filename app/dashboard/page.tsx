@@ -10,6 +10,7 @@ import PendingInvitationsWidget from './_components/PendingInvitationsWidget';
 import UpcomingEventsWidget from './_components/UpcomingEventsWidget';
 import ActivityFeedWidget from './_components/ActivityFeedWidget';
 import RecentlyViewedWorldsWidget from './_components/RecentlyViewedWorlds';
+import InMyKitWidget from './_components/InMyKitWidget';
 
 function Delta({ n }: { n: number | undefined }) {
   if (!n || n <= 0) return null;
@@ -128,11 +129,17 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* ═══ URGENT: invitations + profile completion (full width, top priority) ═══ */}
-      <PendingInvitationsWidget />
-      <ProfileCompletionWidget />
+      {/* ═══ URGENT STRIP — only renders if anything pending. Both widgets
+              self-gate (PendingInvitations hides when total=0; Profile-
+              Completion hides at 100%). They stack on narrow screens, sit
+              side-by-side on wide — together as one row so they don't
+              individually drag empty whitespace. ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 empty:hidden">
+        <PendingInvitationsWidget />
+        <ProfileCompletionWidget />
+      </div>
 
-      {/* ═══ TWO COLUMNS: primary content (2/3) + ambient context (1/3) ═══ */}
+      {/* ═══ MAIN GRID — primary content (2/3) + ambient context (1/3) ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* MAIN COLUMN */}
         <div className="lg:col-span-2 space-y-6 min-w-0">
@@ -144,7 +151,13 @@ export default function DashboardOverviewPage() {
             <EmptyWorldsCard />
           )}
 
-          <SavedToolsWidget />
+          {/* Tools row — in-kit and saved tools side-by-side on wide. The
+              two lists are conceptually similar (favicon cards) and clearer
+              when paired than stacked. */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <InMyKitWidget />
+            <SavedToolsWidget />
+          </div>
         </div>
 
         {/* SIDE COLUMN — ambient / passive context */}

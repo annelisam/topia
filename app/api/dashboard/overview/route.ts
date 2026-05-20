@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const [user] = await db
-      .select({ id: users.id, savedToolSlugs: users.savedToolSlugs })
+      .select({ id: users.id, savedToolSlugs: users.savedToolSlugs, toolSlugs: users.toolSlugs })
       .from(users)
       .where(eq(users.privyId, privyId))
       .limit(1);
@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
     const actors   = alias(users, 'actors');
 
     const savedSlugs = (user.savedToolSlugs ?? '')
+      .split(',').map((s) => s.trim()).filter(Boolean);
+    // Tools the user has marked "I use this" (in-kit). Separate list from
+    // saved; rendered as the "In my kit" widget on the dashboard.
+    const kitSlugs = (user.toolSlugs ?? '')
       .split(',').map((s) => s.trim()).filter(Boolean);
 
     // Run everything in parallel — single connection pool, one round trip
@@ -51,8 +55,9 @@ export async function GET(request: NextRequest) {
       // Notifications
       recentNotifs,
 
-      // Saved tools (resolved)
+      // Saved tools (resolved) + in-kit tools (resolved)
       savedTools,
+      kitTools,
     ] = await Promise.all([
       // ── Stats: 5 quick counts
       db.select({ value: count() }).from(follows).where(eq(follows.followingId, user.id)),
@@ -163,6 +168,14 @@ export async function GET(request: NextRequest) {
             .select({ id: tools.id, name: tools.name, slug: tools.slug, url: tools.url, category: tools.category })
             .from(tools)
             .where(inArray(tools.slug, savedSlugs)),
+
+      // In-kit tools — tools the user has marked "I use this"
+      kitSlugs.length === 0
+        ? Promise.resolve([] as { id: string; name: string; slug: string; url: string | null; category: string | null }[])
+        : db
+            .select({ id: tools.id, name: tools.name, slug: tools.slug, url: tools.url, category: tools.category })
+            .from(tools)
+            .where(inArray(tools.slug, kitSlugs)),
     ]);
 
     // Merge hosting + attending events, dedupe, sort, top 6
@@ -173,9 +186,11 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => (a.dateIso ?? '').localeCompare(b.dateIso ?? ''))
       .slice(0, 6);
 
-    // Preserve savedSlugs ordering
+    // Preserve savedSlugs / kitSlugs ordering
     const savedToolsMap = new Map(savedTools.map((t) => [t.slug, t]));
     const orderedSavedTools = savedSlugs.map((s) => savedToolsMap.get(s)).filter((x): x is NonNullable<typeof x> => Boolean(x));
+    const kitToolsMap = new Map(kitTools.map((t) => [t.slug, t]));
+    const orderedKitTools = kitSlugs.map((s) => kitToolsMap.get(s)).filter((x): x is NonNullable<typeof x> => Boolean(x));
 
     return NextResponse.json({
       stats: {
@@ -197,6 +212,7 @@ export async function GET(request: NextRequest) {
       upcoming,
       notifications: recentNotifs,
       savedTools: orderedSavedTools,
+      kitTools: orderedKitTools,
     });
   } catch (error) {
     console.error('Dashboard overview error:', error);
@@ -211,5 +227,6 @@ function empty() {
     upcoming: [],
     notifications: [],
     savedTools: [],
+    kitTools: [],
   };
 }

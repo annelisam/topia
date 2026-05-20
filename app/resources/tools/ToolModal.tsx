@@ -55,7 +55,7 @@ export default function ToolModal({ slug, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-6 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[1500] flex items-center justify-center px-3 sm:px-6 py-6 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(10,10,10,0.75)' }}
       onClick={onClose}
     >

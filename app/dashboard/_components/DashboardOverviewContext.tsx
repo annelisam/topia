@@ -72,6 +72,7 @@ export interface OverviewData {
   upcoming: UpcomingEvent[];
   notifications: NotifItem[];
   savedTools: SavedToolItem[];
+  kitTools: SavedToolItem[];
 }
 
 interface CtxValue {

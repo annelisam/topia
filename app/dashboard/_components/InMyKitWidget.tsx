@@ -2,12 +2,16 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { StarIcon } from '../../components/ui/Icons';
 import { useOverview } from './DashboardOverviewContext';
 import ToolMiniCard from '../../resources/tools/ToolMiniCard';
 import ToolModal from '../../resources/tools/ToolModal';
 
-export default function SavedToolsWidget() {
+/**
+ * "In my kit" — tools the user has marked "I use this" on /resources/tools.
+ * Different from SavedToolsWidget (which is the bookmark list). This is the
+ * declared-toolkit that also shows up on their public profile.
+ */
+export default function InMyKitWidget() {
   const { data, loading } = useOverview();
   const [modalSlug, setModalSlug] = useState<string | null>(null);
 
@@ -15,14 +19,14 @@ export default function SavedToolsWidget() {
     <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
       <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 flex items-center gap-2">
-          <span className="text-lime/80"><StarIcon size={11} filled /></span>
-          Saved tools{data && data.savedTools.length > 0 && <span className="text-bone/30">· {data.savedTools.length}</span>}
+          <span className="text-lime/80">◆</span>
+          In my kit{data && data.kitTools.length > 0 && <span className="text-bone/30">· {data.kitTools.length}</span>}
         </span>
         <Link
           href="/resources/tools"
           className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-bone transition no-underline"
         >
-          browse all →
+          add more →
         </Link>
       </div>
 
@@ -39,15 +43,16 @@ export default function SavedToolsWidget() {
               </div>
             ))}
           </div>
-        ) : data.savedTools.length === 0 ? (
+        ) : data.kitTools.length === 0 ? (
           <p className="font-mono text-[11px] text-bone/40 leading-relaxed">
-            Click <StarIcon size={10} filled={false} className="inline align-middle" /> on any tool in{' '}
-            <Link href="/resources/tools" className="text-lime underline">/resources/tools</Link>{' '}
-            to save it here.
+            Declare the tools you actually use — hit{' '}
+            <span className="text-bone">+ I use this</span> on any tool at{' '}
+            <Link href="/resources/tools" className="text-lime underline">/resources/tools</Link>.
+            They&apos;ll show up here and on your public toolkit.
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {data.savedTools.slice(0, 8).map((t) => (
+            {data.kitTools.slice(0, 8).map((t) => (
               <ToolMiniCard key={t.id} tool={t} onOpen={setModalSlug} />
             ))}
           </div>
