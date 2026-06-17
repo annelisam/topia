@@ -19,7 +19,7 @@ const WORLD_CATEGORIES = [
 export default function CreateWorldPage() {
   const { ready, authenticated, user } = usePrivy();
   const router = useRouter();
-  const { worldMemberships, loading } = useUserProfile();
+  const { loading } = useUserProfile();
 
   const [form, setForm] = useState({
     title: '',
@@ -45,8 +45,6 @@ export default function CreateWorldPage() {
   }
 
   if (!authenticated) return null;
-
-  const isWorldBuilder = worldMemberships.some((wm) => wm.role === 'world_builder' || wm.role === 'owner');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,26 +72,6 @@ export default function CreateWorldPage() {
       setSubmitting(false);
     }
   };
-
-  if (!isWorldBuilder) {
-    return (
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation />
-        <main className="container mx-auto max-w-xl px-4 sm:px-6 pt-28 pb-20 text-center">
-          <p className="font-mono text-[13px] uppercase tracking-tight opacity-50 mb-4" style={{ color: 'var(--foreground)' }}>
-            You must be an existing worldbuilder to create new worlds.
-          </p>
-          <Link
-            href="/dashboard"
-            className="inline-block font-mono text-[13px] uppercase tracking-tight border rounded-lg px-4 py-2 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-          >
-            BACK TO DASHBOARD
-          </Link>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>

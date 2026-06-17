@@ -115,6 +115,10 @@ export const events = pgTable('events', {
   // Set when the event was imported from an external platform via /api/events/import.
   // Values: 'partiful' | 'luma' | 'eventbrite' | 'other' (manual creates leave it null)
   externalSource: text('external_source'),
+  // ── RSVP / registration settings (Luma-style) ──
+  rsvpCapacity: integer('rsvp_capacity'),                       // null = unlimited
+  rsvpApprovalRequired: boolean('rsvp_approval_required').notNull().default(false),
+  rsvpClosed: boolean('rsvp_closed').notNull().default(false),  // host closed registration
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -220,8 +224,49 @@ export const eventRsvps = pgTable('event_rsvps', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  status: text('status').default('going').notNull(), // 'going'
+  // 'going' (confirmed) | 'pending' (awaiting host approval) | 'declined'
+  status: text('status').default('going').notNull(),
+  // Snapshot of answers to the event's custom questions at RSVP time:
+  // [{ questionId, label, type, answer }]. Snapshotting keeps history stable
+  // even if the host later edits/removes questions.
+  responses: jsonb('responses'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Guest invitations by email / phone (Luma-style). A host invites people who
+// may not be on the platform yet; each invite carries a unique token used in a
+// shareable link (/events/[slug]?invite=token). The invitee verifies with Privy
+// and RSVPs, which flips the invite to 'accepted'. Delivery (email/SMS) is
+// pluggable — if no provider is configured we just surface the link for the
+// host to share manually.
+export const eventInvites = pgTable('event_invites', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  email: text('email'),                                  // one of email/phone is set
+  phone: text('phone'),
+  invitedBy: uuid('invited_by').references(() => users.id),
+  token: text('token').notNull().unique(),               // shareable-link token
+  status: text('status').notNull().default('pending'),   // 'pending' | 'accepted' | 'revoked'
+  acceptedByUserId: uuid('accepted_by_user_id').references(() => users.id),
+  sent: boolean('sent').notNull().default(false),        // true once auto-delivered
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Custom RSVP questions per event (Luma-style registration form). Hosts define
+// them; answers are captured into eventRsvps.responses at registration time.
+export const eventQuestions = pgTable('event_questions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  label: text('label').notNull(),
+  // 'short_text' | 'long_text' | 'single_select' | 'multi_select' | 'checkbox'
+  type: text('type').notNull().default('short_text'),
+  options: jsonb('options'),                              // string[] for select types
+  required: boolean('required').notNull().default(false),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // TOPIA TV content
@@ -354,5 +399,75 @@ export const tvEpisodes = pgTable('tv_episodes', {
   publishedAt: timestamp('published_at').defaultNow(),
   published: boolean('published').default(true),
   createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/* ════════════════════════════════════════════════════════════════════
+ * TICKETED EVENTS — paid admission
+ *
+ * Three rail-agnostic tables back both payment rails:
+ *   - Square  (fiat: cards, Apple/Google Pay, Cash App Pay)
+ *   - Crypto  (USDC on Base, paid from the buyer's Privy/embedded wallet)
+ *
+ * Money is stored in integer minor units (USD cents) everywhere to avoid
+ * float rounding. Free events simply have no ticket types — RSVP stays the
+ * path for those. An event is "ticketed" iff it has ≥1 active ticket type.
+ * ════════════════════════════════════════════════════════════════════ */
+
+// Ticket tiers for an event, e.g. "General Admission", "VIP". Host-managed.
+export const eventTicketTypes = pgTable('event_ticket_types', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),                          // 'General Admission' | 'VIP'
+  description: text('description'),
+  priceCents: integer('price_cents').notNull().default(0), // USD cents; 0 = free tier
+  currency: text('currency').notNull().default('USD'),
+  quantityTotal: integer('quantity_total'),             // null = unlimited supply
+  quantitySold: integer('quantity_sold').notNull().default(0),
+  maxPerOrder: integer('max_per_order').default(10),
+  isActive: boolean('is_active').notNull().default(true),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// A purchase. One row per checkout attempt; tickets are issued only once
+// status flips to 'paid'. Pricing is snapshotted at purchase time so later
+// tier edits never rewrite history.
+export const ticketOrders = pgTable('ticket_orders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  ticketTypeId: uuid('ticket_type_id').references(() => eventTicketTypes.id).notNull(),
+  buyerId: uuid('buyer_id').references(() => users.id).notNull(),
+  quantity: integer('quantity').notNull().default(1),
+  unitPriceCents: integer('unit_price_cents').notNull(), // snapshot of tier price
+  amountCents: integer('amount_cents').notNull(),        // unitPriceCents * quantity
+  currency: text('currency').notNull().default('USD'),
+  rail: text('rail').notNull(),                          // 'square' | 'crypto'
+  status: text('status').notNull().default('pending'),   // 'pending'|'paid'|'failed'|'refunded'|'cancelled'
+  buyerEmail: text('buyer_email'),
+  // ── Square (fiat) ──
+  squarePaymentId: text('square_payment_id'),
+  squareOrderId: text('square_order_id'),
+  // ── Crypto (USDC on Base) ──
+  txHash: text('tx_hash'),
+  chainId: integer('chain_id'),                          // 8453 = Base mainnet
+  payerWalletAddress: text('payer_wallet_address'),
+  recipientWalletAddress: text('recipient_wallet_address'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Individual issued admissions — one row per seat. Created when an order is
+// paid. `code` is the unique value encoded into a QR for door check-in.
+export const tickets = pgTable('tickets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  orderId: uuid('order_id').references(() => ticketOrders.id, { onDelete: 'cascade' }).notNull(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  ticketTypeId: uuid('ticket_type_id').references(() => eventTicketTypes.id).notNull(),
+  ownerId: uuid('owner_id').references(() => users.id).notNull(),
+  code: text('code').notNull().unique(),                 // scannable check-in code
+  status: text('status').notNull().default('valid'),     // 'valid'|'checked_in'|'refunded'|'void'
+  checkedInAt: timestamp('checked_in_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

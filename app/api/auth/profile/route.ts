@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         worldSlug: worlds.slug,
         worldCategory: worlds.category,
         worldImageUrl: worlds.imageUrl,
+        worldPublished: worlds.published,
         role: worldMembers.role,
       })
       .from(worldMembers)

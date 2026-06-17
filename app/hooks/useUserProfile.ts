@@ -9,6 +9,7 @@ export interface WorldMembership {
   worldSlug: string;
   worldCategory: string | null;
   worldImageUrl: string | null;
+  worldPublished?: boolean;
   role: string; // 'owner' | 'world_builder' | 'collaborator'
 }
 

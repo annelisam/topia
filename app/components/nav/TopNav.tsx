@@ -5,16 +5,34 @@ import Link from 'next/link';
 import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
 
-const NAV_LINKS = [
+type NavItem = {
+  label: string;
+  href?: string;
+  comingSoon?: boolean;
+  children?: { href: string; label: string }[];
+};
+
+const NAV_LINKS: NavItem[] = [
+  { href: '/onboarding', label: 'Onboarding' },
+  { href: '#', label: 'Passport', comingSoon: true },
+  { href: '/tv', label: 'Topia TV' },
   { href: '/worlds', label: 'Worlds' },
   { href: '/events', label: 'Events' },
-  { href: '/tv', label: 'TV' },
-  { href: '/resources/tools', label: 'Tools' },
-  { href: '/resources/grants', label: 'Grants' },
+  { href: '#', label: 'Tiers', comingSoon: true },
+  {
+    label: 'Resources',
+    children: [
+      { href: '/resources/tools', label: 'Tools' },
+      { href: '/resources/grants', label: 'Grants' },
+    ],
+  },
+  { href: '#', label: 'Builder', comingSoon: true },
+  { href: '#', label: 'Catalysts', comingSoon: true },
 ];
 
 const STATIC_LINKS = [
   { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 export default function TopNav() {
@@ -64,17 +82,48 @@ export default function TopNav() {
                   border: '1px solid var(--nav-border)',
                 }}
               >
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
-                    style={{ color: 'var(--page-text)' }}
-                  >
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
+                {NAV_LINKS.map((item) =>
+                  item.children ? (
+                    <div key={item.label} className="mt-1">
+                      <div
+                        className="px-4 pt-3 pb-1 font-mono text-[11px] tracking-[2px] uppercase opacity-30"
+                        style={{ color: 'var(--page-text)' }}
+                      >
+                        {item.label}
+                      </div>
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => setMenuOpen(false)}
+                          className="block pl-7 pr-4 py-2.5 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
+                          style={{ color: 'var(--page-text)' }}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : item.comingSoon ? (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase opacity-30 cursor-default"
+                      style={{ color: 'var(--page-text)' }}
+                    >
+                      <span>{item.label}</span>
+                      <span className="text-[9px] tracking-[1px] opacity-70">Soon</span>
+                    </div>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href!}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
+                      style={{ color: 'var(--page-text)' }}
+                    >
+                      <span>{item.label}</span>
+                    </Link>
+                  )
+                )}
                 <div className="border-t mt-1 pt-1" style={{ borderColor: 'var(--nav-border)' }}>
                   {STATIC_LINKS.map((link) => (
                     <Link

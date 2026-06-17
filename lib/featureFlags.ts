@@ -1,0 +1,7 @@
+// Lightweight feature flags. Flip these to roll features in/out without
+// ripping out the underlying code.
+
+// Ticketed-event payments (Square + USDC). The full backend + UI exist, but the
+// buyer-facing purchase UI and host tier manager stay hidden until we're ready
+// to sell tickets. Set NEXT_PUBLIC_PAYMENTS_ENABLED=true to turn it back on.
+export const PAYMENTS_ENABLED = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true';

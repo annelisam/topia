@@ -14,31 +14,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify user exists
+    // Verify user exists. Any authenticated user may create a world; the
+    // creator becomes its owner below.
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId)).limit(1);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-    // Verify user is an existing worldbuilder
-    const builderMemberships = await db.select({ id: worldMembers.id }).from(worldMembers)
-      .where(eq(worldMembers.userId, user.id))
-      .limit(10);
-
-    const isWorldBuilder = builderMemberships.length > 0;
-    // Check if any membership is world_builder role
-    const hasBuilderRole = await db.select({ id: worldMembers.id }).from(worldMembers)
-      .where(eq(worldMembers.userId, user.id))
-      .limit(10);
-
-    // Re-check with role filter
-    const builderRoles = await db
-      .select({ id: worldMembers.id })
-      .from(worldMembers)
-      .where(eq(worldMembers.userId, user.id));
-
-    // Filter in JS since we need to check role
-    if (!isWorldBuilder) {
-      return NextResponse.json({ error: 'Must be an existing worldbuilder to create worlds' }, { status: 403 });
-    }
 
     const slug = createSlug(data.title);
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });

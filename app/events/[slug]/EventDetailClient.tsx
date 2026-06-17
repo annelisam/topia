@@ -8,7 +8,11 @@ import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../components/Navigation';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
+import RsvpModal from './RsvpModal';
+import TicketPurchase from './TicketPurchase';
+import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
+import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, StarIcon } from '../../components/ui/Icons';
 
 interface EventHost {
@@ -42,9 +46,14 @@ interface EventDetail {
   hosts: EventHost[];
   rsvpCount: number;
   userRsvped: boolean;
+  userStatus?: string | null;       // 'going' | 'pending' | 'declined' | null
   isHost: boolean;
   isSaved: boolean;
+  published?: boolean;
   externalSource?: string | null;
+  rsvpCapacity?: number | null;
+  rsvpApprovalRequired?: boolean;
+  rsvpClosed?: boolean;
 }
 
 const markdownComponents = {
@@ -204,6 +213,11 @@ function getGoogleCalendarUrl(event: EventDetail): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+// Render cover videos for data:video/* and remote .mp4/.mov/.webm; else <img>.
+function isVideoUrl(url: string): boolean {
+  return url.startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/i.test(url);
+}
+
 /* ── Main Client Component ────────────────────────────────────── */
 
 export default function EventDetailClient({ slug }: { slug: string }) {
@@ -213,6 +227,31 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
+  const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState(false);
+
+  const privyEmail =
+    privyUser?.email?.address ?? privyUser?.google?.email ?? null;
+  const PENDING_KEY = 'topia_pending_rsvp';
+  const INVITE_KEY = 'topia_invite_token';
+
+  // Capture an ?invite=token link and persist it (survives the Privy login /
+  // onboarding bounce) so it rides along with the RSVP and marks the invite
+  // accepted. Cleared once the RSVP completes.
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const fromUrl = new URLSearchParams(window.location.search).get('invite');
+    if (fromUrl) {
+      try { sessionStorage.setItem(INVITE_KEY, `${slug}:${fromUrl}`); } catch {}
+      setInviteToken(fromUrl);
+    } else {
+      try {
+        const stored = sessionStorage.getItem(INVITE_KEY);
+        if (stored?.startsWith(`${slug}:`)) setInviteToken(stored.slice(slug.length + 1));
+      } catch {}
+    }
+  }, [slug]);
 
   useEffect(() => {
     const viewerParam = privyUser?.id ? `&viewerPrivyId=${privyUser.id}` : '';
@@ -239,37 +278,67 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     URL.revokeObjectURL(url);
   };
 
+  // RSVP entry point. Visitors verify with Privy first (we stash intent so we
+  // can resume after login), then the registration modal collects answers.
   const handleRsvp = async () => {
-    if (!event || !privyUser?.id) {
+    if (!event) return;
+    if (!privyUser?.id) {
+      try { sessionStorage.setItem(PENDING_KEY, slug); } catch {}
       login();
       return;
     }
-    setRsvpLoading(true);
-    try {
-      if (event.userRsvped) {
+    if (event.userRsvped) {
+      // Withdraw
+      setRsvpLoading(true);
+      try {
         await fetch('/api/events/rsvp', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ privyId: privyUser.id, eventId: event.id }),
         });
-        setEvent({ ...event, userRsvped: false, rsvpCount: event.rsvpCount - 1 });
-      } else {
-        const res = await fetch('/api/events/rsvp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: privyUser.id, eventId: event.id }),
+        setEvent({
+          ...event,
+          userRsvped: false,
+          userStatus: null,
+          rsvpCount: event.userStatus === 'going' ? event.rsvpCount - 1 : event.rsvpCount,
         });
-        if (res.ok) {
-          setEvent({ ...event, userRsvped: true, rsvpCount: event.rsvpCount + 1 });
-          setShowRsvpModal(true);
-        }
+      } catch (err) {
+        console.error('RSVP error:', err);
+      } finally {
+        setRsvpLoading(false);
       }
-    } catch (err) {
-      console.error('RSVP error:', err);
-    } finally {
-      setRsvpLoading(false);
+      return;
     }
+    // Open the registration modal (handles custom questions + confirm).
+    setRsvpFormOpen(true);
   };
+
+  const handleRsvpDone = (status: string) => {
+    setRsvpFormOpen(false);
+    try { sessionStorage.removeItem(INVITE_KEY); } catch {}
+    setInviteToken(null);
+    if (!event) return;
+    setEvent({
+      ...event,
+      userRsvped: true,
+      userStatus: status,
+      rsvpCount: status === 'going' ? event.rsvpCount + 1 : event.rsvpCount,
+    });
+    if (status === 'going') setShowRsvpModal(true);
+    else setPendingNotice(true);
+  };
+
+  // Resume a pending RSVP intent after the visitor logs in, or open the
+  // registration modal automatically when arriving via an invite link.
+  useEffect(() => {
+    if (!event || !privyUser?.id || event.userRsvped || event.isHost || event.rsvpClosed) return;
+    let intent: string | null = null;
+    try { intent = sessionStorage.getItem(PENDING_KEY); } catch {}
+    if (intent === slug || inviteToken) {
+      try { sessionStorage.removeItem(PENDING_KEY); } catch {}
+      setRsvpFormOpen(true);
+    }
+  }, [event, privyUser?.id, slug, inviteToken]);
 
   // "Interested" — toggles the event slug in users.savedEventSlugs CSV.
   // Doubles as a way to unlock comments without committing to an RSVP.
@@ -331,31 +400,14 @@ export default function EventDetailClient({ slug }: { slug: string }) {
 
         {/* Partiful-style centered card */}
         <div className="max-w-lg mx-auto px-4 sm:px-6">
-          {/* 1:1 Square Image */}
+          {/* 1:1 Square Cover */}
           {event.imageUrl && (
-            <div
-              className="w-full rounded-2xl overflow-hidden mb-6 border"
-              style={{ aspectRatio: '1', borderColor: 'var(--border-color)' }}
-            >
-              {/* Sniff data:video/* and remote .mp4/.mov/.webm — render a
-                  silent looping autoplay clip; otherwise render as <img>. */}
-              {(event.imageUrl.toLowerCase().startsWith('data:video/') || /\.(mp4|mov|webm)(\?|#|$)/.test(event.imageUrl.toLowerCase())) ? (
-                <video
-                  src={event.imageUrl}
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+            <div className="w-full rounded-2xl overflow-hidden mb-6 border" style={{ aspectRatio: '1', borderColor: 'var(--border-color)' }}>
+              {isVideoUrl(event.imageUrl) ? (
+                <video src={event.imageUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={event.imageUrl}
-                  alt={event.eventName}
-                  className="w-full h-full object-cover"
-                />
+                <img src={event.imageUrl} alt={event.eventName} className="w-full h-full object-cover" />
               )}
             </div>
           )}
@@ -364,6 +416,16 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-3" style={{ color: 'var(--foreground)' }}>
             {event.eventName}
           </h1>
+
+          {/* Draft badge — only the host sees this; drafts aren't public */}
+          {event.isHost && event.published === false && (
+            <span
+              className="inline-block px-3 py-1 rounded-full font-mono text-[12px] uppercase tracking-widest font-bold mb-3 mr-2"
+              style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}
+            >
+              Draft
+            </span>
+          )}
 
           {isPast && (
             <span
@@ -510,18 +572,34 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
+          {/* Paid tickets — renders only when the event has ticket tiers.
+              Free/unticketed events show nothing here and keep RSVP below.
+              Hidden behind PAYMENTS_ENABLED until we're ready to sell. */}
+          {PAYMENTS_ENABLED && !isPast && !event.isHost && <TicketPurchase eventId={event.id} slug={event.slug} />}
+
           {/* Native RSVP — only shown for non-external events. External
               events render the platform-specific CTA further down instead. */}
           {!isPast && !event.isHost && !(event.externalSource && event.link) && (
             <div className="mb-8">
               <button
                 onClick={handleRsvp}
-                disabled={rsvpLoading}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold border-none"
+                disabled={rsvpLoading || (event.rsvpClosed && !event.userRsvped)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold border-none disabled:opacity-50"
                 style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: rsvpLoading ? 0.5 : 1 }}
               >
-                {rsvpLoading ? '...' : event.userRsvped ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>) : 'RSVP'}
+                {rsvpLoading ? '...'
+                  : event.userStatus === 'going' ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
+                  : event.userStatus === 'pending' ? 'Pending approval'
+                  : event.userRsvped ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
+                  : event.rsvpClosed ? 'Registration closed'
+                  : event.rsvpApprovalRequired ? 'Request to join'
+                  : 'RSVP'}
               </button>
+              {event.userStatus === 'pending' && (
+                <p className="font-mono text-[11px] opacity-50 mt-1.5 text-center" style={{ color: 'var(--foreground)' }}>
+                  Awaiting host approval — tap to withdraw.
+                </p>
+              )}
             </div>
           )}
           {/* Interested \u2605 \u2014 separate row to stay backward-compatible with
@@ -573,17 +651,32 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
-          {/* Edit Event button for hosts */}
+          {/* Host controls — Edit opens the full composer; Manage covers
+              guests, registration questions & co-hosts. */}
           {event.isHost && (
-            <div className="mb-8">
+            <div className="mb-8 flex flex-wrap items-center gap-2">
               <Link
-                href={`/dashboard/edit-event/${event.slug}`}
+                href={`/events/${event.slug}/edit`}
                 className="inline-block px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
               >
                 Edit Event
               </Link>
+              <Link
+                href={`/events/${event.slug}/manage`}
+                className="inline-block px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.6 }}
+                title="Guests, registration questions & co-hosts"
+              >
+                Manage event →
+              </Link>
             </div>
+          )}
+
+          {/* Host ticket management — create/edit paid tiers.
+              Hidden behind PAYMENTS_ENABLED until we're ready to sell. */}
+          {PAYMENTS_ENABLED && event.isHost && privyUser?.id && (
+            <TicketManager eventId={event.id} slug={event.slug} privyId={privyUser.id} />
           )}
 
           {/* Divider */}
@@ -614,7 +707,21 @@ export default function EventDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {/* RSVP Confirmation Modal */}
+      {/* Registration modal — custom questions + confirm */}
+      {rsvpFormOpen && event && privyUser?.id && (
+        <RsvpModal
+          eventId={event.id}
+          slug={event.slug}
+          eventName={event.eventName}
+          privyId={privyUser.id}
+          email={privyEmail}
+          inviteToken={inviteToken}
+          onClose={() => setRsvpFormOpen(false)}
+          onDone={handleRsvpDone}
+        />
+      )}
+
+      {/* RSVP Confirmation Modal (confirmed "going") */}
       {showRsvpModal && event && (
         <RsvpConfirmationModal
           eventName={event.eventName}
@@ -623,6 +730,21 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           slug={event.slug}
           onClose={() => setShowRsvpModal(false)}
         />
+      )}
+
+      {/* Pending-approval confirmation */}
+      {pendingNotice && event && (
+        <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+            <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>Request sent ✓</p>
+            <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
+              The host reviews requests for {event.eventName}. You&apos;ll be notified once you&apos;re approved.
+            </p>
+            <button onClick={() => setPendingNotice(false)} className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+              Got it
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

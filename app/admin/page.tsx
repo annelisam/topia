@@ -114,7 +114,7 @@ interface UserRow {
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
-type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools';
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,18 +124,33 @@ function generateSlug(name: string): string {
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
-function Badge({ label, active }: { label: string; active: boolean }) {
+// One-click publish/unpublish. Renders like the Badge but toggles on click via
+// the generic /api/admin/publish endpoint, then asks the parent tab to reload.
+function PublishToggle({ type, id, published, onChange }: { type: string; id: string; published: boolean; onChange: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, id, published: !published }),
+      });
+      if (res.ok) onChange();
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
-    <span
-      className="font-mono text-[12px] px-2 py-0.5 border"
-      style={{
-        backgroundColor: active ? '#00FF88' : '#FF5C34',
-        color: '#1a1a1a',
-        borderColor: '#1a1a1a',
-      }}
+    <button
+      onClick={toggle}
+      disabled={busy}
+      title={published ? 'Published — click to unpublish' : 'Hidden — click to publish'}
+      className="font-mono text-[12px] px-2 py-0.5 border hover:opacity-70 disabled:opacity-40 cursor-pointer"
+      style={{ backgroundColor: published ? '#00FF88' : '#FF5C34', color: '#1a1a1a', borderColor: '#1a1a1a' }}
     >
-      {active ? 'PUB' : 'DRAFT'}
-    </span>
+      {busy ? '…' : published ? 'PUB' : 'DRAFT'}
+    </button>
   );
 }
 
@@ -367,7 +382,7 @@ function WorldsTab() {
                   <td className="px-3 py-2 font-bold">{item.title}</td>
                   <td className="px-3 py-2">{builders.length > 0 ? builders.map(b => b.userName || b.userUsername).join(', ') : item.creatorName || '—'}</td>
                   <td className="px-3 py-2">{item.category || '—'}</td>
-                  <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                  <td className="px-3 py-2"><PublishToggle type="worlds" id={item.id} published={item.published} onChange={load} /></td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
                       <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
@@ -569,7 +584,7 @@ function EventsTab() {
                 <td className="px-3 py-2 font-bold">{item.eventName}</td>
                 <td className="px-3 py-2">{item.date || '—'}</td>
                 <td className="px-3 py-2">{item.city || '—'}</td>
-                <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                <td className="px-3 py-2"><PublishToggle type="events" id={item.id} published={item.published} onChange={load} /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
@@ -695,7 +710,7 @@ function GrantsTab() {
                     : '—'}
                 </td>
                 <td className="px-3 py-2">{item.status || '—'}</td>
-                <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                <td className="px-3 py-2"><PublishToggle type="grants" id={item.id} published={item.published} onChange={load} /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
@@ -818,7 +833,7 @@ function ToolsTab() {
                 <td className="px-3 py-2">{item.category || '—'}</td>
                 <td className="px-3 py-2">{item.pricing || '—'}</td>
                 <td className="px-3 py-2">{item.featured ? '★' : '—'}</td>
-                <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                <td className="px-3 py-2"><PublishToggle type="tools" id={item.id} published={item.published} onChange={load} /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
@@ -959,7 +974,7 @@ function CreatorsTab() {
                 <td className="px-3 py-2 opacity-60">{item.slug}</td>
                 <td className="px-3 py-2">{item.linkedUserUsername ? `@${item.linkedUserUsername}` : item.linkedUserName || '—'}</td>
                 <td className="px-3 py-2">{item.country || '—'}</td>
-                <td className="px-3 py-2"><Badge active={item.published} label="" /></td>
+                <td className="px-3 py-2"><PublishToggle type="creators" id={item.id} published={item.published} onChange={load} /></td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button onClick={() => openEdit(item)} className="font-mono text-[12px] underline hover:opacity-60">EDIT</button>
@@ -1226,6 +1241,62 @@ function UsersTab() {
   );
 }
 
+// ─── Generic publish-only tab ─────────────────────────────────────────────────
+// For content types managed/created elsewhere (catalysts, TV episodes, world
+// projects). Lists items with a one-click publish toggle — no create/edit here.
+
+interface PublishItem {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  published: boolean;
+}
+
+function SimplePublishTab({ type, noun }: { type: string; noun: string }) {
+  const [items, setItems] = useState<PublishItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/admin/publish?type=${type}`);
+    const data = await res.json();
+    setItems(data.items || []);
+    setLoading(false);
+  }, [type]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} {noun}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Slug</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, i) => (
+              <tr key={item.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
+                <td className="px-3 py-2 font-bold">{item.name || '—'}</td>
+                <td className="px-3 py-2">{item.slug || '—'}</td>
+                <td className="px-3 py-2"><PublishToggle type={type} id={item.id} published={item.published} onChange={load} /></td>
+              </tr>
+            ))}
+            {!loading && items.length === 0 && (
+              <tr><td className="px-3 py-4 opacity-60" colSpan={3}>No {noun} yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string }[] = [
@@ -1235,6 +1306,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'events', label: 'EVENTS' },
   { id: 'grants', label: 'GRANTS' },
   { id: 'tools', label: 'TOOLS' },
+  { id: 'catalysts', label: 'CATALYSTS' },
+  { id: 'tv', label: 'TV' },
+  { id: 'projects', label: 'PROJECTS' },
 ];
 
 export default function AdminDashboard() {
@@ -1288,6 +1362,9 @@ export default function AdminDashboard() {
         {tab === 'events' && <EventsTab />}
         {tab === 'grants' && <GrantsTab />}
         {tab === 'tools' && <ToolsTab />}
+        {tab === 'catalysts' && <SimplePublishTab type="catalysts" noun="catalysts" />}
+        {tab === 'tv' && <SimplePublishTab type="tv-episodes" noun="episodes" />}
+        {tab === 'projects' && <SimplePublishTab type="world-projects" noun="projects" />}
       </main>
     </div>
   );

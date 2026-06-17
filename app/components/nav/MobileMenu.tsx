@@ -3,17 +3,35 @@
 import Link from 'next/link';
 import LoginButton from '../LoginButton';
 
-const NAV_LINKS = [
+type NavItem = {
+  label: string;
+  href?: string;
+  comingSoon?: boolean;
+  children?: { href: string; label: string }[];
+};
+
+const NAV_LINKS: NavItem[] = [
+  { href: '/onboarding', label: 'Onboarding' },
+  { href: '#', label: 'Passport', comingSoon: true },
+  { href: '/tv', label: 'Topia TV' },
   { href: '/worlds', label: 'Worlds' },
   { href: '/events', label: 'Events' },
-  { href: '/tv', label: 'TV' },
-  { href: '/resources/tools', label: 'Tools' },
-  { href: '/resources/grants', label: 'Grants' },
+  { href: '#', label: 'Tiers', comingSoon: true },
+  {
+    label: 'Resources',
+    children: [
+      { href: '/resources/tools', label: 'Tools' },
+      { href: '/resources/grants', label: 'Grants' },
+    ],
+  },
+  { href: '#', label: 'Builder', comingSoon: true },
+  { href: '#', label: 'Catalysts', comingSoon: true },
   { href: '/dashboard', label: 'Dashboard' },
 ];
 
 const STATIC_LINKS = [
   { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 interface MobileMenuProps {
@@ -54,20 +72,57 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
       {/* Links */}
       <div className="flex-1 flex flex-col justify-center px-8 gap-1">
-        {NAV_LINKS.map((link, i) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onClose}
-            className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70"
-            style={{
-              color: 'var(--page-text)',
-              transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
-            }}
-          >
-            {link.label}
-          </Link>
-        ))}
+        {NAV_LINKS.map((item, i) =>
+          item.children ? (
+            <div key={item.label} className="mt-2">
+              <span
+                className="font-mono text-[13px] tracking-[2px] uppercase opacity-30 block mb-1"
+                style={{
+                  color: 'var(--page-text)',
+                  transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
+                }}
+              >
+                {item.label}
+              </span>
+              {item.children.map((child) => (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  onClick={onClose}
+                  className="font-basement font-black text-[clamp(22px,5vw,38px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70 block pl-5"
+                  style={{ color: 'var(--page-text)' }}
+                >
+                  {child.label}
+                </Link>
+              ))}
+            </div>
+          ) : item.comingSoon ? (
+            <span
+              key={item.label}
+              className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase leading-tight opacity-25 cursor-default flex items-baseline gap-3"
+              style={{
+                color: 'var(--page-text)',
+                transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
+              }}
+            >
+              {item.label}
+              <span className="font-mono text-[11px] tracking-[1px] opacity-70">Soon</span>
+            </span>
+          ) : (
+            <Link
+              key={item.href}
+              href={item.href!}
+              onClick={onClose}
+              className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70"
+              style={{
+                color: 'var(--page-text)',
+                transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
+              }}
+            >
+              {item.label}
+            </Link>
+          )
+        )}
         {STATIC_LINKS.map((link) => (
           <Link
             key={link.href}

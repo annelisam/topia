@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, worldMembers, worlds } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { isAdminRequest } from '@/lib/adminAuth';
 
 // GET – all users with their world memberships
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const allUsers = await db
       .select()
@@ -49,6 +51,7 @@ export async function GET() {
 
 // PUT – update user profile
 export async function PUT(request: Request) {
+  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -80,6 +83,7 @@ export async function PUT(request: Request) {
 
 // DELETE – delete user
 export async function DELETE(request: Request) {
+  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
