@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../../components/Navigation';
 import LoadingBar from '../../../components/LoadingBar';
-import { QUESTION_TYPES, SELECT_TYPES, answerToText } from '../../../../lib/events/questions';
+import { QUESTION_TYPES, SELECT_TYPES, answerToText, DEFAULT_LABELS, ROLE_TAGS } from '../../../../lib/events/questions';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -502,7 +502,12 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
       <div className="rounded-lg border p-4 space-y-2" style={{ borderColor: 'var(--border-color)' }}>
         <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Question (e.g. What's your dietary preference?)" className={inputCls} style={fieldStyle} />
         <div className="flex gap-2">
-          <select value={newType} onChange={(e) => setNewType(e.target.value)} className={inputCls + ' appearance-none cursor-pointer'} style={fieldStyle}>
+          <select value={newType} onChange={(e) => {
+            const t = e.target.value; setNewType(t);
+            const known = Object.values(DEFAULT_LABELS);
+            if (DEFAULT_LABELS[t] && (!newLabel.trim() || known.includes(newLabel.trim()))) setNewLabel(DEFAULT_LABELS[t]);
+            if (t === 'roles') { if (!newOptions.trim()) setNewOptions(ROLE_TAGS.join('\n')); setNewRequired(true); }
+          }} className={inputCls + ' appearance-none cursor-pointer'} style={fieldStyle}>
             {QUESTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
           <label className="flex items-center gap-2 cursor-pointer font-mono text-[12px] uppercase tracking-widest shrink-0 px-2" style={{ color: 'var(--foreground)' }}>
@@ -510,7 +515,7 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
           </label>
         </div>
         {SELECT_TYPES.has(newType) && (
-          <textarea value={newOptions} onChange={(e) => setNewOptions(e.target.value)} rows={3} placeholder="One option per line" className={inputCls} style={fieldStyle} />
+          <textarea value={newOptions} onChange={(e) => setNewOptions(e.target.value)} rows={3} placeholder={newType === 'roles' ? 'Role tags — one per line (guests can add their own)' : 'One option per line'} className={inputCls} style={fieldStyle} />
         )}
         <button onClick={addQuestion} disabled={busy || !newLabel.trim()} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
           {busy ? 'Adding…' : '+ Add question'}
