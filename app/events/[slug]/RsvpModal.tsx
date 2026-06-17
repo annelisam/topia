@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
+import { SocialIcon } from '../../components/SocialIcons';
+import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
 
 interface Question {
   id: string;
@@ -52,6 +55,23 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [contactEmail, setContactEmail] = useState(email ?? '');
   const [phoneCode, setPhoneCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
+
+  // Privy-verified contact methods are locked (can't be edited); the others
+  // can be verified in-place via Privy, like the profile "connect" rows.
+  const { user, linkEmail, linkPhone } = usePrivy();
+  const linked = user?.linkedAccounts ?? [];
+  const emailAcct = linked.find((a) => a.type === 'email') as { address: string } | undefined;
+  const googleAcct = linked.find((a) => a.type === 'google_oauth') as { email?: string } | undefined;
+  const phoneAcct = linked.find((a) => a.type === 'phone') as { number: string } | undefined;
+  const verifiedEmail = emailAcct?.address || googleAcct?.email || null;
+  const verifiedPhone = phoneAcct?.number || null;
+
+  // Force the verified values into the fields (and keep them in sync if the
+  // guest verifies one mid-flow).
+  useEffect(() => { if (verifiedEmail) setContactEmail(verifiedEmail); }, [verifiedEmail]);
+  useEffect(() => {
+    if (verifiedPhone) { const { code, rest } = splitPhone(verifiedPhone); setPhoneCode(code); setPhoneNumber(rest); }
+  }, [verifiedPhone]);
 
   useEffect(() => {
     fetch(`/api/events/questions?slug=${slug}`)
@@ -153,6 +173,30 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             Yes
           </label>
         );
+      case 'instagram':
+      case 'twitter':
+        return (
+          <div className="flex items-center gap-2 border px-3 rounded-lg" style={fieldStyle}>
+            <SocialIcon type={q.type} size={15} />
+            <span className="opacity-40 font-mono text-[13px]">@</span>
+            <input
+              type="text" inputMode="text" autoCapitalize="off" autoCorrect="off"
+              value={(v as string) ?? ''}
+              onChange={(e) => set(q.id, e.target.value.replace(/^@+/, '').trim())}
+              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2"
+              style={{ color: 'var(--foreground)' }}
+              placeholder="handle"
+            />
+          </div>
+        );
+      case 'roles':
+        return (
+          <RoleTagPicker
+            options={(q.options && q.options.length ? q.options : ROLE_TAGS)}
+            value={Array.isArray(v) ? (v as string[]) : []}
+            onChange={(next) => set(q.id, next)}
+          />
+        );
       default:
         return (
           <input type="text" value={(v as string) ?? ''} onChange={(e) => set(q.id, e.target.value)}
@@ -190,21 +234,41 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} style={fieldStyle} placeholder="Your name" />
               </div>
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Email<span style={{ color: '#FF5C34' }}> *</span>
+                  {verifiedEmail && <span className="inline-flex items-center gap-1 normal-case tracking-normal" style={{ color: '#00b36b', opacity: 1 }}>· verified ✓</span>}
                 </label>
-                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} style={fieldStyle} placeholder="you@email.com" />
+                {verifiedEmail ? (
+                  <input type="email" value={contactEmail} readOnly disabled className={`${inputCls} cursor-not-allowed opacity-80`} style={fieldStyle} />
+                ) : (
+                  <>
+                    <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} style={fieldStyle} placeholder="you@email.com" />
+                    <button type="button" onClick={() => linkEmail()} className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
+                      Verify with Privy →
+                    </button>
+                  </>
+                )}
               </div>
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Phone<span style={{ color: '#FF5C34' }}> *</span>
+                  {verifiedPhone && <span className="inline-flex items-center gap-1 normal-case tracking-normal" style={{ color: '#00b36b', opacity: 1 }}>· verified ✓</span>}
                 </label>
-                <div className="flex gap-2">
-                  <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-2 py-2 font-mono text-[13px] rounded-lg outline-none cursor-pointer shrink-0" style={fieldStyle}>
-                    {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
-                </div>
+                {verifiedPhone ? (
+                  <input type="tel" value={`${phoneCode} ${phoneNumber}`} readOnly disabled className={`${inputCls} cursor-not-allowed opacity-80`} style={fieldStyle} />
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-2 py-2 font-mono text-[13px] rounded-lg outline-none cursor-pointer shrink-0" style={fieldStyle}>
+                        {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
+                    </div>
+                    <button type="button" onClick={() => linkPhone()} className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
+                      Verify with Privy →
+                    </button>
+                  </>
+                )}
               </div>
 
               {questions.map((q) => (
@@ -237,3 +301,61 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 const fieldStyle: React.CSSProperties = {
   backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)',
 };
+
+// Searchable role/tag picker — pick up to ROLES_MAX from a suggestion list,
+// or create your own.
+function RoleTagPicker({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  const [search, setSearch] = useState('');
+  const atMax = value.length >= ROLES_MAX;
+  const q = search.trim();
+  const ql = q.toLowerCase();
+  const filtered = options.filter((o) => o.toLowerCase().includes(ql) && !value.includes(o)).slice(0, 10);
+  const exactExists = [...options, ...value].some((o) => o.toLowerCase() === ql);
+  const canCreate = q.length > 0 && !exactExists && !atMax;
+
+  const add = (tag: string) => {
+    if (value.includes(tag) || value.length >= ROLES_MAX) return;
+    onChange([...value, tag]);
+    setSearch('');
+  };
+  const remove = (tag: string) => onChange(value.filter((t) => t !== tag));
+
+  return (
+    <div>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {value.map((t) => (
+            <button key={t} type="button" onClick={() => remove(t)} className="inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border-none" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+              {t} <span className="opacity-60">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {atMax ? (
+        <p className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>Max {ROLES_MAX} selected — remove one to change.</p>
+      ) : (
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) { e.preventDefault(); add(q); } }}
+          placeholder={`Search or add… (${value.length}/${ROLES_MAX})`}
+          className={inputCls} style={fieldStyle}
+        />
+      )}
+      {!atMax && q.length > 0 && (filtered.length > 0 || canCreate) && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {filtered.map((o) => (
+            <button key={o} type="button" onClick={() => add(o)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'transparent' }}>
+              {o}
+            </button>
+          ))}
+          {canCreate && (
+            <button type="button" onClick={() => add(q)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border border-dashed hover:opacity-70" style={{ borderColor: 'var(--accent)', color: 'var(--accent)', backgroundColor: 'transparent' }}>
+              + Create “{q}”
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

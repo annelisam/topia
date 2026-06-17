@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Navigation from '../../components/Navigation';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { QUESTION_TYPES, SELECT_TYPES } from '../../../lib/events/questions';
+import { QUESTION_TYPES, SELECT_TYPES, DEFAULT_LABELS, ROLE_TAGS } from '../../../lib/events/questions';
 
 /* ════════════════════════════════════════════════════════════════════
  * EventComposer — the single create/edit surface. /events/create renders
@@ -37,6 +37,11 @@ export interface EventComposerInitial {
 }
 
 interface DraftQuestion { id?: string; label: string; type: string; options: string[]; required: boolean; }
+
+// Small mono glyph per question type, shown on each question card.
+const QTYPE_GLYPH: Record<string, string> = {
+  short_text: 'A', long_text: '¶', single_select: '◉', multi_select: '☰', checkbox: '☑', socials: '@',
+};
 
 const ACCENTS = [
   { name: 'lime',   hex: '#e4fe52', on: '#0a0a0a' },
@@ -144,6 +149,10 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   const [qRequired, setQRequired] = useState(false);
   const [qBusy, setQBusy] = useState(false);
   const [qError, setQError] = useState('');
+  // Editor state: editorOpen toggles the add/edit form; editIdx === null means
+  // "adding new", a number means "editing the question at that index".
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
 
   // Edit mode: load existing questions (managed live against the API).
   useEffect(() => {
@@ -154,30 +163,80 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       .catch(() => setQError('Could not load existing questions — reload to retry.'));
   }, [mode, initial.slug]);
 
-  const addQuestion = async () => {
-    if (!qLabel.trim()) return;
+  const resetEditorFields = () => { setQLabel(''); setQType('short_text'); setQOptions(''); setQRequired(false); };
+  // Switch question type: auto-fill a friendly default label (unless the host
+  // typed a custom one) and seed the roles picker with the suggestion list.
+  const onTypeChange = (t: string) => {
+    setQType(t);
+    const known = Object.values(DEFAULT_LABELS);
+    if (DEFAULT_LABELS[t] && (!qLabel.trim() || known.includes(qLabel.trim()))) setQLabel(DEFAULT_LABELS[t]);
+    if (t === 'roles') { if (!qOptions.trim()) setQOptions(ROLE_TAGS.join('\n')); setQRequired(true); }
+  };
+  const openEditor = (idx: number | null) => {
     setQError('');
+    if (idx === null) { resetEditorFields(); }
+    else { const q = questions[idx]; setQLabel(q.label); setQType(q.type); setQOptions(q.options.join('\n')); setQRequired(q.required); }
+    setEditIdx(idx); setEditorOpen(true);
+  };
+  const closeEditor = () => { setEditorOpen(false); setEditIdx(null); resetEditorFields(); setQError(''); };
+
+  // Save the editor — adds a new question (editIdx === null) or updates an
+  // existing one. Edit mode persists immediately; create mode stages until save.
+  const saveQuestion = async () => {
+    setQError('');
+    if (!qLabel.trim()) { setQError('Add a question label.'); return; }
     const options = SELECT_TYPES.has(qType) ? qOptions.split('\n').map((s) => s.trim()).filter(Boolean) : [];
-    if (SELECT_TYPES.has(qType) && options.length === 0) { setQError('Add at least one option for a choice question.'); return; }
+    if (SELECT_TYPES.has(qType) && options.length === 0) { setQError(qType === 'roles' ? 'Add at least one role tag.' : 'Add at least one option for a choice question.'); return; }
     const draft: DraftQuestion = { label: qLabel.trim(), type: qType, options, required: qRequired };
-    // Edit mode persists immediately; create mode stages until save.
-    if (mode === 'edit' && initial.eventId && user) {
-      setQBusy(true);
-      try {
-        const res = await fetch('/api/events/questions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: user.id, eventId: initial.eventId, ...draft, sortOrder: questions.length }),
-        });
-        const d = await res.json().catch(() => ({}));
-        if (!res.ok) { setQError(d.error || 'Could not save question — try again.'); return; }
-        draft.id = d.question?.id;
-      } catch {
-        setQError('Could not save question — check your connection and try again.');
-        return;
-      } finally { setQBusy(false); }
+
+    if (editIdx === null) {
+      // ADD
+      if (mode === 'edit' && initial.eventId && user) {
+        setQBusy(true);
+        try {
+          const res = await fetch('/api/events/questions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ privyId: user.id, eventId: initial.eventId, ...draft, sortOrder: questions.length }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (!res.ok) { setQError(d.error || 'Could not save question — try again.'); return; }
+          draft.id = d.question?.id;
+        } catch { setQError('Could not save question — check your connection.'); return; }
+        finally { setQBusy(false); }
+      }
+      setQuestions((qs) => [...qs, draft]);
+    } else {
+      // UPDATE
+      const existing = questions[editIdx];
+      draft.id = existing.id;
+      if (mode === 'edit' && existing.id && user) {
+        setQBusy(true);
+        try {
+          const res = await fetch('/api/events/questions', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ privyId: user.id, id: existing.id, ...draft }),
+          });
+          if (!res.ok) { const d = await res.json().catch(() => ({})); setQError(d.error || 'Could not update question.'); return; }
+        } catch { setQError('Could not update question — check your connection.'); return; }
+        finally { setQBusy(false); }
+      }
+      setQuestions((qs) => qs.map((q, i) => (i === editIdx ? draft : q)));
     }
-    setQuestions((qs) => [...qs, draft]);
-    setQLabel(''); setQOptions(''); setQRequired(false); setQType('short_text');
+    closeEditor();
+  };
+
+  const moveQuestion = async (idx: number, dir: -1 | 1) => {
+    const j = idx + dir;
+    if (j < 0 || j >= questions.length) return;
+    const next = [...questions];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setQuestions(next);
+    if (mode === 'edit' && user) {
+      await Promise.allSettled([
+        next[idx].id && fetch('/api/events/questions', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ privyId: user.id, id: next[idx].id, sortOrder: idx }) }),
+        next[j].id && fetch('/api/events/questions', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ privyId: user.id, id: next[j].id, sortOrder: j }) }),
+      ].filter(Boolean) as Promise<Response>[]);
+    }
   };
 
   const removeQuestion = async (idx: number) => {
@@ -395,6 +454,34 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   const labelCls = 'block font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-1';
   const ERR = '#FF5C34';
 
+  // Shared add/edit question editor (used inline for both new + existing).
+  const renderQuestionEditor = () => (
+    <div className="border rounded-lg p-3 space-y-2" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--surface-hover)' }}>
+      <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40">{editIdx === null ? 'New question' : 'Edit question'}</p>
+      <input value={qLabel} onChange={(e) => setQLabel(e.target.value)} placeholder="Question (e.g. Dietary preference?)" className={inputCls} />
+      <div className="flex gap-2">
+        <select value={qType} onChange={(e) => onTypeChange(e.target.value)} className={`${inputCls} flex-1 cursor-pointer`}>
+          {QUESTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+        <label className="flex items-center gap-1.5 cursor-pointer font-mono text-[11px] uppercase tracking-[1px] opacity-70 shrink-0 px-1">
+          <input type="checkbox" checked={qRequired} onChange={(e) => setQRequired(e.target.checked)} style={{ accentColor: 'var(--accent)' }} /> Required
+        </label>
+      </div>
+      {SELECT_TYPES.has(qType) && (
+        <textarea value={qOptions} onChange={(e) => setQOptions(e.target.value)} rows={3} placeholder={qType === 'roles' ? 'Role tags — one per line (guests can add their own)' : 'One option per line'} className={`${inputCls} resize-none`} />
+      )}
+      <div className="flex gap-2 pt-1">
+        <button type="button" onClick={saveQuestion} disabled={qBusy} className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm cursor-pointer border-none disabled:opacity-40 font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+          {qBusy ? 'Saving…' : (editIdx === null ? 'Add question' : 'Save')}
+        </button>
+        <button type="button" onClick={closeEditor} className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm cursor-pointer border bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+          Cancel
+        </button>
+      </div>
+      {qError && <p className="font-mono text-[11px]" style={{ color: ERR }}>{qError}</p>}
+    </div>
+  );
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       <Navigation />
@@ -593,42 +680,47 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
               </label>
             </div>
 
-            {/* Custom questions */}
+            {/* Custom questions — Luma-style cards with edit + reorder */}
             <div>
               <label className="block font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-2">Registration questions</label>
+
               {questions.length > 0 && (
-                <div className="space-y-1.5 mb-3">
+                <div className="space-y-2 mb-3">
                   {questions.map((q, i) => (
-                    <div key={q.id ?? i} className="flex items-start gap-2 border rounded-sm px-2.5 py-1.5" style={{ borderColor: 'var(--border-color)' }}>
-                      <span className="flex-1 min-w-0 font-mono text-[12px] break-words">
-                        {q.label}{q.required && <span style={{ color: ERR }}> *</span>}
-                        <span className="opacity-35"> · {QUESTION_TYPES.find((t) => t.value === q.type)?.label}{q.options.length ? ` · ${q.options.join(', ')}` : ''}</span>
-                      </span>
-                      <button type="button" onClick={() => removeQuestion(i)} className="font-mono text-[10px] uppercase bg-transparent border-none cursor-pointer shrink-0 hover:opacity-70 mt-0.5" style={{ color: ERR }}>Del</button>
-                    </div>
+                    editorOpen && editIdx === i ? (
+                      <div key={q.id ?? i}>{renderQuestionEditor()}</div>
+                    ) : (
+                      <div key={q.id ?? i} className="flex items-center gap-3 border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+                        <div className="flex flex-col -my-1 shrink-0">
+                          <button type="button" onClick={() => moveQuestion(i, -1)} disabled={i === 0} className="font-mono text-[10px] leading-none disabled:opacity-20 hover:opacity-70 bg-transparent border-none cursor-pointer p-0.5" style={{ color: 'var(--foreground)' }} aria-label="Move up">▲</button>
+                          <button type="button" onClick={() => moveQuestion(i, 1)} disabled={i === questions.length - 1} className="font-mono text-[10px] leading-none disabled:opacity-20 hover:opacity-70 bg-transparent border-none cursor-pointer p-0.5" style={{ color: 'var(--foreground)' }} aria-label="Move down">▼</button>
+                        </div>
+                        <span className="shrink-0 w-6 h-6 rounded flex items-center justify-center font-mono text-[12px] border" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>{QTYPE_GLYPH[q.type] ?? 'A'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{q.label}</p>
+                          <p className="font-mono text-[11px] opacity-40 truncate" style={{ color: 'var(--foreground)' }}>
+                            {QUESTION_TYPES.find((t) => t.value === q.type)?.label}{q.required && ' · Required'}{q.options.length ? ` · ${q.options.join(', ')}` : ''}
+                          </p>
+                        </div>
+                        <button type="button" onClick={() => openEditor(i)} className="shrink-0 font-mono text-[14px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" title="Edit" style={{ color: 'var(--foreground)' }}>✎</button>
+                        <button type="button" onClick={() => removeQuestion(i)} className="shrink-0 font-mono text-[13px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" title="Delete" style={{ color: ERR }}>✕</button>
+                      </div>
+                    )
                   ))}
                 </div>
               )}
-              <div className="space-y-2">
-                <input value={qLabel} onChange={(e) => setQLabel(e.target.value)} placeholder="Question (e.g. Dietary preference?)" className={inputCls} />
-                <div className="flex gap-2">
-                  <select value={qType} onChange={(e) => setQType(e.target.value)} className={`${inputCls} flex-1 cursor-pointer`}>
-                    {QUESTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  <label className="flex items-center gap-1.5 cursor-pointer font-mono text-[11px] uppercase tracking-[1px] opacity-70 shrink-0 px-1">
-                    <input type="checkbox" checked={qRequired} onChange={(e) => setQRequired(e.target.checked)} style={{ accentColor: 'var(--accent)' }} /> Req
-                  </label>
-                </div>
-                {SELECT_TYPES.has(qType) && (
-                  <textarea value={qOptions} onChange={(e) => setQOptions(e.target.value)} rows={2} placeholder="One option per line" className={`${inputCls} resize-none`} />
-                )}
-                <button type="button" onClick={addQuestion} disabled={!qLabel.trim() || qBusy} className="font-mono text-[11px] uppercase tracking-[2px] border disabled:opacity-40 px-3 py-1.5 rounded-sm cursor-pointer bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
-                  {qBusy ? 'Adding…' : '+ Add question'}
+
+              {editorOpen && editIdx === null ? (
+                renderQuestionEditor()
+              ) : !editorOpen ? (
+                <button type="button" onClick={() => openEditor(null)} className="w-full font-mono text-[11px] uppercase tracking-[2px] border border-dashed px-3 py-2.5 rounded-lg cursor-pointer bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+                  + Add question
                 </button>
-                {qError && <p className="font-mono text-[11px]" style={{ color: ERR }}>{qError}</p>}
-              </div>
+              ) : null}
+
+              {qError && !editorOpen && <p className="font-mono text-[11px] mt-2" style={{ color: ERR }}>{qError}</p>}
             </div>
-            <p className="font-mono text-[10px] opacity-30">Guests always provide name, email &amp; (optional) phone. Add custom questions above.</p>
+            <p className="font-mono text-[10px] opacity-30">Guests always provide name, email &amp; phone. Add custom questions above.</p>
           </div>
         )}
 

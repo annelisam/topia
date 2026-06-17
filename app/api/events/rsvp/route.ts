@@ -9,6 +9,9 @@ function isAnswered(type: string, v: string | string[] | boolean | undefined): b
   if (v == null) return false;
   if (type === 'checkbox') return v === true;
   if (Array.isArray(v)) return v.length > 0;
+  if (type === 'socials') {
+    try { const o = JSON.parse(String(v)); return !!(o.instagram || o.x); } catch { return false; }
+  }
   return String(v).trim().length > 0;
 }
 

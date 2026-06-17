@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, asc, eq } from 'drizzle-orm';
 import { db, events, eventHosts, eventQuestions, users } from '@/lib/db';
+import { QUESTION_TYPES, SELECT_TYPES } from '@/lib/events/questions';
 
-const SELECT_TYPES = new Set(['single_select', 'multi_select']);
-const ALL_TYPES = new Set(['short_text', 'long_text', 'single_select', 'multi_select', 'checkbox']);
+// Single source of truth for valid question types (incl. instagram/twitter).
+const ALL_TYPES = new Set(QUESTION_TYPES.map((t) => t.value));
 
 // Resolve the privyId to a user that hosts the event (creator or co-host).
 async function requireHost(privyId: string | undefined, eventId: string) {
