@@ -1,10 +1,30 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import { useDashboard } from '../_components/DashboardContext';
 
 export default function DashboardEventsPage() {
-  const { hostedEvents } = useDashboard();
+  const { hostedEvents, refreshEvents } = useDashboard();
+  const { user } = usePrivy();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Soft remove / restore — flips events.published. Recoverable.
+  const setPublished = async (eventId: string, published: boolean) => {
+    if (!user?.id) return;
+    setBusyId(eventId);
+    try {
+      const res = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, eventId, published }),
+      });
+      if (res.ok) refreshEvents();
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div>
@@ -41,19 +61,47 @@ export default function DashboardEventsPage() {
 
               {/* Info */}
               <div className="p-4">
-                <h3 className="font-mono text-[13px] font-bold uppercase truncate mb-1" style={{ color: 'var(--foreground)' }}>{ev.eventName}</h3>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-mono text-[13px] font-bold uppercase truncate" style={{ color: 'var(--foreground)' }}>{ev.eventName}</h3>
+                  {!ev.published && (
+                    <span className="font-mono text-[12px] uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}>
+                      Draft
+                    </span>
+                  )}
+                </div>
                 {(ev.date || ev.city) && (
                   <p className="font-mono text-[13px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>
                     {[ev.date, ev.city].filter(Boolean).join(' \u00b7 ')}
                   </p>
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Link href={`/events/${ev.slug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                     View
                   </Link>
-                  <Link href={`/dashboard/edit-event/${ev.slug}`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
+                  <Link href={`/events/${ev.slug}/edit`} className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>
                     Edit
                   </Link>
+                  {ev.published ? (
+                    <button
+                      onClick={() => setPublished(ev.id, false)}
+                      disabled={busyId === ev.id}
+                      className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition disabled:opacity-40 cursor-pointer bg-transparent"
+                      style={{ color: '#FF5C34', borderColor: 'var(--border-color)' }}
+                      title="Unpublish \u2014 move back to draft (hidden from the public site)"
+                    >
+                      {busyId === ev.id ? '\u2026' : 'Unpublish'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setPublished(ev.id, true)}
+                      disabled={busyId === ev.id}
+                      className="font-mono text-[13px] uppercase tracking-widest px-3 py-1.5 rounded-lg border hover:opacity-70 transition disabled:opacity-40 cursor-pointer font-bold"
+                      style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', borderColor: 'var(--foreground)' }}
+                      title="Publish \u2014 make it live on the public site"
+                    >
+                      {busyId === ev.id ? '\u2026' : 'Publish'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

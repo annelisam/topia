@@ -39,10 +39,12 @@ async function getHostsForEvents(eventIds: string[]) {
 // Fetch RSVP counts for a list of event IDs
 async function getRsvpCounts(eventIds: string[]) {
   if (eventIds.length === 0) return {};
+  // Count only confirmed ('going') guests — pending approvals don't show
+  // publicly as "going".
   const rows = await db
     .select({ eventId: eventRsvps.eventId, count: count() })
     .from(eventRsvps)
-    .where(inArray(eventRsvps.eventId, eventIds))
+    .where(and(inArray(eventRsvps.eventId, eventIds), eq(eventRsvps.status, 'going')))
     .groupBy(eventRsvps.eventId);
 
   const map: Record<string, number> = {};
@@ -60,6 +62,9 @@ export async function GET(request: NextRequest) {
     const hostUserId = request.nextUrl.searchParams.get('hostUserId');
     const worldId = request.nextUrl.searchParams.get('worldId');
     const viewerPrivyId = request.nextUrl.searchParams.get('viewerPrivyId');
+    // When listing a host's own events (dashboard), include their archived
+    // (unpublished) events so they can restore them.
+    const includeUnpublished = request.nextUrl.searchParams.get('includeUnpublished') === '1';
 
     // Return distinct cities list
     if (citiesOnly === 'true') {
@@ -88,6 +93,9 @@ export async function GET(request: NextRequest) {
       createdBy: events.createdBy,
       externalSource: events.externalSource,
       published: events.published,
+      rsvpCapacity: events.rsvpCapacity,
+      rsvpApprovalRequired: events.rsvpApprovalRequired,
+      rsvpClosed: events.rsvpClosed,
       createdAt: events.createdAt,
       creatorName: users.name,
       creatorUsername: users.username,
@@ -113,6 +121,7 @@ export async function GET(request: NextRequest) {
       // three parallel checks. We also peek at savedEventSlugs CSV to derive
       // the saved/interested flag.
       let userRsvped = false;
+      let userStatus: string | null = null;
       let isHost = false;
       let isSaved = false;
       if (viewerPrivyId) {
@@ -121,12 +130,13 @@ export async function GET(request: NextRequest) {
           .from(users).where(eq(users.privyId, viewerPrivyId));
         if (viewer) {
           const [[rsvp], [host]] = await Promise.all([
-            db.select({ id: eventRsvps.id }).from(eventRsvps)
+            db.select({ status: eventRsvps.status }).from(eventRsvps)
               .where(and(eq(eventRsvps.eventId, results[0].id), eq(eventRsvps.userId, viewer.id))),
             db.select({ id: eventHosts.id }).from(eventHosts)
               .where(and(eq(eventHosts.eventId, results[0].id), eq(eventHosts.userId, viewer.id))),
           ]);
           userRsvped = !!rsvp;
+          userStatus = rsvp?.status ?? null;
           // External events suppress the auto-host flag (submitter ≠ host),
           // mirroring the overview API's logic.
           isHost = !!host || (results[0].createdBy === viewer.id && !results[0].externalSource);
@@ -140,6 +150,7 @@ export async function GET(request: NextRequest) {
         hosts: hostsMap[e.id] || [],
         rsvpCount: rsvpMap[e.id] || 0,
         userRsvped,
+        userStatus,
         isHost,
         isSaved,
       }));
@@ -159,11 +170,14 @@ export async function GET(request: NextRequest) {
       }
 
       const ids = hostEventIds.map(r => r.eventId);
+      const hostWhere = includeUnpublished
+        ? inArray(events.id, ids)
+        : and(eq(events.published, true), inArray(events.id, ids));
       const results = await db
         .select(eventSelect)
         .from(events)
         .leftJoin(users, eq(events.createdBy, users.id))
-        .where(and(eq(events.published, true), inArray(events.id, ids)))
+        .where(hostWhere)
         .orderBy(asc(events.dateIso));
 
       const hostsMap = await getHostsForEvents(ids);
@@ -272,7 +286,8 @@ export async function POST(request: NextRequest) {
       link: data.link || null,
       imageUrl: data.imageUrl || null,
       createdBy: user.id,
-      published: true,
+      // Default to published unless the composer explicitly saves a draft.
+      published: data.published ?? true,
       externalSource: data.externalSource || null,
     }).returning();
 
@@ -333,11 +348,45 @@ export async function PUT(request: NextRequest) {
       address: data.address || null,
       link: data.link || null,
       imageUrl: data.imageUrl || null,
+      updatedAt: new Date(),
+      // Only change published when the caller sends it (the composer's
+      // draft/publish toggle). Other partial updates leave it untouched.
+      ...(data.published !== undefined ? { published: data.published } : {}),
     }).where(eq(events.id, data.eventId)).returning();
 
     return NextResponse.json({ event: result[0] });
   } catch (error) {
     console.error('PUT event:', error);
+    return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
+  }
+}
+
+// PATCH /api/events — archive (publish=false) or restore (publish=true) an
+// event. Owner-style action: any host of the event may toggle it. This is the
+// user-facing "remove"/"restore" — a soft hide, not a hard delete.
+export async function PATCH(request: NextRequest) {
+  try {
+    const data = await request.json();
+    if (!data.privyId || !data.eventId || typeof data.published !== 'boolean') {
+      return NextResponse.json({ error: 'privyId, eventId and published(boolean) are required' }, { status: 400 });
+    }
+
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId));
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    // Authorized if the user is a host of the event (mirrors PUT).
+    const [host] = await db.select({ id: eventHosts.id }).from(eventHosts)
+      .where(and(eq(eventHosts.eventId, data.eventId), eq(eventHosts.userId, user.id)));
+    if (!host) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+
+    const [updated] = await db.update(events)
+      .set({ published: data.published, updatedAt: new Date() })
+      .where(eq(events.id, data.eventId))
+      .returning({ id: events.id, published: events.published });
+
+    return NextResponse.json({ event: updated });
+  } catch (error) {
+    console.error('PATCH event:', error);
     return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
   }
 }

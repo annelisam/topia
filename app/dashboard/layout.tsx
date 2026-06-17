@@ -27,14 +27,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [ready, authenticated, router]);
 
-  // Fetch hosted events
+  // Fetch hosted events — include archived (unpublished) ones so the owner
+  // can see + restore them from the dashboard.
+  const [eventsRefresh, setEventsRefresh] = useState(0);
   useEffect(() => {
     if (!profile?.id) return;
-    fetch(`/api/events?hostUserId=${profile.id}`)
+    fetch(`/api/events?hostUserId=${profile.id}&includeUnpublished=1`)
       .then((r) => r.json())
       .then((data) => setHostedEvents(data.events || []))
       .catch(console.error);
-  }, [profile?.id]);
+  }, [profile?.id, eventsRefresh]);
 
   if (!ready || loading) {
     return (
@@ -52,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <DashboardContext.Provider value={{ profile, worldMemberships, hostedEvents }}>
+    <DashboardContext.Provider value={{ profile, worldMemberships, hostedEvents, refreshEvents: () => setEventsRefresh((n) => n + 1) }}>
       <DashboardOverviewProvider>
         <SidebarProvider>
           <DashboardShell>{children}</DashboardShell>

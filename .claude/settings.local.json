@@ -94,7 +94,17 @@
       "Bash(/usr/bin/grep -n \"{profile.name\\\\|FULL NAME\\\\|font-basement font-black\" \"/Users/annelisamoody/topia/app/profile/[username]/page.tsx\")",
       "Bash(/usr/bin/grep -n \"socialLinks.map\" \"/Users/annelisamoody/topia/app/profile/[username]/page.tsx\")",
       "Bash(/usr/bin/grep -n \"function renderSection\\\\|case 'identity'\\\\|return renderIdentityContent\\\\|: renderIdentity\" \"/Users/annelisamoody/topia/app/profile/[username]/page.tsx\")",
-      "Bash(/usr/bin/grep -n \"hostedEvents\\\\.\" /Users/annelisamoody/topia/app/dashboard/page.tsx)"
+      "Bash(/usr/bin/grep -n \"hostedEvents\\\\.\" /Users/annelisamoody/topia/app/dashboard/page.tsx)",
+      "Read(//Users/annelisamoody/.nvm/versions/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(command -v fnm volta)",
+      "Read(//Users/annelisamoody/**)",
+      "Bash(/opt/homebrew/bin/npm --version)",
+      "Bash(/opt/homebrew/bin/node --version)",
+      "Bash(break)",
+      "Read(//tmp/**)",
+      "Bash(awk '{print $6, \"len=\"length\\($7\\)}')"
     ]
   }
 }

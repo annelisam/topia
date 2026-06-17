@@ -11,18 +11,21 @@ interface HostedEvent {
   dateIso: string | null;
   city: string | null;
   imageUrl: string | null;
+  published: boolean;
 }
 
 interface DashboardContextValue {
   profile: UserProfile | null;
   worldMemberships: WorldMembership[];
   hostedEvents: HostedEvent[];
+  refreshEvents: () => void;
 }
 
 export const DashboardContext = createContext<DashboardContextValue>({
   profile: null,
   worldMemberships: [],
   hostedEvents: [],
+  refreshEvents: () => {},
 });
 
 export function useDashboard() {
