@@ -20,20 +20,38 @@ interface Props {
   email?: string | null;
   name?: string | null;
   inviteToken?: string | null;
+  approvalRequired?: boolean;
   onClose: () => void;
   onDone: (status: string) => void;
 }
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] rounded-lg outline-none';
 
-// Registration modal: after a visitor verifies with Privy, they answer the
-// host's custom questions here, then submit. Handles the no-questions case as a
-// simple confirm step.
-export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, onClose, onDone }: Props) {
+// Curated country dialing codes for the phone field.
+const COUNTRY_CODES = ['+1', '+44', '+61', '+33', '+49', '+34', '+39', '+81', '+91', '+52', '+55', '+86', '+27', '+234', '+971', '+972'];
+
+// Split a stored E.164-ish phone into a known dialing code + the rest.
+function splitPhone(full: string | null | undefined): { code: string; rest: string } {
+  if (!full) return { code: '+1', rest: '' };
+  const match = COUNTRY_CODES.filter((c) => full.startsWith(c)).sort((a, b) => b.length - a.length)[0];
+  if (match) return { code: match, rest: full.slice(match.length) };
+  return { code: '+1', rest: full.replace(/^\+/, '') };
+}
+
+// Registration modal: after a visitor verifies with Privy, they confirm their
+// contact details (name auto-filled, email + optional phone) and answer the
+// host's custom questions, then submit.
+export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, onClose, onDone }: Props) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Standard contact fields — auto-filled from the user's profile, editable.
+  const [contactName, setContactName] = useState(name ?? '');
+  const [contactEmail, setContactEmail] = useState(email ?? '');
+  const [phoneCode, setPhoneCode] = useState('+1');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   useEffect(() => {
     fetch(`/api/events/questions?slug=${slug}`)
@@ -41,6 +59,21 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       .then((d) => setQuestions(d.questions ?? []))
       .catch(() => setQuestions([]));
   }, [slug]);
+
+  // Prefill name / email / phone from the signed-in user's profile.
+  useEffect(() => {
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const u = d.user;
+        if (!u) return;
+        setContactName((prev) => prev || u.name || '');
+        setContactEmail((prev) => prev || u.email || '');
+        const { code, rest } = splitPhone(u.phone);
+        if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
+      })
+      .catch(() => {});
+  }, [privyId]);
 
   const set = (id: string, v: AnswerValue) => setAnswers((a) => ({ ...a, [id]: v }));
   const toggleMulti = (id: string, opt: string) =>
@@ -57,16 +90,21 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   const submit = async () => {
+    if (!contactName.trim()) { setError('Please add your name'); return; }
+    if (!contactEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setError('Please add a valid email'); return; }
+    const digits = phoneNumber.replace(/\D/g, '');
+    if (digits.length < 7) { setError('Please add a valid phone number'); return; }
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
+    const phone = `${phoneCode}${digits}`;
     setSubmitting(true);
     setError('');
     try {
       const res = await fetch('/api/events/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, answers, email, name, inviteToken }),
+        body: JSON.stringify({ privyId, eventId, answers, email: contactEmail.trim(), name: contactName.trim(), phone, inviteToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
@@ -137,22 +175,47 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>Loading…</p>
         ) : (
           <>
-            {questions.length === 0 ? (
-              <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
-                Confirm your spot for {eventName}.
-              </p>
-            ) : (
-              <div className="space-y-4 mb-5">
-                {questions.map((q) => (
-                  <div key={q.id}>
-                    <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                      {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
-                    </label>
-                    {renderField(q)}
-                  </div>
-                ))}
+            <p className="font-mono text-[13px] opacity-60 mb-4" style={{ color: 'var(--foreground)' }}>
+              {approvalRequired
+                ? `Request to join ${eventName}. The host will review your request.`
+                : questions.length === 0 ? `Confirm your spot for ${eventName}.` : `Register for ${eventName}.`}
+            </p>
+
+            {/* Standard contact fields — name auto-filled, email + optional phone */}
+            <div className="space-y-4 mb-5">
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Name<span style={{ color: '#FF5C34' }}> *</span>
+                </label>
+                <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} style={fieldStyle} placeholder="Your name" />
               </div>
-            )}
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Email<span style={{ color: '#FF5C34' }}> *</span>
+                </label>
+                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} style={fieldStyle} placeholder="you@email.com" />
+              </div>
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Phone<span style={{ color: '#FF5C34' }}> *</span>
+                </label>
+                <div className="flex gap-2">
+                  <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-2 py-2 font-mono text-[13px] rounded-lg outline-none cursor-pointer shrink-0" style={fieldStyle}>
+                    {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
+                </div>
+              </div>
+
+              {questions.map((q) => (
+                <div key={q.id}>
+                  <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                    {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
+                  </label>
+                  {renderField(q)}
+                </div>
+              ))}
+            </div>
 
             {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
@@ -162,7 +225,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
-              {submitting ? 'Submitting…' : 'Complete RSVP'}
+              {submitting ? 'Submitting…' : approvalRequired ? 'Send request' : 'Complete RSVP'}
             </button>
           </>
         )}

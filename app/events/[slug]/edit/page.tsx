@@ -51,8 +51,10 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           link: ev.link || '',
           description: ev.description || '',
           imageUrl: ev.imageUrl || '',
-          worldId: '',
+          worldId: (ev.hosts?.find((h: { role: string; worldId: string | null }) => h.role === 'creator')?.worldId) ?? '',
           published: !!ev.published,
+          rsvpCapacity: ev.rsvpCapacity ?? null,
+          rsvpApprovalRequired: !!ev.rsvpApprovalRequired,
         });
         setState('ready');
       })

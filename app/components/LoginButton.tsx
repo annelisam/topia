@@ -10,10 +10,15 @@ export default function LoginButton() {
   const router = useRouter();
   const pathname = usePathname();
   const syncedFor = useRef<string | null>(null);
+  const profileOk = useRef(false); // cached once we know the profile is complete
 
-  // Sync user to our DB after login, then route first-timers to /onboarding
+  // 1. Sync the Privy user into our DB — once per login.
   useEffect(() => {
-    if (!authenticated || !user) return;
+    if (!authenticated || !user) {
+      syncedFor.current = null;
+      profileOk.current = false;
+      return;
+    }
     if (syncedFor.current === user.id) return;
     syncedFor.current = user.id;
 
@@ -24,25 +29,38 @@ export default function LoginButton() {
     const phone = user.phone?.number ?? null;
     const walletAddress = user.wallet?.address ?? null;
 
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: user.id, email, phone, walletAddress }),
-        });
-        const json = await res.json();
-        const synced = json?.user;
-        // Don't redirect if user is already inside onboarding or actively on a profile-edit/related path
-        const onProtectedPath = pathname?.startsWith('/onboarding') || pathname?.startsWith('/profile');
-        if (synced && (!synced.username || !synced.name) && !onProtectedPath) {
-          router.push('/onboarding');
-        }
-      } catch (err) {
-        console.error('auth sync failed', err);
-      }
-    })();
-  }, [authenticated, user, router, pathname]);
+    fetch('/api/auth/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId: user.id, email, phone, walletAddress }),
+    }).catch((err) => console.error('auth sync failed', err));
+  }, [authenticated, user]);
+
+  // 2. Send first-timers (no name/username) to onboarding — re-checked on every
+  //    navigation. The event flow is exempt: RSVPing must not force profile
+  //    creation. But once they leave events (e.g. land on the enter page) they
+  //    get prompted. Onboarding/profile pages are exempt to avoid loops.
+  useEffect(() => {
+    if (!authenticated || !user) return;
+    if (profileOk.current) return; // already complete — stop checking
+    const exempt =
+      pathname?.startsWith('/onboarding') ||
+      pathname?.startsWith('/profile') ||
+      pathname?.startsWith('/events');
+    if (exempt) return;
+
+    let cancelled = false;
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const complete = !!(d.user?.username && d.user?.name);
+        if (complete) profileOk.current = true;
+        else router.push('/onboarding');
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [authenticated, user, pathname, router]);
 
   return <AvatarMenu />;
 }

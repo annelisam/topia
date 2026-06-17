@@ -289,6 +289,10 @@ export async function POST(request: NextRequest) {
       // Default to published unless the composer explicitly saves a draft.
       published: data.published ?? true,
       externalSource: data.externalSource || null,
+      // Registration settings (optional — composer sets these at create time).
+      rsvpCapacity: data.rsvpCapacity ?? null,
+      rsvpApprovalRequired: data.rsvpApprovalRequired ?? false,
+      rsvpClosed: data.rsvpClosed ?? false,
     }).returning();
 
     // Auto-create host row for the creator — BUT only for original events.
@@ -326,11 +330,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Verify user is a host
-    const [host] = await db.select({ id: eventHosts.id }).from(eventHosts)
+    // Verify user is a host (capture their role for host-as-world).
+    const [host] = await db.select({ id: eventHosts.id, role: eventHosts.role }).from(eventHosts)
       .where(and(eq(eventHosts.eventId, data.eventId), eq(eventHosts.userId, user.id)));
     if (!host) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    // Host-as-world — only the main host (creator) controls which world the
+    // event is presented by. Co-hosts editing other fields don't change it.
+    if (data.worldId !== undefined && host.role === 'creator') {
+      await db.update(eventHosts)
+        .set({ worldId: data.worldId || null })
+        .where(eq(eventHosts.id, host.id));
     }
 
     const city = data.city ? titleCase(data.city) : null;
@@ -352,6 +364,10 @@ export async function PUT(request: NextRequest) {
       // Only change published when the caller sends it (the composer's
       // draft/publish toggle). Other partial updates leave it untouched.
       ...(data.published !== undefined ? { published: data.published } : {}),
+      // Registration settings — only when provided.
+      ...(data.rsvpCapacity !== undefined ? { rsvpCapacity: data.rsvpCapacity } : {}),
+      ...(data.rsvpApprovalRequired !== undefined ? { rsvpApprovalRequired: data.rsvpApprovalRequired } : {}),
+      ...(data.rsvpClosed !== undefined ? { rsvpClosed: data.rsvpClosed } : {}),
     }).where(eq(events.id, data.eventId)).returning();
 
     return NextResponse.json({ event: result[0] });

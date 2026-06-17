@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../components/Navigation';
+import SentientText from '../../components/ui/SentientText';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
 import RsvpModal from './RsvpModal';
@@ -13,7 +14,7 @@ import TicketPurchase from './TicketPurchase';
 import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
-import { CheckIcon, StarIcon } from '../../components/ui/Icons';
+import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
 
 interface EventHost {
   userId: string;
@@ -226,6 +227,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
   const [pendingNotice, setPendingNotice] = useState(false);
@@ -239,6 +241,15 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   // onboarding bounce) so it rides along with the RSVP and marks the invite
   // accepted. Cleared once the RSVP completes.
   const [inviteToken, setInviteToken] = useState<string | null>(null);
+  // One-shot notice handed off by the composer (e.g. some staged questions
+  // failed to save). Read + clear once on mount.
+  const [composerNotice, setComposerNotice] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const n = sessionStorage.getItem('eventComposerNotice');
+      if (n) { setComposerNotice(n); sessionStorage.removeItem('eventComposerNotice'); }
+    } catch {}
+  }, []);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const fromUrl = new URLSearchParams(window.location.search).get('invite');
@@ -340,8 +351,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   }, [event, privyUser?.id, slug, inviteToken]);
 
-  // "Interested" — toggles the event slug in users.savedEventSlugs CSV.
-  // Doubles as a way to unlock comments without committing to an RSVP.
+  // "Save" — toggles the event slug in users.savedEventSlugs CSV so the user
+  // can bookmark it (shows under the "Saved" tab on /events). Commenting is
+  // gated on RSVP, not on saving.
   const handleSaveToggle = async () => {
     if (!event || !privyUser?.id) { login(); return; }
     const next = !event.isSaved;
@@ -362,9 +374,32 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   };
 
+  // Share — native share sheet on mobile/supported browsers, clipboard fallback
+  // everywhere else (shows a transient "Link copied" confirmation).
+  const handleShare = async () => {
+    if (!event) return;
+    const url = typeof window !== 'undefined' ? window.location.href.split('?')[0] : '';
+    const shareData = {
+      title: event.eventName,
+      text: `${event.eventName}${event.city ? ` · ${event.city}` : ''} — on TOPIA`,
+      url,
+    };
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch { /* user cancelled the native sheet — fall through to nothing */ return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1800);
+    } catch { /* clipboard blocked — no-op */ }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
         <Navigation />
         <LoadingBar />
       </div>
@@ -373,7 +408,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
 
   if (!event) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
         <Navigation />
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>Event not found.</p>
         <Link href="/events" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Events</Link>
@@ -386,251 +421,326 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const tzLabel = formatTimezone(event.timezone);
   const isPast = event.dateIso ? event.dateIso < new Date().toISOString().slice(0, 10) : false;
 
+  // Luma-style mini calendar tile values, derived from the ISO date.
+  const evDate = event.dateIso ? new Date(event.dateIso + 'T00:00:00') : null;
+  const calMonth = evDate ? evDate.toLocaleString('en-US', { month: 'short' }).toUpperCase() : '';
+  const calDay = evDate ? String(evDate.getDate()) : '';
+  const dateHeadline = evDate ? evDate.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : (event.date || '');
+  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.address, event.city].filter(Boolean).join(', '))}`;
+  // Presenting world (Luma "Presented by") — first host that belongs to a world.
+  const world = event.hosts.find((h) => h.worldSlug && h.worldTitle) || null;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--page-bg)' }}>
+      {/* Background treatment — mirrors the worlds/events pages (PageShell):
+          halftone grid dots + film grain layered ABOVE the content (so the
+          texture washes the whole page identically), plus the glitching
+          "sentient" whispers. */}
+      <div
+        className="fixed inset-0 pointer-events-none z-[5] opacity-[0.06] mix-blend-multiply"
+        style={{ backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.8) 1px, transparent 1px)', backgroundSize: '4px 4px' }}
+      />
+      <div
+        className="fixed inset-0 pointer-events-none z-[4] opacity-[0.05]"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`, backgroundSize: '200px' }}
+      />
+      <SentientText />
+
       <Navigation />
 
-      <div className="pt-20 sm:pt-24 pb-16">
-        {/* Back link */}
-        <div className="container mx-auto px-4 sm:px-6 mb-6">
-          <Link href="/events" className="font-mono text-[12px] uppercase tracking-widest hover:opacity-60 transition" style={{ color: 'var(--foreground)' }}>
-            ← Events
-          </Link>
-        </div>
+      <div className="pt-6 md:pt-24 pb-16">
+        {/* Luma-style two-column layout — sticky cover on the left, all the
+            event details + registration card on the right. */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="lg:grid lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-10 lg:items-start">
 
-        {/* Partiful-style centered card */}
-        <div className="max-w-lg mx-auto px-4 sm:px-6">
-          {/* 1:1 Square Cover */}
-          {event.imageUrl && (
-            <div className="w-full rounded-2xl overflow-hidden mb-6 border" style={{ aspectRatio: '1', borderColor: 'var(--border-color)' }}>
-              {isVideoUrl(event.imageUrl) ? (
-                <video src={event.imageUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
+          {/* LEFT — sticky cover + presenting world + hosts (Luma-style) */}
+          <div className="lg:sticky lg:top-24 mb-8 lg:mb-0">
+            <div className="w-full rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+              {event.imageUrl ? (
+                isVideoUrl(event.imageUrl) ? (
+                  // Full poster at its natural aspect ratio — fills the box, no crop.
+                  <video src={event.imageUrl} className="w-full h-auto block" autoPlay loop muted playsInline preload="metadata" />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={event.imageUrl} alt={event.eventName} className="w-full h-auto block" />
+                )
               ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={event.imageUrl} alt={event.eventName} className="w-full h-full object-cover" />
+                <div className="w-full flex items-center justify-center" style={{ aspectRatio: '4 / 5' }}>
+                  <span className="font-black uppercase leading-none" style={{ fontSize: 'clamp(48px,10vw,120px)', color: 'var(--foreground)', opacity: 0.12 }}>
+                    {event.eventName[0]?.toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Presented by — the host's world */}
+            {world && (
+              <div className="mt-6">
+                <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-2.5" style={{ color: 'var(--foreground)' }}>Presented by</p>
+                <Link href={`/worlds/${world.worldSlug}`} className="flex items-center gap-2.5 group no-underline">
+                  {world.worldImageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={world.worldImageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border" style={{ borderColor: 'var(--border-color)' }} />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-mono text-[12px] font-bold border" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                      {world.worldTitle![0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="font-mono text-[13px] font-bold group-hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>{world.worldTitle}</span>
+                </Link>
+              </div>
+            )}
+
+            {/* Hosted by — host list */}
+            {event.hosts.length > 0 && (
+              <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>Hosted by</p>
+                <div className="space-y-3">
+                  {event.hosts.map((host) => (
+                    <Link key={host.userId} href={host.username ? `/profile/${host.username}` : '#'} className="flex items-center gap-2.5 group no-underline">
+                      {host.avatarUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={host.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[12px] font-bold" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>
+                          {(host.name || host.username || '?')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span className="font-mono text-[13px] group-hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
+                        {host.name || host.username || 'Host'}
+                        {host.role === 'creator' && <span className="opacity-40"> · Creator</span>}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT — details */}
+          <div className="min-w-0">
+
+          {/* Title */}
+          <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-tight mb-3" style={{ color: 'var(--foreground)' }}>
+            {event.eventName}
+          </h1>
+
+          {/* Status pills — color pops that mirror the quick-view card.
+              Hosting (lime) · Going (green) · Past (orange) · Draft (orange). */}
+          {(event.isHost || event.userStatus === 'going' || event.userRsvped || isPast || (event.isHost && event.published === false)) && (
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              {event.isHost && event.published === false && (
+                <span className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}>
+                  Draft
+                </span>
+              )}
+              {event.isHost && (
+                <span className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                  Hosting
+                </span>
+              )}
+              {!event.isHost && (event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending')) && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                  <CheckIcon size={9} strokeWidth={2} /> Going
+                </span>
+              )}
+              {isPast && (
+                <span className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}>
+                  Past Event
+                </span>
               )}
             </div>
           )}
 
-          {/* Title */}
-          <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-3" style={{ color: 'var(--foreground)' }}>
-            {event.eventName}
-          </h1>
+          {!isPast && !event.isHost && event.userStatus !== 'going' && !event.userRsvped && <div className="mb-2" />}
 
-          {/* Draft badge — only the host sees this; drafts aren't public */}
-          {event.isHost && event.published === false && (
-            <span
-              className="inline-block px-3 py-1 rounded-full font-mono text-[12px] uppercase tracking-widest font-bold mb-3 mr-2"
-              style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}
-            >
-              Draft
-            </span>
-          )}
-
-          {isPast && (
-            <span
-              className="inline-block px-3 py-1 rounded-full font-mono text-[13px] uppercase tracking-widest font-bold mb-5"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: 0.6 }}
-            >
-              Past Event
-            </span>
-          )}
-
-          {!isPast && <div className="mb-2" />}
-
-          {/* Hosts */}
-          {event.hosts && event.hosts.length > 0 && (
-            <div className="flex items-center gap-2 mb-6">
-              <div className="flex -space-x-2">
-                {event.hosts.map((host) => (
-                  <Link
-                    key={host.userId}
-                    href={host.username ? `/profile/${host.username}` : '#'}
-                    className="block relative hover:z-10 transition-transform hover:scale-110"
-                    title={host.name || host.username || 'Host'}
-                  >
-                    {host.avatarUrl ? (
-                      <img
-                        src={host.avatarUrl}
-                        alt={host.name || host.username || 'Host'}
-                        className="w-8 h-8 rounded-full border-2 object-cover"
-                        style={{ borderColor: 'var(--background)' }}
-                      />
-                    ) : (
-                      <div
-                        className="w-8 h-8 rounded-full border-2 flex items-center justify-center font-mono text-[11px] font-bold"
-                        style={{ borderColor: 'var(--background)', backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}
-                      >
-                        {(host.name || host.username || '?')[0].toUpperCase()}
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-              <div className="font-mono text-[12px] opacity-60" style={{ color: 'var(--foreground)' }}>
-                Hosted by{' '}
-                {event.hosts.map((host, i) => (
-                  <span key={host.userId}>
-                    {i > 0 && (i === event.hosts.length - 1 ? ' & ' : ', ')}
-                    <Link
-                      href={host.username ? `/profile/${host.username}` : '#'}
-                      className="underline hover:opacity-60 transition"
-                    >
-                      {host.worldTitle || host.name || host.username || 'Unknown'}
-                    </Link>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Info rows — icon-style like Partiful */}
-          <div className="space-y-4 mb-6">
-            {/* Date & Time */}
+          {/* Meta tiles — Luma-style date + location with leading icon tiles */}
+          <div className="space-y-3.5 mb-7">
+            {/* Date & time — mini calendar tile (or clock tile when no date) */}
             {(event.date || event.startTime) && (
-              <div className="flex gap-3 items-start">
-                <span className="font-mono text-[14px] opacity-40 mt-0.5" style={{ color: 'var(--foreground)' }}>
-                  &#x25F7;
-                </span>
-                <div>
-                  <p className="font-mono text-[14px] font-bold" style={{ color: 'var(--foreground)' }}>
-                    {event.date}
-                  </p>
+              <div className="flex items-center gap-3.5">
+                {evDate ? (
+                  <div className="shrink-0 w-12 rounded-lg overflow-hidden border text-center" style={{ borderColor: 'var(--border-color)' }}>
+                    <div className="font-mono text-[9px] uppercase tracking-[1px] py-0.5 font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                      {calMonth}
+                    </div>
+                    <div className="font-bold text-[18px] leading-none py-1.5" style={{ color: 'var(--foreground)' }}>
+                      {calDay}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="shrink-0 w-12 h-12 rounded-lg border flex items-center justify-center" style={{ borderColor: 'var(--border-color)' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                    </svg>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-mono text-[14px] font-bold" style={{ color: 'var(--foreground)' }}>{dateHeadline || 'Date to be announced'}</p>
                   {event.startTime && (
                     <p className="font-mono text-[13px] opacity-60" style={{ color: 'var(--foreground)' }}>
-                      {event.startTime}
-                      {event.endTime && ` – ${event.endTime}`}
-                      {tzLabel && ` ${tzLabel}`}
+                      {event.startTime}{event.endTime && ` – ${event.endTime}`}{tzLabel && ` ${tzLabel}`}
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Location */}
+            {/* Location — icon tile that links out to Google Maps */}
             {location && (
-              <div className="flex gap-3 items-start">
-                <span className="font-mono text-[14px] opacity-40 mt-0.5" style={{ color: 'var(--foreground)' }}>
-                  &#x25C7;
-                </span>
-                <p className="font-mono text-[14px]" style={{ color: 'var(--foreground)' }}>
-                  {location}
-                </p>
-              </div>
-            )}
-
-            {/* RSVP count */}
-            {event.rsvpCount > 0 && (
-              <div className="flex gap-3 items-start">
-                <span className="font-mono text-[14px] opacity-40 mt-0.5" style={{ color: 'var(--foreground)' }}>
-                  &#x2713;
-                </span>
-                <p className="font-mono text-[14px] opacity-60" style={{ color: 'var(--foreground)' }}>
-                  {event.rsvpCount} going
-                </p>
-              </div>
-            )}
-
-            {/* External link */}
-            {event.link && (
-              <div className="flex gap-3 items-start">
-                <span className="font-mono text-[14px] opacity-40 mt-0.5" style={{ color: 'var(--foreground)' }}>
-                  &#x2197;
-                </span>
-                <a
-                  href={event.link.startsWith('http') ? event.link : `https://${event.link}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-[14px] underline hover:opacity-60 transition"
-                  style={{ color: 'var(--foreground)' }}
-                >
-                  Event Link
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Add to Calendar buttons */}
-          {hasCalendarData && (
-            <div className="flex flex-wrap gap-2 mb-8">
-              <button
-                onClick={downloadICal}
-                className="flex-1 sm:flex-none px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer text-center"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-              >
-                + iCal / Apple
-              </button>
               <a
-                href={getGoogleCalendarUrl(event)}
+                href={mapsHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 sm:flex-none px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                className="flex items-center gap-3.5 group no-underline"
+                title="Open in Google Maps"
               >
-                + Google Calendar
+                <div className="shrink-0 w-12 h-12 rounded-lg border flex items-center justify-center" style={{ borderColor: 'var(--border-color)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[14px] font-bold group-hover:opacity-70 transition truncate" style={{ color: 'var(--foreground)' }}>
+                    {event.address || event.city}
+                  </p>
+                  <p className="font-mono text-[12px]" style={{ color: 'var(--accent)' }}>
+                    {event.address && event.city ? `${event.city} · ` : ''}View on Google Maps ↗
+                  </p>
+                </div>
               </a>
-            </div>
-          )}
+            )}
+            {/* Ticket link is intentionally hidden here — it surfaces in the
+                RSVP confirmation ("Get Tickets") after someone registers. */}
+          </div>
 
-          {/* Paid tickets — renders only when the event has ticket tiers.
-              Free/unticketed events show nothing here and keep RSVP below.
-              Hidden behind PAYMENTS_ENABLED until we're ready to sell. */}
-          {PAYMENTS_ENABLED && !isPast && !event.isHost && <TicketPurchase eventId={event.id} slug={event.slug} />}
+          {/* Share + Add to Calendar — Share is always available; calendar
+              links show only when the event has a date. */}
+          <div className="rounded-2xl border mb-7 overflow-hidden" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+              <span className="font-mono text-[11px] uppercase tracking-[2px] font-bold opacity-70" style={{ color: 'var(--foreground)' }}>
+                {event.isHost ? 'You’re hosting' : isPast ? 'Registration closed' : 'Registration'}
+              </span>
+            </div>
+            <div className="p-5">
+              {event.isHost ? (
+                <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>You’re hosting this event. RSVP yourself, or manage registration &amp; guests below.</p>
+              ) : isPast ? (
+                <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>This event has ended.</p>
+              ) : (event.externalSource && event.link) ? (
+                <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>RSVPs for this event are handled on {event.externalSource}.</p>
+              ) : (
+                <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>
+                  {(event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending')) ? 'You’re in! See you there.'
+                    : event.userStatus === 'pending' ? 'Your request is awaiting the host’s approval.'
+                    : event.rsvpApprovalRequired ? 'Approval required — request to join below.'
+                    : 'Welcome! To join the event, please register below.'}
+                </p>
+              )}
+
+              {/* Paid tickets — hidden behind PAYMENTS_ENABLED */}
+              {PAYMENTS_ENABLED && !isPast && !event.isHost && <TicketPurchase eventId={event.id} slug={event.slug} />}
+
+              {/* Host can RSVP themselves (mark attendance / withdraw) */}
+              {event.isHost && !isPast && (() => {
+                const hostGoing = event.userStatus === 'going' || (!event.userStatus && event.userRsvped);
+                const hostPending = event.userStatus === 'pending';
+                return (
+                  <button
+                    onClick={handleRsvp}
+                    disabled={rsvpLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 mb-2 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold hover:opacity-90"
+                    style={hostGoing
+                      ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)', border: 'none', opacity: rsvpLoading ? 0.5 : 1 }
+                      : { backgroundColor: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border-color)', opacity: rsvpLoading ? 0.5 : 1 }}
+                  >
+                    {rsvpLoading ? '...' : hostGoing ? (<><CheckIcon size={11} strokeWidth={2} /> You’re going</>) : hostPending ? 'Request sent' : 'RSVP as host'}
+                  </button>
+                );
+              })()}
+
+              {/* Host actions — edit, manage & share, in-card */}
+              {event.isHost && (
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/events/${event.slug}/edit`} className="flex-1 min-w-[100px] inline-flex items-center justify-center px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center no-underline" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>Edit Event</Link>
+                  <Link href={`/events/${event.slug}/manage`} className="flex-1 min-w-[100px] inline-flex items-center justify-center px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center no-underline" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.75 }}>Manage</Link>
+                  <button onClick={handleShare} className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}><ShareIcon size={12} />{shareCopied ? 'Copied' : 'Share'}</button>
+                </div>
+              )}
 
           {/* Native RSVP — only shown for non-external events. External
               events render the platform-specific CTA further down instead. */}
-          {!isPast && !event.isHost && !(event.externalSource && event.link) && (
-            <div className="mb-8">
+          {!isPast && !event.isHost && !(event.externalSource && event.link) && (() => {
+            // Capacity math — only meaningful when a cap is set. A guest who's
+            // already going/pending is never blocked by a full house.
+            const isGoing = event.userStatus === 'going' || (!event.userStatus && event.userRsvped);
+            const isPending = event.userStatus === 'pending';
+            const cap = event.rsvpCapacity ?? null;
+            const spotsLeft = cap != null ? Math.max(0, cap - event.rsvpCount) : null;
+            const isFull = spotsLeft === 0 && !isGoing && !isPending;
+            const blocked = (event.rsvpClosed && !isGoing && !isPending) || isFull;
+            // Site-wide lime accent for the RSVP / Going actions; muted only
+            // when the action is blocked (pending / closed / full).
+            const btnStyle: React.CSSProperties = (isPending || event.rsvpClosed || isFull) && !isGoing
+              ? { backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }
+              : { backgroundColor: 'var(--accent)', color: 'var(--accent-text)' };
+            return (
+            <div>
+              <div className="flex gap-2">
               <button
                 onClick={handleRsvp}
-                disabled={rsvpLoading || (event.rsvpClosed && !event.userRsvped)}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold border-none disabled:opacity-50"
-                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: rsvpLoading ? 0.5 : 1 }}
+                disabled={rsvpLoading || blocked}
+                className="flex-[3] inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest transition rounded-lg cursor-pointer text-center font-bold border-none disabled:cursor-not-allowed hover:opacity-90"
+                style={{ ...btnStyle, opacity: rsvpLoading ? 0.5 : 1 }}
               >
                 {rsvpLoading ? '...'
-                  : event.userStatus === 'going' ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
-                  : event.userStatus === 'pending' ? 'Pending approval'
-                  : event.userRsvped ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
+                  : isGoing ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
+                  : isPending ? 'Request sent'
                   : event.rsvpClosed ? 'Registration closed'
+                  : isFull ? 'Full'
                   : event.rsvpApprovalRequired ? 'Request to join'
                   : 'RSVP'}
               </button>
-              {event.userStatus === 'pending' && (
+              <button
+                onClick={handleShare}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                title="Share"
+              >
+                <ShareIcon size={12} />
+                {shareCopied ? 'Copied' : 'Share'}
+              </button>
+              </div>
+              {isPending && (
                 <p className="font-mono text-[11px] opacity-50 mt-1.5 text-center" style={{ color: 'var(--foreground)' }}>
                   Awaiting host approval — tap to withdraw.
                 </p>
               )}
+              {/* Capacity hint — only when a cap is set and the guest hasn't
+                  already locked a spot. */}
+              {cap != null && !isGoing && !isPending && !event.rsvpClosed && (
+                <p className="font-mono text-[11px] opacity-50 mt-1.5 text-center" style={{ color: 'var(--foreground)' }}>
+                  {isFull ? 'This event is at capacity.'
+                    : spotsLeft === 1 ? '1 spot left.'
+                    : `${spotsLeft} spots left.`}
+                </p>
+              )}
             </div>
-          )}
-          {/* Interested \u2605 \u2014 separate row to stay backward-compatible with
-              the original button placement. Shows only for non-host, non-
-              past events. Doubles as the unlock for the comments composer. */}
-          {!isPast && !event.isHost && !(event.externalSource && event.link) && (
-            <div className="mb-8 -mt-6">
-              <button
-                onClick={handleSaveToggle}
-                disabled={saveLoading}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer transition border"
-                style={event.isSaved
-                  ? { borderColor: 'var(--foreground)', backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: saveLoading ? 0.5 : 1 }
-                  : { borderColor: 'var(--border-color)', backgroundColor: 'transparent', color: 'var(--foreground)', opacity: saveLoading ? 0.5 : 1 }}
-                title={event.isSaved ? 'Click to remove from saved' : 'Mark interested \u2014 saves it + unlocks comments'}
-              >
-                <StarIcon size={12} filled={event.isSaved} />
-                {event.isSaved ? 'Interested' : 'Interested?'}
-              </button>
-            </div>
-          )}
+            );
+          })()}
+          {/* Save \u2014 non-host, non-past; bookmarks under the "Saved" tab. */}
           {/* External-event RSVP CTA (replaces the local RSVP for imports
-              from Partiful/Luma/Posh) \u2014 still pairs with the Interested \u2605. */}
+              from Partiful/Luma/Posh) \u2014 still pairs with the Save \u2605. */}
           {!isPast && !event.isHost && event.externalSource && event.link && (
-            <div className="mb-8 flex flex-col sm:flex-row gap-2 -mt-6">
+            <div className="mt-3 flex gap-2">
               <a
                 href={event.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center font-mono text-[12px] uppercase tracking-widest px-4 py-3 rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90"
-                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                className="flex-[3] inline-flex items-center justify-center font-mono text-[12px] uppercase tracking-widest px-4 py-3 rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90"
+                style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
               >
                 {event.externalSource === 'partiful' ? 'RSVP on Partiful \u2192'
                 : event.externalSource === 'luma'    ? 'RSVP on Luma \u2192'
@@ -638,38 +748,58 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 : 'Open event \u2192'}
               </a>
               <button
-                onClick={handleSaveToggle}
-                disabled={saveLoading}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer transition border"
-                style={event.isSaved
-                  ? { borderColor: 'var(--foreground)', backgroundColor: 'var(--foreground)', color: 'var(--background)', opacity: saveLoading ? 0.5 : 1 }
-                  : { borderColor: 'var(--border-color)', backgroundColor: 'transparent', color: 'var(--foreground)', opacity: saveLoading ? 0.5 : 1 }}
+                onClick={handleShare}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-3 font-mono text-[11px] uppercase tracking-widest rounded-lg cursor-pointer transition border hover:opacity-70"
+                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                title="Share"
               >
-                <StarIcon size={12} filled={event.isSaved} />
-                {event.isSaved ? 'Interested' : 'Interested?'}
+                <ShareIcon size={12} />
+                {shareCopied ? 'Copied' : 'Share'}
               </button>
             </div>
           )}
 
-          {/* Host controls — Edit opens the full composer; Manage covers
-              guests, registration questions & co-hosts. */}
-          {event.isHost && (
-            <div className="mb-8 flex flex-wrap items-center gap-2">
-              <Link
-                href={`/events/${event.slug}/edit`}
-                className="inline-block px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
-              >
-                Edit Event
-              </Link>
-              <Link
-                href={`/events/${event.slug}/manage`}
-                className="inline-block px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.6 }}
-                title="Guests, registration questions & co-hosts"
-              >
-                Manage event →
-              </Link>
+              {/* Add to calendar (+ Share for past events, which have no action row) */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {isPast && (
+                  <button
+                    onClick={handleShare}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer text-center"
+                    style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                  >
+                    <ShareIcon size={12} />
+                    {shareCopied ? 'Copied' : 'Share'}
+                  </button>
+                )}
+                {hasCalendarData && (
+                  <>
+                    <button
+                      onClick={downloadICal}
+                      className="flex-1 px-3 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer text-center"
+                      style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      + iCal
+                    </button>
+                    <a
+                      href={getGoogleCalendarUrl(event)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-3 py-2.5 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center"
+                      style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      + Google
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* One-shot composer hand-off notice (e.g. some questions failed to save) */}
+          {composerNotice && event.isHost && (
+            <div className="mb-6 flex items-start gap-3 px-4 py-3 rounded-lg border font-mono text-[12px]" style={{ borderColor: '#FF5C3455', backgroundColor: '#FF5C3414', color: 'var(--foreground)' }}>
+              <span className="flex-1">{composerNotice}</span>
+              <button onClick={() => setComposerNotice(null)} className="bg-transparent border-none cursor-pointer opacity-60 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label="Dismiss">×</button>
             </div>
           )}
 
@@ -696,15 +826,18 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             </section>
           )}
 
-          {/* Comments — RSVP'd or interested users can post */}
+          {/* Comments — hosts + RSVP'd guests can post */}
           <CommentSection
             endpoint="/api/events/comments"
             slug={event.slug}
             kind="event"
             title="The chat"
-            gateHint="RSVP or hit ★ Interested above to unlock the chat. (Hosts can always comment.)"
+            gateHint="RSVP above to join the chat. (Hosts can always comment.)"
           />
-        </div>
+
+          </div>{/* right column */}
+          </div>{/* two-column grid */}
+        </div>{/* container */}
       </div>
 
       {/* Registration modal — custom questions + confirm */}
@@ -716,6 +849,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           privyId={privyUser.id}
           email={privyEmail}
           inviteToken={inviteToken}
+          approvalRequired={!!event.rsvpApprovalRequired}
           onClose={() => setRsvpFormOpen(false)}
           onDone={handleRsvpDone}
         />
@@ -728,6 +862,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           date={event.date}
           city={event.city}
           slug={event.slug}
+          ticketLink={event.link}
           onClose={() => setShowRsvpModal(false)}
         />
       )}

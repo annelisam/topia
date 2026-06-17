@@ -7,10 +7,11 @@ interface RsvpConfirmationModalProps {
   date: string | null;
   city: string | null;
   slug: string;
+  ticketLink?: string | null;
   onClose: () => void;
 }
 
-export default function RsvpConfirmationModal({ eventName, date, city, slug, onClose }: RsvpConfirmationModalProps) {
+export default function RsvpConfirmationModal({ eventName, date, city, slug, ticketLink, onClose }: RsvpConfirmationModalProps) {
   const [copied, setCopied] = useState(false);
 
   const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}` : '';
@@ -59,6 +60,24 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, onC
           <p className="font-mono text-[12px] opacity-40 mb-6" style={{ color: 'var(--foreground)' }}>
             {[date, city].filter(Boolean).join(' · ')}
           </p>
+        )}
+
+        {/* Ticketed event — direct the guest to grab tickets */}
+        {ticketLink && (
+          <div className="mb-6 rounded-xl border p-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+            <p className="font-mono text-[12px] opacity-70 mb-3" style={{ color: 'var(--foreground)' }}>
+              This is a ticketed event — secure your spot.
+            </p>
+            <a
+              href={ticketLink.startsWith('http') ? ticketLink : `https://${ticketLink}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+            >
+              Get Tickets →
+            </a>
+          </div>
         )}
 
         {/* Share buttons */}

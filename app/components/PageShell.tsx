@@ -2,8 +2,6 @@
 
 import Navigation from './Navigation';
 import Footer from './Footer';
-import ColorSlider from './ui/ColorSlider';
-import ThemeToggle from './ThemeToggle';
 import SentientText from './ui/SentientText';
 import { ReactNode } from 'react';
 
@@ -32,8 +30,6 @@ export default function PageShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
-      <ColorSlider />
-      <ThemeToggle />
     </>
   );
 }

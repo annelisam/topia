@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
-import { db, users, events, eventHosts } from '@/lib/db';
+import { db, users, events, eventHosts, eventRsvps } from '@/lib/db';
 
 // POST /api/events/settings — host updates RSVP/registration settings.
 // Body: { privyId, eventId, rsvpCapacity?, rsvpApprovalRequired?, rsvpClosed? }
@@ -21,11 +21,26 @@ export async function POST(request: NextRequest) {
 
     const patch: Partial<typeof events.$inferInsert> = { updatedAt: new Date() };
     if (data.rsvpCapacity !== undefined) {
-      patch.rsvpCapacity =
-        data.rsvpCapacity === null || data.rsvpCapacity === '' ? null : Math.max(0, Math.round(Number(data.rsvpCapacity)));
+      // Capacity below 1 is meaningless (it would lock everyone out), so any
+      // blank / null / sub-1 value is normalized to null = unlimited.
+      const n = data.rsvpCapacity === null || data.rsvpCapacity === '' ? NaN : Number(data.rsvpCapacity);
+      patch.rsvpCapacity = Number.isFinite(n) && n >= 1 ? Math.floor(n) : null;
     }
     if (data.rsvpApprovalRequired !== undefined) patch.rsvpApprovalRequired = Boolean(data.rsvpApprovalRequired);
     if (data.rsvpClosed !== undefined) patch.rsvpClosed = Boolean(data.rsvpClosed);
+
+    // When the host is closing registration, surface a warning if there are
+    // still pending join requests that will be left in limbo.
+    let warning: string | null = null;
+    if (patch.rsvpClosed === true) {
+      const pending = await db
+        .select({ id: eventRsvps.id })
+        .from(eventRsvps)
+        .where(and(eq(eventRsvps.eventId, data.eventId), eq(eventRsvps.status, 'pending')));
+      if (pending.length > 0) {
+        warning = `Registration closed with ${pending.length} pending request${pending.length > 1 ? 's' : ''} still awaiting your decision.`;
+      }
+    }
 
     const [updated] = await db
       .update(events)
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
         rsvpClosed: events.rsvpClosed,
       });
 
-    return NextResponse.json({ ok: true, settings: updated });
+    return NextResponse.json({ ok: true, settings: updated, warning });
   } catch (error) {
     console.error('POST event settings:', error);
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
