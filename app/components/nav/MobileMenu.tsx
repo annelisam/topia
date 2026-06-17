@@ -11,7 +11,6 @@ type NavItem = {
 };
 
 const NAV_LINKS: NavItem[] = [
-  { href: '/onboarding', label: 'Onboarding' },
   { href: '#', label: 'Passport', comingSoon: true },
   { href: '/tv', label: 'Topia TV' },
   { href: '/worlds', label: 'Worlds' },
