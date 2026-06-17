@@ -18,7 +18,6 @@ const NAV_LINKS: NavItem[] = [
   { href: '/tv', label: 'Topia TV' },
   { href: '/worlds', label: 'Worlds' },
   { href: '/events', label: 'Events' },
-  { href: '#', label: 'Tiers', comingSoon: true },
   {
     label: 'Resources',
     children: [

@@ -9,6 +9,7 @@ export default function CreateEventPage() {
       initial={{
         eventName: '', dateIso: '', startTime: '', endTime: '', timezone: '',
         city: '', venue: '', link: '', description: '', imageUrl: '', worldId: '', published: false,
+        rsvpCapacity: null, rsvpApprovalRequired: false,
       }}
     />
   );

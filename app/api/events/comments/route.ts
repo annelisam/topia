@@ -63,15 +63,11 @@ export async function GET(request: NextRequest) {
 
     // Resolve viewer id (used for reactions' viewerReacted flag + canPost)
     let viewerId: string | null = null;
-    let viewerSavedSlugs = '';
     if (viewerPrivyId) {
       const [viewer] = await db
-        .select({ id: users.id, savedEventSlugs: users.savedEventSlugs })
+        .select({ id: users.id })
         .from(users).where(eq(users.privyId, viewerPrivyId)).limit(1);
-      if (viewer) {
-        viewerId = viewer.id;
-        viewerSavedSlugs = viewer.savedEventSlugs ?? '';
-      }
+      if (viewer) viewerId = viewer.id;
     }
 
     // Reactions per comment — single query batched across all IDs
@@ -102,25 +98,21 @@ export async function GET(request: NextRequest) {
     topLevel.sort((a, b) => (b.createdAt instanceof Date ? b.createdAt.getTime() : 0) - (a.createdAt instanceof Date ? a.createdAt.getTime() : 0));
     const comments = topLevel;
 
-    // Gate check — hosts always allowed; otherwise must be RSVP'd OR
-    // interested (event slug in savedEventSlugs CSV).
+    // Gate check — hosts always allowed; everyone else must have RSVP'd.
     let canPost = false;
     if (viewerId) {
       if (hostIds.has(viewerId)) {
         canPost = true;
       } else {
-        const saved = viewerSavedSlugs.split(',').map((s) => s.trim()).filter(Boolean);
-        if (saved.includes(event.slug)) {
-          canPost = true;
-        } else {
-          const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps)
-            .where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, viewerId))).limit(1);
-          canPost = !!rsvp;
-        }
+        const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps)
+          .where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, viewerId))).limit(1);
+        canPost = !!rsvp;
       }
     }
 
-    return NextResponse.json({ comments, canPost });
+    // viewerId + viewerIsHost let the client show delete controls (own
+    // comments for everyone, any comment for hosts).
+    return NextResponse.json({ comments, canPost, viewerId, viewerIsHost: !!(viewerId && hostIds.has(viewerId)) });
   } catch (error) {
     console.error('GET event comments error:', error);
     return NextResponse.json({ error: 'Failed to load comments' }, { status: 500 });
@@ -133,29 +125,23 @@ export async function POST(request: NextRequest) {
     if (!privyId || !slug) return NextResponse.json({ error: 'Missing privyId or slug' }, { status: 400 });
     if (!body?.trim() && !imageUrl) return NextResponse.json({ error: 'Body or gif required' }, { status: 400 });
 
-    const [user]  = await db.select({ id: users.id, savedEventSlugs: users.savedEventSlugs }).from(users).where(eq(users.privyId, privyId)).limit(1);
+    const [user]  = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId)).limit(1);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     const [event] = await db
       .select({ id: events.id, slug: events.slug, createdBy: events.createdBy, externalSource: events.externalSource })
       .from(events).where(eq(events.slug, slug)).limit(1);
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 
-    // Gate: host OR RSVP'd OR interested. Hosts skip the engagement check
-    // because they're running the event — no point demanding they RSVP to
-    // their own party.
+    // Gate: host OR RSVP'd. Hosts skip the check (they run the event); everyone
+    // else must RSVP to join the conversation.
     const hostIds = await getHostIds(event.id, event.createdBy, event.externalSource);
     let allowed = hostIds.has(user.id);
     if (!allowed) {
-      const saved = (user.savedEventSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-      if (saved.includes(event.slug)) {
-        allowed = true;
-      } else {
-        const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps).where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, user.id))).limit(1);
-        allowed = !!rsvp;
-      }
+      const [rsvp] = await db.select({ id: eventRsvps.id }).from(eventRsvps).where(and(eq(eventRsvps.eventId, event.id), eq(eventRsvps.userId, user.id))).limit(1);
+      allowed = !!rsvp;
     }
     if (!allowed) {
-      return NextResponse.json({ error: "RSVP or mark interested to comment." }, { status: 403 });
+      return NextResponse.json({ error: 'RSVP to comment.' }, { status: 403 });
     }
 
     // If this is a reply, validate the parent belongs to the same event
@@ -195,9 +181,16 @@ export async function DELETE(request: NextRequest) {
   try {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId)).limit(1);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    const [comment] = await db.select({ userId: eventComments.userId }).from(eventComments).where(eq(eventComments.id, id)).limit(1);
+    const [comment] = await db.select({ userId: eventComments.userId, eventId: eventComments.eventId }).from(eventComments).where(eq(eventComments.id, id)).limit(1);
     if (!comment) return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
-    if (comment.userId !== user.id) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    // Authors can delete their own comments; event hosts can delete anyone's.
+    if (comment.userId !== user.id) {
+      const [event] = await db
+        .select({ id: events.id, createdBy: events.createdBy, externalSource: events.externalSource })
+        .from(events).where(eq(events.id, comment.eventId)).limit(1);
+      const hostIds = event ? await getHostIds(event.id, event.createdBy, event.externalSource) : new Set<string>();
+      if (!hostIds.has(user.id)) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
     await db.delete(eventComments).where(eq(eventComments.id, id));
     return NextResponse.json({ ok: true });
   } catch (error) {

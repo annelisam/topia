@@ -47,6 +47,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   const { user, authenticated } = usePrivy();
   const [items, setItems] = useState<CommentItem[]>([]);
   const [canPost, setCanPost] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerIsHost, setViewerIsHost] = useState(false);
   const [avg, setAvg] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [gif, setGif] = useState<PickedGif | null>(null);
   const [gifOpen, setGifOpen] = useState(false);
+  const [media, setMedia] = useState<{ url: string; isVideo: boolean } | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +69,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   const [replyBody, setReplyBody] = useState('');
   const [replyGif, setReplyGif] = useState<PickedGif | null>(null);
   const [replyGifOpen, setReplyGifOpen] = useState(false);
+  const [replyMedia, setReplyMedia] = useState<{ url: string; isVideo: boolean } | null>(null);
+  const [replyUploading, setReplyUploading] = useState(false);
   const [replySubmitting, setReplySubmitting] = useState(false);
 
   const targetType = kind === 'tool' ? 'tool_comment' : 'event_comment';
@@ -78,6 +84,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       const json = await res.json();
       setItems(json.comments ?? []);
       setCanPost(!!json.canPost);
+      setViewerId(json.viewerId ?? null);
+      setViewerIsHost(!!json.viewerIsHost);
       if (kind === 'tool') {
         setAvg(json.averageRating ?? null);
         setRatingCount(json.ratingCount ?? 0);
@@ -91,10 +99,25 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
   useEffect(() => { load(); }, [load]);
 
+  // Upload a photo or video (event comments) to blob storage and attach it.
+  async function uploadMedia(file: File) {
+    setError(null); setUploadingMedia(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch('/api/events/cover-upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok || !json.ok) { setError(json.error || 'Upload failed'); return; }
+      setGif(null);
+      setMedia({ url: json.url as string, isVideo: file.type.startsWith('video/') });
+    } catch {
+      setError('Upload failed');
+    } finally { setUploadingMedia(false); }
+  }
+
   async function submit() {
     if (!user?.id) return;
-    if (!body.trim() && !gif && (kind !== 'tool' || rating === 0)) {
-      setError('Add something — a comment, a rating, or a gif');
+    if (!body.trim() && !gif && !media && (kind !== 'tool' || rating === 0)) {
+      setError('Add something — a comment, a rating, a photo or a gif');
       return;
     }
     setSubmitting(true);
@@ -103,7 +126,9 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       const payload: Record<string, unknown> = { privyId: user.id, slug };
       if (body.trim()) payload.body = body.trim();
       if (kind === 'tool' && rating > 0) payload.rating = rating;
-      if (kind === 'event' && gif) {
+      if (kind === 'event' && media) {
+        payload.imageUrl = media.url;
+      } else if (kind === 'event' && gif) {
         payload.imageUrl = gif.url;
         payload.giphyId = gif.id;
       }
@@ -113,7 +138,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'Failed to post'); return; }
-      setBody(''); setGif(null); setRating(0);
+      setBody(''); setGif(null); setMedia(null); setRating(0);
       await load();
     } catch (err) {
       console.error('comment post failed', err);
@@ -123,14 +148,30 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
     }
   }
 
+  async function uploadReplyMedia(file: File) {
+    setError(null); setReplyUploading(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch('/api/events/cover-upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok || !json.ok) { setError(json.error || 'Upload failed'); return; }
+      setReplyGif(null);
+      setReplyMedia({ url: json.url as string, isVideo: file.type.startsWith('video/') });
+    } catch {
+      setError('Upload failed');
+    } finally { setReplyUploading(false); }
+  }
+
   async function submitReply(parentId: string) {
     if (!user?.id) return;
-    if (!replyBody.trim() && !replyGif) return;
+    if (!replyBody.trim() && !replyGif && !replyMedia) return;
     setReplySubmitting(true);
     try {
       const payload: Record<string, unknown> = { privyId: user.id, slug, parentId };
       if (replyBody.trim()) payload.body = replyBody.trim();
-      if (kind === 'event' && replyGif) {
+      if (kind === 'event' && replyMedia) {
+        payload.imageUrl = replyMedia.url;
+      } else if (kind === 'event' && replyGif) {
         payload.imageUrl = replyGif.url;
         payload.giphyId = replyGif.id;
       }
@@ -140,14 +181,27 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'Failed to reply'); return; }
-      setReplyBody(''); setReplyGif(null); setReplyOpenFor(null);
+      setReplyBody(''); setReplyGif(null); setReplyMedia(null); setReplyOpenFor(null);
       await load();
     } finally {
       setReplySubmitting(false);
     }
   }
 
+  async function handleDelete(commentId: string) {
+    if (!user?.id) return;
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      const res = await fetch(`${endpoint}?id=${commentId}&privyId=${encodeURIComponent(user.id)}`, { method: 'DELETE' });
+      if (res.ok) await load();
+    } catch (err) {
+      console.error('delete comment failed', err);
+    }
+  }
+
   function CommentRow({ c, isReply = false }: { c: CommentItem; isReply?: boolean }) {
+    // Authors can delete their own comment; event hosts can delete any.
+    const canDelete = !!viewerId && (c.authorId === viewerId || viewerIsHost);
     return (
       <div className={`flex items-start gap-3 ${isReply ? 'pl-3 border-l-2 border-bone/[0.06]' : 'border border-bone/[0.06] rounded-md p-3 bg-bone/[0.015]'}`}>
         {c.authorAvatarUrl ? (
@@ -182,8 +236,12 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
           )}
           {c.imageUrl && (
             <div className="mt-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.imageUrl} alt={c.body || 'gif'} className="rounded-sm border border-bone/10 max-w-[220px]" />
+              {/\.(mp4|mov|webm)(\?|#|$)/i.test(c.imageUrl) ? (
+                <video src={c.imageUrl} className="rounded-sm border border-bone/10 max-w-[260px]" controls muted playsInline preload="metadata" />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={c.imageUrl} alt={c.body || 'attachment'} className="rounded-sm border border-bone/10 max-w-[220px]" />
+              )}
               {c.giphyId && <span className="block font-mono text-[8px] uppercase tracking-[2px] text-bone/20 mt-0.5">via giphy</span>}
             </div>
           )}
@@ -203,10 +261,22 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 setReplyOpenFor(replyOpenFor === c.id ? null : c.id);
                 setReplyBody('');
                 setReplyGif(null);
+                setReplyMedia(null);
               }}
               className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border-none cursor-pointer mt-1.5 px-0"
             >
               {replyOpenFor === c.id ? '× cancel' : '↪ reply'}
+            </button>
+          )}
+
+          {/* Delete — author (own comment) or event host (any comment) */}
+          {canDelete && (
+            <button
+              onClick={() => handleDelete(c.id)}
+              className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-[#FF5C34] bg-transparent border-none cursor-pointer mt-1.5 px-0 ml-3"
+              title={c.authorId === viewerId ? 'Delete your comment' : 'Delete (host)'}
+            >
+              🗑 delete
             </button>
           )}
 
@@ -228,19 +298,36 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                   <button onClick={() => setReplyGif(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-obsidian border border-bone/20 text-bone text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove gif">×</button>
                 </div>
               )}
+              {replyMedia && (
+                <div className="relative inline-block mt-1.5">
+                  {replyMedia.isVideo ? (
+                    <video src={replyMedia.url} className="rounded-sm border border-bone/15 max-w-[150px]" muted playsInline controls />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={replyMedia.url} alt="upload" className="rounded-sm border border-bone/15 max-w-[150px]" />
+                  )}
+                  <button onClick={() => setReplyMedia(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-obsidian border border-bone/20 text-bone text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
+                </div>
+              )}
               <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-bone/[0.05]">
                 {kind === 'event' && (
-                  <button
-                    type="button"
-                    onClick={() => setReplyGifOpen(true)}
-                    className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
-                  >
-                    + GIF
-                  </button>
+                  <>
+                    <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                      {replyUploading ? '…' : '+ photo / video'}
+                      <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={replyUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReplyMedia(f); e.currentTarget.value = ''; }} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setReplyGifOpen(true)}
+                      className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
+                    >
+                      + GIF
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => submitReply(c.id)}
-                  disabled={replySubmitting || (!replyBody.trim() && !replyGif)}
+                  disabled={replySubmitting || replyUploading || (!replyBody.trim() && !replyGif && !replyMedia)}
                   className="ml-auto font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-lime text-obsidian rounded-sm disabled:opacity-50 hover:opacity-90 transition cursor-pointer border-none"
                 >
                   {replySubmitting ? '…' : 'reply →'}
@@ -325,19 +412,37 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             </div>
           )}
 
+          {media && (
+            <div className="relative inline-block mt-1.5">
+              {media.isVideo ? (
+                <video src={media.url} className="rounded-sm border border-bone/15 max-w-[180px]" muted playsInline controls />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={media.url} alt="upload" className="rounded-sm border border-bone/15 max-w-[180px]" />
+              )}
+              <button onClick={() => setMedia(null)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-obsidian border border-bone/20 text-bone text-[12px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-bone/[0.05]">
             {kind === 'event' && (
-              <button
-                type="button"
-                onClick={() => setGifOpen(true)}
-                className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
-              >
-                + GIF
-              </button>
+              <>
+                <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                  {uploadingMedia ? 'uploading…' : '+ photo / video'}
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={uploadingMedia} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f); e.currentTarget.value = ''; }} />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setGifOpen(true)}
+                  className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
+                >
+                  + GIF
+                </button>
+              </>
             )}
             <button
               onClick={submit}
-              disabled={submitting}
+              disabled={submitting || uploadingMedia}
               className="ml-auto font-mono text-[10px] uppercase tracking-[2px] px-3 py-1.5 bg-lime text-obsidian rounded-sm disabled:opacity-50 hover:opacity-90 transition cursor-pointer border-none"
             >
               {submitting ? 'posting…' : 'post →'}
@@ -358,8 +463,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
         </div>
       )}
 
-      <GiphyPicker open={gifOpen}     onClose={() => setGifOpen(false)}     onPick={(g) => setGif(g)} />
-      <GiphyPicker open={replyGifOpen} onClose={() => setReplyGifOpen(false)} onPick={(g) => setReplyGif(g)} />
+      <GiphyPicker open={gifOpen}     onClose={() => setGifOpen(false)}     onPick={(g) => { setGif(g); setMedia(null); }} />
+      <GiphyPicker open={replyGifOpen} onClose={() => setReplyGifOpen(false)} onPick={(g) => { setReplyGif(g); setReplyMedia(null); }} />
     </div>
   );
 }

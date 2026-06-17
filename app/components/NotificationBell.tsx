@@ -233,6 +233,7 @@ export default function NotificationBell() {
                 if (n.type === 'world_invite_accepted_self') return <>You accepted the invite to {worldName}</>;
                 if (n.type === 'world_invite_declined_self') return <>You declined the invite to {worldName}</>;
                 if (n.type === 'event_cohost_invite') return <>{actor} invited you to co-host {eventName}</>;
+                if (n.type === 'event_cohost_added') return <>{actor} added you as a co-host of {eventName}</>;
                 if (n.type === 'event_cohost_accepted') return <>{actor} accepted your co-host invite for {eventName}</>;
                 if (n.type === 'event_cohost_accepted_self') return <>You accepted the co-host invite for {eventName}</>;
                 if (n.type === 'event_cohost_declined_self') return <>You declined the co-host invite for {eventName}</>;

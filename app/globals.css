@@ -64,7 +64,7 @@
   --pink: #FF5BD7;
   --green: #00FF88;
 
-  /* Accent system (switchable via ColorSlider) */
+  /* Accent system — fixed site-wide to lime */
   --accent: #e4fe52;
   --accent-text: #1a1a1a;
   --page-tint: rgba(228, 254, 82, 0.08);
@@ -339,6 +339,7 @@ h3 {
   75% { opacity: 0.6; transform: translate(-1px, 0); }
   100% { opacity: 1; transform: translate(0); }
 }
+
 
 /* ── Theme System ─────────────────────────────────────────────── */
 

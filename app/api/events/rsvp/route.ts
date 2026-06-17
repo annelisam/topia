@@ -15,17 +15,32 @@ function isAnswered(type: string, v: string | string[] | boolean | undefined): b
 // Resolve the user for a privyId, creating a minimal row if they're brand new
 // (an external visitor who just verified with Privy). The LoginButton sync fills
 // in email/name shortly after; we only need the row to exist to attach an RSVP.
-async function resolveOrCreateUser(privyId: string, hint: { email?: string; name?: string }) {
-  const [found] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
-  if (found) return found.id;
+// Resolve the user, creating a minimal row for brand-new visitors, then fill in
+// the contact fields they entered on the registration form (only writing over
+// blanks for name/phone so we don't clobber an existing profile).
+async function resolveOrCreateUser(privyId: string, hint: { email?: string; name?: string; phone?: string }) {
+  const [found] = await db.select({ id: users.id, name: users.name, phone: users.phone, email: users.email }).from(users).where(eq(users.privyId, privyId));
+  if (found) {
+    const patch: { name?: string; phone?: string; email?: string; updatedAt?: Date } = {};
+    // Only ever fill blanks from RSVP contact fields — never clobber an
+    // existing profile name/phone/email the user has already set.
+    if (hint.name?.trim() && !found.name) patch.name = hint.name.trim();
+    if (hint.phone?.trim() && !found.phone) patch.phone = hint.phone.trim();
+    if (hint.email?.trim() && !found.email) patch.email = hint.email.trim();
+    if (Object.keys(patch).length) {
+      patch.updatedAt = new Date();
+      try { await db.update(users).set(patch).where(eq(users.id, found.id)); } catch {}
+    }
+    return found.id;
+  }
   try {
     const [created] = await db
       .insert(users)
-      .values({ privyId, email: hint.email ?? null, name: hint.name ?? null })
+      .values({ privyId, email: hint.email ?? null, name: hint.name ?? null, phone: hint.phone ?? null })
       .returning({ id: users.id });
     return created.id;
   } catch {
-    // Unique race (email/privyId) — re-select.
+    // Unique race (email/phone/privyId) — re-select.
     const [again] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
     return again?.id ?? null;
   }
@@ -34,12 +49,16 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
 // POST /api/events/rsvp — register for an event (with custom-question answers)
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, eventId, answers, email, name, inviteToken } = await request.json() as {
-      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; inviteToken?: string;
+    const { privyId, eventId, answers, email, name, phone, inviteToken } = await request.json() as {
+      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; phone?: string; inviteToken?: string;
     };
 
     if (!privyId || !eventId) {
       return NextResponse.json({ error: 'Missing privyId or eventId' }, { status: 400 });
+    }
+    // Phone is required to RSVP.
+    if (!phone || phone.replace(/\D/g, '').length < 7) {
+      return NextResponse.json({ error: 'A phone number is required to RSVP' }, { status: 400 });
     }
 
     const [event] = await db
@@ -55,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     if (event.rsvpClosed) return NextResponse.json({ error: 'Registration is closed' }, { status: 403 });
 
-    const userId = await resolveOrCreateUser(privyId, { email, name });
+    const userId = await resolveOrCreateUser(privyId, { email, name, phone });
     if (!userId) return NextResponse.json({ error: 'Could not resolve user' }, { status: 500 });
 
     // Already registered?

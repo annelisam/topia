@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../../components/Navigation';
 import LoadingBar from '../../../components/LoadingBar';
+import { QUESTION_TYPES, SELECT_TYPES, answerToText } from '../../../../lib/events/questions';
+import { useUserProfile } from '../../../hooks/useUserProfile';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface EventLite {
@@ -15,35 +17,18 @@ interface EventLite {
   rsvpApprovalRequired: boolean;
   rsvpClosed: boolean;
 }
-interface Host { userId: string; role: string; name: string | null; username: string | null; avatarUrl: string | null; worldTitle: string | null; }
+interface Host { userId: string; role: string; name: string | null; username: string | null; avatarUrl: string | null; worldId: string | null; worldTitle: string | null; }
 interface SearchUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; }
 interface Question { id: string; label: string; type: string; options: string[] | null; required: boolean; sortOrder: number | null; isActive: boolean; }
 interface Response { questionId: string; label: string; type: string; answer: string | string[] | boolean | null; }
-interface Rsvp { userId: string; name: string | null; username: string | null; avatarUrl: string | null; email: string | null; status: string; responses: Response[] | null; createdAt: string; }
+interface Rsvp { userId: string; name: string | null; username: string | null; avatarUrl: string | null; email: string | null; phone: string | null; status: string; responses: Response[] | null; createdAt: string; }
 interface Invite { id: string; email: string | null; phone: string | null; status: string; sent: boolean; url: string | null; }
-
-const QUESTION_TYPES: { value: string; label: string }[] = [
-  { value: 'short_text', label: 'Short text' },
-  { value: 'long_text', label: 'Paragraph' },
-  { value: 'single_select', label: 'Single choice' },
-  { value: 'multi_select', label: 'Multiple choice' },
-  { value: 'checkbox', label: 'Checkbox' },
-];
-const SELECT_TYPES = new Set(['single_select', 'multi_select']);
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] rounded-lg outline-none';
 const fieldStyle: React.CSSProperties = { backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' };
 const labelCls = 'block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60';
 const btnPrimary = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40';
 const btnGhost = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border bg-transparent disabled:opacity-40';
-
-function answerToText(a: Response['answer']): string {
-  if (a == null) return '—';
-  if (a === true) return 'Yes';
-  if (a === false) return 'No';
-  if (Array.isArray(a)) return a.join(', ');
-  return String(a);
-}
 
 type Tab = 'guests' | 'registration' | 'hosts';
 
@@ -146,7 +131,7 @@ function InvitesPanel({ eventId, privyId }: { eventId: string; privyId: string }
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const load = useCallback(() => {
     fetch(`/api/events/invites?eventId=${eventId}&privyId=${privyId}`)
@@ -262,6 +247,7 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   const [pending, setPending] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [decideMsg, setDecideMsg] = useState('');
 
   const load = useCallback(() => {
     fetch(`/api/events/rsvps?eventId=${eventId}&privyId=${privyId}`)
@@ -272,22 +258,32 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   useEffect(() => { load(); }, [load]);
 
   const decide = async (guestUserId: string, decision: 'approve' | 'decline') => {
-    setBusyId(guestUserId);
+    setBusyId(guestUserId); setDecideMsg('');
+    const who = rsvps.find((r) => r.userId === guestUserId);
+    const label = who?.name || who?.username || 'Guest';
     try {
       const res = await fetch('/api/events/rsvp/decision', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ privyId, eventId, guestUserId, decision }),
       });
-      if (res.ok) load();
+      if (res.ok) {
+        setDecideMsg(decision === 'approve' ? `${label} approved.` : `${label} declined.`);
+        load();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setDecideMsg(d.error || 'Could not update request.');
+      }
+    } catch {
+      setDecideMsg('Could not update request.');
     } finally { setBusyId(null); }
   };
 
   const exportCsv = () => {
     const qCols = Array.from(new Set(rsvps.flatMap((r) => (r.responses ?? []).map((x) => x.label))));
-    const header = ['Name', 'Email', 'Status', 'Registered', ...qCols];
+    const header = ['Name', 'Email', 'Phone', 'Status', 'Registered', ...qCols];
     const rows = rsvps.map((r) => {
       const map = new Map((r.responses ?? []).map((x) => [x.label, answerToText(x.answer)]));
-      return [r.name ?? '', r.email ?? '', r.status, new Date(r.createdAt).toISOString().slice(0, 10), ...qCols.map((c) => map.get(c) ?? '')];
+      return [r.name ?? '', r.email ?? '', r.phone ?? '', r.status, new Date(r.createdAt).toISOString().slice(0, 10), ...qCols.map((c) => map.get(c) ?? '')];
     });
     const csv = [header, ...rows].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -311,6 +307,10 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
       </div>
 
       <InvitesPanel eventId={eventId} privyId={privyId} />
+
+      {decideMsg && (
+        <p className="font-mono text-[12px] mb-3 opacity-70" style={{ color: 'var(--foreground)' }}>{decideMsg}</p>
+      )}
 
       {pendingList.length > 0 && (
         <div className="mb-6">
@@ -353,7 +353,11 @@ function GuestRow({ r, expanded, onToggle, actions }: { r: Rsvp; expanded: boole
           : <div className="w-7 h-7 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(r.name || r.username || '?')[0].toUpperCase()}</div>}
         <div className="flex-1 min-w-0">
           <p className="font-mono text-[12px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{r.name || r.username || 'Guest'}</p>
-          {r.email && <p className="font-mono text-[11px] opacity-40 truncate" style={{ color: 'var(--foreground)' }}>{r.email}</p>}
+          {(r.email || r.phone) && (
+            <p className="font-mono text-[11px] opacity-40 truncate" style={{ color: 'var(--foreground)' }}>
+              {[r.email, r.phone].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
         {actions}
         {hasAnswers && (
@@ -381,6 +385,7 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
   const [approval, setApproval] = useState(event.rsvpApprovalRequired);
   const [closed, setClosed] = useState(event.rsvpClosed);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState('');
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [newLabel, setNewLabel] = useState('');
@@ -396,11 +401,25 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
   useEffect(() => { loadQuestions(); }, [loadQuestions]);
 
   const saveSettings = async () => {
-    setSavingSettings(true);
+    setSavingSettings(true); setSettingsMsg('');
     try {
-      const body = { privyId, eventId: event.id, rsvpCapacity: capacity.trim() === '' ? null : Number(capacity), rsvpApprovalRequired: approval, rsvpClosed: closed };
+      // Normalize capacity: blank → unlimited; anything < 1 is meaningless so
+      // treat it as unlimited too rather than silently locking everyone out.
+      const parsed = capacity.trim() === '' ? null : Number(capacity);
+      const normalizedCap = parsed != null && Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : null;
+      const body = { privyId, eventId: event.id, rsvpCapacity: normalizedCap, rsvpApprovalRequired: approval, rsvpClosed: closed };
       const res = await fetch('/api/events/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (res.ok) onSettings({ rsvpCapacity: body.rsvpCapacity, rsvpApprovalRequired: approval, rsvpClosed: closed });
+      if (res.ok) {
+        const d = await res.json().catch(() => ({}));
+        if (normalizedCap == null) setCapacity('');
+        onSettings({ rsvpCapacity: normalizedCap, rsvpApprovalRequired: approval, rsvpClosed: closed });
+        setSettingsMsg(d.warning ? `Saved ✓ — ${d.warning}` : 'Saved ✓');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setSettingsMsg(d.error || 'Could not save settings.');
+      }
+    } catch {
+      setSettingsMsg('Could not save settings.');
     } finally { setSavingSettings(false); }
   };
 
@@ -448,9 +467,12 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
         <label className="flex items-center gap-2 cursor-pointer mb-4 font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
           <input type="checkbox" checked={closed} onChange={(e) => setClosed(e.target.checked)} style={{ accentColor: 'var(--foreground)' }} /> Close registration
         </label>
-        <button onClick={saveSettings} disabled={savingSettings} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-          {savingSettings ? 'Saving…' : 'Save settings'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={saveSettings} disabled={savingSettings} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+            {savingSettings ? 'Saving…' : 'Save settings'}
+          </button>
+          {settingsMsg && <span className="font-mono text-[12px] opacity-70" style={{ color: 'var(--foreground)' }}>{settingsMsg}</span>}
+        </div>
       </div>
 
       {/* Questions */}
@@ -505,6 +527,25 @@ function HostsTab({ eventId, privyId, hosts }: { eventId: string; privyId: strin
   const [inviting, setInviting] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Presenting world ("Presented by") — set on the creator's host row.
+  const { worldMemberships } = useUserProfile();
+  const myWorlds = worldMemberships.map((wm) => ({ id: wm.worldId, title: wm.worldTitle }));
+  const creatorHost = hosts.find((h) => h.role === 'creator');
+  const [worldId, setWorldId] = useState(creatorHost?.worldId ?? '');
+  const [worldMsg, setWorldMsg] = useState('');
+
+  const saveWorld = async (next: string) => {
+    setWorldId(next); setWorldMsg('');
+    try {
+      const res = await fetch('/api/events/hosts', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, worldId: next || null }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setWorldMsg(res.ok ? 'Saved ✓' : (d.error || 'Could not save'));
+    } catch { setWorldMsg('Could not save'); }
+  };
+
   useEffect(() => {
     if (search.length < 2) { setResults([]); return; }
     const t = setTimeout(() => {
@@ -527,13 +568,31 @@ function HostsTab({ eventId, privyId, hosts }: { eventId: string; privyId: strin
         body: JSON.stringify({ privyId, eventId, targetUserId }),
       });
       const d = await res.json();
-      if (res.ok) { setSearch(''); setResults([]); setMsg('Invitation sent.'); }
+      if (res.ok) {
+        setSearch(''); setResults([]);
+        // The main host auto-approves co-hosts; co-hosts send a pending invite.
+        setMsg(d.autoApproved ? 'Added as co-host — reload to see them in the list.' : 'Invitation sent.');
+      }
       else setMsg(d.error || 'Failed to invite');
     } finally { setInviting(false); }
   };
 
   return (
     <div>
+      {/* Presented by — which world hosts this event (creator only) */}
+      {myWorlds.length > 0 && (
+        <div className="mb-6">
+          <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-2" style={{ color: 'var(--foreground)' }}>Presented by</p>
+          <select value={worldId} onChange={(e) => saveWorld(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
+            <option value="">Just me (personal)</option>
+            {myWorlds.map((w) => <option key={w.id} value={w.id}>{w.title}</option>)}
+          </select>
+          <p className="font-mono text-[11px] opacity-40 mt-1.5" style={{ color: 'var(--foreground)' }}>
+            Shown as “Presented by” on the event page. {worldMsg && <span className="opacity-100">· {worldMsg}</span>}
+          </p>
+        </div>
+      )}
+
       <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>Hosts</p>
       <div className="space-y-2 mb-4">
         {hosts.map((h) => (

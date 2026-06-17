@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Navigation from '../../components/Navigation';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { QUESTION_TYPES, SELECT_TYPES } from '../../../lib/events/questions';
 
 /* ════════════════════════════════════════════════════════════════════
  * EventComposer — the single create/edit surface. /events/create renders
@@ -31,15 +32,28 @@ export interface EventComposerInitial {
   imageUrl: string;
   worldId: string;
   published: boolean;
+  rsvpCapacity: number | null;
+  rsvpApprovalRequired: boolean;
 }
+
+interface DraftQuestion { id?: string; label: string; type: string; options: string[]; required: boolean; }
 
 const ACCENTS = [
   { name: 'lime',   hex: '#e4fe52', on: '#0a0a0a' },
-  { name: 'pink',   hex: '#FF5BD7', on: '#0a0a0a' },
-  { name: 'blue',   hex: '#4F46FF', on: '#f5f0e8' },
-  { name: 'orange', hex: '#FF5C34', on: '#0a0a0a' },
-  { name: 'green',  hex: '#00FF88', on: '#0a0a0a' },
 ] as const;
+
+const TIMEZONES: { value: string; label: string }[] = [
+  { value: 'America/New_York', label: 'Eastern (ET)' },
+  { value: 'America/Chicago', label: 'Central (CT)' },
+  { value: 'America/Denver', label: 'Mountain (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (PT)' },
+  { value: 'America/Anchorage', label: 'Alaska (AKT)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (HT)' },
+  { value: 'Europe/London', label: 'GMT' },
+  { value: 'Europe/Paris', label: 'Central Europe (CET)' },
+  { value: 'Asia/Tokyo', label: 'Japan (JST)' },
+  { value: 'Australia/Sydney', label: 'Australia East (AEST)' },
+];
 
 const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
 const MAX_VIDEO_SECONDS = 10;
@@ -47,19 +61,19 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const COVER_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm';
 
 const markdownComponents = {
-  p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (<p className="font-mono text-[13px] leading-relaxed mb-3 last:mb-0 text-bone" {...props}>{children}</p>),
-  h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (<h1 className="font-mono text-[18px] font-bold mb-3 mt-6 first:mt-0 text-bone" {...props}>{children}</h1>),
-  h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (<h2 className="font-mono text-[16px] font-bold mb-2 mt-5 first:mt-0 text-bone" {...props}>{children}</h2>),
-  ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (<ul className="font-mono text-[13px] list-disc pl-5 mb-3 space-y-1 text-bone" {...props}>{children}</ul>),
-  ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (<ol className="font-mono text-[13px] list-decimal pl-5 mb-3 space-y-1 text-bone" {...props}>{children}</ol>),
-  li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (<li className="font-mono text-[13px] leading-relaxed text-bone" {...props}>{children}</li>),
-  a: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (<a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-60 transition text-bone" {...props}>{children}</a>),
+  p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (<p className="font-mono text-[13px] leading-relaxed mb-3 last:mb-0 text-[var(--foreground)]" {...props}>{children}</p>),
+  h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (<h1 className="font-mono text-[18px] font-bold mb-3 mt-6 first:mt-0 text-[var(--foreground)]" {...props}>{children}</h1>),
+  h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (<h2 className="font-mono text-[16px] font-bold mb-2 mt-5 first:mt-0 text-[var(--foreground)]" {...props}>{children}</h2>),
+  ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (<ul className="font-mono text-[13px] list-disc pl-5 mb-3 space-y-1 text-[var(--foreground)]" {...props}>{children}</ul>),
+  ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (<ol className="font-mono text-[13px] list-decimal pl-5 mb-3 space-y-1 text-[var(--foreground)]" {...props}>{children}</ol>),
+  li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (<li className="font-mono text-[13px] leading-relaxed text-[var(--foreground)]" {...props}>{children}</li>),
+  a: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (<a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-60 transition text-[var(--foreground)]" {...props}>{children}</a>),
   strong: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (<strong className="font-bold" {...props}>{children}</strong>),
   em: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (<em {...props}>{children}</em>),
 };
 
 function MarkdownToolbar({ onInsert }: { onInsert: (b: string, a: string, p: string) => void }) {
-  const btn = 'px-2 py-1 font-mono text-[11px] border border-bone/15 hover:border-lime/50 transition-all rounded-lg cursor-pointer text-bone bg-transparent';
+  const btn = 'px-2 py-1 font-mono text-[11px] border border-[var(--border-color)] hover:border-[var(--accent)] transition-all rounded-lg cursor-pointer text-[var(--foreground)] bg-transparent';
   return (
     <div className="flex flex-wrap gap-1 mb-1.5">
       <button type="button" className={btn} onClick={() => onInsert('**', '**', 'bold')}><strong>B</strong></button>
@@ -109,13 +123,79 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   const [descriptionPreview, setDescriptionPreview] = useState(false);
   const [saving, setSaving] = useState<'draft' | 'publish' | null>(null);
   const [error, setError] = useState('');
-  const [accent, setAccent] = useState<typeof ACCENTS[number]>(ACCENTS[0]);
-  const [showMore, setShowMore] = useState(false);
+  const [accent] = useState<typeof ACCENTS[number]>(ACCENTS[0]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Import-from-link (create only): paste a Partiful/Luma/Posh URL to autofill.
+  const [importUrl, setImportUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState('');
+  const [externalSource, setExternalSource] = useState<string | null>(null);
+
+  // Registration settings + custom questions.
+  const [showReg, setShowReg] = useState(false);
+  const [capacity, setCapacity] = useState(initial.rsvpCapacity != null ? String(initial.rsvpCapacity) : '');
+  const [approval, setApproval] = useState(initial.rsvpApprovalRequired);
+  const [questions, setQuestions] = useState<DraftQuestion[]>([]);
+  const [qLabel, setQLabel] = useState('');
+  const [qType, setQType] = useState('short_text');
+  const [qOptions, setQOptions] = useState('');
+  const [qRequired, setQRequired] = useState(false);
+  const [qBusy, setQBusy] = useState(false);
+  const [qError, setQError] = useState('');
+
+  // Edit mode: load existing questions (managed live against the API).
+  useEffect(() => {
+    if (mode !== 'edit' || !initial.slug) return;
+    fetch(`/api/events/questions?slug=${initial.slug}&includeInactive=1`)
+      .then((r) => r.json())
+      .then((d) => setQuestions((d.questions ?? []).map((q: { id: string; label: string; type: string; options: string[] | null; required: boolean }) => ({ id: q.id, label: q.label, type: q.type, options: q.options ?? [], required: q.required }))))
+      .catch(() => setQError('Could not load existing questions — reload to retry.'));
+  }, [mode, initial.slug]);
+
+  const addQuestion = async () => {
+    if (!qLabel.trim()) return;
+    setQError('');
+    const options = SELECT_TYPES.has(qType) ? qOptions.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+    if (SELECT_TYPES.has(qType) && options.length === 0) { setQError('Add at least one option for a choice question.'); return; }
+    const draft: DraftQuestion = { label: qLabel.trim(), type: qType, options, required: qRequired };
+    // Edit mode persists immediately; create mode stages until save.
+    if (mode === 'edit' && initial.eventId && user) {
+      setQBusy(true);
+      try {
+        const res = await fetch('/api/events/questions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ privyId: user.id, eventId: initial.eventId, ...draft, sortOrder: questions.length }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { setQError(d.error || 'Could not save question — try again.'); return; }
+        draft.id = d.question?.id;
+      } catch {
+        setQError('Could not save question — check your connection and try again.');
+        return;
+      } finally { setQBusy(false); }
+    }
+    setQuestions((qs) => [...qs, draft]);
+    setQLabel(''); setQOptions(''); setQRequired(false); setQType('short_text');
+  };
+
+  const removeQuestion = async (idx: number) => {
+    const q = questions[idx];
+    if (q.id && user) {
+      try {
+        const res = await fetch(`/api/events/questions?id=${q.id}&privyId=${user.id}`, { method: 'DELETE' });
+        if (!res.ok) { setQError('Could not remove question — try again.'); return; }
+      } catch { setQError('Could not remove question — check your connection.'); return; }
+    }
+    setQError('');
+    setQuestions((qs) => qs.filter((_, i) => i !== idx));
+  };
+
+  // Any world the user belongs to can host their event — so they can pick
+  // whichever world they want it presented by.
   const myWorlds = useMemo(() =>
-    worldMemberships.filter((wm) => wm.role === 'world_builder' || wm.role === 'owner').map((wm) => ({ id: wm.worldId, title: wm.worldTitle })),
+    worldMemberships.map((wm) => ({ id: wm.worldId, title: wm.worldTitle })),
     [worldMemberships]);
 
   useEffect(() => {
@@ -123,16 +203,18 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   }, []);
 
   /* ── cover upload ── */
-  const compressImageToBlob = (file: File, maxWidth = 1200, quality = 0.85): Promise<Blob> => new Promise((resolve, reject) => {
+  // Preserve the poster's full aspect ratio — only scale down so the longest
+  // side fits within maxDim. No cropping, so tall/wide posters stay intact.
+  const compressImageToBlob = (file: File, maxDim = 1600, quality = 0.85): Promise<Blob> => new Promise((resolve, reject) => {
     const img = new Image();
     img.onerror = () => reject(new Error('Could not decode image'));
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const size = Math.min(img.width, img.height);
-      const sx = (img.width - size) / 2, sy = (img.height - size) / 2;
-      const out = Math.min(size, maxWidth);
-      canvas.width = out; canvas.height = out;
-      canvas.getContext('2d')?.drawImage(img, sx, sy, size, size, 0, 0, out, out);
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas encode failed'))), 'image/jpeg', quality);
     };
     img.src = URL.createObjectURL(file);
@@ -185,9 +267,56 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
     setDescription(description.substring(0, start) + before + text + after + description.substring(end));
   };
 
+  /* ── import from link ── */
+  const parseTo24 = (t: string): string => {
+    const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!m) return '';
+    let h = parseInt(m[1]);
+    const ap = m[3]?.toUpperCase();
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return `${h.toString().padStart(2, '0')}:${m[2]}`;
+  };
+  const handleImport = async () => {
+    if (!importUrl.trim()) return;
+    setImporting(true);
+    setImportNote('');
+    try {
+      const res = await fetch('/api/events/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) { setImportNote(json.error || 'Could not fetch that link'); return; }
+      const d = json.data;
+      if (d.title) setEventName(d.title);
+      if (d.dateIso) setDate(d.dateIso);
+      if (d.startTime) setStartTime(parseTo24(d.startTime));
+      if (d.timezone) setTimezone(d.timezone);
+      if (d.city) setCity(d.city);
+      if (d.address) setVenue(d.address);
+      if (d.imageUrl) setImageUrl(d.imageUrl);
+      if (d.description) setDescription(d.description.slice(0, 800));
+      if (d.link) setLink(d.link);
+      setExternalSource(json.source ?? null);
+      setImportUrl('');
+      setImportNote(`Imported from ${json.source ?? 'link'} — review and publish.`);
+    } catch {
+      setImportNote('Network error — try again');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   /* ── submit ── */
   const submit = async (publish: boolean) => {
     if (!user || !eventName.trim()) { setError('Event name is required'); return; }
+    // Date + start time are required to publish. Drafts can be incomplete —
+    // that's the point of saving a draft — so we only enforce on publish.
+    if (publish) {
+      if (!date) { setError('Pick a date before publishing.'); return; }
+      if (!startTime) { setError('Add a start time before publishing.'); return; }
+    }
     setSaving(publish ? 'publish' : 'draft');
     setError('');
     const payload = {
@@ -205,12 +334,15 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       link: link || null,
       imageUrl: imageUrl || null,
       published: publish,
+      // Capacity below 1 is meaningless (locks everyone out) → unlimited.
+      rsvpCapacity: (() => { const n = capacity.trim() === '' ? NaN : Number(capacity); return Number.isFinite(n) && n >= 1 ? Math.floor(n) : null; })(),
+      rsvpApprovalRequired: approval,
     };
     try {
       const res = await fetch('/api/events', {
         method: mode === 'edit' ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mode === 'edit' ? { ...payload, eventId: initial.eventId } : { ...payload, worldId: worldId || null }),
+        body: JSON.stringify(mode === 'edit' ? { ...payload, eventId: initial.eventId, worldId: worldId || null } : { ...payload, worldId: worldId || null, externalSource }),
       });
       if (!res.ok) {
         let msg = 'Failed to save event';
@@ -219,6 +351,25 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       }
       const data = await res.json();
       const finalSlug = data.event?.slug ?? payload.slug;
+      const newEventId = data.event?.id;
+
+      // Create-mode: persist the staged custom questions now that the event exists.
+      // The event itself is already saved, so a question failure shouldn't block
+      // navigation — but we warn the host so they can re-add it from Manage.
+      if (mode !== 'edit' && newEventId) {
+        const staged = questions.filter((q) => !q.id);
+        const results = await Promise.allSettled(staged.map((q, i) =>
+          fetch('/api/events/questions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ privyId: user.id, eventId: newEventId, label: q.label, type: q.type, options: q.options, required: q.required, sortOrder: i }),
+          }).then((r) => { if (!r.ok) throw new Error('failed'); }),
+        ));
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          try { sessionStorage.setItem('eventComposerNotice', `Event saved, but ${failed} registration question${failed > 1 ? 's' : ''} didn't save. Add ${failed > 1 ? 'them' : 'it'} again from Manage.`); } catch {}
+        }
+      }
+
       router.push(`/events/${finalSlug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save event');
@@ -236,27 +387,30 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
     );
   }
 
-  const dateChip = date ? new Date(date + 'T00:00:00').toLocaleString('en-US', { month: 'short', day: 'numeric' }) : 'Add date';
-  const timeChip = startTime ? formatTimeForStorage(startTime) + (endTime ? ` – ${formatTimeForStorage(endTime)}` : '') : 'Add time';
-  const cityChip = (showCustomCity ? customCity : city) || 'Add location';
-  const primaryLabel = mode === 'edit' && initial.published ? 'Save →' : 'Publish →';
+  const primaryLabel = mode === 'edit' && initial.published ? 'Update →' : 'Publish →';
   const backHref = mode === 'edit' && initial.slug ? `/events/${initial.slug}` : '/events';
 
+  // Themed field styling (adapts to light/dark via CSS variables).
+  const inputCls = 'w-full rounded-sm px-3 py-2 font-mono text-[12px] outline-none border bg-[var(--surface-hover)] text-[var(--foreground)] border-[var(--border-color)] focus:border-[var(--accent)] placeholder:opacity-40';
+  const labelCls = 'block font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-1';
+  const ERR = '#FF5C34';
+
   return (
-    <div className="min-h-screen text-bone" style={{ backgroundColor: '#0a0a0a' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       <Navigation />
 
       {/* Sticky bar — back · status · save draft · publish */}
-      <div className="sticky top-0 z-40 backdrop-blur-md border-b border-bone/[0.06]" style={{ backgroundColor: 'rgba(10,10,10,0.85)', marginTop: 'var(--nav-height, 56px)' }}>
+      <div className="sticky top-0 z-40 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--border-color)', marginTop: 'var(--nav-height, 56px)' }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
-          <Link href={backHref} className="font-mono text-[11px] uppercase tracking-[2px] text-bone/50 hover:text-bone transition no-underline">← {mode === 'edit' ? 'Event' : 'Events'}</Link>
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 ml-auto">
+          <Link href={backHref} className="font-mono text-[11px] uppercase tracking-[2px] opacity-50 hover:opacity-100 transition no-underline">← {mode === 'edit' ? 'Event' : 'Events'}</Link>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] opacity-30 ml-auto">
             {mode === 'edit' ? (initial.published ? 'Published' : 'Draft') : (eventName.trim() ? 'Unsaved draft' : 'New event')}
           </span>
           <button
             onClick={() => submit(false)}
             disabled={saving !== null || !eventName.trim()}
-            className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-bone/20 text-bone/80 hover:text-bone bg-transparent"
+            className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border bg-transparent hover:opacity-70"
+            style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
           >
             {saving === 'draft' ? 'Saving…' : 'Save draft'}
           </button>
@@ -273,25 +427,50 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
 
       {/* Body */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-32">
+        {/* Import from link — create only. Paste a Partiful/Luma/Posh URL to
+            autofill the fields, then review + publish. */}
+        {mode === 'create' && (
+          <div className="mb-6 rounded-lg border p-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="url" value={importUrl} onChange={(e) => setImportUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleImport(); } }}
+                placeholder="Have a Partiful / Luma / Posh link? Paste it to autofill…"
+                className={inputCls}
+              />
+              <button type="button" onClick={handleImport} disabled={importing || !importUrl.trim()}
+                className="font-mono text-[11px] uppercase tracking-[2px] px-4 py-2 rounded-sm cursor-pointer disabled:opacity-40 border-none shrink-0"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                {importing ? 'Importing…' : 'Import'}
+              </button>
+            </div>
+            {importNote && <p className="font-mono text-[11px] opacity-70 mt-2">{importNote}</p>}
+          </div>
+        )}
+
         {/* Cover */}
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`relative group rounded-2xl overflow-hidden mb-8 transition-all duration-300 ${imageUrl ? 'border border-bone/10' : 'border-2 border-dashed'}`}
-          style={{ aspectRatio: imageUrl ? '16 / 10' : '16 / 9', borderColor: dragOver ? accent.hex : imageUrl ? 'rgba(245,240,232,0.10)' : 'rgba(245,240,232,0.18)', backgroundColor: 'rgba(245,240,232,0.02)', boxShadow: dragOver ? `0 0 0 4px ${accent.hex}30` : 'none' }}
+          className={`relative group rounded-2xl overflow-hidden mb-8 transition-all duration-300 ${imageUrl ? 'border' : 'border-2 border-dashed'}`}
+          style={{ aspectRatio: imageUrl ? undefined : '4 / 5', borderColor: dragOver ? accent.hex : 'var(--border-color)', backgroundColor: 'var(--surface-hover)', boxShadow: dragOver ? `0 0 0 4px ${accent.hex}30` : 'none' }}
         >
           {imageUrl ? (
             <>
-              {coverIsVideo
-                ? <video src={imageUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline preload="metadata" />
-                : /* eslint-disable-next-line @next/next/no-img-element */ <img src={imageUrl} alt="cover" className="w-full h-full object-cover" />}
-              <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <label className={`font-mono text-[10px] uppercase tracking-[2px] bg-obsidian/80 backdrop-blur-sm text-bone border border-bone/20 px-3 py-1.5 rounded-sm cursor-pointer hover:border-lime/50 ${uploading ? 'opacity-50 cursor-wait' : ''}`}>
+              {/* Full poster at its natural aspect ratio — fills the box, no crop */}
+              {coverIsVideo ? (
+                <video src={imageUrl} className="w-full h-auto block" autoPlay loop muted playsInline preload="metadata" />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={imageUrl} alt="cover" className="w-full h-auto block" />
+              )}
+              <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <label className={`font-mono text-[10px] uppercase tracking-[2px] backdrop-blur-sm border px-3 py-1.5 rounded-sm cursor-pointer ${uploading ? 'opacity-50 cursor-wait' : ''}`} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
                   {uploading ? 'Uploading…' : 'Change'}
                   <input type="file" accept={COVER_ACCEPT} onChange={onPick} className="hidden" disabled={uploading} />
                 </label>
-                <button onClick={() => setImageUrl('')} className="font-mono text-[10px] uppercase tracking-[2px] bg-obsidian/80 backdrop-blur-sm text-bone/70 border border-bone/20 px-3 py-1.5 rounded-sm cursor-pointer hover:text-pink hover:border-pink/50">Remove</button>
+                <button onClick={() => setImageUrl('')} className="font-mono text-[10px] uppercase tracking-[2px] backdrop-blur-sm border px-3 py-1.5 rounded-sm cursor-pointer hover:opacity-70" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>Remove</button>
               </div>
             </>
           ) : (
@@ -300,7 +479,7 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
               <span className="font-basement font-black uppercase leading-none" style={{ fontSize: 'clamp(28px, 5vw, 56px)', color: accent.hex, opacity: 0.85 }}>
                 {uploading ? 'Uploading…' : dragOver ? 'Drop it' : '+ Cover'}
               </span>
-              <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/35 text-center px-6">drag a file · or click · jpg · gif · mp4 (≤10s)</span>
+              <span className="font-mono text-[11px] uppercase tracking-[2px] opacity-40 text-center px-6">drag a file · or click · jpg · gif · mp4 (≤10s)</span>
             </label>
           )}
         </div>
@@ -309,129 +488,156 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
         <input
           type="text" value={eventName} onChange={(e) => setEventName(e.target.value)}
           placeholder="Untitled event" autoFocus={mode === 'create'}
-          className="w-full bg-transparent border-none outline-none font-basement font-black uppercase text-bone placeholder:text-bone/20 mb-5 px-0"
-          style={{ fontSize: 'clamp(32px, 6vw, 64px)', lineHeight: 0.95, letterSpacing: '-0.02em' }}
+          className="w-full bg-transparent border-none outline-none font-basement font-black uppercase placeholder:opacity-30 mb-5 px-0"
+          style={{ fontSize: 'clamp(32px, 6vw, 64px)', lineHeight: 0.95, letterSpacing: '-0.02em', color: 'var(--foreground)' }}
         />
 
-        {/* Chips */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          <label className="relative inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition">
-            <span className="text-[14px] leading-none">📅</span>
-            <span className={date ? 'text-bone' : 'text-bone/50'}>{dateChip}</span>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
-          </label>
+        {/* When & where — always visible; these are the essentials */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div>
+            <label className={labelCls}>Date<span style={{ color: ERR }}> *</span></label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} cursor-pointer`} />
+          </div>
+          <div>
+            <label className={labelCls}>Start<span style={{ color: ERR }}> *</span></label>
+            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>End</label>
+            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Timezone</label>
+            <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={`${inputCls} cursor-pointer`}>
+              {TIMEZONES.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+            </select>
+          </div>
+        </div>
 
-          <details className="relative">
-            <summary className="list-none inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition">
-              <span className="text-[14px] leading-none">⏰</span><span className={startTime ? 'text-bone' : 'text-bone/50'}>{timeChip}</span>
-            </summary>
-            <div className="absolute top-full left-0 mt-2 z-10 bg-obsidian border border-bone/15 rounded-lg p-3 shadow-2xl w-[260px]">
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Start</span><input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" /></div>
-                <div><span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">End</span><input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div>
+            <label className={labelCls}>City</label>
+            {!showCustomCity ? (
+              <select value={city} onChange={(e) => { if (e.target.value === '__new__') { setShowCustomCity(true); setCity(''); } else setCity(e.target.value); }} className={`${inputCls} cursor-pointer`}>
+                <option value="">Select a city…</option>
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="__new__">+ Add new city</option>
+              </select>
+            ) : (
+              <div className="flex gap-1.5">
+                <input type="text" value={customCity} onChange={(e) => setCustomCity(e.target.value)} placeholder="e.g. Los Angeles" autoFocus className={inputCls} />
+                <button type="button" onClick={() => { setShowCustomCity(false); setCustomCity(''); }} className="px-2 font-mono text-[12px] opacity-50 hover:opacity-100 bg-transparent border rounded-sm cursor-pointer shrink-0" style={{ borderColor: 'var(--border-color)' }}>↺</button>
               </div>
-            </div>
-          </details>
-
-          <details className="relative">
-            <summary className="list-none inline-flex items-center gap-2 font-mono text-[12px] uppercase tracking-[2px] border border-bone/15 hover:border-lime/50 rounded-full px-3.5 py-1.5 cursor-pointer transition">
-              <span className="text-[14px] leading-none">📍</span><span className={(city || customCity) ? 'text-bone' : 'text-bone/50'}>{cityChip}</span>
-            </summary>
-            <div className="absolute top-full left-0 mt-2 z-10 bg-obsidian border border-bone/15 rounded-lg p-3 shadow-2xl w-[320px]">
-              <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">City</span>
-              {!showCustomCity ? (
-                <select value={city} onChange={(e) => { if (e.target.value === '__new__') { setShowCustomCity(true); setCity(''); } else setCity(e.target.value); }} className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50 cursor-pointer mb-2">
-                  <option value="">Select a city…</option>
-                  {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                  <option value="__new__">+ Add new city</option>
-                </select>
-              ) : (
-                <div className="flex gap-1.5 mb-2">
-                  <input type="text" value={customCity} onChange={(e) => setCustomCity(e.target.value)} placeholder="e.g. Los Angeles" autoFocus className="flex-1 bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" />
-                  <button type="button" onClick={() => { setShowCustomCity(false); setCustomCity(''); }} className="px-2 py-1 font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone bg-transparent border border-bone/15 rounded-sm cursor-pointer">↺</button>
-                </div>
-              )}
-              <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Venue</span>
-              <input type="text" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="e.g. The Fonda Theatre" className="w-full bg-bone/[0.04] border border-bone/15 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none focus:border-lime/50" />
-            </div>
-          </details>
-
-          <div className="inline-flex items-center gap-1 border border-bone/15 rounded-full px-2 py-1 ml-auto">
-            <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/35 pl-1 pr-1">mood</span>
-            {ACCENTS.map((a) => (
-              <button key={a.name} type="button" onClick={() => setAccent(a)} title={a.name} className="w-5 h-5 rounded-full transition-all cursor-pointer border-2"
-                style={{ backgroundColor: a.hex, borderColor: accent.name === a.name ? '#f5f0e8' : 'transparent', transform: accent.name === a.name ? 'scale(1.1)' : 'scale(1)' }} />
-            ))}
+            )}
+          </div>
+          <div>
+            <label className={labelCls}>Venue / address</label>
+            <input type="text" value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="e.g. The Fonda Theatre" className={inputCls} />
           </div>
         </div>
 
         {/* Description */}
-        <div className="mb-6 border border-bone/10 hover:border-bone/20 focus-within:border-lime/40 rounded-lg overflow-hidden transition-colors">
-          <div className="flex items-center justify-between bg-bone/[0.02] border-b border-bone/[0.04] px-3 py-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40">Description</span>
+        <div className="mb-6 border rounded-lg overflow-hidden transition-colors" style={{ borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center justify-between border-b px-3 py-1.5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}>
+            <span className="font-mono text-[10px] uppercase tracking-[2px] opacity-40">Description</span>
             {description && (
               <div className="flex gap-1">
-                <button type="button" onClick={() => setDescriptionPreview(false)} className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none ${!descriptionPreview ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}>Write</button>
-                <button type="button" onClick={() => setDescriptionPreview(true)} className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none ${descriptionPreview ? 'bg-bone text-obsidian' : 'bg-transparent text-bone/40 hover:text-bone'}`}>Preview</button>
+                <button type="button" onClick={() => setDescriptionPreview(false)} className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none" style={!descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { backgroundColor: 'transparent', color: 'var(--foreground)', opacity: 0.4 }}>Write</button>
+                <button type="button" onClick={() => setDescriptionPreview(true)} className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none" style={descriptionPreview ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { backgroundColor: 'transparent', color: 'var(--foreground)', opacity: 0.4 }}>Preview</button>
               </div>
             )}
           </div>
           {!descriptionPreview ? (
             <div className="p-3">
               {description && <MarkdownToolbar onInsert={insertMarkdown} />}
-              <textarea id="composer-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={6} placeholder="What's the vibe? Who's it for? **Markdown** works." className="w-full bg-transparent border-none outline-none font-mono text-[14px] text-bone placeholder:text-bone/25 resize-none leading-relaxed" style={{ minHeight: '120px' }} />
+              <textarea id="composer-description" value={description} onChange={(e) => setDescription(e.target.value)} rows={6} placeholder="What's the vibe? Who's it for? **Markdown** works." className="w-full bg-transparent border-none outline-none font-mono text-[14px] placeholder:opacity-30 resize-none leading-relaxed" style={{ minHeight: '120px', color: 'var(--foreground)' }} />
             </div>
           ) : (
             <div className="p-3 min-h-[150px]">
-              {description ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{description}</ReactMarkdown> : <p className="font-mono text-[12px] text-bone/30">Nothing to preview yet</p>}
+              {description ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{description}</ReactMarkdown> : <p className="font-mono text-[12px] opacity-30">Nothing to preview yet</p>}
             </div>
           )}
         </div>
 
-        {/* More options */}
-        <button type="button" onClick={() => setShowMore(!showMore)} className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone transition bg-transparent border-none cursor-pointer flex items-center gap-2 mb-3">
-          <span style={{ transition: 'transform 200ms', display: 'inline-block', transform: showMore ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
-          {showMore ? 'Hide options' : 'More options · timezone · external link' + (mode === 'create' && myWorlds.length > 0 ? ' · world host' : '')}
-        </button>
-        {showMore && (
-          <div className="space-y-4 border border-bone/[0.06] rounded-lg p-4 mb-6">
+        {/* External link + world host — always visible */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className={myWorlds.length > 0 ? '' : 'sm:col-span-2'}>
+            <label className={labelCls}>External event link <span className="opacity-60 normal-case">· optional</span></label>
+            <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://… (RSVP somewhere else)" className={inputCls} />
+          </div>
+          {myWorlds.length > 0 && (
             <div>
-              <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Timezone</label>
-              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none cursor-pointer">
-                <option value="America/New_York">Eastern Time (ET)</option>
-                <option value="America/Chicago">Central Time (CT)</option>
-                <option value="America/Denver">Mountain Time (MT)</option>
-                <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                <option value="America/Anchorage">Alaska Time (AKT)</option>
-                <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
-                <option value="Europe/London">Greenwich Mean Time (GMT)</option>
-                <option value="Europe/Paris">Central European Time (CET)</option>
-                <option value="Asia/Tokyo">Japan Standard Time (JST)</option>
-                <option value="Australia/Sydney">Australian Eastern Time (AEST)</option>
+              <label className={labelCls}>Host as world</label>
+              <select value={worldId} onChange={(e) => setWorldId(e.target.value)} className={`${inputCls} cursor-pointer`}>
+                <option value="">Just me (personal)</option>
+                {myWorlds.map((w) => <option key={w.id} value={w.id}>{w.title}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">External event link</label>
-              <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none placeholder:text-bone/25" />
-            </div>
-            {mode === 'create' && myWorlds.length > 0 && (
+          )}
+        </div>
+
+        {/* Registration — capacity, approval + custom questions */}
+        <button type="button" onClick={() => setShowReg(!showReg)} className="font-mono text-[11px] uppercase tracking-[2px] opacity-40 hover:opacity-100 transition bg-transparent border-none cursor-pointer flex items-center gap-2 mb-3">
+          <span style={{ transition: 'transform 200ms', display: 'inline-block', transform: showReg ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+          {showReg ? 'Hide registration' : 'Registration · capacity · approval · questions' + (questions.length ? ` · ${questions.length} question${questions.length > 1 ? 's' : ''}` : '')}
+        </button>
+        {showReg && (
+          <div className="space-y-4 border rounded-lg p-4 mb-6" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Host as world</label>
-                <select value={worldId} onChange={(e) => setWorldId(e.target.value)} className="w-full bg-bone/[0.03] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[12px] text-bone outline-none cursor-pointer">
-                  <option value="">Just me (personal)</option>
-                  {myWorlds.map((w) => <option key={w.id} value={w.id}>{w.title}</option>)}
-                </select>
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-1">Capacity</label>
+                <input value={capacity} onChange={(e) => setCapacity(e.target.value)} inputMode="numeric" placeholder="∞ unlimited" className={inputCls} />
               </div>
-            )}
+              <label className="flex items-end gap-2 cursor-pointer pb-2 font-mono text-[12px] opacity-80">
+                <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} style={{ accentColor: 'var(--accent)' }} /> Require approval
+              </label>
+            </div>
+
+            {/* Custom questions */}
+            <div>
+              <label className="block font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-2">Registration questions</label>
+              {questions.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  {questions.map((q, i) => (
+                    <div key={q.id ?? i} className="flex items-start gap-2 border rounded-sm px-2.5 py-1.5" style={{ borderColor: 'var(--border-color)' }}>
+                      <span className="flex-1 min-w-0 font-mono text-[12px] break-words">
+                        {q.label}{q.required && <span style={{ color: ERR }}> *</span>}
+                        <span className="opacity-35"> · {QUESTION_TYPES.find((t) => t.value === q.type)?.label}{q.options.length ? ` · ${q.options.join(', ')}` : ''}</span>
+                      </span>
+                      <button type="button" onClick={() => removeQuestion(i)} className="font-mono text-[10px] uppercase bg-transparent border-none cursor-pointer shrink-0 hover:opacity-70 mt-0.5" style={{ color: ERR }}>Del</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="space-y-2">
+                <input value={qLabel} onChange={(e) => setQLabel(e.target.value)} placeholder="Question (e.g. Dietary preference?)" className={inputCls} />
+                <div className="flex gap-2">
+                  <select value={qType} onChange={(e) => setQType(e.target.value)} className={`${inputCls} flex-1 cursor-pointer`}>
+                    {QUESTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <label className="flex items-center gap-1.5 cursor-pointer font-mono text-[11px] uppercase tracking-[1px] opacity-70 shrink-0 px-1">
+                    <input type="checkbox" checked={qRequired} onChange={(e) => setQRequired(e.target.checked)} style={{ accentColor: 'var(--accent)' }} /> Req
+                  </label>
+                </div>
+                {SELECT_TYPES.has(qType) && (
+                  <textarea value={qOptions} onChange={(e) => setQOptions(e.target.value)} rows={2} placeholder="One option per line" className={`${inputCls} resize-none`} />
+                )}
+                <button type="button" onClick={addQuestion} disabled={!qLabel.trim() || qBusy} className="font-mono text-[11px] uppercase tracking-[2px] border disabled:opacity-40 px-3 py-1.5 rounded-sm cursor-pointer bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+                  {qBusy ? 'Adding…' : '+ Add question'}
+                </button>
+                {qError && <p className="font-mono text-[11px]" style={{ color: ERR }}>{qError}</p>}
+              </div>
+            </div>
+            <p className="font-mono text-[10px] opacity-30">Guests always provide name, email &amp; (optional) phone. Add custom questions above.</p>
           </div>
         )}
 
-        {error && <div className="mb-6 font-mono text-[12px] uppercase tracking-[2px] text-pink/90 border border-pink/30 bg-pink/[0.06] rounded-sm px-3 py-2">{error}</div>}
+        {error && <div className="mb-6 font-mono text-[12px] uppercase tracking-[2px] border rounded-sm px-3 py-2" style={{ color: ERR, borderColor: `${ERR}55`, backgroundColor: `${ERR}14` }}>{error}</div>}
 
         {/* Edit: pointer to deeper settings */}
         {mode === 'edit' && initial.slug && (
-          <Link href={`/events/${initial.slug}/manage`} className="inline-block font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone transition no-underline">
-            Guests · registration questions · co-hosts →
+          <Link href={`/events/${initial.slug}/manage`} className="inline-block font-mono text-[11px] uppercase tracking-[2px] opacity-40 hover:opacity-100 transition no-underline">
+            Guests · co-hosts · approvals →
           </Link>
         )}
       </div>

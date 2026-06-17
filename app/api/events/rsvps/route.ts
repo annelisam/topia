@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         username: users.username,
         avatarUrl: users.avatarUrl,
         email: users.email,
+        phone: users.phone,
         status: eventRsvps.status,
         responses: eventRsvps.responses,
         createdAt: eventRsvps.createdAt,

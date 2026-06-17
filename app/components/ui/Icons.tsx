@@ -41,3 +41,18 @@ export function StarIcon({ size = 10, filled = true, className = '' }: { size?: 
     </svg>
   );
 }
+
+/** Share mark — three nodes joined by two lines (classic share glyph). */
+export function ShareIcon({ size = 12, strokeWidth = 1.4, className = '' }: { size?: number; strokeWidth?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" aria-hidden="true" className={className} style={{ flexShrink: 0 }}>
+      <g fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9.5" cy="2.5" r="1.5" />
+        <circle cx="2.5" cy="6" r="1.5" />
+        <circle cx="9.5" cy="9.5" r="1.5" />
+        <line x1="3.8" y1="5.3" x2="8.2" y2="3.2" />
+        <line x1="3.8" y1="6.7" x2="8.2" y2="8.8" />
+      </g>
+    </svg>
+  );
+}

@@ -18,7 +18,8 @@ export const metadata: Metadata = {
   },
 };
 
-// Prevent flash of wrong theme on load
+// Prevent flash of wrong theme on load. Accent is fixed site-wide to lime —
+// the custom accent picker was removed, so we clear any stale saved accent.
 const themeScript = `
   (function() {
     try {
@@ -26,22 +27,7 @@ const themeScript = `
       if (theme !== 'light') {
         document.documentElement.setAttribute('data-theme', 'dark');
       }
-      var accent = localStorage.getItem('topia-accent-index');
-      if (accent) {
-        var colors = ['#e4fe52','#4F46FF','#FF5BD7','#FF5C34','#00FF88','#f5f0e8'];
-        var darkText = [false,true,true,true,false,false];
-        var names = ['lime','blue','pink','orange','green','bone'];
-        var i = parseInt(accent);
-        if (colors[i]) {
-          var c = colors[i];
-          document.documentElement.style.setProperty('--accent', c);
-          document.documentElement.style.setProperty('--accent-text', darkText[i] ? '#f5f0e8' : '#1a1a1a');
-          document.documentElement.style.setProperty('--page-tint', c + '15');
-          document.documentElement.style.setProperty('--page-glow', c + '08');
-          document.documentElement.style.setProperty('--border-accent', c + '40');
-          document.body && document.body.setAttribute('data-accent', names[i]);
-        }
-      }
+      localStorage.removeItem('topia-accent-index');
     } catch(e) {}
   })();
 `;

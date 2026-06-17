@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import LoadingBar from '../components/LoadingBar';
 import ThemeToggle from '../components/ThemeToggle';
-import ColorSlider from '../components/ui/ColorSlider';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { DashboardContext } from './_components/DashboardContext';
 import type { HostedEvent } from './_components/DashboardContext';
@@ -104,7 +103,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       >
         <div className="max-w-6xl">{children}</div>
       </main>
-      <ColorSlider />
       <ThemeToggle />
     </div>
   );
