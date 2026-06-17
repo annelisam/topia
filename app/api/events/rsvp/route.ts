@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users, events, eventRsvps, eventHosts, eventQuestions, notifications } from '@/lib/db';
 import { eq, and, count } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
+import { verifyPrivyEmails } from '@/lib/auth/privyServer';
 
 type AnswerMap = Record<string, string | string[] | boolean>;
 
@@ -52,16 +53,36 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
 // POST /api/events/rsvp — register for an event (with custom-question answers)
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, eventId, answers, email, name, phone, inviteToken } = await request.json() as {
-      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; phone?: string; inviteToken?: string;
+    const { privyId, eventId, answers, email, name, phone, inviteToken, accessToken } = await request.json() as {
+      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; phone?: string; inviteToken?: string; accessToken?: string;
     };
 
     if (!privyId || !eventId) {
       return NextResponse.json({ error: 'Missing privyId or eventId' }, { status: 400 });
     }
-    // Phone is required to RSVP.
-    if (!phone || phone.replace(/\D/g, '').length < 7) {
-      return NextResponse.json({ error: 'A phone number is required to RSVP' }, { status: 400 });
+    // A verified email is required to RSVP. The body's `email` is not trusted —
+    // we confirm it against Privy's record of this user's verified accounts.
+    if (!email?.trim()) {
+      return NextResponse.json({ error: 'A verified email is required to RSVP' }, { status: 400 });
+    }
+    const verification = await verifyPrivyEmails(accessToken);
+    if (verification.configured) {
+      // Enforcement is active (PRIVY_APP_SECRET is set).
+      if (!verification.ok) {
+        return NextResponse.json({ error: 'Could not verify your email — please verify with Privy and try again' }, { status: 401 });
+      }
+      if (!verification.verifiedEmails.includes(email.trim().toLowerCase())) {
+        return NextResponse.json({ error: 'This email is not verified on your account' }, { status: 403 });
+      }
+    } else {
+      // PRIVY_APP_SECRET not configured — server-side verification is inactive.
+      // The client still gates on a verified email, but until the secret is set
+      // this check is advisory only. See lib/auth/privyServer.ts.
+      console.warn('[rsvp] PRIVY_APP_SECRET not set — email verification not enforced server-side');
+    }
+    // Phone is optional, but if provided it must look like a real number.
+    if (phone && phone.replace(/\D/g, '').length < 7) {
+      return NextResponse.json({ error: 'Please provide a valid phone number, or none at all' }, { status: 400 });
     }
 
     const [event] = await db
