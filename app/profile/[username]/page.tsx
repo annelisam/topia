@@ -75,6 +75,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hostedEvents, setHostedEvents] = useState<HostedEvent[]>([]);
+  const [attendedEvents, setAttendedEvents] = useState<HostedEvent[]>([]);
   const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]['id']>('identity');
 
   useEffect(() => {
@@ -103,6 +104,11 @@ export default function PublicProfilePage() {
     fetch(`/api/events?hostUserId=${profile.id}`)
       .then(r => r.json())
       .then(data => setHostedEvents(data.events || []))
+      .catch(console.error);
+    // Events this user RSVP'd to (going) — each earns a passport stamp.
+    fetch(`/api/events?attendeeUserId=${profile.id}`)
+      .then(r => r.json())
+      .then(data => setAttendedEvents(data.events || []))
       .catch(console.error);
   }, [profile?.id]);
 
@@ -191,7 +197,15 @@ export default function PublicProfilePage() {
       color: STAMP_COLORS[i % STAMP_COLORS.length],
       weight: 1 - i * 0.15,
     }));
-    const fromEvents = hostedEvents.slice(0, 6 - fromWorlds.length).map((e, i) => ({
+    // Hosted + attended (RSVP'd) events both earn a stamp — dedupe by id so a
+    // host who also RSVP'd their own event isn't double-stamped.
+    const seen = new Set<string>();
+    const eventSources = [...hostedEvents, ...attendedEvents].filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
+    const fromEvents = eventSources.slice(0, 6 - fromWorlds.length).map((e, i) => ({
       type: 'ENTRY' as const,
       world: e.eventName.toUpperCase().slice(0, 14),
       date: e.date ? new Date(e.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '.') : (memberSince || '—'),
@@ -199,11 +213,16 @@ export default function PublicProfilePage() {
       weight: 0.7 - i * 0.1,
     }));
     return [...fromWorlds, ...fromEvents].slice(0, 6);
-  }, [sortedWorlds, hostedEvents, memberSince]);
+  }, [sortedWorlds, hostedEvents, attendedEvents, memberSince]);
 
+  // Events count = hosted + attended (RSVP'd), deduped — matches the passport stamps.
+  const eventCount = useMemo(
+    () => new Set([...hostedEvents, ...attendedEvents].map((e) => e.id)).size,
+    [hostedEvents, attendedEvents],
+  );
   const stats = {
     worlds: sortedWorlds.length,
-    events: hostedEvents.length,
+    events: eventCount,
     collabs: sortedWorlds.filter((w) => w.role === 'collab').length,
     followers: followerCount,
   };
