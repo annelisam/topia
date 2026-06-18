@@ -49,6 +49,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Consent: registering creates a Topia profile and lets us contact them.
+  const [consent, setConsent] = useState(false);
 
   // Standard contact fields — auto-filled from the user's profile, editable.
   const [contactName, setContactName] = useState(name ?? '');
@@ -119,6 +121,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
+    if (!consent) { setError('Please agree to create a Topia profile to continue'); return; }
     const phone = digits.length ? `${phoneCode}${digits}` : null;
     setSubmitting(true);
     setError('');
@@ -294,15 +297,29 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               ))}
             </div>
 
+            {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
+            <label className="flex items-start gap-2.5 mb-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 shrink-0"
+                style={{ accentColor: 'var(--foreground)' }}
+              />
+              <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                By registering, I agree to create a Topia profile and allow Topia and the event host to contact me about this event.
+              </span>
+            </label>
+
             {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
             <button
               onClick={submit}
-              disabled={submitting || !verifiedEmail}
+              disabled={submitting || !verifiedEmail || !consent}
               className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
-              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
             </button>
           </>
         )}
