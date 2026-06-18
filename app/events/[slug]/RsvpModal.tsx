@@ -49,6 +49,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Consent: registering creates a Topia profile and lets us contact them.
+  const [consent, setConsent] = useState(false);
 
   // Standard contact fields — auto-filled from the user's profile, editable.
   const [contactName, setContactName] = useState(name ?? '');
@@ -58,7 +60,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
   // Privy-verified contact methods are locked (can't be edited); the others
   // can be verified in-place via Privy, like the profile "connect" rows.
-  const { user, linkEmail, linkPhone } = usePrivy();
+  const { user, linkEmail, linkPhone, getAccessToken } = usePrivy();
   const linked = user?.linkedAccounts ?? [];
   const emailAcct = linked.find((a) => a.type === 'email') as { address: string } | undefined;
   const googleAcct = linked.find((a) => a.type === 'google_oauth') as { email?: string } | undefined;
@@ -111,20 +113,26 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
   const submit = async () => {
     if (!contactName.trim()) { setError('Please add your name'); return; }
-    if (!contactEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setError('Please add a valid email'); return; }
+    // Email must be verified through Privy — no free-typed addresses.
+    if (!verifiedEmail) { setError('Please verify your email to register'); return; }
+    // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
-    if (digits.length < 7) { setError('Please add a valid phone number'); return; }
+    if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); return; }
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
-    const phone = `${phoneCode}${digits}`;
+    if (!consent) { setError('Please agree to create a Topia profile to continue'); return; }
+    const phone = digits.length ? `${phoneCode}${digits}` : null;
     setSubmitting(true);
     setError('');
     try {
+      // Send the Privy access token so the server can independently confirm the
+      // email is verified (the body alone is not trusted).
+      const accessToken = await getAccessToken().catch(() => null);
       const res = await fetch('/api/events/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, answers, email: contactEmail.trim(), name: contactName.trim(), phone, inviteToken }),
+        body: JSON.stringify({ privyId, eventId, answers, email: verifiedEmail, name: contactName.trim(), phone, inviteToken, accessToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
@@ -242,16 +250,24 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   <input type="email" value={contactEmail} readOnly disabled className={`${inputCls} cursor-not-allowed opacity-80`} style={fieldStyle} />
                 ) : (
                   <>
-                    <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} style={fieldStyle} placeholder="you@email.com" />
-                    <button type="button" onClick={() => linkEmail()} className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
-                      Verify with Privy →
+                    <button
+                      type="button"
+                      onClick={() => linkEmail()}
+                      className="w-full px-3 py-2 font-mono text-[13px] rounded-lg cursor-pointer border text-left flex items-center justify-between gap-2"
+                      style={fieldStyle}
+                    >
+                      <span className="opacity-50">Verify your email…</span>
+                      <span className="text-[11px] uppercase tracking-[0.12em]" style={{ color: 'var(--accent)' }}>Verify →</span>
                     </button>
+                    <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+                      A verified email is required to register.
+                    </p>
                   </>
                 )}
               </div>
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                  Phone<span style={{ color: '#FF5C34' }}> *</span>
+                  Phone<span className="normal-case tracking-normal opacity-50"> (optional)</span>
                   {verifiedPhone && <span className="inline-flex items-center gap-1 normal-case tracking-normal" style={{ color: '#00b36b', opacity: 1 }}>· verified ✓</span>}
                 </label>
                 {verifiedPhone ? (
@@ -281,15 +297,29 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               ))}
             </div>
 
+            {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
+            <label className="flex items-start gap-2.5 mb-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 shrink-0"
+                style={{ accentColor: 'var(--foreground)' }}
+              />
+              <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                By registering, I agree to create a Topia profile and allow Topia and the event host to contact me about this event.
+              </span>
+            </label>
+
             {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
             <button
               onClick={submit}
-              disabled={submitting}
-              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40"
+              disabled={submitting || !verifiedEmail || !consent}
+              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
-              {submitting ? 'Submitting…' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
             </button>
           </>
         )}

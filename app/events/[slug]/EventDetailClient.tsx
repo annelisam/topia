@@ -13,6 +13,7 @@ import RsvpModal from './RsvpModal';
 import TicketPurchase from './TicketPurchase';
 import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
+import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
 
@@ -825,6 +826,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               </ReactMarkdown>
             </section>
           )}
+
+          {/* Photo album — hosts upload; everyone views */}
+          <EventGallery slug={event.slug} isHost={event.isHost} privyId={privyUser?.id ?? null} />
 
           {/* Comments — hosts + RSVP'd guests can post */}
           <CommentSection
