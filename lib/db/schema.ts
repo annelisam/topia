@@ -351,6 +351,20 @@ export const eventComments = pgTable('event_comments', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+/* Event photo album — hosts upload images/clips that render in a gallery
+ * on the event page. Public to read; only hosts add/remove (enforced at
+ * the API). sortOrder lets hosts arrange the album. */
+export const eventGalleryPhotos = pgTable('event_gallery_photos', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  url: text('url').notNull(),                    // Vercel Blob URL
+  isVideo: boolean('is_video').notNull().default(false),
+  caption: text('caption'),
+  uploadedBy: uuid('uploaded_by').references(() => users.id),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 /* ────────────────────────────────────────────────────────────────────
  * Polymorphic emoji reactions on guestbook entries + comments.
  *
