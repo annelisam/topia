@@ -81,6 +81,27 @@ export async function PUT(request: Request) {
   }
 }
 
+// PATCH – publish/unpublish a profile (one-click toggle from the admin table)
+export async function PATCH(request: Request) {
+  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { id, published } = await request.json();
+    if (!id || typeof published !== 'boolean') {
+      return NextResponse.json({ error: 'id and published(boolean) are required' }, { status: 400 });
+    }
+    const [updated] = await db
+      .update(users)
+      .set({ published, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning({ id: users.id, published: users.published });
+    if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return NextResponse.json({ ok: true, user: updated });
+  } catch (error) {
+    console.error('Admin PATCH user:', error);
+    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
+  }
+}
+
 // DELETE – delete user
 export async function DELETE(request: Request) {
   if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
