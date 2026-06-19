@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     const slug = request.nextUrl.searchParams.get('slug');
     const citiesOnly = request.nextUrl.searchParams.get('cities');
     const hostUserId = request.nextUrl.searchParams.get('hostUserId');
+    const attendeeUserId = request.nextUrl.searchParams.get('attendeeUserId');
     const worldId = request.nextUrl.searchParams.get('worldId');
     const viewerPrivyId = request.nextUrl.searchParams.get('viewerPrivyId');
     // When listing a host's own events (dashboard), include their archived
@@ -183,6 +184,36 @@ export async function GET(request: NextRequest) {
       const hostsMap = await getHostsForEvents(ids);
       const rsvpMap = await getRsvpCounts(ids);
       const enriched = results.map(e => ({
+        ...e,
+        hosts: hostsMap[e.id] || [],
+        rsvpCount: rsvpMap[e.id] || 0,
+      }));
+
+      return NextResponse.json({ events: enriched });
+    }
+
+    // Events a user is attending (status 'going') — powers passport stamps.
+    if (attendeeUserId) {
+      const goingIds = await db
+        .select({ eventId: eventRsvps.eventId })
+        .from(eventRsvps)
+        .where(and(eq(eventRsvps.userId, attendeeUserId), eq(eventRsvps.status, 'going')));
+
+      if (goingIds.length === 0) {
+        return NextResponse.json({ events: [] });
+      }
+
+      const ids = goingIds.map((r) => r.eventId);
+      const results = await db
+        .select(eventSelect)
+        .from(events)
+        .leftJoin(users, eq(events.createdBy, users.id))
+        .where(and(eq(events.published, true), inArray(events.id, ids)))
+        .orderBy(asc(events.dateIso));
+
+      const hostsMap = await getHostsForEvents(ids);
+      const rsvpMap = await getRsvpCounts(ids);
+      const enriched = results.map((e) => ({
         ...e,
         hosts: hostsMap[e.id] || [],
         rsvpCount: rsvpMap[e.id] || 0,

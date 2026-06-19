@@ -232,6 +232,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
   const [pendingNotice, setPendingNotice] = useState(false);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
   const privyEmail =
     privyUser?.email?.address ?? privyUser?.google?.email ?? null;
@@ -300,29 +301,36 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       return;
     }
     if (event.userRsvped) {
-      // Withdraw
-      setRsvpLoading(true);
-      try {
-        await fetch('/api/events/rsvp', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: privyUser.id, eventId: event.id }),
-        });
-        setEvent({
-          ...event,
-          userRsvped: false,
-          userStatus: null,
-          rsvpCount: event.userStatus === 'going' ? event.rsvpCount - 1 : event.rsvpCount,
-        });
-      } catch (err) {
-        console.error('RSVP error:', err);
-      } finally {
-        setRsvpLoading(false);
-      }
+      // Withdrawing gives up your spot — never do it on a single tap. Ask first.
+      setConfirmWithdraw(true);
       return;
     }
     // Open the registration modal (handles custom questions + confirm).
     setRsvpFormOpen(true);
+  };
+
+  // Actually withdraw the RSVP / request — only reached after the confirm dialog.
+  const doWithdraw = async () => {
+    if (!event || !privyUser?.id) return;
+    setRsvpLoading(true);
+    try {
+      await fetch('/api/events/rsvp', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: privyUser.id, eventId: event.id }),
+      });
+      setEvent({
+        ...event,
+        userRsvped: false,
+        userStatus: null,
+        rsvpCount: event.userStatus === 'going' ? event.rsvpCount - 1 : event.rsvpCount,
+      });
+    } catch (err) {
+      console.error('RSVP error:', err);
+    } finally {
+      setRsvpLoading(false);
+      setConfirmWithdraw(false);
+    }
   };
 
   const handleRsvpDone = (status: string) => {
@@ -882,6 +890,40 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             <button onClick={() => setPendingNotice(false)} className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
               Got it
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw confirmation — guards against accidentally giving up a spot */}
+      {confirmWithdraw && event && (
+        <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !rsvpLoading && setConfirmWithdraw(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+            <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+              {event.userStatus === 'pending' ? 'Withdraw your request?' : 'Remove your RSVP?'}
+            </p>
+            <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
+              {event.userStatus === 'pending'
+                ? `You'll lose your place in the approval queue for ${event.eventName}.`
+                : `You'll give up your spot for ${event.eventName}${event.rsvpCapacity != null ? ' and may not get it back if it fills up' : ''}. You can always RSVP again.`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmWithdraw(false)}
+                disabled={rsvpLoading}
+                className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'transparent' }}
+              >
+                Keep my RSVP
+              </button>
+              <button
+                onClick={doWithdraw}
+                disabled={rsvpLoading}
+                className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold disabled:opacity-50"
+                style={{ backgroundColor: 'transparent', color: '#FF5C34', borderColor: '#FF5C34' }}
+              >
+                {rsvpLoading ? '...' : event.userStatus === 'pending' ? 'Withdraw' : 'Remove RSVP'}
+              </button>
+            </div>
           </div>
         </div>
       )}
