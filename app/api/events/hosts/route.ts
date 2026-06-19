@@ -5,7 +5,7 @@ import { eq, and, or, ilike, count } from 'drizzle-orm';
 // POST /api/events/hosts — invite a co-host
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, eventId, targetUserId } = await request.json();
+    const { privyId, eventId, targetUserId, manager, showOnEventPage } = await request.json();
 
     if (!privyId || !eventId || !targetUserId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
         eventId,
         userId: targetUserId,
         role: 'co_host',
+        manager: manager !== false,                  // default Manager unless explicitly false
+        showOnEventPage: showOnEventPage !== false,   // default visible
       });
       if (event) {
         await db.insert(notifications).values({
@@ -148,6 +150,75 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('PUT event host world:', error);
     return NextResponse.json({ error: 'Failed to set presenting world' }, { status: 500 });
+  }
+}
+
+// Resolve the requester and confirm they are the event's creator (main host).
+async function requireCreator(privyId: string, eventId: string) {
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
+  if (!user) return { error: 'User not found', status: 404 as const };
+  const [host] = await db.select({ role: eventHosts.role }).from(eventHosts)
+    .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, user.id)));
+  if (!host || host.role !== 'creator') return { error: 'Only the main host can manage hosts', status: 403 as const };
+  return { userId: user.id };
+}
+
+// PATCH /api/events/hosts — update a host's settings (creator only)
+// Body: { privyId, eventId, hostUserId, showOnEventPage?, manager? }
+export async function PATCH(request: NextRequest) {
+  try {
+    const { privyId, eventId, hostUserId, showOnEventPage, manager } = await request.json();
+    if (!privyId || !eventId || !hostUserId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    const auth = await requireCreator(privyId, eventId);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    const [target] = await db.select({ id: eventHosts.id, role: eventHosts.role }).from(eventHosts)
+      .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, hostUserId)));
+    if (!target) return NextResponse.json({ error: 'Host not found' }, { status: 404 });
+
+    const patch: { showOnEventPage?: boolean; manager?: boolean } = {};
+    if (typeof showOnEventPage === 'boolean') patch.showOnEventPage = showOnEventPage;
+    // The creator is always a manager — only co-hosts can be set to non-manager.
+    if (typeof manager === 'boolean' && target.role !== 'creator') patch.manager = manager;
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+    await db.update(eventHosts).set(patch).where(eq(eventHosts.id, target.id));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('PATCH event host:', error);
+    return NextResponse.json({ error: 'Failed to update host' }, { status: 500 });
+  }
+}
+
+// DELETE /api/events/hosts?privyId=&eventId=&hostUserId=  (creator only; not the creator themselves)
+export async function DELETE(request: NextRequest) {
+  try {
+    const sp = request.nextUrl.searchParams;
+    const privyId = sp.get('privyId');
+    const eventId = sp.get('eventId');
+    const hostUserId = sp.get('hostUserId');
+    if (!privyId || !eventId || !hostUserId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    const auth = await requireCreator(privyId, eventId);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    const [target] = await db.select({ id: eventHosts.id, role: eventHosts.role }).from(eventHosts)
+      .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, hostUserId)));
+    if (!target) return NextResponse.json({ error: 'Host not found' }, { status: 404 });
+    if (target.role === 'creator') return NextResponse.json({ error: "Can't remove the main host" }, { status: 400 });
+
+    await db.delete(eventHosts).where(eq(eventHosts.id, target.id));
+    // Clear any lingering invitation so they could be re-invited cleanly.
+    await db.delete(eventHostInvitations)
+      .where(and(eq(eventHostInvitations.eventId, eventId), eq(eventHostInvitations.inviteeId, hostUserId)));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('DELETE event host:', error);
+    return NextResponse.json({ error: 'Failed to remove host' }, { status: 500 });
   }
 }
 

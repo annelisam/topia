@@ -205,6 +205,9 @@ export const eventHosts = pgTable('event_hosts', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   role: text('role').notNull(), // 'creator' | 'co_host'
   worldId: uuid('world_id').references(() => worlds.id), // optional: hosting as a World
+  // Luma-style host settings:
+  manager: boolean('manager').notNull().default(true),          // false = host shown but no /manage access
+  showOnEventPage: boolean('show_on_event_page').notNull().default(true), // public "Hosted by" visibility
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

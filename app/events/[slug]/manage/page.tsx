@@ -13,11 +13,12 @@ interface EventLite {
   id: string;
   eventName: string;
   isHost: boolean;
+  isCreator: boolean;
   rsvpCapacity: number | null;
   rsvpApprovalRequired: boolean;
   rsvpClosed: boolean;
 }
-interface Host { userId: string; role: string; name: string | null; username: string | null; avatarUrl: string | null; worldId: string | null; worldTitle: string | null; }
+interface Host { userId: string; role: string; name: string | null; username: string | null; email: string | null; avatarUrl: string | null; worldId: string | null; worldTitle: string | null; manager: boolean; showOnEventPage: boolean; }
 interface SearchUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; }
 interface Question { id: string; label: string; type: string; options: string[] | null; required: boolean; sortOrder: number | null; isActive: boolean; }
 interface Response { questionId: string; label: string; type: string; answer: string | string[] | boolean | null; }
@@ -43,6 +44,15 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   const [notHost, setNotHost] = useState(false);
   const [tab, setTab] = useState<Tab>('guests');
 
+  // Re-pull the host roster after add/update/remove (no loading flicker).
+  const reloadHosts = useCallback(() => {
+    if (!privyId) return;
+    fetch(`/api/events?slug=${slug}&viewerPrivyId=${privyId}`)
+      .then((r) => r.json())
+      .then((d) => { const ev = d.events?.[0]; if (ev) setHosts(ev.hosts ?? []); })
+      .catch(() => {});
+  }, [slug, privyId]);
+
   // Load event + authorize. Waits for Privy to finish hydrating (ready +
   // authenticated + a user id) so we never check isHost against an empty viewer
   // — that race used to bounce the host out. On a confirmed non-host we show an
@@ -57,10 +67,11 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
         if (cancelled) return;
         const ev = d.events?.[0];
         if (!ev) { setLoading(false); return; }
-        if (!ev.isHost) { setNotHost(true); setLoading(false); return; }
+        // Only managers (creator or manager co-hosts) can open the manage page.
+        if (!ev.isManager) { setNotHost(true); setLoading(false); return; }
         setNotHost(false);
         setEvent({
-          id: ev.id, eventName: ev.eventName, isHost: ev.isHost,
+          id: ev.id, eventName: ev.eventName, isHost: ev.isHost, isCreator: !!ev.isCreator,
           rsvpCapacity: ev.rsvpCapacity ?? null,
           rsvpApprovalRequired: !!ev.rsvpApprovalRequired,
           rsvpClosed: !!ev.rsvpClosed,
@@ -118,7 +129,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
 
         {tab === 'guests' && <GuestsTab eventId={event.id} eventName={event.eventName} privyId={privyId!} capacity={event.rsvpCapacity} />}
         {tab === 'registration' && <RegistrationTab event={event} slug={slug} privyId={privyId!} onSettings={(s) => setEvent({ ...event, ...s })} />}
-        {tab === 'hosts' && <HostsTab eventId={event.id} privyId={privyId!} hosts={hosts} />}
+        {tab === 'hosts' && <HostsTab eventId={event.id} privyId={privyId!} hosts={hosts} isCreator={event.isCreator} reload={reloadHosts} />}
       </div>
     </div>
   );
@@ -248,6 +259,8 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [decideMsg, setDecideMsg] = useState('');
+  // Pending approve/decline awaiting an "are you sure?" confirm.
+  const [confirmDecision, setConfirmDecision] = useState<{ userId: string; decision: 'approve' | 'decline' } | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/events/rsvps?eventId=${eventId}&privyId=${privyId}`)
@@ -320,8 +333,8 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
               <GuestRow key={r.userId} r={r} expanded={expanded === r.userId} onToggle={() => setExpanded(expanded === r.userId ? null : r.userId)}
                 actions={
                   <span className="flex gap-2">
-                    <button disabled={busyId === r.userId} onClick={() => decide(r.userId, 'approve')} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#00b36b' }}>Approve</button>
-                    <button disabled={busyId === r.userId} onClick={() => decide(r.userId, 'decline')} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Decline</button>
+                    <button disabled={busyId === r.userId} onClick={() => setConfirmDecision({ userId: r.userId, decision: 'approve' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#00b36b' }}>Approve</button>
+                    <button disabled={busyId === r.userId} onClick={() => setConfirmDecision({ userId: r.userId, decision: 'decline' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Decline</button>
                   </span>
                 } />
             ))}
@@ -339,6 +352,38 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
           ))}
         </div>
       )}
+
+      {/* Approve/decline confirmation — guards against an accidental tap */}
+      {confirmDecision && (() => {
+        const who = rsvps.find((r) => r.userId === confirmDecision.userId);
+        const label = who?.name || who?.username || 'this guest';
+        const approving = confirmDecision.decision === 'approve';
+        return (
+          <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !busyId && setConfirmDecision(null)}>
+            <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+              <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+                {approving ? 'Approve' : 'Decline'} {label}?
+              </p>
+              <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
+                {approving
+                  ? `They'll be confirmed as going and notified.`
+                  : `Their request will be declined and they'll be notified.`}
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDecision(null)} disabled={!!busyId} className={`flex-1 ${btnPrimary}`} style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Cancel</button>
+                <button
+                  onClick={() => { const d = confirmDecision; setConfirmDecision(null); decide(d.userId, d.decision); }}
+                  disabled={!!busyId}
+                  className={`flex-1 ${btnGhost}`}
+                  style={{ color: approving ? '#00b36b' : '#FF5C34', borderColor: approving ? '#00b36b' : '#FF5C34' }}
+                >
+                  {approving ? 'Approve' : 'Decline'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -526,18 +571,53 @@ function RegistrationTab({ event, slug, privyId, onSettings }: { event: EventLit
 }
 
 /* ── Hosts tab (co-host management) ────────────────────────────────── */
-function HostsTab({ eventId, privyId, hosts }: { eventId: string; privyId: string; hosts: Host[] }) {
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState<SearchUser[]>([]);
-  const [inviting, setInviting] = useState(false);
-  const [msg, setMsg] = useState('');
+// Pill toggle switch.
+function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button type="button" disabled={disabled} onClick={() => onChange(!on)}
+      className="relative w-11 h-6 rounded-full transition-colors shrink-0 border-none cursor-pointer disabled:opacity-50"
+      style={{ backgroundColor: on ? 'var(--foreground)' : 'var(--border-color)' }} aria-pressed={on}>
+      <span className="absolute top-0.5 w-5 h-5 rounded-full transition-all" style={{ backgroundColor: 'var(--background)', left: on ? '22px' : '2px' }} />
+    </button>
+  );
+}
 
+// Manager / Non-Manager selector row.
+function AccessOption({ selected, onClick, label, desc }: { selected: boolean; onClick: () => void; label: string; desc: string }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 border rounded-lg text-left cursor-pointer bg-transparent mb-2"
+      style={{ borderColor: selected ? 'var(--foreground)' : 'var(--border-color)' }}>
+      <div>
+        <p className="font-mono text-[13px] font-bold" style={{ color: 'var(--foreground)' }}>{label}</p>
+        <p className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>{desc}</p>
+      </div>
+      <span className="w-4 text-center font-bold" style={{ color: 'var(--foreground)', opacity: selected ? 1 : 0 }}>✓</span>
+    </button>
+  );
+}
+
+// Access-level badge shown on each host row.
+function AccessBadge({ host }: { host: Host }) {
+  const label = host.role === 'creator' ? 'Creator' : host.manager ? 'Manager' : 'Non-Manager';
+  const color = host.role === 'creator' ? '#00b36b' : host.manager ? '#FF9F1C' : 'var(--foreground)';
+  return (
+    <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0"
+      style={{ color, borderColor: color, opacity: host.role === 'creator' || host.manager ? 1 : 0.45 }}>
+      {label}
+    </span>
+  );
+}
+
+function HostsTab({ eventId, privyId, hosts, isCreator, reload }: { eventId: string; privyId: string; hosts: Host[]; isCreator: boolean; reload: () => void }) {
   // Presenting world ("Presented by") — set on the creator's host row.
   const { worldMemberships } = useUserProfile();
   const myWorlds = worldMemberships.map((wm) => ({ id: wm.worldId, title: wm.worldTitle }));
   const creatorHost = hosts.find((h) => h.role === 'creator');
   const [worldId, setWorldId] = useState(creatorHost?.worldId ?? '');
   const [worldMsg, setWorldMsg] = useState('');
+  const [editing, setEditing] = useState<Host | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const saveWorld = async (next: string) => {
     setWorldId(next); setWorldMsg('');
@@ -551,41 +631,10 @@ function HostsTab({ eventId, privyId, hosts }: { eventId: string; privyId: strin
     } catch { setWorldMsg('Could not save'); }
   };
 
-  useEffect(() => {
-    if (search.length < 2) { setResults([]); return; }
-    const t = setTimeout(() => {
-      fetch(`/api/events/hosts?search=${encodeURIComponent(search)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          const ids = new Set(hosts.map((h) => h.userId));
-          setResults((d.users ?? []).filter((u: SearchUser) => !ids.has(u.id)));
-        }).catch(console.error);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search, hosts]);
-
-  const invite = async (targetUserId: string) => {
-    setInviting(true);
-    setMsg('');
-    try {
-      const res = await fetch('/api/events/hosts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, targetUserId }),
-      });
-      const d = await res.json();
-      if (res.ok) {
-        setSearch(''); setResults([]);
-        // The main host auto-approves co-hosts; co-hosts send a pending invite.
-        setMsg(d.autoApproved ? 'Added as co-host — reload to see them in the list.' : 'Invitation sent.');
-      }
-      else setMsg(d.error || 'Failed to invite');
-    } finally { setInviting(false); }
-  };
-
   return (
     <div>
       {/* Presented by — which world hosts this event (creator only) */}
-      {myWorlds.length > 0 && (
+      {isCreator && myWorlds.length > 0 && (
         <div className="mb-6">
           <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-2" style={{ color: 'var(--foreground)' }}>Presented by</p>
           <select value={worldId} onChange={(e) => saveWorld(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
@@ -598,44 +647,187 @@ function HostsTab({ eventId, privyId, hosts }: { eventId: string; privyId: strin
         </div>
       )}
 
-      <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>Hosts</p>
-      <div className="space-y-2 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Hosts</p>
+        {isCreator && hosts.length < 6 && (
+          <button onClick={() => setAdding(true)} className={btnGhost} style={fieldStyle}>+ Add Host</button>
+        )}
+      </div>
+
+      <div className="space-y-2">
         {hosts.map((h) => (
           <div key={h.userId} className="flex items-center gap-3 px-3 py-2 border rounded-lg" style={{ borderColor: 'var(--border-color)' }}>
             {h.avatarUrl
-              ? <img src={h.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
-              : <div className="w-7 h-7 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(h.name || h.username || '?')[0].toUpperCase()}</div>}
-            <div className="flex-1">
-              <p className="font-mono text-[12px] font-bold" style={{ color: 'var(--foreground)' }}>
+              ? <img src={h.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+              : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[12px] font-bold shrink-0" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(h.name || h.username || '?')[0].toUpperCase()}</div>}
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-[12px] font-bold truncate" style={{ color: 'var(--foreground)' }}>
                 {h.name || h.username || 'Unknown'}{h.worldTitle && <span className="font-normal opacity-50"> · {h.worldTitle}</span>}
+                {!h.showOnEventPage && <span className="font-normal opacity-40"> · hidden</span>}
               </p>
-              <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>{h.role === 'creator' ? 'Creator' : 'Co-host'}</p>
+              {h.email && <p className="font-mono text-[11px] opacity-40 truncate" style={{ color: 'var(--foreground)' }}>{h.email}</p>}
             </div>
+            <AccessBadge host={h} />
+            {isCreator && (
+              <button onClick={() => setEditing(h)} title="Edit host" className="opacity-50 hover:opacity-100 transition bg-transparent border-none cursor-pointer text-[15px]" style={{ color: 'var(--foreground)' }}>✎</button>
+            )}
           </div>
         ))}
       </div>
 
-      {hosts.length < 6 ? (
-        <div className="relative">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or username to invite…" className={inputCls} style={fieldStyle} />
-          {results.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+      {editing && (
+        <UpdateHostModal host={editing} eventId={eventId} privyId={privyId} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />
+      )}
+      {adding && (
+        <AddHostModal eventId={eventId} privyId={privyId} existingIds={new Set(hosts.map((h) => h.userId))} onClose={() => setAdding(false)} onAdded={() => { setAdding(false); reload(); }} />
+      )}
+    </div>
+  );
+}
+
+// Update Host modal — show-on-page toggle + (co-hosts) access control + remove.
+function UpdateHostModal({ host, eventId, privyId, onClose, onSaved }: { host: Host; eventId: string; privyId: string; onClose: () => void; onSaved: () => void }) {
+  const [show, setShow] = useState(host.showOnEventPage);
+  const [manager, setManager] = useState(host.manager);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const isCreatorRow = host.role === 'creator';
+
+  const update = async () => {
+    setBusy(true); setErr('');
+    const res = await fetch('/api/events/hosts', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, eventId, hostUserId: host.userId, showOnEventPage: show, ...(isCreatorRow ? {} : { manager }) }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(d.error || 'Could not update'); return; }
+    onSaved();
+  };
+  const remove = async () => {
+    setBusy(true); setErr('');
+    const res = await fetch(`/api/events/hosts?privyId=${encodeURIComponent(privyId)}&eventId=${eventId}&hostUserId=${host.userId}`, { method: 'DELETE' });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(d.error || 'Could not remove'); return; }
+    onSaved();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !busy && onClose()}>
+      <div className="w-full max-w-sm rounded-2xl p-6 border" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+        <p className="font-mono text-[15px] font-bold mb-0.5" style={{ color: 'var(--foreground)' }}>Update Host</p>
+        <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>{host.name || host.username}{host.email ? ` (${host.email})` : ''}</p>
+
+        <div className="flex items-center justify-between mb-5">
+          <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Show on the Event Page</span>
+          <Toggle on={show} onChange={setShow} disabled={busy} />
+        </div>
+
+        {!isCreatorRow && (
+          <div className="mb-5">
+            <p className={labelCls} style={{ color: 'var(--foreground)' }}>Access Control</p>
+            <AccessOption selected={manager} onClick={() => setManager(true)} label="Manager" desc="Full manage access to the event" />
+            <AccessOption selected={!manager} onClick={() => setManager(false)} label="Non-Manager" desc="No manage event access" />
+          </div>
+        )}
+
+        {err && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{err}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={update} disabled={busy} className={`flex-1 ${btnPrimary}`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>{busy ? '…' : 'Update'}</button>
+          {!isCreatorRow && (
+            <button onClick={remove} disabled={busy} className={`flex-1 ${btnGhost}`} style={{ color: '#FF5C34', borderColor: '#FF5C34' }}>Remove</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Configure (Add) Host modal — search a user, set visibility + access, send invite.
+function AddHostModal({ eventId, privyId, existingIds, onClose, onAdded }: { eventId: string; privyId: string; existingIds: Set<string>; onClose: () => void; onAdded: () => void }) {
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<SearchUser[]>([]);
+  const [selected, setSelected] = useState<SearchUser | null>(null);
+  const [show, setShow] = useState(true);
+  const [manager, setManager] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    if (selected || search.length < 2) { setResults([]); return; }
+    const t = setTimeout(() => {
+      fetch(`/api/events/hosts?search=${encodeURIComponent(search)}`)
+        .then((r) => r.json())
+        .then((d) => setResults((d.users ?? []).filter((u: SearchUser) => !existingIds.has(u.id))))
+        .catch(() => {});
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, selected, existingIds]);
+
+  const add = async () => {
+    if (!selected) return;
+    setBusy(true); setMsg('');
+    const res = await fetch('/api/events/hosts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, eventId, targetUserId: selected.id, manager, showOnEventPage: show }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setMsg(d.error || 'Could not add host'); return; }
+    onAdded();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !busy && onClose()}>
+      <div className="w-full max-w-sm rounded-2xl p-6 border" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+        <p className="font-mono text-[15px] font-bold mb-5" style={{ color: 'var(--foreground)' }}>Configure Host</p>
+
+        {!selected ? (
+          <>
+            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or username…" className={inputCls} style={fieldStyle} />
+            <div className="mt-2 space-y-1 max-h-56 overflow-y-auto">
               {results.map((u) => (
-                <button key={u.id} onClick={() => invite(u.id)} disabled={inviting}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:opacity-70 transition border-b last:border-b-0 text-left disabled:opacity-40" style={{ borderColor: 'var(--border-color)' }}>
+                <button key={u.id} onClick={() => setSelected(u)} className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:opacity-70 transition text-left bg-transparent border-none cursor-pointer">
                   {u.avatarUrl
-                    ? <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-                    : <div className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(u.name || u.username || '?')[0].toUpperCase()}</div>}
+                    ? <img src={u.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                    : <div className="w-7 h-7 rounded-full flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(u.name || u.username || '?')[0].toUpperCase()}</div>}
                   <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)' }}>{u.name || u.username}{u.username && <span className="opacity-40"> @{u.username}</span>}</span>
                 </button>
               ))}
+              {search.length >= 2 && results.length === 0 && <p className="font-mono text-[12px] opacity-40 px-2 py-2" style={{ color: 'var(--foreground)' }}>No matches.</p>}
             </div>
-          )}
-        </div>
-      ) : (
-        <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>Maximum co-hosts reached (5).</p>
-      )}
-      {msg && <p className="font-mono text-[12px] mt-2 opacity-70" style={{ color: 'var(--foreground)' }}>{msg}</p>}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5 mb-5">
+              {selected.avatarUrl
+                ? <img src={selected.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[12px] font-bold" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(selected.name || selected.username || '?')[0].toUpperCase()}</div>}
+              <div>
+                <p className="font-mono text-[13px] font-bold" style={{ color: 'var(--foreground)' }}>{selected.name || selected.username}</p>
+                {selected.username && <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>@{selected.username}</p>}
+              </div>
+              <button onClick={() => setSelected(null)} className="ml-auto font-mono text-[11px] uppercase underline opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }}>Change</button>
+            </div>
+
+            <div className="flex items-center justify-between mb-5">
+              <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>Show on the Event Page</span>
+              <Toggle on={show} onChange={setShow} disabled={busy} />
+            </div>
+
+            <div className="mb-5">
+              <p className={labelCls} style={{ color: 'var(--foreground)' }}>Access Control</p>
+              <AccessOption selected={manager} onClick={() => setManager(true)} label="Manager" desc="Full manage access to the event" />
+              <AccessOption selected={!manager} onClick={() => setManager(false)} label="Non-Manager" desc="No manage event access" />
+            </div>
+
+            {msg && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{msg}</p>}
+            <button onClick={add} disabled={busy} className={`w-full ${btnPrimary}`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>{busy ? '…' : 'Add Host'}</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
