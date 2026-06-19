@@ -15,9 +15,12 @@ async function getHostsForEvents(eventIds: string[]) {
       eventId: eventHosts.eventId,
       userId: eventHosts.userId,
       role: eventHosts.role,
+      manager: eventHosts.manager,
+      showOnEventPage: eventHosts.showOnEventPage,
       worldId: eventHosts.worldId,
       name: users.name,
       username: users.username,
+      email: users.email,
       avatarUrl: users.avatarUrl,
       worldTitle: worlds.title,
       worldSlug: worlds.slug,
@@ -124,6 +127,8 @@ export async function GET(request: NextRequest) {
       let userRsvped = false;
       let userStatus: string | null = null;
       let isHost = false;
+      let isManager = false;
+      let isCreator = false;
       let isSaved = false;
       if (viewerPrivyId) {
         const [viewer] = await db
@@ -133,14 +138,20 @@ export async function GET(request: NextRequest) {
           const [[rsvp], [host]] = await Promise.all([
             db.select({ status: eventRsvps.status }).from(eventRsvps)
               .where(and(eq(eventRsvps.eventId, results[0].id), eq(eventRsvps.userId, viewer.id))),
-            db.select({ id: eventHosts.id }).from(eventHosts)
+            db.select({ id: eventHosts.id, role: eventHosts.role, manager: eventHosts.manager }).from(eventHosts)
               .where(and(eq(eventHosts.eventId, results[0].id), eq(eventHosts.userId, viewer.id))),
           ]);
           userRsvped = !!rsvp;
           userStatus = rsvp?.status ?? null;
           // External events suppress the auto-host flag (submitter ≠ host),
           // mirroring the overview API's logic.
-          isHost = !!host || (results[0].createdBy === viewer.id && !results[0].externalSource);
+          const isCreatorFallback = results[0].createdBy === viewer.id && !results[0].externalSource;
+          isHost = !!host || isCreatorFallback;
+          // Manager = a host with manage access (or the creator fallback). Only
+          // managers can open the /manage page. Creator = the main host (only
+          // they can edit the host roster).
+          isManager = (!!host && host.manager) || isCreatorFallback;
+          isCreator = (!!host && host.role === 'creator') || isCreatorFallback;
           const saved = (viewer.savedEventSlugs ?? '').split(',').map((s) => s.trim()).filter(Boolean);
           isSaved = saved.includes(results[0].slug);
         }
@@ -153,6 +164,8 @@ export async function GET(request: NextRequest) {
         userRsvped,
         userStatus,
         isHost,
+        isManager,
+        isCreator,
         isSaved,
       }));
 

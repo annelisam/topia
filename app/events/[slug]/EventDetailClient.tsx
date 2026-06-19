@@ -27,6 +27,7 @@ interface EventHost {
   worldTitle: string | null;
   worldSlug: string | null;
   worldImageUrl: string | null;
+  showOnEventPage?: boolean;
 }
 
 interface EventDetail {
@@ -438,6 +439,8 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.address, event.city].filter(Boolean).join(', '))}`;
   // Presenting world (Luma "Presented by") — first host that belongs to a world.
   const world = event.hosts.find((h) => h.worldSlug && h.worldTitle) || null;
+  // Hosts hidden via the manage page's "Show on the Event Page" toggle drop out.
+  const visibleHosts = event.hosts.filter((h) => h.showOnEventPage !== false);
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: 'var(--page-bg)' }}>
@@ -501,12 +504,12 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Hosted by — host list */}
-            {event.hosts.length > 0 && (
+            {/* Hosted by — host list (hosts toggled off in manage are hidden) */}
+            {visibleHosts.length > 0 && (
               <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
                 <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>Hosted by</p>
                 <div className="space-y-3">
-                  {event.hosts.map((host) => (
+                  {visibleHosts.map((host) => (
                     <Link key={host.userId} href={host.username ? `/profile/${host.username}` : '#'} className="flex items-center gap-2.5 group no-underline">
                       {host.avatarUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
