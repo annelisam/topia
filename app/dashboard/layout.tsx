@@ -97,7 +97,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <Navigation />
       <DashboardSidebar />
       <main
-        className={`pt-28 sm:pt-24 px-4 sm:px-8 pb-16 md:pb-8 transition-[margin-left] duration-300 ease-out ${
+        className={`pt-12 sm:pt-24 px-4 sm:px-8 pb-16 md:pb-8 transition-[margin-left] duration-300 ease-out ${
           collapsed ? 'sm:ml-14' : 'sm:ml-56'
         }`}
       >

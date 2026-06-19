@@ -9,7 +9,9 @@ export default function PageShell({ children }: { children: ReactNode }) {
   return (
     <>
       <Navigation />
-      <main className="pt-[var(--nav-height)] pb-16 md:pb-0 relative">
+      {/* Top padding only clears the desktop top nav; on mobile the nav lives at
+          the bottom, so no top offset is needed. */}
+      <main className="md:pt-[var(--nav-height)] pb-16 md:pb-0 relative">
         {/* Halftone */}
         <div
           className="fixed inset-0 pointer-events-none z-[5] opacity-[0.06] mix-blend-multiply"

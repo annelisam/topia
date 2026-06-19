@@ -317,8 +317,8 @@ export default function ProfilePage() {
       <PageShell>
         {/* ── Sticky top action bar — sits below the nav ────────── */}
         <div
-          className="sticky z-30 backdrop-blur-md border-b border-bone/[0.06]"
-          style={{ top: 'var(--nav-height, 56px)', backgroundColor: 'rgba(10,10,10,0.88)' }}
+          className="sticky top-0 md:top-[var(--nav-height,56px)] z-30 backdrop-blur-md border-b border-bone/[0.06]"
+          style={{ backgroundColor: 'rgba(10,10,10,0.88)' }}
         >
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
             <Link
