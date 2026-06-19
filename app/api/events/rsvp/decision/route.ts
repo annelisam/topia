@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq } from 'drizzle-orm';
 import { db, users, events, eventRsvps, eventHosts, notifications } from '@/lib/db';
+import { isEmailConfigured, sendRsvpDecision } from '@/lib/notify/email';
 
 // POST /api/events/rsvp/decision — host approves or declines a pending RSVP.
 // Body: { privyId, eventId, guestUserId, decision: 'approve' | 'decline' }
@@ -56,6 +57,16 @@ export async function POST(request: NextRequest) {
         type: decision === 'approve' ? 'event_rsvp_approved' : 'event_rsvp_declined',
         metadata: { eventId, eventName: event.eventName, eventSlug: event.slug },
       });
+
+      // Email the guest the decision — best-effort, dormant until configured.
+      if (isEmailConfigured()) {
+        try {
+          const [guest] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, guestUserId));
+          if (guest?.email) {
+            await sendRsvpDecision({ to: guest.email, eventName: event.eventName, origin: request.nextUrl.origin, slug: event.slug, guestName: guest.name, approved: decision === 'approve' });
+          }
+        } catch (e) { console.error('rsvp decision email:', e); }
+      }
     }
 
     return NextResponse.json({ ok: true, status: newStatus });

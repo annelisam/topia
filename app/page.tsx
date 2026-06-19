@@ -13,20 +13,12 @@ export default function Home() {
 
   // When authenticated, decide where to send the user:
   //   - no username yet → /onboarding (first-time builder)
-  //   - has username → /worlds (dashboard)
+  // Authenticated users go straight to the main page (Topia TV).
+  // Onboarding is optional — we never auto-force it.
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
-    fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
-      .then((r) => r.json())
-      .then(({ user: saved }) => {
-        if (saved && saved.username && saved.name) {
-          router.replace('/worlds');
-        } else {
-          router.replace('/onboarding');
-        }
-      })
-      .catch(() => router.replace('/worlds'));
+    router.replace('/tv');
   }, [ready, authenticated, user, router]);
 
   useEffect(() => {

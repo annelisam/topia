@@ -54,7 +54,6 @@ export default function Footer() {
               <FooterLink href="/onboarding">Onboarding</FooterLink>
               <FooterSoon>Passport</FooterSoon>
               <FooterLink href="/tv">Topia TV</FooterLink>
-              <FooterLink href="/worlds">Worlds</FooterLink>
               <FooterLink href="/events">Events</FooterLink>
               <FooterSoon>Tiers</FooterSoon>
               <FooterSoon>Builder</FooterSoon>
