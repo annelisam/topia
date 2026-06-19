@@ -51,16 +51,14 @@ export default function TVPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Player state. TOPIA TV is intentionally NOT muted by default — this
-  // is a TV channel, sound is the point. We try unmuted autoplay first;
-  // if the browser refuses (Chrome/Safari may block when there's been no
-  // recent user gesture on the domain), we fall back to muted + show a
-  // small "Tap to unmute" overlay. See attemptAutoplay() below.
+  // Player state. TOPIA TV autoplays MUTED by default (reliable across
+  // browsers, and avoids blasting sound at visitors). A "Tap to unmute"
+  // overlay nudges viewers to restore sound. See the autoplay effect below.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [needsUnmute, setNeedsUnmute] = useState(false);
   const [volume, setVolume] = useState(0.85);
 
@@ -96,31 +94,26 @@ export default function TVPage() {
     return list;
   }, [episodes, activeCategory, searchQuery]);
 
-  /* ── Reset + try to autoplay when the active episode changes ──
-        Strategy: ask the browser to play unmuted. If it refuses (the
-        autoplay-with-sound policy), we mute + retry, which always
-        works. The "Tap to unmute" overlay then nudges the viewer to
-        restore sound. */
+  /* ── Reset + autoplay (muted) when the active episode changes ──
+        Muted autoplay is always allowed by browsers, so this just works.
+        We show the "Tap to unmute" overlay so viewers can restore sound. */
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !activeEp) return;
     setCurrentTime(0);
     setDuration(0);
     setPlaying(false);
-    setNeedsUnmute(false);
-    v.muted = false;
+    v.muted = true;
+    setMuted(true);
     v.volume = volume;
     v.load();
     const tryPlay = async () => {
       try {
         await v.play();
-        setMuted(false);
+        setNeedsUnmute(true); // muted by default — invite the viewer to unmute
       } catch {
-        // Browser blocked unmuted autoplay — fall back to muted
-        v.muted = true;
-        setMuted(true);
-        setNeedsUnmute(true);
-        try { await v.play(); } catch { /* user will press play manually */ }
+        // Even muted autoplay blocked — user will press play manually.
+        setNeedsUnmute(false);
       }
     };
     void tryPlay();
