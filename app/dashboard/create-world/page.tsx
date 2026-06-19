@@ -77,7 +77,7 @@ export default function CreateWorldPage() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation />
 
-      <main className="container mx-auto max-w-xl px-4 sm:px-6 pt-24 sm:pt-28 pb-16">
+      <main className="container mx-auto max-w-xl px-4 sm:px-6 pt-8 sm:pt-28 pb-16">
         <div className="mb-6">
           <Link
             href="/dashboard"

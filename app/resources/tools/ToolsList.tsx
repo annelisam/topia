@@ -173,7 +173,7 @@ export default function ToolsList() {
             </div>
 
             {/* ─── ROW 2: Search + sort + count ─── */}
-            <div className="bg-obsidian border-t border-b border-bone/[0.06] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-[var(--nav-height,56px)] z-30">
+            <div className="bg-obsidian border-t border-b border-bone/[0.06] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-0 md:top-[var(--nav-height,56px)] z-30">
               <div className="relative flex-1">
                 <input
                   ref={searchInputRef}

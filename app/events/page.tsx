@@ -324,7 +324,7 @@ export default function EventsPage() {
               </div>
 
               {/* ─── ROW 2: Search + city + count ─── */}
-              <div className="bg-[var(--background)] border-t border-b border-[var(--border-color)] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-[var(--nav-height,56px)] z-30">
+              <div className="bg-[var(--background)] border-t border-b border-[var(--border-color)] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-0 md:top-[var(--nav-height,56px)] z-30">
                 <div className="relative flex-1">
                   <input
                     ref={searchRef}
@@ -418,7 +418,7 @@ export default function EventsPage() {
                 ) : viewMode === 'grid' ? (
                   grouped.map((group, gi) => (
                     <div key={group.label}>
-                      <div className="sticky top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
+                      <div className="sticky top-[58px] md:top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
                         <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--foreground)]/40">{group.label} · {group.items.length}</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
@@ -440,7 +440,7 @@ export default function EventsPage() {
                 ) : (
                   grouped.map((group, gi) => (
                     <div key={group.label}>
-                      <div className="sticky top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
+                      <div className="sticky top-[58px] md:top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
                         <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--foreground)]/40">{group.label} · {group.items.length}</span>
                       </div>
                       <div className="divide-y divide-bone/[0.04]">

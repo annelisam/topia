@@ -329,7 +329,7 @@ export default function DashboardSidebar() {
 
   /* ── Mobile tab bar ──────────────────────────────────── */
   const mobileTabs = (
-    <div className="sm:hidden fixed top-16 left-0 right-0 z-20 border-b border-bone/[0.06] overflow-x-auto bg-obsidian">
+    <div className="sm:hidden fixed top-0 left-0 right-0 z-20 border-b border-bone/[0.06] overflow-x-auto bg-obsidian">
       <div className="flex items-center gap-0.5 px-3 py-1.5" style={{ scrollbarWidth: 'none' }}>
         {/* Mobile context indicator */}
         {currentWorld && (

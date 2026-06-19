@@ -487,7 +487,7 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       <Navigation />
 
       {/* Sticky bar — back · status · save draft · publish */}
-      <div className="sticky top-0 z-40 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--border-color)', marginTop: 'var(--nav-height, 56px)' }}>
+      <div className="sticky top-0 z-40 backdrop-blur-md border-b md:mt-[var(--nav-height)]" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
           <Link href={backHref} className="font-mono text-[11px] uppercase tracking-[2px] opacity-50 hover:opacity-100 transition no-underline">← {mode === 'edit' ? 'Event' : 'Events'}</Link>
           <span className="font-mono text-[10px] uppercase tracking-[2px] opacity-30 ml-auto">
