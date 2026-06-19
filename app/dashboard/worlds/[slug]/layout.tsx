@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, use, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LoadingBar from '../../../components/LoadingBar';
 import { WorldData, ToolOption, PendingInvite, ProjectItem } from '../../_components/types';
 
@@ -45,6 +47,7 @@ export default function WorldDashboardLayout({
 }) {
   const { slug } = use(params);
   const { user, authenticated, ready } = usePrivy();
+  const router = useRouter();
 
   const [world, setWorld] = useState<WorldData | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -110,6 +113,14 @@ export default function WorldDashboardLayout({
       setAuthorized(isMember);
   }, [world, currentUserId, isMember]);
 
+  /* If the slug doesn't resolve to a world, bounce back to the worlds list
+     after a moment (e.g. a stale/typed URL like /dashboard/worlds/details). */
+  useEffect(() => {
+    if (loading || !ready || world) return;
+    const t = setTimeout(() => router.replace('/dashboard/worlds'), 4000);
+    return () => clearTimeout(t);
+  }, [loading, ready, world, router]);
+
   /* Guards */
   if (loading || !ready || (authenticated && !currentUserId))
     return (
@@ -120,8 +131,19 @@ export default function WorldDashboardLayout({
 
   if (!world)
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>World not found.</p>
+      <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
+        <p className="font-mono text-[14px] font-bold" style={{ color: 'var(--foreground)' }}>World not found</p>
+        <p className="font-mono text-[12px] opacity-60 max-w-xs" style={{ color: 'var(--foreground)' }}>
+          “{slug}” doesn’t match a world you can manage. It may have been removed, or the link is missing a world.
+        </p>
+        <Link
+          href="/dashboard/worlds"
+          className="font-mono text-[12px] uppercase tracking-widest px-4 py-2 rounded-lg border no-underline hover:opacity-70 transition"
+          style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+        >
+          ← Back to your worlds
+        </Link>
+        <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>Taking you there…</p>
       </div>
     );
 
