@@ -1049,7 +1049,8 @@ function UsersTab() {
   const [items, setItems] = useState<UserRow[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: UserRow | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Omit<UserRow, 'worldMemberships'>>({
+  // `published` is toggled separately (PATCH), not via this edit form.
+  const [form, setForm] = useState<Omit<UserRow, 'worldMemberships' | 'published'>>({
     id: '', name: '', username: '', email: '', bio: '', avatarUrl: '', role: 'user',
     roleTags: '', toolSlugs: '', socialWebsite: '', socialTwitter: '', socialInstagram: '',
     socialSoundcloud: '', socialSpotify: '', socialLinkedin: '', socialSubstack: '',
