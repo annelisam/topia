@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import LoginButton from '../LoginButton';
+import { useUserProfile } from '../../hooks/useUserProfile';
 
 type NavItem = {
   label: string;
@@ -11,7 +12,7 @@ type NavItem = {
 };
 
 const NAV_LINKS: NavItem[] = [
-  { href: '#', label: 'Passport', comingSoon: true },
+  { href: '/profile', label: 'Passport' },
   { href: '/tv', label: 'Topia TV' },
   { href: '/events', label: 'Events' },
   {
@@ -37,6 +38,8 @@ interface MobileMenuProps {
 }
 
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+  const { profile } = useUserProfile();
+  const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
   return (
     <div
       className={`
@@ -108,7 +111,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           ) : (
             <Link
               key={item.href}
-              href={item.href!}
+              href={item.label === 'Passport' ? passportHref : item.href!}
               onClick={onClose}
               className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70"
               style={{

@@ -48,14 +48,13 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
     <button
       onClick={handleToggle}
       disabled={busy}
-      className="font-mono text-[13px] uppercase tracking-tight border px-3 py-1 rounded-full hover:opacity-70 transition disabled:opacity-40"
-      style={{
-        color: isFollowing ? 'var(--background)' : 'var(--foreground)',
-        backgroundColor: isFollowing ? 'var(--foreground)' : 'transparent',
-        borderColor: 'var(--foreground)',
-      }}
+      className={`font-mono text-[10px] uppercase tracking-wider rounded-sm px-2.5 py-1 transition-colors disabled:opacity-40 ${
+        isFollowing
+          ? 'bg-transparent text-bone/60 border border-bone/20 hover:text-bone hover:border-bone/40'
+          : 'bg-lime text-obsidian border border-lime font-bold hover:opacity-80'
+      }`}
     >
-      {busy ? '...' : isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+      {busy ? '···' : isFollowing ? 'Following' : 'Follow'}
     </button>
   );
 }

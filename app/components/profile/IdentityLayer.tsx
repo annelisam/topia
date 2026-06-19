@@ -22,6 +22,8 @@ interface Props {
   sectionLabel: string;
   items: ContentItem[];
   stamps: Stamp[];
+  /** When false, only the visa stamps show (full-width); endorsed list hidden. */
+  showEndorsed?: boolean;
 }
 
 const STAMP_POSITIONS = [
@@ -33,10 +35,11 @@ const STAMP_POSITIONS = [
   { x: 46, y: 62, rot: -4 },
 ];
 
-export default function IdentityLayer({ config, sectionLabel, items, stamps }: Props) {
+export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true }: Props) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-[3px] h-full">
+    <div className={`grid grid-cols-1 ${showEndorsed ? 'md:grid-cols-[2fr_3fr]' : ''} gap-[3px] h-full`}>
       {/* Left — Endorsed list */}
+      {showEndorsed && (
       <div className="grid grid-rows-[auto_1fr] gap-[3px] overflow-hidden">
         <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
           <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>{sectionLabel}</span>
@@ -67,9 +70,10 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps }: P
           </div>
         </div>
       </div>
+      )}
 
       {/* Right — Visa stamps */}
-      <div className="border-l border-bone/[0.04] bg-obsidian p-4 overflow-y-auto relative" style={{ scrollbarWidth: 'thin' }}>
+      <div className={`${showEndorsed ? 'border-l border-bone/[0.04]' : ''} bg-obsidian p-4 overflow-y-auto relative`} style={{ scrollbarWidth: 'thin' }}>
         <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.02]" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice">
           {Array.from({ length: 8 }, (_, i) => (
             <ellipse key={i} cx="150" cy="200" rx={60 + i * 20} ry={40 + i * 15} fill="none" stroke="#f5f0e8" strokeWidth="0.4" transform={`rotate(${i * 12} 150 200)`} />
