@@ -114,10 +114,10 @@ export default function DoneStep({ config, name, username, avatarUrl, roleTags }
                 </Link>
               )}
               <Link
-                href="/worlds"
+                href="/tv"
                 className="font-mono text-[12px] uppercase tracking-[2px] text-bone/50 hover:text-bone transition-colors no-underline border border-bone/20 hover:border-bone/50 px-4 py-2.5"
               >
-                explore worlds
+                explore topia tv
               </Link>
             </div>
           )}

@@ -15,7 +15,6 @@ type NavItem = {
 const NAV_LINKS: NavItem[] = [
   { href: '#', label: 'Passport', comingSoon: true },
   { href: '/tv', label: 'Topia TV' },
-  { href: '/worlds', label: 'Worlds' },
   { href: '/events', label: 'Events' },
   {
     label: 'Resources',
