@@ -11,10 +11,7 @@ import { SocialIcon } from '../../components/SocialIcons';
 import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
 import IdentityLayer from '../../components/profile/IdentityLayer';
-import WorldLayer from '../../components/profile/WorldLayer';
-import ProofLayer from '../../components/profile/ProofLayer';
-import PulseLayer from '../../components/profile/PulseLayer';
-import ProfileTV from '../../components/profile/ProfileTV';
+import EventsLayer from '../../components/profile/EventsLayer';
 import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
 import ToolkitLayer from '../../components/profile/ToolkitLayer';
@@ -48,11 +45,8 @@ interface HostedEvent { id: string; eventName: string; slug: string; date: strin
 
 const STAMP_COLORS = ['lime', 'blue', 'pink', 'orange', 'green'];
 const SECTIONS = [
-  { id: 'identity', label: 'IDENTITY' },
-  { id: 'world',    label: 'WORLD' },
-  { id: 'proof',    label: 'PROOF' },
-  { id: 'pulse',    label: 'PULSE' },
-  { id: 'tv',       label: 'TV' },
+  { id: 'identity', label: 'PASSPORT' },
+  { id: 'events',   label: 'EVENTS' },
   { id: 'worlds',   label: 'WORLDS' },
   { id: 'toolkit',  label: 'TOOLKIT' },
   { id: 'guestbook',label: 'GUESTBOOK' },
@@ -121,6 +115,8 @@ export default function PublicProfilePage() {
 
   const roleTags = profile?.roleTags ? profile.roleTags.split(',').map((s) => s.trim()).filter(Boolean) : [];
   const hasOwnedWorlds = sortedWorlds.some((w) => w.role === 'owner' || w.role === 'world_builder');
+  // Hide the Worlds tab entirely when this person isn't part of any world.
+  const visibleSections = SECTIONS.filter((s) => s.id !== 'worlds' || sortedWorlds.length > 0);
   const path = resolvePath(profile?.path, roleTags, hasOwnedWorlds);
   const config = PATH_CONFIG[path];
 
@@ -258,14 +254,11 @@ export default function PublicProfilePage() {
 
   function renderSection() {
     switch (activeSection) {
-      case 'world':     return <WorldLayer config={config} />;
-      case 'proof':     return <ProofLayer config={config} path={path} stats={stats} />;
-      case 'pulse':     return <PulseLayer config={config} />;
-      case 'tv':        return <ProfileTV config={config} handle={`@${username}`} />;
+      case 'events':    return <EventsLayer config={config} hosted={hostedEvents} attended={attendedEvents} />;
       case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
       case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
-      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} />;
+      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} />;
     }
   }
 
@@ -504,7 +497,7 @@ export default function PublicProfilePage() {
 
                 {/* ═══ ROW 3 — SECTION TAB NAV ═══ */}
                 <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                  {SECTIONS.map((s) => {
+                  {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
                     return (
                       <button
@@ -516,7 +509,7 @@ export default function PublicProfilePage() {
                       </button>
                     );
                   })}
-                  <span className="font-mono text-[9px] text-bone/15 ml-auto shrink-0">{SECTIONS.length} sections</span>
+                  <span className="font-mono text-[9px] text-bone/15 ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
                 {/* ═══ ROW 4 — ACTIVE SECTION CONTENT ═══ */}

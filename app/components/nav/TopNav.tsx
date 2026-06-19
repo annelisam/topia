@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
+import { useUserProfile } from '../../hooks/useUserProfile';
 
 type NavItem = {
   label: string;
@@ -13,7 +14,7 @@ type NavItem = {
 };
 
 const NAV_LINKS: NavItem[] = [
-  { href: '#', label: 'Passport', comingSoon: true },
+  { href: '/profile', label: 'Passport' },
   { href: '/tv', label: 'Topia TV' },
   { href: '/events', label: 'Events' },
   {
@@ -34,6 +35,9 @@ const STATIC_LINKS = [
 
 export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { profile } = useUserProfile();
+  // Passport routes to the viewer's own profile (their passport).
+  const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
 
   return (
     <nav
@@ -112,7 +116,7 @@ export default function TopNav() {
                   ) : (
                     <Link
                       key={item.href}
-                      href={item.href!}
+                      href={item.label === 'Passport' ? passportHref : item.href!}
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
                       style={{ color: 'var(--page-text)' }}
