@@ -5,6 +5,8 @@
 // When a channel isn't configured, sendInvite returns { sent:false,
 // reason:'not_configured' } and the caller surfaces the shareable link instead.
 
+import { sendTemplateEmail, EVENT_TEMPLATES } from './email';
+
 export type InviteChannel = 'email' | 'sms';
 
 export function isInviteChannelConfigured(channel: InviteChannel): boolean {
@@ -23,24 +25,13 @@ export async function sendInvite(opts: {
   const lede = inviterName ? `${inviterName} invited you` : "You're invited";
 
   if (channel === 'email') {
-    const key = process.env.RESEND_API_KEY;
-    if (!key) return { sent: false, reason: 'not_configured' };
-    const from = process.env.INVITE_EMAIL_FROM || 'Topia <onboarding@resend.dev>';
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from,
-          to,
-          subject: `${lede} to ${eventName}`,
-          html: `<p>${lede} to <strong>${eventName}</strong> on Topia.</p><p><a href="${url}">RSVP here →</a></p>`,
-        }),
-      });
-      return res.ok ? { sent: true } : { sent: false, reason: `resend_${res.status}` };
-    } catch {
-      return { sent: false, reason: 'resend_error' };
-    }
+    // Copy/subject live in the Resend "event-invite" template. EVENT_URL is the
+    // tokenized accept link so clicking it marks the invite accepted.
+    return sendTemplateEmail({
+      to,
+      templateId: EVENT_TEMPLATES.invite,
+      variables: { EVENT_NAME: eventName, EVENT_URL: url, INVITER_NAME: inviterName || 'A host' },
+    });
   }
 
   // sms

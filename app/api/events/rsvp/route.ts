@@ -3,6 +3,7 @@ import { db, users, events, eventRsvps, eventHosts, eventQuestions, notification
 import { eq, and, count } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
+import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert } from '@/lib/notify/email';
 
 type AnswerMap = Record<string, string | string[] | boolean>;
 
@@ -160,6 +161,30 @@ export async function POST(request: NextRequest) {
           metadata: { eventId, eventName: event.eventName, eventSlug: event.slug },
         });
       }
+    }
+
+    // Transactional emails — best-effort, dormant until RESEND_API_KEY is set.
+    if (isEmailConfigured()) {
+      const origin = request.nextUrl.origin;
+      // Guest: confirmation (instant) or "request received" (approval on).
+      if (email) {
+        try {
+          await sendRsvpConfirmation({ to: email, eventName: event.eventName, origin, slug: event.slug, guestName: name, approvalRequired: status === 'pending' });
+        } catch (e) { console.error('rsvp confirmation email:', e); }
+      }
+      // Hosts: alert (skip the actor when a host RSVPs their own event).
+      try {
+        const hostRows = await db
+          .select({ userId: eventHosts.userId, email: users.email })
+          .from(eventHosts)
+          .innerJoin(users, eq(eventHosts.userId, users.id))
+          .where(eq(eventHosts.eventId, eventId));
+        await Promise.allSettled(
+          hostRows
+            .filter((h) => h.email && h.userId !== userId)
+            .map((h) => sendHostRsvpAlert({ to: h.email!, eventName: event.eventName, origin, slug: event.slug, guestName: name, pending: status === 'pending' })),
+        );
+      } catch (e) { console.error('host rsvp alert email:', e); }
     }
 
     return NextResponse.json({ rsvp, status }, { status: 201 });
