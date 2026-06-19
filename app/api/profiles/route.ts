@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { and, isNotNull, desc } from 'drizzle-orm';
+import { and, eq, isNotNull, desc } from 'drizzle-orm';
 
 // GET /api/profiles — public list of discoverable profiles (anyone who has
 // claimed a username). Powers the "Discover" grid on the homepage.
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         pronouns: users.pronouns,
       })
       .from(users)
-      .where(and(isNotNull(users.username), isNotNull(users.name)))
+      .where(and(isNotNull(users.username), isNotNull(users.name), eq(users.published, true)))
       .orderBy(desc(users.createdAt))
       .limit(limit);
 

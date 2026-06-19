@@ -111,6 +111,7 @@ interface UserRow {
   socialSpotify: string | null;
   socialLinkedin: string | null;
   socialSubstack: string | null;
+  published: boolean;
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
@@ -1098,6 +1099,13 @@ function UsersTab() {
     load();
   };
 
+  // Publish / unpublish a profile (hides it from the Discover grid).
+  const togglePublished = async (item: UserRow) => {
+    setItems((prev) => prev.map((u) => (u.id === item.id ? { ...u, published: !item.published } : u))); // optimistic
+    const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, published: !item.published }) });
+    if (!res.ok) { setError('Failed to update visibility'); load(); }
+  };
+
   const filtered = items.filter(u => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -1128,6 +1136,7 @@ function UsersTab() {
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Email</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Role</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Worlds</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Visibility</th>
               <th className="px-3 py-2 text-[12px]"></th>
             </tr>
           </thead>
@@ -1159,6 +1168,16 @@ function UsersTab() {
                       ))}
                     </div>
                   ) : '—'}
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => togglePublished(item)}
+                    title={item.published ? 'Visible in Discover — click to hide' : 'Hidden from Discover — click to publish'}
+                    className="font-mono text-[11px] px-2 py-0.5 border font-bold"
+                    style={{ backgroundColor: item.published ? '#00FF88' : '#FF5C34', color: '#1a1a1a', borderColor: '#1a1a1a' }}
+                  >
+                    {item.published ? 'PUB' : 'HIDDEN'}
+                  </button>
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">

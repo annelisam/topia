@@ -28,6 +28,7 @@ export const users = pgTable('users', {
   verifiedProviders: text('verified_providers'), // CSV of OAuth-verified social providers e.g. 'twitter,linkedin'
   pronouns: text('pronouns'),         // Optional free-text e.g. 'she/her', 'they/them'
   customLinks: jsonb('custom_links'), // Array of {label, url} pairs for arbitrary user links
+  published: boolean('published').notNull().default(true), // admin can hide a profile from Discover
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
