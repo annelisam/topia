@@ -505,7 +505,7 @@ export default function PublicProfilePage() {
                     to min-height lets content flow naturally; the layers
                     that need internal scrolling already declare their own
                     overflow-y-auto. */}
-                <div className={`bg-obsidian ${activeSection === 'identity' ? 'min-h-[250px] md:min-h-[290px]' : 'min-h-[260px] md:min-h-[420px]'}`}>
+                <div className={`bg-obsidian ${activeSection === 'identity' ? 'min-h-[250px] md:min-h-[290px]' : activeSection === 'worlds' ? 'min-h-[250px] md:min-h-[300px]' : 'min-h-[260px] md:min-h-[420px]'}`}>
                   {renderSection()}
                 </div>
 

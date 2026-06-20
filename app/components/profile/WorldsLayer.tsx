@@ -49,7 +49,7 @@ export default function WorldsLayer({ config, worlds, isOwnProfile = false, owne
             const colorKey = COLORS[i % COLORS.length];
             const status = w.role === 'owner' ? 'live' : w.role === 'world_builder' ? 'active' : 'rising';
             return (
-              <Link key={w.worldId} href={`/worlds/${w.worldSlug}`} className="group flex flex-col w-[min(280px,80vw)] shrink-0 h-full rounded-lg overflow-hidden border border-bone/[0.08] bg-obsidian hover:border-bone/25 transition-colors no-underline">
+              <Link key={w.worldId} href={`/worlds/${w.worldSlug}`} className="group flex flex-col w-[min(340px,85vw)] shrink-0 h-full rounded-lg overflow-hidden border border-bone/[0.08] bg-obsidian hover:border-bone/25 transition-colors no-underline">
                 <div className="relative flex-1 min-h-0 overflow-hidden bg-bone/[0.04]">
                   {w.worldImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
