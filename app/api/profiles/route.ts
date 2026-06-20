@@ -15,8 +15,9 @@ export async function GET(request: NextRequest) {
   try {
     const conditions = [isNotNull(users.username), isNotNull(users.name), eq(users.published, true)];
     if (completeOnly) {
-      // A "completed" profile has a photo, a bio, and at least one role tag.
-      conditions.push(isNotNull(users.avatarUrl), isNotNull(users.bio), ne(users.bio, ''), isNotNull(users.roleTags), ne(users.roleTags, ''));
+      // A "completed" profile has a photo, a name, and at least one role tag
+      // (bio is optional — not everyone writes one).
+      conditions.push(isNotNull(users.avatarUrl), ne(users.avatarUrl, ''), isNotNull(users.roleTags), ne(users.roleTags, ''));
     }
 
     const rows = await db
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
         path: users.path,
         bio: users.bio,
         pronouns: users.pronouns,
+        createdAt: users.createdAt,
       })
       .from(users)
       .where(and(...conditions))

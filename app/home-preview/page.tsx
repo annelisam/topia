@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
 import GlitchType from '../components/ui/GlitchType';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
@@ -47,6 +48,14 @@ interface Profile {
   path: string | null;
   pronouns: string | null;
   isWorldBuilder?: boolean;
+  createdAt?: string;
+}
+
+// New if the profile was created within the last 21 days.
+function isNewProfile(createdAt?: string): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
 const CAT_DOT: Record<string, string> = { Featured: 'bg-lime', Live: 'bg-pink', Series: 'bg-blue', Replays: 'bg-orange' };
@@ -146,9 +155,23 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
 }
 
 export default function HomePreview() {
+  const { user } = usePrivy();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  // null = unknown / logged out; true/false = the viewer's profile completeness.
+  const [viewerComplete, setViewerComplete] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) { setViewerComplete(null); return; }
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const u = d.user;
+        setViewerComplete(!!(u && u.avatarUrl && u.name && u.username && u.roleTags));
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
   useEffect(() => {
     fetch('/api/tv/episodes').then((r) => r.json()).then((d) => setEpisodes(d.episodes ?? [])).catch(() => {});
@@ -158,9 +181,15 @@ export default function HomePreview() {
       const upcoming = all.filter((e) => !e.dateIso || e.dateIso >= today);
       setEvents((upcoming.length ? upcoming : all).slice(0, 7));
     }).catch(() => {});
-    // Only completed profiles (photo + bio + tags), most recent first.
+    // Only completed profiles (photo + name + tags), most recent first.
     fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(d.profiles ?? [])).catch(() => {});
   }, []);
+
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollCarousel = (dir: number) => {
+    const el = carouselRef.current;
+    if (el) el.scrollBy({ left: dir * Math.max(260, el.clientWidth * 0.8), behavior: 'smooth' });
+  };
 
   const featuredEp = episodes[0];
   const moreEps = episodes.slice(1, 5);
@@ -207,26 +236,45 @@ export default function HomePreview() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
                 {featuredEp && <HomeTVPlayer episode={featuredEp} />}
-                <div className="grid grid-rows-4 gap-3">
-                  {moreEps.map((ep) => (
-                    <Link key={ep.id} href="/tv" className="group flex items-center gap-3 rounded-lg overflow-hidden border hover:opacity-80 transition-opacity no-underline p-2" style={card}>
-                      <div className="w-[88px] h-[52px] shrink-0 rounded-md overflow-hidden bg-obsidian">
-                        {ep.thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={ep.thumbnailUrl} alt={ep.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <video src={ep.videoUrl} muted playsInline className="w-full h-full object-cover" />
-                        )}
+                {/* Guide panel — mirrors the TV page (now playing / up next) */}
+                <div className="relative rounded-xl overflow-hidden border bg-obsidian flex flex-col min-h-[260px]" style={{ borderColor: 'var(--border-color)' }}>
+                  {/* CRT scanline texture */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-[1]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(245,240,232,1) 3px, rgba(245,240,232,1) 4px)' }} />
+                  <div className="relative z-[2] flex items-center justify-between px-3 py-2.5 border-b border-bone/[0.08]">
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40">Topia TV // Guide</span>
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" /><span className="font-mono text-[9px] uppercase tracking-[2px] text-lime">Live</span></span>
+                  </div>
+
+                  {/* Now playing */}
+                  {featuredEp && (
+                    <div className="relative z-[2] flex items-stretch border-b border-bone/[0.08] bg-bone/[0.05]">
+                      <div className={`w-1 shrink-0 ${CAT_DOT[featuredEp.category] ?? 'bg-lime'}`} />
+                      <div className="px-3 py-2.5 min-w-0 flex-1">
+                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-lime block mb-1">▸ Now playing</span>
+                        <span className="font-mono text-[12px] font-bold uppercase text-bone block truncate">{featuredEp.title}</span>
+                        <span className="font-mono text-[9px] text-bone/40 uppercase tracking-wider">{[featuredEp.category, featuredEp.guestName].filter(Boolean).join(' · ')}</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${CAT_DOT[ep.category] ?? 'bg-lime'}`} />
-                          <span className="font-mono text-[9px] uppercase tracking-[1.5px] opacity-40" style={txt}>{ep.category}</span>
+                    </div>
+                  )}
+
+                  {/* Up next */}
+                  <div className="relative z-[2] px-3 pt-2.5 pb-1">
+                    <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30">Up next</span>
+                  </div>
+                  <div className="relative z-[2] flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                    {moreEps.map((ep, i) => (
+                      <Link key={ep.id} href="/tv" className="group flex items-stretch border-b border-bone/[0.04] hover:bg-bone/[0.03] transition-colors no-underline">
+                        <div className={`w-1 shrink-0 ${CAT_DOT[ep.category] ?? 'bg-lime'} opacity-40 group-hover:opacity-100 transition-opacity`} />
+                        <div className="w-10 shrink-0 flex items-center justify-center border-r border-bone/[0.04]">
+                          <span className="font-basement font-black text-[13px] text-bone/25 group-hover:text-bone/60 transition-colors">{String(i + 2).padStart(3, '0')}</span>
                         </div>
-                        <span className="font-mono text-[12px] font-bold uppercase block truncate" style={txt}>{ep.title}</span>
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="flex-1 px-3 py-2.5 min-w-0">
+                          <span className="font-mono text-[11px] font-bold uppercase text-bone block truncate">{ep.title}</span>
+                          <span className="font-mono text-[9px] text-bone/30 uppercase tracking-wider">{ep.category}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -259,23 +307,27 @@ export default function HomePreview() {
                       <h3 className="font-basement font-black text-[clamp(22px,2.6vw,32px)] uppercase leading-[0.95] mt-2 mb-4" style={txt}>{featuredEvent.eventName}</h3>
 
                       <dl className="space-y-2.5 font-mono text-[12px]" style={txt}>
+                        <div className="flex items-start gap-2">
+                          <dt className="opacity-40 uppercase tracking-wider text-[10px] w-20 shrink-0 pt-0.5">Presented by</dt>
+                          <dd className="font-bold opacity-90">TOPIA</dd>
+                        </div>
                         {featuredEvent.hosts.length > 0 && (
                           <div className="flex items-start gap-2">
-                            <dt className="opacity-40 uppercase tracking-wider text-[10px] w-20 shrink-0 pt-0.5">Presented by</dt>
-                            <dd className="flex items-center gap-1.5 flex-wrap">
+                            <dt className="opacity-40 uppercase tracking-wider text-[10px] w-20 shrink-0 pt-0.5">Hosts</dt>
+                            <dd className="flex items-center gap-2 flex-wrap">
                               <div className="flex -space-x-1.5">
-                                {featuredEvent.hosts.slice(0, 4).map((h) => (
-                                  <span key={h.userId} className="block w-5 h-5 rounded-full overflow-hidden border bg-obsidian" style={{ borderColor: 'var(--border-color)' }} title={h.name || h.username || ''}>
+                                {featuredEvent.hosts.slice(0, 5).map((h) => (
+                                  <span key={h.userId} className="block w-6 h-6 rounded-full overflow-hidden border-2 bg-obsidian" style={{ borderColor: 'var(--background)' }} title={h.name || h.username || ''}>
                                     {h.avatarUrl ? (
                                       // eslint-disable-next-line @next/next/no-img-element
                                       <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                      <span className="w-full h-full flex items-center justify-center text-[8px] opacity-50">{(h.name || h.username || '?')[0]?.toUpperCase()}</span>
+                                      <span className="w-full h-full flex items-center justify-center text-[9px] opacity-50">{(h.name || h.username || '?')[0]?.toUpperCase()}</span>
                                     )}
                                   </span>
                                 ))}
                               </div>
-                              <span className="opacity-80">{featuredEvent.hosts.map((h) => h.name || h.username).filter(Boolean).slice(0, 2).join(', ')}{featuredEvent.hosts.length > 2 ? ` +${featuredEvent.hosts.length - 2}` : ''}</span>
+                              <span className="opacity-70 text-[11px]">{featuredEvent.hosts.map((h) => h.name || h.username).filter(Boolean).slice(0, 2).join(', ')}{featuredEvent.hosts.length > 2 ? ` +${featuredEvent.hosts.length - 2}` : ''}</span>
                             </dd>
                           </div>
                         )}
@@ -291,7 +343,7 @@ export default function HomePreview() {
                         </div>
                       </dl>
 
-                      <Link href={`/events/${featuredEvent.slug}`} className="mt-auto pt-5 self-start font-mono text-[11px] uppercase tracking-[2px] px-4 py-2 rounded-sm bg-[var(--foreground)] text-[var(--background)] font-bold no-underline hover:opacity-80 transition">
+                      <Link href={`/events/${featuredEvent.slug}`} className="mt-5 self-start inline-flex items-center font-mono text-[11px] uppercase tracking-[2px] px-5 py-2.5 rounded-sm bg-[var(--foreground)] text-[var(--background)] font-bold no-underline hover:opacity-80 transition">
                         View Event →
                       </Link>
                     </div>
@@ -326,37 +378,69 @@ export default function HomePreview() {
 
           {/* ── DISCOVER PROFILES (carousel) ── */}
           <section className="mb-12">
-            <SectionHead label="the community" title="Discover" />
-            {profiles.length === 0 ? (
+            <div className="flex items-end justify-between mb-5">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-[3px] opacity-40 block mb-1" style={txt}>the community</span>
+                <h2 className="font-basement font-black text-[clamp(26px,4vw,44px)] leading-[0.9] uppercase" style={txt}>Discover</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {[-1, 1].map((dir) => (
+                  <button
+                    key={dir}
+                    onClick={() => scrollCarousel(dir)}
+                    aria-label={dir < 0 ? 'Scroll left' : 'Scroll right'}
+                    className="w-9 h-9 rounded-full border flex items-center justify-center font-mono text-[14px] hover:bg-[var(--surface-hover)] transition cursor-pointer"
+                    style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                  >
+                    {dir < 0 ? '←' : '→'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {profiles.length === 0 && viewerComplete !== false ? (
               <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
             ) : (
-              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'thin' }}>
+              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none' }}>
+                {/* Nudge the viewer to finish their own profile */}
+                {viewerComplete === false && (
+                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[230px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
+                    <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
+                    <span className="font-basement font-black text-[16px] uppercase leading-tight" style={txt}>Complete your profile</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
+                  </Link>
+                )}
+
                 {profiles.map((p) => {
                   const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
                   const initial = (p.name || p.username || '?')[0]?.toUpperCase();
                   return (
-                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[160px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="aspect-square overflow-hidden bg-obsidian relative">
+                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[230px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
+                      <div className="aspect-[4/5] overflow-hidden bg-obsidian relative">
                         {p.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.avatarUrl} alt={p.name ?? ''} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[40px] text-bone/20">{initial}</div>
+                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[48px] text-bone/20">{initial}</div>
                         )}
-                        <div className="absolute top-2 left-2">
-                          {/* One badge: the membership-accurate World Builder tag, else the path badge. */}
+                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
+                        <div className="absolute top-2.5 left-2.5">
+                          {/* One badge: membership-accurate World Builder, else the path badge */}
                           {p.isWorldBuilder ? (
                             <span className="font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-lime text-obsidian">World Builder</span>
                           ) : (
                             <PathBadge path={p.path} />
                           )}
                         </div>
+                        {isNewProfile(p.createdAt) && (
+                          <span className="absolute top-2.5 right-2.5 font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-pink text-obsidian">New</span>
+                        )}
                       </div>
-                      <div className="p-2.5">
-                        <h3 className="font-mono text-[12px] font-bold text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
+                      <div className="p-3">
+                        <h3 className="font-basement font-black text-[16px] uppercase text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
                         <span className="font-mono text-[10px] text-bone/40 block truncate">@{p.username}</span>
                         {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <div className="flex flex-wrap gap-1 mt-2">
                             {tags.map((t) => (
                               <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm whitespace-nowrap">{t.replace(/-/g, ' ')}</span>
                             ))}
