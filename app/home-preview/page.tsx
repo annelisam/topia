@@ -58,6 +58,22 @@ function isNewProfile(createdAt?: string): boolean {
   return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
+// Hero headline that types + cycles through taglines with a blinking cursor.
+const HERO_PHRASES = ['It is what you make it.', 'A network you own.', 'Culture before tech.', 'Built by us — for us.'];
+function CyclingHeadline() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % HERO_PHRASES.length), 3600);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="inline-flex items-baseline">
+      <GlitchType key={i} text={HERO_PHRASES[i]} speed={24} />
+      <span className="ml-1.5 w-[3px] h-[0.8em] bg-lime inline-block self-center animate-pulse" />
+    </span>
+  );
+}
+
 const CAT_DOT: Record<string, string> = { Featured: 'bg-lime', Live: 'bg-pink', Series: 'bg-blue', Replays: 'bg-orange' };
 
 const txt = { color: 'var(--foreground)' };
@@ -205,11 +221,11 @@ export default function HomePreview() {
         <header className="border-b" style={{ borderColor: 'var(--border-color)' }}>
           <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-14 md:py-20">
             <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
-            <h1 className="font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase" style={txt}>
-              TOPIA<span className="text-lime">.</span>
+            <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
+              TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
             </h1>
-            <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 mb-7 text-lime" style={{ minHeight: '1.1em' }}>
-              <GlitchType text="It is what you make it." speed={26} />
+            <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 mb-7 text-lime" style={{ minHeight: '1.2em' }}>
+              <CyclingHeadline />
             </div>
 
             <div className="max-w-2xl space-y-4">
@@ -223,10 +239,20 @@ export default function HomePreview() {
                 We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.
               </p>
             </div>
+
+            {/* Scroll cue → "see what's possible" */}
+            <button
+              onClick={() => document.getElementById('explore')?.scrollIntoView({ behavior: 'smooth' })}
+              className="mt-12 inline-flex flex-col items-start gap-1 group bg-transparent border-none cursor-pointer p-0"
+              style={{ opacity: 0, animation: 'fadeUp 0.6s ease-out 1300ms forwards' }}
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[3px] opacity-40 group-hover:opacity-100 transition-opacity" style={txt}>see what&apos;s possible on topia</span>
+              <span className="text-lime text-[28px] leading-none animate-bounce">⌄</span>
+            </button>
           </div>
         </header>
 
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
+        <div id="explore" className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
 
           {/* ── TOPIA TV ── */}
           <section className="mb-16">
@@ -404,7 +430,7 @@ export default function HomePreview() {
               <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none' }}>
                 {/* Nudge the viewer to finish their own profile */}
                 {viewerComplete === false && (
-                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[230px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
+                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
                     <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
                     <span className="font-basement font-black text-[16px] uppercase leading-tight" style={txt}>Complete your profile</span>
                     <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
@@ -415,8 +441,8 @@ export default function HomePreview() {
                   const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
                   const initial = (p.name || p.username || '?')[0]?.toUpperCase();
                   return (
-                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[230px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="aspect-[4/5] overflow-hidden bg-obsidian relative">
+                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[310px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
+                      <div className="aspect-[4/3] overflow-hidden bg-obsidian relative">
                         {p.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.avatarUrl} alt={p.name ?? ''} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
