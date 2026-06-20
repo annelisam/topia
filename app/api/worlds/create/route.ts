@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worlds, users, worldMembers } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { ensureShortLink } from '@/lib/shortlinkStore';
 
 function createSlug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -40,6 +41,11 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       role: 'owner',
     });
+
+    // Auto-generate the shareable short link (best-effort — never blocks create).
+    try {
+      await ensureShortLink({ path: `/worlds/${slug}`, kind: 'world', createdBy: user.id });
+    } catch { /* ignore */ }
 
     return NextResponse.json({ world }, { status: 201 });
   } catch (error) {

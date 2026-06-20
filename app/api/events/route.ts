@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, events, users, eventHosts, eventRsvps, worlds } from '@/lib/db';
 import { eq, asc, and, isNotNull, count, sql, inArray } from 'drizzle-orm';
+import { ensureShortLink } from '@/lib/shortlinkStore';
 
 // Title-case normalize: "los angeles" → "Los Angeles"
 function titleCase(str: string): string {
@@ -351,6 +352,11 @@ export async function POST(request: NextRequest) {
         worldId: data.worldId || null,
       });
     }
+
+    // Auto-generate the shareable short link (best-effort — never blocks create).
+    try {
+      await ensureShortLink({ path: `/events/${data.slug}`, kind: 'event', createdBy: user.id });
+    } catch { /* ignore */ }
 
     return NextResponse.json({ event: result[0] }, { status: 201 });
   } catch (error) {
