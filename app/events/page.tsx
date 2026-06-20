@@ -121,7 +121,7 @@ export default function EventsPage() {
   const [search, setSearch] = useState('');
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Restore view preference
@@ -333,8 +333,21 @@ export default function EventsPage() {
                 {/* List/grid toggle */}
                 <div className="flex items-center border border-[var(--border-color)] rounded-sm overflow-hidden shrink-0">
                   <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-1.5 transition cursor-pointer ${viewMode === 'grid' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
+                    title="Gallery view"
+                    aria-label="Gallery view"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                      <rect x="1" y="1" width="5" height="5" rx="0.5" />
+                      <rect x="8" y="1" width="5" height="5" rx="0.5" />
+                      <rect x="1" y="8" width="5" height="5" rx="0.5" />
+                      <rect x="8" y="8" width="5" height="5" rx="0.5" />
+                    </svg>
+                  </button>
+                  <button
                     onClick={() => setViewMode('list')}
-                    className={`p-1.5 transition cursor-pointer ${viewMode === 'list' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
+                    className={`p-1.5 transition cursor-pointer border-l border-[var(--border-color)] ${viewMode === 'list' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
                     title="List view"
                     aria-label="List view"
                   >
@@ -342,19 +355,6 @@ export default function EventsPage() {
                       <line x1="2" y1="3.5" x2="12" y2="3.5" />
                       <line x1="2" y1="7"   x2="12" y2="7" />
                       <line x1="2" y1="10.5" x2="12" y2="10.5" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 transition cursor-pointer border-l border-[var(--border-color)] ${viewMode === 'grid' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
-                    title="Grid view"
-                    aria-label="Grid view"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                      <rect x="1" y="1" width="5" height="5" rx="0.5" />
-                      <rect x="8" y="1" width="5" height="5" rx="0.5" />
-                      <rect x="1" y="8" width="5" height="5" rx="0.5" />
-                      <rect x="8" y="8" width="5" height="5" rx="0.5" />
                     </svg>
                   </button>
                 </div>
