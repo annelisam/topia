@@ -11,11 +11,13 @@ export interface ProfileStamp {
   /** The word stamped around the ring / across the top (the stamp's "type"). */
   caption: string;
   date: string;
-  color: string;            // COLOR_HEX key: lime | blue | pink | orange | green
+  color: string;            // COLOR_HEX key: lime | blue | pink | orange | green | silver
   shape: 'circle' | 'rect' | 'seal';
   rarity: StampRarity;
   weight: number;           // drives size + opacity (legendary biggest/boldest)
   emblem?: 'topia' | 'star'; // central glyph for seal-shaped stamps
+  title: string;            // human title shown in the detail modal
+  description: string;      // short blurb shown in the detail modal
 }
 
 // Anyone who joins before this date is an "Early Citizen" of the beta.
@@ -83,27 +85,32 @@ export async function computeProfileStamps(opts: {
     (w) => (w.worldTitle || '').trim().toUpperCase() === 'TOPIA' || (w.worldSlug || '').toLowerCase() === 'topia',
   );
   if (inTopia) {
-    add({ label: 'TOPIA', caption: 'MEMBER', date: ym(opts.createdAt), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia' });
+    add({ label: 'TOPIA', caption: 'MEMBER', date: ym(opts.createdAt), color: 'silver', shape: 'seal', rarity: 'legendary', emblem: 'topia',
+      title: 'TOPIA Member', description: 'A member of TOPIA — the world at the center of it all. The rarest seal on the passport.' });
   }
 
   // ── Path seal — everyone has a resolved path ───────────────────────────────
   const path = resolvePath(opts.path, roleTagList, hasOwnedWorlds);
   const pathCfg = PATH_CONFIG[path];
-  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathCfg.color, shape: 'seal', rarity: 'rare', emblem: 'star' });
+  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathCfg.color, shape: 'seal', rarity: 'rare', emblem: 'star',
+    title: `${pathCfg.label} Seal`, description: 'Your official path seal — the lane you build in across TOPIA.' });
 
   // ── Early citizen ──────────────────────────────────────────────────────────
   if (new Date(opts.createdAt) <= BETA_CUTOFF) {
-    add({ label: 'BETA', caption: 'EARLY CITIZEN', date: ym(opts.createdAt), color: 'orange', shape: 'circle', rarity: 'legendary' });
+    add({ label: 'BETA', caption: 'EARLY CITIZEN', date: ym(opts.createdAt), color: 'orange', shape: 'circle', rarity: 'legendary',
+      title: 'Early Citizen', description: 'Joined TOPIA during the beta — here before it was here.' });
   }
 
   // ── Profile complete (renamed from "Completionist" → "Certified") ──────────
   if (opts.avatarUrl && opts.bio && roleTagList.length > 0 && opts.path) {
-    add({ label: 'PROFILE', caption: 'CERTIFIED', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'common' });
+    add({ label: 'PROFILE', caption: 'CERTIFIED', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'common',
+      title: 'Certified', description: 'Completed your profile — photo, story, and path all in place.' });
   }
 
   // ── Founder — owns a world ─────────────────────────────────────────────────
   worldMemberships.filter((w) => w.role === 'owner').slice(0, 2).forEach((w) => {
-    add({ label: w.worldTitle.toUpperCase().slice(0, 14), caption: 'FOUNDER', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'legendary' });
+    add({ label: w.worldTitle.toUpperCase().slice(0, 14), caption: 'FOUNDER', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'legendary',
+      title: 'Founder', description: `Founded ${w.worldTitle} and shaped it from day one.` });
   });
 
   // ── Settler — among the first members of a world (excludes owned worlds) ────
@@ -119,36 +126,43 @@ export async function computeProfileStamps(opts: {
     }
   }
   if (bestSettler) {
-    add({ label: bestSettler.world.toUpperCase().slice(0, 14), caption: 'SETTLER', date: ym(bestSettler.at), color: 'orange', shape: 'rect', rarity: 'rare' });
+    add({ label: bestSettler.world.toUpperCase().slice(0, 14), caption: 'SETTLER', date: ym(bestSettler.at), color: 'orange', shape: 'rect', rarity: 'rare',
+      title: 'Settler', description: `Among the first to join ${bestSettler.world} — an early believer.` });
   }
 
   // ── Events: first stamp + frequent flyer + check-in ────────────────────────
   if (rsvpRows.length > 0) {
     const first = rsvpRows[0];
-    add({ label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'green', shape: 'circle', rarity: 'common' });
+    add({ label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'green', shape: 'circle', rarity: 'common',
+      title: 'First Stamp', description: `Your very first RSVP — ${first.name}. Every passport starts somewhere.` });
   }
   if (rsvpRows.length >= FF_COMMON) {
     const rarity: StampRarity = rsvpRows.length >= FF_LEGENDARY ? 'legendary' : rsvpRows.length >= FF_RARE ? 'rare' : 'common';
-    add({ label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'blue', shape: 'circle', rarity });
+    add({ label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'blue', shape: 'circle', rarity,
+      title: 'Frequent Flyer', description: `RSVP'd to ${rsvpRows.length} events. A regular on the circuit.` });
   }
   if (checkIns.length > 0) {
     const latest = checkIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
-    add({ label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'green', shape: 'rect', rarity: 'rare' });
+    add({ label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'green', shape: 'rect', rarity: 'rare',
+      title: 'Checked In', description: 'Showed up and checked in on-site. Presence verified.' });
   }
 
   // ── Connector — invited someone who joined ─────────────────────────────────
   if (invites.length > 0) {
-    add({ label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'pink', shape: 'rect', rarity: 'rare' });
+    add({ label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'pink', shape: 'rect', rarity: 'rare',
+      title: 'Connector', description: `Brought ${invites.length} ${invites.length === 1 ? 'person' : 'people'} into TOPIA through an invite.` });
   }
 
   // ── Guestbook — signed at least one guestbook ──────────────────────────────
   if (gbRows.length > 0) {
-    add({ label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'pink', shape: 'rect', rarity: 'common' });
+    add({ label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'pink', shape: 'rect', rarity: 'common',
+      title: 'Guestbook', description: 'Signed a guestbook and left your mark on someone’s profile.' });
   }
 
   // ── Toolmaker — contributed a tool to Resources ────────────────────────────
   if (toolRows.length > 0) {
-    add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'blue', shape: 'rect', rarity: 'rare' });
+    add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'blue', shape: 'rect', rarity: 'rare',
+      title: 'Toolmaker', description: 'Contributed a tool to the TOPIA Resources library.' });
   }
 
   // Rarest first, then by insertion order (stable).

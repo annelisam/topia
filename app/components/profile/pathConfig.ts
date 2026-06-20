@@ -20,6 +20,7 @@ export const COLOR_HEX: Record<string, string> = {
   pink: '#FF5BD7',
   orange: '#FF5C34',
   green: '#00FF88',
+  silver: '#d4d8e0',
 };
 
 export function derivePath(roleTags: string[], hasOwnedWorlds: boolean): UserPath {
