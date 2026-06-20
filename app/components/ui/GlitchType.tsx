@@ -9,11 +9,14 @@ export default function GlitchType({
   onComplete,
   speed = 40,
   className = '',
+  flicker = true,
 }: {
   text: string;
   onComplete?: () => void;
   speed?: number;
   className?: string;
+  // When false, only the characters scramble — no element-level shake/flicker.
+  flicker?: boolean;
 }) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
@@ -57,12 +60,12 @@ export default function GlitchType({
   }, []);
 
   return (
-    <span className={`${className} ${glitching ? 'animate-[glitchFlicker_0.1s_steps(2)_infinite]' : ''}`}>
+    <span className={`${className} ${flicker && glitching ? 'animate-[glitchFlicker_0.1s_steps(2)_infinite]' : ''}`}>
       {glitching ? glitchText : displayed}
       {!done && (
         <span
           className="inline-block w-[2px] h-[1.1em] bg-current ml-[2px] align-middle"
-          style={{ animation: glitching ? 'glitchFlicker 0.08s steps(2) infinite' : 'pulse 1s ease-in-out infinite' }}
+          style={{ animation: flicker && glitching ? 'glitchFlicker 0.08s steps(2) infinite' : 'pulse 1s ease-in-out infinite' }}
         />
       )}
     </span>

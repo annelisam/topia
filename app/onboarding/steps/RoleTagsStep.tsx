@@ -40,6 +40,13 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
   const [selected, setSelected] = useState<string[]>(initialValue);
   const [error, setError] = useState('');
 
+  // Pre-select the user's saved tags once the profile hydrates (the initial
+  // value arrives async, after mount, so useState's initializer misses it).
+  useEffect(() => {
+    setSelected(initialValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue.join(',')]);
+
   function toggle(slug: string) {
     setSelected((prev) => prev.includes(slug) ? prev.filter((r) => r !== slug) : [...prev, slug]);
     if (error) setError('');

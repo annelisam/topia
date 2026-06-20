@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ShareModalProps {
   open: boolean;
@@ -28,7 +29,12 @@ export default function ShareModal({ open, onClose, url, title, text, storyImage
 
   useEffect(() => { if (open) { setCopied(false); setIgState('idle'); } }, [open]);
 
-  if (!open) return null;
+  // Portal to <body> so the modal escapes any page stacking/blend context
+  // (the global grain/scanline texture overlays otherwise paint through it).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!open || !mounted) return null;
 
   const shareText = text || title || 'Check this out on TOPIA';
 
@@ -78,8 +84,8 @@ export default function ShareModal({ open, onClose, url, title, text, storyImage
   const accentBtn = 'font-mono text-[11px] uppercase tracking-widest font-bold rounded-lg cursor-pointer border-none';
   const outlineBtn = 'font-mono text-[11px] uppercase tracking-wider rounded-lg cursor-pointer border hover:opacity-70 transition bg-transparent';
 
-  return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" onClick={onClose} style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={onClose} style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md rounded-2xl p-6 border max-h-[85vh] overflow-y-auto"
@@ -140,6 +146,7 @@ export default function ShareModal({ open, onClose, url, title, text, storyImage
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

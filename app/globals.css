@@ -327,6 +327,12 @@ h3 {
   to { transform: rotateY(360deg); }
 }
 
+/* TOPIA logo cursor on the home-preview (desktop only). Interactive elements
+   keep their own cursor (pointer / grab) since `cursor` is inherited. */
+@media (min-width: 768px) and (pointer: fine) {
+  .home-cursor { cursor: url('/topia-cursor.png') 12 12, auto; }
+}
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }

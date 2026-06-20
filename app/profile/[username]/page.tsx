@@ -42,7 +42,8 @@ interface PublicProfile {
 
 interface ResolvedTool { name: string; slug: string; category: string | null; url?: string | null; }
 interface WorldMembership { worldId: string; worldTitle: string; worldSlug: string; worldCategory: string | null; worldImageUrl: string | null; role: string; }
-interface HostedEvent { id: string; eventName: string; slug: string; date: string | null; city: string | null; imageUrl: string | null }
+interface EventHostRef { userId: string; name: string | null; username: string | null; avatarUrl: string | null }
+interface HostedEvent { id: string; eventName: string; slug: string; date: string | null; city: string | null; imageUrl: string | null; startTime?: string | null; rsvpCount?: number; hosts?: EventHostRef[] }
 
 const STAMP_COLORS = ['lime', 'blue', 'pink', 'orange', 'green'];
 const SECTIONS = [
