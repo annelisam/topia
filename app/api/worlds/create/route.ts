@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Auto-generate the shareable short link (best-effort — never blocks create).
     try {
-      await ensureShortLink({ path: `/worlds/${slug}`, kind: 'world', createdBy: user.id });
+      await ensureShortLink({ path: `/worlds/${slug}`, kind: 'world', createdBy: user.id, preferredCode: slug });
     } catch { /* ignore */ }
 
     return NextResponse.json({ world }, { status: 201 });

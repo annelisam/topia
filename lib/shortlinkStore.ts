@@ -31,27 +31,46 @@ export function normalizePath(raw: unknown): string | null {
   return p;
 }
 
+const PREFERRED_CODE = /^[A-Za-z0-9._~-]{1,80}$/;
+
 // Returns the code for `path`, creating it if needed. Idempotent: a page that
-// already has a code returns it unchanged. Returns null on invalid path or if a
+// already has a code returns it unchanged. `preferredCode` (e.g. a world slug)
+// is used as the code when it's free; otherwise a random code is allocated. An
+// existing row is "promoted" to the preferred code when it becomes available
+// (so worlds reliably read /s/<slug>). Returns null on invalid path or if a
 // code couldn't be allocated. Best-effort — callers should not let it throw.
 export async function ensureShortLink(opts: {
   path: string;
   kind?: string | null;
   createdBy?: string | null;
+  preferredCode?: string | null;
 }): Promise<string | null> {
   const path = normalizePath(opts.path);
   if (!path) return null;
   const kind = opts.kind && opts.kind.length <= 32 ? opts.kind : null;
+  const pref = opts.preferredCode && PREFERRED_CODE.test(opts.preferredCode) ? opts.preferredCode : null;
 
   const existing = await db
     .select({ code: shortLinks.code })
     .from(shortLinks)
     .where(eq(shortLinks.targetPath, path))
     .limit(1);
-  if (existing[0]) return existing[0].code;
+  if (existing[0]) {
+    if (pref && existing[0].code !== pref) {
+      // Promote to the preferred (pretty) code if it's not already taken.
+      try {
+        await db.update(shortLinks).set({ code: pref }).where(eq(shortLinks.targetPath, path));
+        return pref;
+      } catch {
+        return existing[0].code; // preferred code in use elsewhere — keep current
+      }
+    }
+    return existing[0].code;
+  }
 
+  const tries: string[] = pref ? [pref] : [];
   for (let attempt = 0; attempt < 5; attempt++) {
-    const code = genCode(6);
+    const code = tries.shift() ?? genCode(6);
     try {
       const inserted = await db
         .insert(shortLinks)
@@ -66,8 +85,18 @@ export async function ensureShortLink(opts: {
         .where(eq(shortLinks.targetPath, path))
         .limit(1);
       if (raced[0]) return raced[0].code;
-      if (attempt === 4) return null;
+      if (attempt === 4) return null; // preferred + retries all clashed
     }
   }
   return null;
+}
+
+// Builds the public share URL for a link. Profiles get a vanity /@username;
+// everything else uses /s/<code> (world slug or random event code).
+export function buildShortUrl(origin: string, opts: { kind?: string | null; code: string; path: string }): string {
+  if (opts.kind === 'profile') {
+    const username = opts.path.replace(/^\/profile\//, '');
+    if (username && !username.includes('/')) return `${origin}/@${username}`;
+  }
+  return `${origin}/s/${opts.code}`;
 }

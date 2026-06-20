@@ -43,13 +43,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
           />
         ) : null}
 
-        {/* Darkening gradient so text reads on any cover */}
+        {/* Flat darken so the busy cover recedes behind the text. Satori needs
+            explicit dimensions here (it ignores the `inset` shorthand). */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '1080px', height: '1920px', display: 'flex', backgroundColor: 'rgba(0,0,0,0.5)' }} />
+        {/* Extra gradient anchoring the brand (top) and title block (bottom) */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
+            top: 0,
+            left: 0,
+            width: '1080px',
+            height: '1920px',
             display: 'flex',
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.0) 32%, rgba(0,0,0,0.88) 100%)',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 38%, rgba(0,0,0,0.92) 100%)',
           }}
         />
 

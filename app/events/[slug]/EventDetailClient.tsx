@@ -392,11 +392,11 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   useEffect(() => {
     if (!event) return;
     let alive = true;
-    shortenPath(window.location.pathname, 'event').then((u) => {
+    shortenPath(window.location.pathname, 'event', privyUser?.id).then((u) => {
       if (alive) setShortUrl(u);
     });
     return () => { alive = false; };
-  }, [event]);
+  }, [event, privyUser?.id]);
 
   // Share — opens our custom share sheet (copy link + Email/X/WhatsApp/FB +
   // Instagram Story). The short link is prefetched into shortUrl above.

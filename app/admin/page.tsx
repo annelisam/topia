@@ -1377,20 +1377,25 @@ function LinksTab() {
               </tr>
             </thead>
             <tbody>
-              {items.map((l) => (
-                <tr key={l.id} className="border-t border-[#1a1a1a]/15">
-                  <td className={`${td} font-bold`}>{l.clicks}</td>
-                  <td className={td}>
-                    <a href={`/s/${l.code}`} target="_blank" rel="noreferrer" className="underline hover:opacity-60">/s/{l.code}</a>
-                  </td>
-                  <td className={`${td} break-all`}>
-                    <a href={l.targetPath} target="_blank" rel="noreferrer" className="underline hover:opacity-60">{l.targetPath}</a>
-                  </td>
-                  <td className={td}>{l.kind || '—'}</td>
-                  <td className={td}>{l.creatorUsername ? `@${l.creatorUsername}` : l.creatorName || '—'}</td>
-                  <td className={td}>{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : '—'}</td>
-                </tr>
-              ))}
+              {items.map((l) => {
+                const shortPath = l.kind === 'profile'
+                  ? `/@${l.targetPath.replace(/^\/profile\//, '')}`
+                  : `/s/${l.code}`;
+                return (
+                  <tr key={l.id} className="border-t border-[#1a1a1a]/15">
+                    <td className={`${td} font-bold`}>{l.clicks}</td>
+                    <td className={td}>
+                      <a href={shortPath} target="_blank" rel="noreferrer" className="underline hover:opacity-60">{shortPath}</a>
+                    </td>
+                    <td className={`${td} break-all`}>
+                      <a href={l.targetPath} target="_blank" rel="noreferrer" className="underline hover:opacity-60">{l.targetPath}</a>
+                    </td>
+                    <td className={td}>{l.kind || '—'}</td>
+                    <td className={td}>{l.creatorUsername ? `@${l.creatorUsername}` : l.creatorName || '—'}</td>
+                    <td className={td}>{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : '—'}</td>
+                  </tr>
+                );
+              })}
               {items.length === 0 && (
                 <tr><td colSpan={6} className="px-3 py-6 text-center font-mono text-[12px] opacity-50">No short links yet.</td></tr>
               )}

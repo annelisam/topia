@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, CSSProperties } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { ShareIcon } from './ui/Icons';
 import { shortenPath } from '@/lib/shortlink';
 import ShareModal from './ShareModal';
@@ -39,24 +40,25 @@ export default function ShareButton({
   storyImageUrl,
   storyFilename,
 }: ShareButtonProps) {
+  const { user } = usePrivy();
   const [url, setUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
     const p = path ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
-    shortenPath(p, kind).then((u) => {
+    shortenPath(p, kind, user?.id).then((u) => {
       if (alive) setUrl(u);
     });
     return () => {
       alive = false;
     };
-  }, [path, kind]);
+  }, [path, kind, user?.id]);
 
   const handleClick = async () => {
     if (!url) {
       const p = path ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
-      setUrl(await shortenPath(p, kind));
+      setUrl(await shortenPath(p, kind, user?.id));
     }
     setOpen(true);
   };
