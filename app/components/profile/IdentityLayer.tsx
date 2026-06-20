@@ -44,9 +44,23 @@ const ROT = [-8, 6, -5, 9, -4, 7, -9, 4, -6, 8, -3, 6];
 // 4-point sparkle star fallback emblem (path seals).
 const STAR = 'M50 30 L55 45 L70 50 L55 55 L50 70 L45 55 L30 50 L45 45 Z';
 
+// Muted "ink" versions of the brand colors — desaturated so stamps read like
+// faded passport ink instead of neon. Silver (the TOPIA seal) is left vivid.
+const STAMP_INK: Record<string, string> = {
+  lime: '#a7b06a',
+  blue: '#8786bd',
+  pink: '#bd83ac',
+  orange: '#c5816a',
+  green: '#67a78b',
+};
+function inkColor(color: string, fallback: string): string {
+  if (color === 'silver') return COLOR_HEX.silver;
+  return STAMP_INK[color] || COLOR_HEX[color] || fallback;
+}
+
 // One stamp's SVG — reused in the strip and the detail modal.
 function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; config: PathConfig }) {
-  const c = COLOR_HEX[stamp.color] || config.hex;
+  const c = inkColor(stamp.color, config.hex);
   const isRect = stamp.shape === 'rect';
   const isRare = stamp.rarity !== 'common';
   const isLegend = stamp.rarity === 'legendary';
@@ -120,7 +134,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
 
 export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true }: Props) {
   const [selected, setSelected] = useState<Stamp | null>(null);
-  const selColor = selected ? (COLOR_HEX[selected.color] || config.hex) : config.hex;
+  const selColor = selected ? inkColor(selected.color, config.hex) : config.hex;
   const selRectShape = selected?.shape === 'rect';
 
   return (
