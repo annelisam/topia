@@ -340,10 +340,15 @@ function fmtEventDate(e: EventItem): string {
   return (e.date ?? '').toUpperCase();
 }
 
+// Shared badge style — inline-flex + leading-none so every badge renders at the
+// exact same height/baseline regardless of wrapper (keeps the corner badges of a
+// card vertically aligned).
+const BADGE_BASE = 'inline-flex items-center font-mono text-[8px] uppercase tracking-[1.5px] leading-none px-1.5 py-1 rounded-sm font-bold';
+
 function PathBadge({ path }: { path: string | null }) {
   if (!path || !(path in PATH_CONFIG)) return null;
   const c = PATH_CONFIG[path as UserPath];
-  return <span className={`font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold ${c.bg} ${c.textOn}`}>{c.label}</span>;
+  return <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} ${c.bg} ${c.textOn}`}>{c.label}</span>;
 }
 
 function SectionHead({ label, title, href, linkText }: { label: string; title: string; href?: string; linkText?: string }) {
@@ -733,16 +738,14 @@ export default function HomePreview() {
                           <div className="w-full h-full flex items-center justify-center font-basement font-black text-[48px] text-bone/20">{initial}</div>
                         )}
                         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
-                        <div className="absolute top-2.5 left-2.5">
-                          {/* One badge: membership-accurate World Builder, else the path badge */}
-                          {p.isWorldBuilder ? (
-                            <span className="font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-lime text-obsidian">World Builder</span>
-                          ) : (
-                            <PathBadge path={p.path} />
-                          )}
-                        </div>
+                        {/* One badge: membership-accurate World Builder, else the path badge */}
+                        {p.isWorldBuilder ? (
+                          <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} bg-lime text-obsidian`}>World Builder</span>
+                        ) : (
+                          <PathBadge path={p.path} />
+                        )}
                         {isNewProfile(p.createdAt) && (
-                          <span className="absolute top-2.5 right-2.5 font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-pink text-obsidian">New</span>
+                          <span className={`absolute top-2.5 right-2.5 ${BADGE_BASE} bg-pink text-obsidian`}>New</span>
                         )}
                       </div>
                       <div className="p-3">
