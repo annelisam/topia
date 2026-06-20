@@ -76,8 +76,8 @@ function CyclingHeadline() {
 
 // Rotating CSS wireframe globe — pure transforms, decorative hero background.
 function GridGlobe() {
-  const meridians = Array.from({ length: 9 });
-  const latitudes = [0, 28, 55, -28, -55];
+  const meridians = Array.from({ length: 16 });
+  const latitudes = [0, 18, 36, 54, 72, -18, -36, -54, -72];
   const line = '1px solid color-mix(in srgb, var(--accent, #e4fe52) 24%, transparent)';
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,115vw)] aspect-square opacity-[0.45]" style={{ perspective: '1100px' }}>
@@ -142,8 +142,8 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       style={{
         left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden',
         width: 'min(360px, calc(100% - 32px))',
-        background: '#ded7c7',
-        boxShadow: 'inset -2px -2px 0 #5f5946, inset 2px 2px 0 #fffdf3, 7px 7px 0 rgba(0,0,0,0.45)',
+        background: '#c4c4c4',
+        boxShadow: 'inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fdfdfd, 7px 7px 0 rgba(0,0,0,0.45)',
       }}
     >
       {/* Title bar — drag handle */}
@@ -157,7 +157,7 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
         <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-obsidian truncate">{title}</span>
         <div className="flex items-center gap-1 shrink-0">
           {['–', '▢', '✕'].map((g, i) => (
-            <span key={i} className="w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none" style={{ background: '#ded7c7', boxShadow: 'inset -1px -1px 0 #5f5946, inset 1px 1px 0 #fffdf3' }}>{g}</span>
+            <span key={i} className="w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none" style={{ background: '#c4c4c4', boxShadow: 'inset -1px -1px 0 #7a7a7a, inset 1px 1px 0 #fdfdfd' }}>{g}</span>
           ))}
         </div>
       </div>
@@ -167,6 +167,69 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       </div>
     </div>
   );
+}
+
+// Giant slowly-rotating galaxy of orbit rings (no points) — atmospheric
+// backdrop for the lower sections, echoing the worlds browse page.
+function GalaxyBackdrop() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+
+    const rings = Array.from({ length: 22 }, (_, i) => ({
+      r: 0.1 + (i / 22) * 1.05,
+      tilt: Math.sin(i * 1.27) * 0.75,
+      rotation: i * 0.55,
+    }));
+    const orbit = (a: number, r: number, tilt: number, rotation: number) => {
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const z1 = -z * Math.cos(tilt);
+      const y1 = z * Math.sin(tilt);
+      return { x: x * Math.cos(rotation) + z1 * Math.sin(rotation), y: y1, z: -x * Math.sin(rotation) + z1 * Math.cos(rotation) };
+    };
+    const rotate = (p: { x: number; y: number; z: number }, rx: number, ry: number) => {
+      const x = p.x * Math.cos(ry) - p.z * Math.sin(ry);
+      const z = p.x * Math.sin(ry) + p.z * Math.cos(ry);
+      return { x, y: p.y * Math.cos(rx) - z * Math.sin(rx) };
+    };
+
+    let raf = 0, rotY = 0, W = 0, H = 0;
+    const resize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const rect = canvas.getBoundingClientRect();
+      W = rect.width; H = rect.height;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    const draw = () => {
+      rotY += 0.0013;
+      ctx.clearRect(0, 0, W, H);
+      const cx = W * 0.5, cy = H * 0.5;
+      const scale = Math.max(W * 0.55, H * 0.42);
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const col = isDark ? '228,254,82' : '26,26,26';
+      for (const ring of rings) {
+        ctx.beginPath();
+        for (let i = 0; i <= 72; i++) {
+          const a = (i / 72) * Math.PI * 2;
+          const p = rotate(orbit(a, ring.r, ring.tilt, ring.rotation), 0.55, rotY);
+          const sx = cx + p.x * scale, sy = cy - p.y * scale;
+          if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.strokeStyle = `rgba(${col},0.05)`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    resize();
+    draw();
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />;
 }
 
 const CAT_DOT: Record<string, string> = { Featured: 'bg-lime', Live: 'bg-pink', Series: 'bg-blue', Replays: 'bg-orange' };
@@ -333,7 +396,9 @@ export default function HomePreview() {
               style={{ opacity: 0, animation: 'fadeUp 0.6s ease-out 1100ms forwards' }}
             >
               <span className="font-mono text-[10px] uppercase tracking-[3px] opacity-40 group-hover:opacity-100 transition-opacity" style={txt}>see what&apos;s possible on topia</span>
-              <span className="text-lime text-[28px] leading-none animate-bounce">⌄</span>
+              <svg className="text-lime animate-bounce" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </button>
           </div>
 
@@ -342,11 +407,12 @@ export default function HomePreview() {
             <p className="font-mono text-[12px] leading-[1.7] font-bold">Welcome to beta — and to a new path for ownership and sovereignty.</p>
             <p className="font-mono text-[11px] leading-[1.7]"><span className="font-bold">What is TOPIA?</span> Not another algorithm to fight. Not another platform to feed. It&apos;s the infrastructure: a network of world builders your algorithm can&apos;t contain, and a community to support your ecosystem.</p>
             <p className="font-mono text-[11px] leading-[1.7]">We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.</p>
-            <p className="font-mono text-[9px] uppercase tracking-[2px] opacity-50 pt-1">▓ drag me around ▓</p>
           </DraggablePopup>
         </header>
 
-        <div id="explore" className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
+        <div id="explore" className="relative">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none"><GalaxyBackdrop /></div>
+          <div className="relative z-10 max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
 
           {/* ── TOPIA TV ── */}
           <section className="mb-16">
@@ -574,6 +640,7 @@ export default function HomePreview() {
             )}
           </section>
 
+          </div>
         </div>
       </div>
     </PageShell>
