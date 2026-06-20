@@ -74,6 +74,101 @@ function CyclingHeadline() {
   );
 }
 
+// Rotating CSS wireframe globe — pure transforms, decorative hero background.
+function GridGlobe() {
+  const meridians = Array.from({ length: 9 });
+  const latitudes = [0, 28, 55, -28, -55];
+  const line = '1px solid color-mix(in srgb, var(--accent, #e4fe52) 24%, transparent)';
+  return (
+    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,115vw)] aspect-square opacity-[0.45]" style={{ perspective: '1100px' }}>
+      <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 34s linear infinite' }}>
+        {meridians.map((_, i) => (
+          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: line, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
+        ))}
+        {latitudes.map((deg, i) => {
+          const r = Math.cos((deg * Math.PI) / 180);
+          const y = Math.sin((deg * Math.PI) / 180);
+          return (
+            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: line }} />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Old-school draggable window. Drag by the title bar; stays inside `boundsRef`.
+function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefObject<HTMLElement | null>; title: string; children: React.ReactNode }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const drag = useRef<{ dx: number; dy: number } | null>(null);
+
+  useEffect(() => {
+    const place = () => {
+      const b = boundsRef.current?.getBoundingClientRect();
+      const c = cardRef.current?.getBoundingClientRect();
+      if (!b || !c) return;
+      setPos({ x: Math.max(16, b.width - c.width - 40), y: Math.max(16, b.height - c.height - 48) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [boundsRef]);
+
+  const clamp = (x: number, y: number) => {
+    const b = boundsRef.current?.getBoundingClientRect();
+    const c = cardRef.current?.getBoundingClientRect();
+    if (!b || !c) return { x, y };
+    return { x: Math.min(Math.max(0, x), Math.max(0, b.width - c.width)), y: Math.min(Math.max(0, y), Math.max(0, b.height - c.height)) };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!pos) return;
+    const b = boundsRef.current!.getBoundingClientRect();
+    drag.current = { dx: e.clientX - b.left - pos.x, dy: e.clientY - b.top - pos.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current) return;
+    const b = boundsRef.current!.getBoundingClientRect();
+    setPos(clamp(e.clientX - b.left - drag.current.dx, e.clientY - b.top - drag.current.dy));
+  };
+  const onPointerUp = () => { drag.current = null; };
+
+  return (
+    <div
+      ref={cardRef}
+      className="absolute z-20 select-none"
+      style={{
+        left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden',
+        width: 'min(360px, calc(100% - 32px))',
+        background: '#ded7c7',
+        boxShadow: 'inset -2px -2px 0 #5f5946, inset 2px 2px 0 #fffdf3, 7px 7px 0 rgba(0,0,0,0.45)',
+      }}
+    >
+      {/* Title bar — drag handle */}
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        className="flex items-center justify-between gap-2 px-2 py-1 cursor-grab active:cursor-grabbing touch-none"
+        style={{ background: 'linear-gradient(90deg, var(--accent, #e4fe52), #aacb33)' }}
+      >
+        <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-obsidian truncate">{title}</span>
+        <div className="flex items-center gap-1 shrink-0">
+          {['–', '▢', '✕'].map((g, i) => (
+            <span key={i} className="w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none" style={{ background: '#ded7c7', boxShadow: 'inset -1px -1px 0 #5f5946, inset 1px 1px 0 #fffdf3' }}>{g}</span>
+          ))}
+        </div>
+      </div>
+      {/* Body */}
+      <div className="p-4 space-y-3" style={{ color: '#1a1a1a' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const CAT_DOT: Record<string, string> = { Featured: 'bg-lime', Live: 'bg-pink', Series: 'bg-blue', Replays: 'bg-orange' };
 
 const txt = { color: 'var(--foreground)' };
@@ -201,6 +296,7 @@ export default function HomePreview() {
     fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(d.profiles ?? [])).catch(() => {});
   }, []);
 
+  const heroRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollCarousel = (dir: number) => {
     const el = carouselRef.current;
@@ -218,8 +314,10 @@ export default function HomePreview() {
       <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
         {/* ── HERO ── */}
-        <header className="border-b" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-14 md:py-20">
+        <header ref={heroRef} className="relative overflow-hidden border-b min-h-[620px] md:min-h-[680px] flex items-center" style={{ borderColor: 'var(--border-color)' }}>
+          <GridGlobe />
+
+          <div className="relative z-10 max-w-[1200px] w-full mx-auto px-4 md:px-8 py-14 md:py-20">
             <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
             <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
               TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
@@ -228,28 +326,24 @@ export default function HomePreview() {
               <CyclingHeadline />
             </div>
 
-            <div className="max-w-2xl space-y-4">
-              <p className="font-mono text-[clamp(13px,1.5vw,16px)] leading-[1.8] opacity-80" style={{ ...txt, opacity: 0, animation: 'fadeUp 0.6s ease-out 600ms forwards' }}>
-                Welcome to beta — and to a new path for ownership and sovereignty.
-              </p>
-              <p className="font-mono text-[clamp(12px,1.4vw,15px)] leading-[1.8] opacity-60" style={{ ...txt, opacity: 0, animation: 'fadeUp 0.6s ease-out 800ms forwards' }}>
-                <span className="opacity-100 font-bold">What is TOPIA?</span> Not another algorithm to fight. Not another platform to feed. It&apos;s the infrastructure: a network of world builders your algorithm can&apos;t contain, and a community to support your ecosystem.
-              </p>
-              <p className="font-mono text-[clamp(12px,1.4vw,15px)] leading-[1.8] opacity-60" style={{ ...txt, opacity: 0, animation: 'fadeUp 0.6s ease-out 1000ms forwards' }}>
-                We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.
-              </p>
-            </div>
-
             {/* Scroll cue → "see what's possible" */}
             <button
               onClick={() => document.getElementById('explore')?.scrollIntoView({ behavior: 'smooth' })}
-              className="mt-12 inline-flex flex-col items-start gap-1 group bg-transparent border-none cursor-pointer p-0"
-              style={{ opacity: 0, animation: 'fadeUp 0.6s ease-out 1300ms forwards' }}
+              className="mt-8 inline-flex flex-col items-start gap-1 group bg-transparent border-none cursor-pointer p-0"
+              style={{ opacity: 0, animation: 'fadeUp 0.6s ease-out 1100ms forwards' }}
             >
               <span className="font-mono text-[10px] uppercase tracking-[3px] opacity-40 group-hover:opacity-100 transition-opacity" style={txt}>see what&apos;s possible on topia</span>
               <span className="text-lime text-[28px] leading-none animate-bounce">⌄</span>
             </button>
           </div>
+
+          {/* Draggable retro pop-up holding the intro copy */}
+          <DraggablePopup boundsRef={heroRef} title="welcome.txt">
+            <p className="font-mono text-[12px] leading-[1.7] font-bold">Welcome to beta — and to a new path for ownership and sovereignty.</p>
+            <p className="font-mono text-[11px] leading-[1.7]"><span className="font-bold">What is TOPIA?</span> Not another algorithm to fight. Not another platform to feed. It&apos;s the infrastructure: a network of world builders your algorithm can&apos;t contain, and a community to support your ecosystem.</p>
+            <p className="font-mono text-[11px] leading-[1.7]">We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.</p>
+            <p className="font-mono text-[9px] uppercase tracking-[2px] opacity-50 pt-1">▓ drag me around ▓</p>
+          </DraggablePopup>
         </header>
 
         <div id="explore" className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
