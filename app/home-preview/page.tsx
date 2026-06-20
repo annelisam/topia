@@ -108,7 +108,14 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       const b = boundsRef.current?.getBoundingClientRect();
       const c = cardRef.current?.getBoundingClientRect();
       if (!b || !c) return;
-      setPos({ x: Math.max(16, b.width - c.width - 40), y: Math.max(16, b.height - c.height - 48) });
+      const mobile = b.width < 768;
+      // Leave the bottom clear for the scroll cue; on desktop sit upper-right,
+      // on mobile sit lower-middle (below the headline).
+      const x = mobile ? Math.max(16, (b.width - c.width) / 2) : Math.max(16, b.width - c.width - 40);
+      const y = mobile
+        ? Math.min(Math.max(16, b.height - c.height - 76), b.height * 0.5)
+        : Math.max(16, b.height * 0.26);
+      setPos({ x, y });
     };
     place();
     window.addEventListener('resize', place);
@@ -178,10 +185,12 @@ function GalaxyBackdrop() {
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    const rings = Array.from({ length: 22 }, (_, i) => ({
-      r: 0.1 + (i / 22) * 1.05,
-      tilt: Math.sin(i * 1.27) * 0.75,
-      rotation: i * 0.55,
+    const N = 30;
+    const rings = Array.from({ length: N }, (_, i) => ({
+      r: 0.08 + (i / N) * 1.08,
+      // Bias tilts toward a common disc plane so it reads as a galaxy disc.
+      tilt: 0.32 + Math.sin(i * 1.27) * 0.32,
+      rotation: i * 0.42,
     }));
     const orbit = (a: number, r: number, tilt: number, rotation: number) => {
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
@@ -204,21 +213,31 @@ function GalaxyBackdrop() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     const draw = () => {
-      rotY += 0.0013;
+      rotY += 0.0012;
       ctx.clearRect(0, 0, W, H);
       const cx = W * 0.5, cy = H * 0.5;
-      const scale = Math.max(W * 0.55, H * 0.42);
+      const scale = Math.max(W * 0.6, H * 0.45);
       const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       const col = isDark ? '228,254,82' : '26,26,26';
+
+      // Glowing galactic core
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, scale * 0.9);
+      grad.addColorStop(0, `rgba(${col},0.09)`);
+      grad.addColorStop(0.4, `rgba(${col},0.025)`);
+      grad.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(cx, cy, scale * 0.9, 0, Math.PI * 2); ctx.fill();
+
+      // Orbit rings — brighter near the core, fading to the arms
       for (const ring of rings) {
         ctx.beginPath();
-        for (let i = 0; i <= 72; i++) {
-          const a = (i / 72) * Math.PI * 2;
+        for (let i = 0; i <= 80; i++) {
+          const a = (i / 80) * Math.PI * 2;
           const p = rotate(orbit(a, ring.r, ring.tilt, ring.rotation), 0.55, rotY);
           const sx = cx + p.x * scale, sy = cy - p.y * scale;
           if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
         }
-        ctx.strokeStyle = `rgba(${col},0.05)`;
+        ctx.strokeStyle = `rgba(${col},${0.07 * (1 - ring.r * 0.55)})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -230,6 +249,29 @@ function GalaxyBackdrop() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
   }, []);
   return <canvas ref={ref} aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />;
+}
+
+// Faint flickering glitch words behind the hero.
+const GLITCH_WORDS = [
+  { t: 'OWN IT', top: '14%', left: '58%', size: 'text-[clamp(36px,7vw,86px)]' },
+  { t: 'BUILD.', top: '64%', left: '6%', size: 'text-[clamp(30px,6vw,72px)]' },
+  { t: 'CULTURE FIRST', top: '40%', left: '40%', size: 'text-[clamp(24px,4vw,52px)]' },
+  { t: 'NO ALGORITHM', top: '80%', left: '52%', size: 'text-[clamp(20px,3.5vw,44px)]' },
+];
+function GlitchWords() {
+  return (
+    <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden z-[1] opacity-[0.07]">
+      {GLITCH_WORDS.map((w, i) => (
+        <span
+          key={i}
+          className={`absolute font-basement font-black uppercase whitespace-nowrap ${w.size}`}
+          style={{ top: w.top, left: w.left, color: 'var(--foreground)', animation: `glitchFlicker ${2.4 + i * 0.6}s steps(3) infinite ${i * 0.4}s` }}
+        >
+          {w.t}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 const CAT_DOT: Record<string, string> = { Featured: 'bg-lime', Live: 'bg-pink', Series: 'bg-blue', Replays: 'bg-orange' };
@@ -377,29 +419,18 @@ export default function HomePreview() {
       <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
         {/* ── HERO ── */}
-        <header ref={heroRef} className="relative overflow-hidden border-b min-h-[620px] md:min-h-[680px] flex items-center" style={{ borderColor: 'var(--border-color)' }}>
+        <header ref={heroRef} className="relative overflow-hidden border-b min-h-[640px] md:min-h-[680px] flex items-start" style={{ borderColor: 'var(--border-color)' }}>
           <GridGlobe />
+          <GlitchWords />
 
-          <div className="relative z-10 max-w-[1200px] w-full mx-auto px-4 md:px-8 py-14 md:py-20">
+          <div className="relative z-10 max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-6 md:pt-24 pb-28">
             <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
             <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
               TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
             </h1>
-            <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 mb-7 text-lime" style={{ minHeight: '1.2em' }}>
+            <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-lime" style={{ minHeight: '1.2em' }}>
               <CyclingHeadline />
             </div>
-
-            {/* Scroll cue → "see what's possible" */}
-            <button
-              onClick={() => document.getElementById('explore')?.scrollIntoView({ behavior: 'smooth' })}
-              className="mt-8 inline-flex flex-col items-start gap-1 group bg-transparent border-none cursor-pointer p-0"
-              style={{ opacity: 0, animation: 'fadeUp 0.6s ease-out 1100ms forwards' }}
-            >
-              <span className="font-mono text-[10px] uppercase tracking-[3px] opacity-40 group-hover:opacity-100 transition-opacity" style={txt}>see what&apos;s possible on topia</span>
-              <svg className="text-lime animate-bounce" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
           </div>
 
           {/* Draggable retro pop-up holding the intro copy */}
@@ -408,6 +439,17 @@ export default function HomePreview() {
             <p className="font-mono text-[11px] leading-[1.7]"><span className="font-bold">What is TOPIA?</span> Not another algorithm to fight. Not another platform to feed. It&apos;s the infrastructure: a network of world builders your algorithm can&apos;t contain, and a community to support your ecosystem.</p>
             <p className="font-mono text-[11px] leading-[1.7]">We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.</p>
           </DraggablePopup>
+
+          {/* Scroll cue — centered on the divider, clear of the popup */}
+          <button
+            onClick={() => document.getElementById('explore')?.scrollIntoView({ behavior: 'smooth' })}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 inline-flex flex-col items-center gap-0.5 group bg-transparent border-none cursor-pointer p-0"
+          >
+            <span className="font-mono text-[10px] uppercase tracking-[3px] opacity-40 group-hover:opacity-100 transition-opacity text-center" style={txt}>see what&apos;s possible on topia</span>
+            <svg className="text-lime animate-bounce" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </header>
 
         <div id="explore" className="relative">
