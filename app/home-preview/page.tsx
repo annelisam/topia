@@ -76,12 +76,12 @@ function CyclingHeadline() {
 
 // Rotating CSS wireframe globe — pure transforms, decorative hero background.
 function GridGlobe() {
-  const meridians = Array.from({ length: 16 });
-  const latitudes = [0, 18, 36, 54, 72, -18, -36, -54, -72];
-  const line = '1px solid color-mix(in srgb, var(--accent, #e4fe52) 24%, transparent)';
+  const meridians = Array.from({ length: 24 });
+  const latitudes = [0, 13, 26, 39, 52, 65, 78, -13, -26, -39, -52, -65, -78];
+  const line = '1px solid rgba(190,190,190,0.32)';
   return (
-    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,115vw)] aspect-square opacity-[0.45]" style={{ perspective: '1100px' }}>
-      <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 34s linear infinite' }}>
+    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
+      <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
         {meridians.map((_, i) => (
           <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: line, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
         ))}
@@ -103,31 +103,55 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
+  // Clamp to bounds, then push out of any [data-keepclear] zone (header text,
+  // scroll cue) so the popup can never cover them.
+  function clamp(x: number, y: number) {
+    const b = boundsRef.current?.getBoundingClientRect();
+    const c = cardRef.current?.getBoundingClientRect();
+    if (!b || !c) return { x, y };
+    const maxX = Math.max(0, b.width - c.width);
+    const maxY = Math.max(0, b.height - c.height);
+    let nx = Math.min(Math.max(0, x), maxX);
+    let ny = Math.min(Math.max(0, y), maxY);
+    boundsRef.current!.querySelectorAll('[data-keepclear]').forEach((z) => {
+      const zr = z.getBoundingClientRect();
+      const rx = zr.left - b.left, ry = zr.top - b.top, rr = zr.right - b.left, rb = zr.bottom - b.top;
+      const ox = Math.min(nx + c.width, rr) - Math.max(nx, rx);
+      const oy = Math.min(ny + c.height, rb) - Math.max(ny, ry);
+      if (ox > 0 && oy > 0) {
+        // Push out by the smallest separation that fully clears the zone.
+        const pushes = [
+          { axis: 0, d: rr - nx },                // right: left edge → zone.right
+          { axis: 0, d: -(nx + c.width - rx) },   // left: right edge → zone.left
+          { axis: 1, d: rb - ny },                // down: top edge → zone.bottom
+          { axis: 1, d: -(ny + c.height - ry) },  // up: bottom edge → zone.top
+        ].sort((a, b) => Math.abs(a.d) - Math.abs(b.d));
+        const best = pushes[0];
+        if (best.axis === 0) nx += best.d; else ny += best.d;
+        nx = Math.min(Math.max(0, nx), maxX);
+        ny = Math.min(Math.max(0, ny), maxY);
+      }
+    });
+    return { x: nx, y: ny };
+  }
+
   useEffect(() => {
     const place = () => {
       const b = boundsRef.current?.getBoundingClientRect();
       const c = cardRef.current?.getBoundingClientRect();
       if (!b || !c) return;
       const mobile = b.width < 768;
-      // Leave the bottom clear for the scroll cue; on desktop sit upper-right,
-      // on mobile sit lower-middle (below the headline).
       const x = mobile ? Math.max(16, (b.width - c.width) / 2) : Math.max(16, b.width - c.width - 40);
       const y = mobile
         ? Math.min(Math.max(16, b.height - c.height - 76), b.height * 0.5)
-        : Math.max(16, b.height * 0.26);
-      setPos({ x, y });
+        : Math.max(16, b.height * 0.32);
+      setPos(clamp(x, y));
     };
     place();
     window.addEventListener('resize', place);
     return () => window.removeEventListener('resize', place);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boundsRef]);
-
-  const clamp = (x: number, y: number) => {
-    const b = boundsRef.current?.getBoundingClientRect();
-    const c = cardRef.current?.getBoundingClientRect();
-    if (!b || !c) return { x, y };
-    return { x: Math.min(Math.max(0, x), Math.max(0, b.width - c.width)), y: Math.min(Math.max(0, y), Math.max(0, b.height - c.height)) };
-  };
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!pos) return;
@@ -323,15 +347,19 @@ export default function HomePreview() {
 
         {/* ── HERO ── */}
         <header ref={heroRef} className="relative overflow-hidden border-b min-h-[640px] md:min-h-[680px] flex items-start" style={{ borderColor: 'var(--border-color)' }}>
+          {/* Subtle halftone texture (matches the rest of the app) */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(245,240,232,0.7) 1px, transparent 1px)', backgroundSize: '22px 22px', opacity: 0.05 }} />
           <GridGlobe />
 
           <div className="relative z-10 max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-6 md:pt-24 pb-28">
-            <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
-            <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
-              TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
-            </h1>
-            <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-lime" style={{ minHeight: '1.2em' }}>
-              <CyclingHeadline />
+            <div data-keepclear className="inline-block max-w-full align-top">
+              <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
+              <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
+                TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
+              </h1>
+              <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-lime" style={{ minHeight: '1.2em' }}>
+                <CyclingHeadline />
+              </div>
             </div>
           </div>
 
@@ -344,6 +372,7 @@ export default function HomePreview() {
 
           {/* Scroll cue — centered on the divider, clear of the popup */}
           <button
+            data-keepclear
             onClick={() => document.getElementById('explore')?.scrollIntoView({ behavior: 'smooth' })}
             className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 inline-flex flex-col items-center gap-0.5 group bg-transparent border-none cursor-pointer p-0"
           >
