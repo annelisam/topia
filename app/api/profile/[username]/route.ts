@@ -71,7 +71,8 @@ export async function GET(
       })
       .from(worldMembers)
       .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
-      .where(eq(worldMembers.userId, user.id));
+      // Unpublished worlds never surface on a public profile.
+      .where(and(eq(worldMembers.userId, user.id), eq(worlds.published, true)));
 
     const followerCountPromise = db
       .select({ value: count() })
