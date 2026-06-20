@@ -75,20 +75,23 @@ function CyclingHeadline() {
 }
 
 // Rotating CSS wireframe globe — pure transforms, decorative hero background.
+// Kept deliberately light: ~14 meridians with backface-culling (only the front
+// half ever paints) + 9 latitude rings, promoted to its own compositor layer so
+// the spin never repaints the hero text on top of it.
+const GLOBE_MERIDIANS = 14;
+const GLOBE_LATITUDES = [0, 22, 44, 66, -22, -44, -66];
 function GridGlobe() {
-  const meridians = Array.from({ length: 30 });
-  const latitudes = [0, 10, 20, 30, 40, 50, 60, 70, 80, -10, -20, -30, -40, -50, -60, -70, -80];
   // Even grid — meridians and latitudes share one color and opacity.
   const gridLine = '1px solid rgba(150,150,150,0.3)';
   return (
-    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
+    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px', transform: 'translateZ(0)' }}>
       {/* Faint dark-grey sphere body */}
       <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(80,80,80,0.16), rgba(35,35,35,0.07) 60%, transparent 80%)' }} />
-      <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
-        {meridians.map((_, i) => (
-          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: gridLine, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
+      <div className="globe-spin relative w-full h-full" style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}>
+        {Array.from({ length: GLOBE_MERIDIANS }).map((_, i) => (
+          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: gridLine, transform: `rotateY(${(i * 180) / GLOBE_MERIDIANS}deg)`, backfaceVisibility: 'hidden' }} />
         ))}
-        {latitudes.map((deg, i) => {
+        {GLOBE_LATITUDES.map((deg, i) => {
           const r = Math.cos((deg * Math.PI) / 180);
           const y = Math.sin((deg * Math.PI) / 180);
           return (
