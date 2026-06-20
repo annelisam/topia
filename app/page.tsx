@@ -11,12 +11,12 @@ export default function Home() {
   const [phase, setPhase] = useState(0);
   const [routing, setRouting] = useState(false);
 
-  // When authenticated, send the user to the main homepage (home-preview).
+  // When authenticated, send the user to the main homepage (/home).
   // Onboarding is optional — we never auto-force it.
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
-    router.replace('/home-preview');
+    router.replace('/home');
   }, [ready, authenticated, user, router]);
 
   useEffect(() => {

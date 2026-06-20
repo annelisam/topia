@@ -58,6 +58,16 @@ function isNewProfile(createdAt?: string): boolean {
   return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
+// Fisher-Yates shuffle — returns a new randomly-ordered array.
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 // Hero headline that types + cycles through taglines with a blinking cursor.
 const HERO_PHRASES = ['It is what you make it.', 'A network you own.', 'Culture before tech.', 'Built by us — for us.'];
 function CyclingHeadline() {
@@ -220,11 +230,15 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       const b = boundsRef.current?.getBoundingClientRect();
       const c = elRef.current?.getBoundingClientRect();
       if (!b || !c) return;
-      const mobile = b.width < 768;
-      const x = mobile ? Math.max(16, (b.width - c.width) / 2) : Math.max(16, b.width - c.width - 40);
-      const y = mobile
-        ? Math.min(Math.max(16, b.height - c.height - 76), b.height * 0.5)
-        : Math.max(16, b.height * 0.32);
+      // Find the bottom of the hero text (kicker/wordmark + glitch tagline),
+      // ignoring the scroll-cue button, so the popup defaults just below it.
+      let textBottom = b.height * 0.3;
+      boundsRef.current!.querySelectorAll('[data-keepclear]').forEach((z) => {
+        if (z.tagName === 'BUTTON') return;
+        textBottom = Math.max(textBottom, z.getBoundingClientRect().bottom - b.top);
+      });
+      const x = (b.width - c.width) / 2; // horizontally centered on the page
+      const y = textBottom + 24;         // just under the header text
       setPos(clamp(x, y));
     };
     place();
@@ -436,8 +450,10 @@ export default function HomePreview() {
       const upcoming = all.filter((e) => !e.dateIso || e.dateIso >= today);
       setEvents((upcoming.length ? upcoming : all).slice(0, 7));
     }).catch(() => {});
-    // Only completed profiles (photo + name + tags), most recent first.
-    fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(d.profiles ?? [])).catch(() => {});
+    // Only completed profiles (photo + name + tags). Shuffle on each visit so
+    // the Discover order is fresh every time (the "complete your profile" CTA
+    // card is rendered separately and always stays first).
+    fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(shuffle(d.profiles ?? []))).catch(() => {});
   }, []);
 
   const heroRef = useRef<HTMLElement>(null);
