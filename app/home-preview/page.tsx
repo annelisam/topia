@@ -76,9 +76,9 @@ function CyclingHeadline() {
 
 // Rotating CSS wireframe globe — pure transforms, decorative hero background.
 function GridGlobe() {
-  const meridians = Array.from({ length: 24 });
-  const latitudes = [0, 13, 26, 39, 52, 65, 78, -13, -26, -39, -52, -65, -78];
-  const line = '1px solid rgba(190,190,190,0.32)';
+  const meridians = Array.from({ length: 30 });
+  const latitudes = [0, 10, 20, 30, 40, 50, 60, 70, 80, -10, -20, -30, -40, -50, -60, -70, -80];
+  const line = '1px solid rgba(150,150,150,0.5)';
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
       <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
@@ -101,6 +101,7 @@ function GridGlobe() {
 function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefObject<HTMLElement | null>; title: string; children: React.ReactNode }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [view, setView] = useState<'open' | 'minimized' | 'closed'>('open');
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
   // Clamp to bounds, then push out of any [data-keepclear] zone (header text,
@@ -166,6 +167,30 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
   };
   const onPointerUp = () => { drag.current = null; };
 
+  // Closed → a desktop "text file" icon; double-click reopens the window.
+  if (view === 'closed') {
+    return (
+      <button
+        onDoubleClick={() => setView('open')}
+        title="Double-click to open"
+        className="absolute z-20 flex flex-col items-center gap-1 w-[78px] p-1.5 bg-transparent border-none cursor-pointer group"
+        style={{ left: pos?.x ?? 16, top: pos?.y ?? 16, visibility: pos ? 'visible' : 'hidden' }}
+      >
+        <span className="relative block w-9 h-11" style={{ background: '#e8e4dc', boxShadow: 'inset -1px -1px 0 #9a9a9a, inset 1px 1px 0 #ffffff', clipPath: 'polygon(0 0, 70% 0, 100% 26%, 100% 100%, 0 100%)' }}>
+          <span className="absolute" style={{ top: 0, right: 0, width: '30%', height: '26%', background: '#bcb8ac' }} />
+          <span className="absolute left-1.5 right-1.5 top-5 h-px bg-obsidian/30" />
+          <span className="absolute left-1.5 right-1.5 top-6 h-px bg-obsidian/30" />
+          <span className="absolute left-1.5 right-2.5 top-7 h-px bg-obsidian/30" />
+        </span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-bone px-1 rounded-sm bg-obsidian/70 group-hover:bg-lime group-hover:text-obsidian transition-colors">{title}</span>
+      </button>
+    );
+  }
+
+  const ctrl = 'w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none cursor-pointer';
+  const ctrlStyle = { background: '#c4c4c4', boxShadow: 'inset -1px -1px 0 #7a7a7a, inset 1px 1px 0 #fdfdfd' } as React.CSSProperties;
+  const stop = (e: React.PointerEvent) => e.stopPropagation();
+
   return (
     <div
       ref={cardRef}
@@ -177,25 +202,28 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
         boxShadow: 'inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fdfdfd, 7px 7px 0 rgba(0,0,0,0.45)',
       }}
     >
-      {/* Title bar — drag handle */}
+      {/* Title bar — drag handle. Double-click restores a minimized window. */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onDoubleClick={() => setView(view === 'minimized' ? 'open' : 'minimized')}
         className="flex items-center justify-between gap-2 px-2 py-1 cursor-grab active:cursor-grabbing touch-none"
         style={{ background: 'linear-gradient(90deg, var(--accent, #e4fe52), #aacb33)' }}
       >
         <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-obsidian truncate">{title}</span>
         <div className="flex items-center gap-1 shrink-0">
-          {['–', '▢', '✕'].map((g, i) => (
-            <span key={i} className="w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none" style={{ background: '#c4c4c4', boxShadow: 'inset -1px -1px 0 #7a7a7a, inset 1px 1px 0 #fdfdfd' }}>{g}</span>
-          ))}
+          <button onPointerDown={stop} onClick={() => setView('minimized')} className={ctrl} style={ctrlStyle} title="Minimize">–</button>
+          <button onPointerDown={stop} onClick={() => setView('open')} className={ctrl} style={ctrlStyle} title="Restore">▢</button>
+          <button onPointerDown={stop} onClick={() => setView('closed')} className={ctrl} style={ctrlStyle} title="Close">✕</button>
         </div>
       </div>
-      {/* Body */}
-      <div className="p-4 space-y-3" style={{ color: '#1a1a1a' }}>
-        {children}
-      </div>
+      {/* Body — hidden when minimized */}
+      {view === 'open' && (
+        <div className="p-4 space-y-3" style={{ color: '#1a1a1a' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -343,7 +371,7 @@ export default function HomePreview() {
 
   return (
     <PageShell>
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
+      <div className="home-cursor min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
         {/* ── HERO ── */}
         <header ref={heroRef} className="relative overflow-hidden border-b min-h-[640px] md:min-h-[680px] flex items-start" style={{ borderColor: 'var(--border-color)' }}>
