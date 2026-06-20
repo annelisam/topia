@@ -11,7 +11,7 @@ import ShareButton from '../../components/ShareButton';
 import { SocialIcon } from '../../components/SocialIcons';
 import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
-import IdentityLayer from '../../components/profile/IdentityLayer';
+import IdentityLayer, { type Stamp } from '../../components/profile/IdentityLayer';
 import EventsLayer from '../../components/profile/EventsLayer';
 import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
@@ -72,6 +72,7 @@ export default function PublicProfilePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hostedEvents, setHostedEvents] = useState<HostedEvent[]>([]);
   const [attendedEvents, setAttendedEvents] = useState<HostedEvent[]>([]);
+  const [stamps, setStamps] = useState<Stamp[]>([]);
   const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]['id']>('identity');
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function PublicProfilePage() {
         setFollowingCount(data.followingCount ?? 0);
         setIsFollowing(data.isFollowing ?? false);
         setIsOwnProfile(data.isOwnProfile ?? false);
+        setStamps(data.stamps ?? []);
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
@@ -186,34 +188,10 @@ export default function PublicProfilePage() {
     status: w.role === 'owner' ? 'LIVE' : w.role === 'world_builder' ? 'ACTIVE' : 'COLLAB',
   })), [sortedWorlds]);
 
-  // Visa stamps derived from worlds + events
-  const stamps = useMemo(() => {
-    const fromWorlds = sortedWorlds.slice(0, 4).map((w, i) => ({
-      type: (i % 3 === 0 ? 'ENTRY' : i % 3 === 1 ? 'EXIT' : 'TRANSIT') as 'ENTRY' | 'EXIT' | 'TRANSIT',
-      world: w.worldTitle.toUpperCase().slice(0, 14),
-      date: memberSince || '—',
-      color: STAMP_COLORS[i % STAMP_COLORS.length],
-      weight: 1 - i * 0.15,
-    }));
-    // Hosted + attended (RSVP'd) events both earn a stamp — dedupe by id so a
-    // host who also RSVP'd their own event isn't double-stamped.
-    const seen = new Set<string>();
-    const eventSources = [...hostedEvents, ...attendedEvents].filter((e) => {
-      if (seen.has(e.id)) return false;
-      seen.add(e.id);
-      return true;
-    });
-    const fromEvents = eventSources.slice(0, 6 - fromWorlds.length).map((e, i) => ({
-      type: 'ENTRY' as const,
-      world: e.eventName.toUpperCase().slice(0, 14),
-      date: e.date ? new Date(e.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '.') : (memberSince || '—'),
-      color: STAMP_COLORS[(fromWorlds.length + i) % STAMP_COLORS.length],
-      weight: 0.7 - i * 0.1,
-    }));
-    return [...fromWorlds, ...fromEvents].slice(0, 6);
-  }, [sortedWorlds, hostedEvents, attendedEvents, memberSince]);
+  // Visa stamps come from the profile API (computeProfileStamps) — earned
+  // milestones across events, worlds, and community.
 
-  // Events count = hosted + attended (RSVP'd), deduped — matches the passport stamps.
+  // Events count = hosted + attended (RSVP'd), deduped.
   const eventCount = useMemo(
     () => new Set([...hostedEvents, ...attendedEvents].map((e) => e.id)).size,
     [hostedEvents, attendedEvents],

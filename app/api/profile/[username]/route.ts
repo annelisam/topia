@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, tools, worldMembers, worlds, follows } from '@/lib/db/schema';
 import { eq, and, inArray, count } from 'drizzle-orm';
+import { computeProfileStamps } from '@/lib/profile/stamps';
 
 export async function GET(
   request: NextRequest,
@@ -102,10 +103,22 @@ export async function GET(
       viewerFollowPromise,
     ]);
 
+    // Passport stamps — earned milestones across events, worlds, community.
+    const stamps = await computeProfileStamps({
+      userId: user.id,
+      createdAt: user.createdAt,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      roleTags: user.roleTags,
+      path: user.path,
+      worldMemberships,
+    });
+
     return NextResponse.json({
       user,
       tools: resolvedTools,
       worldMemberships,
+      stamps,
       followerCount: followerResult?.value ?? 0,
       followingCount: followingResult?.value ?? 0,
       isFollowing: viewerStatus.isFollowing,
