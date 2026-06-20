@@ -242,14 +242,16 @@ export default function HomePreview() {
                 {/* Featured event — image + details column */}
                 {featuredEvent && (
                   <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-3 mb-3 rounded-xl overflow-hidden border" style={card}>
-                    <Link href={`/events/${featuredEvent.slug}`} className="group block relative aspect-[16/10] md:aspect-auto md:min-h-[300px] bg-obsidian overflow-hidden no-underline">
+                    {/* Image fills the column and crops (object-cover) so the
+                        flyer never stretches the row — the details drive height. */}
+                    <Link href={`/events/${featuredEvent.slug}`} className="group block relative aspect-[16/10] md:aspect-auto bg-obsidian overflow-hidden no-underline">
                       {featuredEvent.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={featuredEvent.imageUrl} alt={featuredEvent.eventName} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                        <img src={featuredEvent.imageUrl} alt={featuredEvent.eventName} className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center font-basement font-black text-[40px] uppercase text-bone/15">TOPIA</div>
+                        <div className="absolute inset-0 flex items-center justify-center font-basement font-black text-[40px] uppercase text-bone/15">TOPIA</div>
                       )}
-                      <span className="absolute top-3 left-3 font-mono text-[9px] uppercase tracking-[2px] bg-lime text-obsidian px-2 py-0.5 rounded-sm font-bold">Featured</span>
+                      <span className="absolute top-3 left-3 z-10 font-mono text-[9px] uppercase tracking-[2px] bg-lime text-obsidian px-2 py-0.5 rounded-sm font-bold">Featured</span>
                     </Link>
 
                     <div className="p-5 md:p-6 flex flex-col">
@@ -341,9 +343,13 @@ export default function HomePreview() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center font-basement font-black text-[40px] text-bone/20">{initial}</div>
                         )}
-                        <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
-                          {p.isWorldBuilder && <span className="font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-lime text-obsidian">World Builder</span>}
-                          <PathBadge path={p.path} />
+                        <div className="absolute top-2 left-2">
+                          {/* One badge: the membership-accurate World Builder tag, else the path badge. */}
+                          {p.isWorldBuilder ? (
+                            <span className="font-mono text-[8px] uppercase tracking-[1.5px] px-1.5 py-0.5 rounded-sm font-bold bg-lime text-obsidian">World Builder</span>
+                          ) : (
+                            <PathBadge path={p.path} />
+                          )}
                         </div>
                       </div>
                       <div className="p-2.5">

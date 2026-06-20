@@ -88,50 +88,30 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
             <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No events yet</span>
           </div>
         ) : view === 'grid' ? (
-          /* Gallery — rich event cards */
-          <div className="flex flex-col gap-3 p-3">
+          /* Gallery — compact 2-up cards so more events fit */
+          <div className="grid grid-cols-2 gap-2.5 p-3">
             {rows.map(({ ev, role }) => {
               const chip = dayChip(ev.date);
-              const hosts = ev.hosts ?? [];
               return (
                 <Link key={ev.id} href={`/events/${ev.slug}`} className="group block rounded-lg overflow-hidden border border-bone/[0.08] bg-obsidian no-underline hover:border-bone/20 transition-colors">
-                  <div className="relative aspect-[16/10] overflow-hidden bg-bone/[0.05]">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.05]">
                     {ev.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ev.imageUrl} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                      <img src={ev.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     ) : (
-                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[28px] uppercase text-bone/10">TOPIA</span>
+                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[22px] uppercase text-bone/10">TOPIA</span>
                     )}
                     {/* Date chip */}
-                    <div className="absolute top-3 left-3 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-2 py-1 text-center min-w-[40px]">
-                      <div className="font-basement font-black text-[16px] leading-none text-bone">{chip.day}</div>
-                      <div className="font-mono text-[8px] uppercase tracking-[2px] text-bone/60 mt-0.5">{chip.mon}</div>
+                    <div className="absolute top-2 left-2 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-1.5 py-0.5 text-center min-w-[34px]">
+                      <div className="font-basement font-black text-[13px] leading-none text-bone">{chip.day}</div>
+                      <div className="font-mono text-[7px] uppercase tracking-[1.5px] text-bone/60">{chip.mon}</div>
                     </div>
-                    <span className={`absolute top-3 right-3 ${roleBadge(role)} bg-obsidian/60 backdrop-blur-sm`}>{role}</span>
+                    <span className={`absolute top-2 right-2 ${roleBadge(role)} bg-obsidian/60 backdrop-blur-sm`}>{role}</span>
                   </div>
-                  <div className="p-3">
-                    <h3 className="font-basement font-black text-[clamp(16px,5vw,22px)] uppercase text-bone leading-[0.95] line-clamp-2">{ev.eventName}</h3>
-                    <span className="font-mono text-[10px] text-bone/40 block mt-1.5">{[ev.startTime, ev.city].filter(Boolean).join(' · ') || fmtDate(ev.date)}</span>
-                    <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-bone/[0.06]">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {hosts.length > 0 && (
-                          <div className="flex -space-x-1.5 shrink-0">
-                            {hosts.slice(0, 3).map((h) => (
-                              <span key={h.userId} className="block w-5 h-5 rounded-full overflow-hidden border border-obsidian bg-bone/10" title={h.name || h.username || ''}>
-                                {h.avatarUrl ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="w-full h-full flex items-center justify-center text-[8px] text-bone/40">{(h.name || h.username || '?')[0]?.toUpperCase()}</span>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-bone/50 truncate">{ev.rsvpCount ?? 0} going</span>
-                      </div>
-                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[2px] border border-bone/20 px-3 py-1.5 rounded-sm text-bone/70 group-hover:border-lime group-hover:text-lime transition-colors">View</span>
-                    </div>
+                  <div className="p-2.5">
+                    <h3 className="font-basement font-black text-[13px] uppercase text-bone leading-[0.95] line-clamp-2">{ev.eventName}</h3>
+                    <span className="font-mono text-[9px] text-bone/40 block mt-1 truncate">{[ev.startTime, ev.city].filter(Boolean).join(' · ') || fmtDate(ev.date)}</span>
+                    <span className="font-mono text-[9px] text-bone/30 block mt-0.5">{ev.rsvpCount ?? 0} going</span>
                   </div>
                 </Link>
               );
