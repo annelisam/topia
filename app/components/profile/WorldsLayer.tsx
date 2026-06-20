@@ -7,7 +7,7 @@ const STATUS_STYLE: Record<string, string> = {
   dormant: 'text-bone/40 border-bone/[0.12]',
   active: 'text-lime border-lime/30',
   live: 'text-pink border-pink/40',
-  rising: 'text-blue border-blue/40',
+  rising: 'text-cyan border-cyan/40',
 };
 
 interface WorldItem {

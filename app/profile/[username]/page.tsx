@@ -235,10 +235,10 @@ export default function PublicProfilePage() {
   function renderSection() {
     switch (activeSection) {
       case 'events':    return <EventsLayer config={config} hosted={hostedEvents} attended={attendedEvents} />;
-      case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} isOwnProfile={isOwnProfile} ownerName={profile?.name || profile?.username || ''} />;
+      case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} isOwnProfile={isOwnProfile} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
       case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
-      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} editable={isOwnProfile} storageKey={username} ownerName={profile?.name || profile?.username || ''} />;
+      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} editable={isOwnProfile} storageKey={username} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
     }
   }
 

@@ -111,7 +111,7 @@ export async function GET(
       bio: user.bio,
       roleTags: user.roleTags,
       path: user.path,
-      ownerName: user.name || user.username || 'They',
+      ownerName: user.username ? `@${user.username}` : (user.name || 'They'),
       worldMemberships,
     });
 
