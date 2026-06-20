@@ -34,13 +34,13 @@ interface Props {
   showEndorsed?: boolean;
 }
 
-// Organic scatter — stamps sit at varied heights & angles and overlap, like a
-// real passport page. The strip scrolls sideways as more are earned.
-const BAND_H = 208;
-const STEP = 64;            // px advance per stamp (< stamp width → overlap)
-const SCATTER_Y = [0.46, 0.04, 0.58, 0.20, 0.40, 0.0, 0.6, 0.26, 0.5, 0.12, 0.34, 0.56];
-const JIT_X = [0, -8, 10, -6, 8, -4, 6, -10, 4, -2, 7, -5];
-const ROT = [-8, 6, -5, 9, -4, 7, -9, 4, -6, 8, -3, 6];
+// Random-looking scatter — stamps sit at varied heights & angles in a short
+// band, lightly overlapping like a real passport page. Scrolls sideways.
+const BAND_H = 150;
+const STEP = 84;            // px advance per stamp
+// Deterministic pseudo-random in [0,1) — stable across SSR/CSR (Math.random
+// would cause a hydration mismatch; Math.sin of a constant won't).
+function rng(n: number): number { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
 // 4-point sparkle star fallback emblem (path seals).
 const STAR = 'M50 30 L55 45 L70 50 L55 55 L50 70 L45 55 L30 50 L45 45 Z';
 
@@ -67,25 +67,62 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   const ringOp = 0.7 + stamp.weight * 0.3;
 
   if (stamp.shape === 'seal') {
+    const topia = stamp.emblem === 'topia';
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full">
-        <circle cx="50" cy="50" r="48" fill="#0e0e0e" opacity={0.55} />
-        <circle cx="50" cy="50" r="47" fill="none" stroke={c} strokeWidth="3" opacity={ringOp} />
-        <circle cx="50" cy="50" r="42" fill="none" stroke={c} strokeWidth="1" opacity={ringOp * 0.75} />
-        <circle cx="50" cy="50" r="44.5" fill="none" stroke={c} strokeWidth="1.4" opacity={ringOp * 0.7} strokeDasharray="0.4 2.6" />
+      <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
         <defs>
           <path id={`sealTop-${idKey}`} d="M 50,50 m -33,0 a 33,33 0 1,1 66,0" />
           <path id={`sealBot-${idKey}`} d="M 50,50 m 33,0 a 33,33 0 1,1 -66,0" />
+          {topia && (
+            <>
+              <linearGradient id={`chrome-${idKey}`} x1="0" y1="0" x2="0.9" y2="1">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="22%" stopColor="#c4cad6" />
+                <stop offset="46%" stopColor="#878d9c" />
+                <stop offset="60%" stopColor="#dde1ea" />
+                <stop offset="80%" stopColor="#9aa0af" />
+                <stop offset="100%" stopColor="#f4f6fb" />
+              </linearGradient>
+              <linearGradient id={`holo-${idKey}`} x1="0" y1="0" x2="1" y2="0.35">
+                <stop offset="0%" stopColor="#b9a8ff" />
+                <stop offset="25%" stopColor="#9fe0ff" />
+                <stop offset="50%" stopColor="#a6ffcf" />
+                <stop offset="75%" stopColor="#fff2a6" />
+                <stop offset="100%" stopColor="#ffaedb" />
+              </linearGradient>
+              <radialGradient id={`holoGlow-${idKey}`} cx="0.5" cy="0.45" r="0.55">
+                <stop offset="0%" stopColor="#a6ffe0" stopOpacity="0.32" />
+                <stop offset="55%" stopColor="#b9a8ff" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+              </radialGradient>
+            </>
+          )}
         </defs>
-        <text fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
+        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={topia ? 0.72 : 0.55} />
+        {topia ? (
+          <>
+            <circle cx="50" cy="50" r="41" fill={`url(#holoGlow-${idKey})`} />
+            <circle cx="50" cy="50" r="47.6" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity={0.5} />
+            <circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="3.4" />
+            <circle cx="50" cy="50" r="42.4" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="1.2" opacity={0.85} />
+            <circle cx="50" cy="50" r="44.6" fill="none" stroke={`url(#holo-${idKey})`} strokeWidth="2" opacity={0.6} strokeDasharray="0.6 2.3" />
+          </>
+        ) : (
+          <>
+            <circle cx="50" cy="50" r="47" fill="none" stroke={c} strokeWidth="3" opacity={ringOp} />
+            <circle cx="50" cy="50" r="42" fill="none" stroke={c} strokeWidth="1" opacity={ringOp * 0.75} />
+            <circle cx="50" cy="50" r="44.5" fill="none" stroke={c} strokeWidth="1.4" opacity={ringOp * 0.7} strokeDasharray="0.4 2.6" />
+          </>
+        )}
+        <text fill={topia ? `url(#chrome-${idKey})` : c} opacity={topia ? 1 : 0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
           <textPath href={`#sealTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
         </text>
-        <text fill={c} opacity={0.75} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
+        <text fill={topia ? `url(#chrome-${idKey})` : c} opacity={topia ? 0.92 : 0.75} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
           <textPath href={`#sealBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} •`}</textPath>
         </text>
-        {stamp.emblem === 'topia' ? (
+        {topia ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <image href="/brand/topia-mark.png" x="19" y="29.5" width="62" height="41" preserveAspectRatio="xMidYMid meet" opacity={0.9} />
+          <image href="/brand/topia-mark.png" x="18.5" y="29" width="63" height="42" preserveAspectRatio="xMidYMid meet" opacity={1} />
         ) : (
           <path d={STAR} fill="none" stroke={c} strokeWidth="2.4" opacity={0.9} transform="translate(15 15) scale(0.7)" />
         )}
@@ -190,19 +227,21 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
           </div>
         ) : (
           <div className="relative z-10 overflow-x-auto overflow-y-hidden" style={{ scrollbarWidth: 'thin' }}>
-            <div className="relative" style={{ height: BAND_H, width: (stamps.length - 1) * STEP + 150 }}>
+            <div className="relative" style={{ height: BAND_H, width: (stamps.length - 1) * STEP + 130 }}>
               {stamps.map((stamp, i) => {
-                const size = 104 + stamp.weight * 24;
+                const size = 84 + stamp.weight * 18;
                 const isRect = stamp.shape === 'rect';
                 const stampH = isRect ? size * 0.56 : size;
-                const top = SCATTER_Y[i % SCATTER_Y.length] * (BAND_H - stampH);
+                const jx = (rng(i * 2 + 1) - 0.5) * 30;
+                const top = rng(i * 2 + 9) * (BAND_H - stampH);
+                const rot = (rng(i * 3 + 4) - 0.5) * 28;
                 return (
                   <button
                     key={i}
                     onClick={() => setSelected(stamp)}
                     title={`${stamp.title} — ${stamp.date}`}
-                    className="absolute group cursor-pointer transition-transform duration-300 hover:!z-50 hover:scale-[1.12] bg-transparent border-none p-0"
-                    style={{ left: `${i * STEP + JIT_X[i % JIT_X.length]}px`, top: `${top}px`, transform: `rotate(${ROT[i % ROT.length]}deg)`, width: `${size}px`, height: `${stampH}px`, zIndex: i + 1 }}
+                    className="absolute group cursor-pointer transition-transform duration-300 hover:!z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
+                    style={{ left: `${i * STEP + jx}px`, top: `${top}px`, transform: `rotate(${rot}deg)`, width: `${size}px`, height: `${stampH}px`, zIndex: Math.floor(rng(i * 5 + 2) * 20) + 1 }}
                   >
                     <StampSvg stamp={stamp} idKey={String(i)} config={config} />
                   </button>
