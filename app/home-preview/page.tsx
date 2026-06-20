@@ -68,7 +68,7 @@ function CyclingHeadline() {
   }, []);
   return (
     <span className="inline-flex items-baseline">
-      <GlitchType key={i} text={HERO_PHRASES[i]} speed={24} />
+      <GlitchType key={i} text={HERO_PHRASES[i]} speed={24} flicker={false} />
       <span className="ml-1.5 w-[3px] h-[0.8em] bg-lime inline-block self-center animate-pulse" />
     </span>
   );
@@ -78,9 +78,11 @@ function CyclingHeadline() {
 function GridGlobe() {
   const meridians = Array.from({ length: 30 });
   const latitudes = [0, 10, 20, 30, 40, 50, 60, 70, 80, -10, -20, -30, -40, -50, -60, -70, -80];
-  const line = '1px solid rgba(150,150,150,0.5)';
+  const line = '1px solid rgba(140,140,140,0.62)';
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
+      {/* Dark-grey sphere body, so the globe reads solid (not just lines) */}
+      <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(120,120,120,0.32), rgba(60,60,60,0.20) 58%, rgba(20,20,20,0) 80%)' }} />
       <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
         {meridians.map((_, i) => (
           <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: line, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
@@ -97,18 +99,19 @@ function GridGlobe() {
   );
 }
 
-// Old-school draggable window. Drag by the title bar; stays inside `boundsRef`.
+// Old-school draggable window. Drag by the title bar (or the file icon when
+// closed); stays inside `boundsRef` and clear of [data-keepclear] zones.
 function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefObject<HTMLElement | null>; title: string; children: React.ReactNode }) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const elRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [view, setView] = useState<'open' | 'minimized' | 'closed'>('open');
+  const [closed, setClosed] = useState(false);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
   // Clamp to bounds, then push out of any [data-keepclear] zone (header text,
-  // scroll cue) so the popup can never cover them.
+  // scroll cue) so the window/icon can never cover them.
   function clamp(x: number, y: number) {
     const b = boundsRef.current?.getBoundingClientRect();
-    const c = cardRef.current?.getBoundingClientRect();
+    const c = elRef.current?.getBoundingClientRect();
     if (!b || !c) return { x, y };
     const maxX = Math.max(0, b.width - c.width);
     const maxY = Math.max(0, b.height - c.height);
@@ -120,12 +123,11 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       const ox = Math.min(nx + c.width, rr) - Math.max(nx, rx);
       const oy = Math.min(ny + c.height, rb) - Math.max(ny, ry);
       if (ox > 0 && oy > 0) {
-        // Push out by the smallest separation that fully clears the zone.
         const pushes = [
-          { axis: 0, d: rr - nx },                // right: left edge → zone.right
-          { axis: 0, d: -(nx + c.width - rx) },   // left: right edge → zone.left
-          { axis: 1, d: rb - ny },                // down: top edge → zone.bottom
-          { axis: 1, d: -(ny + c.height - ry) },  // up: bottom edge → zone.top
+          { axis: 0, d: rr - nx },
+          { axis: 0, d: -(nx + c.width - rx) },
+          { axis: 1, d: rb - ny },
+          { axis: 1, d: -(ny + c.height - ry) },
         ].sort((a, b) => Math.abs(a.d) - Math.abs(b.d));
         const best = pushes[0];
         if (best.axis === 0) nx += best.d; else ny += best.d;
@@ -139,7 +141,7 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
   useEffect(() => {
     const place = () => {
       const b = boundsRef.current?.getBoundingClientRect();
-      const c = cardRef.current?.getBoundingClientRect();
+      const c = elRef.current?.getBoundingClientRect();
       if (!b || !c) return;
       const mobile = b.width < 768;
       const x = mobile ? Math.max(16, (b.width - c.width) / 2) : Math.max(16, b.width - c.width - 40);
@@ -154,6 +156,13 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boundsRef]);
 
+  // Re-clamp when toggling window/icon (their sizes differ).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setPos((p) => (p ? clamp(p.x, p.y) : p)));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closed]);
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (!pos) return;
     const b = boundsRef.current!.getBoundingClientRect();
@@ -167,33 +176,33 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
   };
   const onPointerUp = () => { drag.current = null; };
 
-  // Closed → a desktop "text file" icon; double-click reopens the window.
-  if (view === 'closed') {
+  // Closed → a draggable desktop "text file" icon; double-click reopens.
+  if (closed) {
     return (
-      <button
-        onDoubleClick={() => setView('open')}
+      <div
+        ref={elRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onDoubleClick={() => setClosed(false)}
         title="Double-click to open"
-        className="absolute z-20 flex flex-col items-center gap-1 w-[78px] p-1.5 bg-transparent border-none cursor-pointer group"
+        className="absolute z-20 flex flex-col items-center gap-1 w-[78px] p-1.5 cursor-grab active:cursor-grabbing touch-none select-none group"
         style={{ left: pos?.x ?? 16, top: pos?.y ?? 16, visibility: pos ? 'visible' : 'hidden' }}
       >
-        <span className="relative block w-9 h-11" style={{ background: '#e8e4dc', boxShadow: 'inset -1px -1px 0 #9a9a9a, inset 1px 1px 0 #ffffff', clipPath: 'polygon(0 0, 70% 0, 100% 26%, 100% 100%, 0 100%)' }}>
+        <span className="relative block w-9 h-11 pointer-events-none" style={{ background: '#e8e4dc', boxShadow: 'inset -1px -1px 0 #9a9a9a, inset 1px 1px 0 #ffffff', clipPath: 'polygon(0 0, 70% 0, 100% 26%, 100% 100%, 0 100%)' }}>
           <span className="absolute" style={{ top: 0, right: 0, width: '30%', height: '26%', background: '#bcb8ac' }} />
           <span className="absolute left-1.5 right-1.5 top-5 h-px bg-obsidian/30" />
           <span className="absolute left-1.5 right-1.5 top-6 h-px bg-obsidian/30" />
           <span className="absolute left-1.5 right-2.5 top-7 h-px bg-obsidian/30" />
         </span>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-bone px-1 rounded-sm bg-obsidian/70 group-hover:bg-lime group-hover:text-obsidian transition-colors">{title}</span>
-      </button>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-bone px-1 rounded-sm bg-obsidian/70 group-hover:bg-lime group-hover:text-obsidian transition-colors pointer-events-none">{title}</span>
+      </div>
     );
   }
 
-  const ctrl = 'w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none cursor-pointer';
-  const ctrlStyle = { background: '#c4c4c4', boxShadow: 'inset -1px -1px 0 #7a7a7a, inset 1px 1px 0 #fdfdfd' } as React.CSSProperties;
-  const stop = (e: React.PointerEvent) => e.stopPropagation();
-
   return (
     <div
-      ref={cardRef}
+      ref={elRef}
       className="absolute z-20 select-none"
       style={{
         left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden',
@@ -202,28 +211,26 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
         boxShadow: 'inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fdfdfd, 7px 7px 0 rgba(0,0,0,0.45)',
       }}
     >
-      {/* Title bar — drag handle. Double-click restores a minimized window. */}
+      {/* Title bar — drag handle */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onDoubleClick={() => setView(view === 'minimized' ? 'open' : 'minimized')}
         className="flex items-center justify-between gap-2 px-2 py-1 cursor-grab active:cursor-grabbing touch-none"
         style={{ background: 'linear-gradient(90deg, var(--accent, #e4fe52), #aacb33)' }}
       >
         <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-obsidian truncate">{title}</span>
-        <div className="flex items-center gap-1 shrink-0">
-          <button onPointerDown={stop} onClick={() => setView('minimized')} className={ctrl} style={ctrlStyle} title="Minimize">–</button>
-          <button onPointerDown={stop} onClick={() => setView('open')} className={ctrl} style={ctrlStyle} title="Restore">▢</button>
-          <button onPointerDown={stop} onClick={() => setView('closed')} className={ctrl} style={ctrlStyle} title="Close">✕</button>
-        </div>
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setClosed(true)}
+          className="w-4 h-4 flex items-center justify-center text-[9px] text-obsidian font-bold leading-none cursor-pointer shrink-0"
+          style={{ background: '#c4c4c4', boxShadow: 'inset -1px -1px 0 #7a7a7a, inset 1px 1px 0 #fdfdfd' }}
+          title="Close"
+        >✕</button>
       </div>
-      {/* Body — hidden when minimized */}
-      {view === 'open' && (
-        <div className="p-4 space-y-3" style={{ color: '#1a1a1a' }}>
-          {children}
-        </div>
-      )}
+      <div className="p-4 space-y-3" style={{ color: '#1a1a1a' }}>
+        {children}
+      </div>
     </div>
   );
 }
