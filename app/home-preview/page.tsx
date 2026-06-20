@@ -78,20 +78,22 @@ function CyclingHeadline() {
 function GridGlobe() {
   const meridians = Array.from({ length: 30 });
   const latitudes = [0, 10, 20, 30, 40, 50, 60, 70, 80, -10, -20, -30, -40, -50, -60, -70, -80];
-  const line = '1px solid rgba(140,140,140,0.62)';
+  // Vertical meridians are the prominent lines; horizontal latitudes stay faint.
+  const meridianLine = '1px solid rgba(170,170,170,0.4)';
+  const latitudeLine = '1px solid rgba(120,120,120,0.14)';
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
-      {/* Dark-grey sphere body, so the globe reads solid (not just lines) */}
-      <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(120,120,120,0.32), rgba(60,60,60,0.20) 58%, rgba(20,20,20,0) 80%)' }} />
+      {/* Faint dark-grey sphere body */}
+      <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(80,80,80,0.16), rgba(35,35,35,0.07) 60%, transparent 80%)' }} />
       <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
         {meridians.map((_, i) => (
-          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: line, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
+          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: meridianLine, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
         ))}
         {latitudes.map((deg, i) => {
           const r = Math.cos((deg * Math.PI) / 180);
           const y = Math.sin((deg * Math.PI) / 180);
           return (
-            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: line }} />
+            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: latitudeLine }} />
           );
         })}
       </div>
@@ -387,14 +389,17 @@ export default function HomePreview() {
           <GridGlobe />
 
           <div className="relative z-10 max-w-[1200px] w-full mx-auto px-4 md:px-8 pt-6 md:pt-24 pb-28">
+            {/* Kicker + wordmark — fully static, isolated from the headline's
+                reflow so they never repaint/shimmer while it cycles. */}
             <div data-keepclear className="inline-block max-w-full align-top">
               <span className="font-mono text-[12px] uppercase tracking-[4px] opacity-40 block mb-4" style={txt}>topia // welcome to beta</span>
-              <h1 className="group font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase cursor-default select-none" style={txt}>
-                TOPIA<span className="text-lime inline-block animate-pulse group-hover:animate-none group-hover:[transform:translateY(-0.08em)] transition-transform">.</span>
+              <h1 className="font-basement font-black text-[clamp(48px,11vw,128px)] leading-[0.82] uppercase select-none" style={txt}>
+                TOPIA<span style={{ color: 'var(--accent, #e4fe52)' }}>.</span>
               </h1>
-              <div className="font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-lime" style={{ minHeight: '1.2em' }}>
-                <CyclingHeadline />
-              </div>
+            </div>
+            {/* The only glitching element — the lime cycling tagline. */}
+            <div data-keepclear className="block w-fit max-w-full font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-lime" style={{ minHeight: '1.2em' }}>
+              <CyclingHeadline />
             </div>
           </div>
 
