@@ -74,40 +74,104 @@ function CyclingHeadline() {
   );
 }
 
-// Rotating CSS wireframe globe — pure transforms, decorative hero background.
-// Kept deliberately light: ~14 meridians with backface-culling (only the front
-// half ever paints) + 9 latitude rings, promoted to its own compositor layer so
-// the spin never repaints the hero text on top of it.
-const GLOBE_MERIDIANS = 14;
-const GLOBE_LATITUDES = [0, 22, 44, 66, -22, -44, -66];
+// ── Wireframe globe — the SAME canvas lat/long grid the world pages use
+// (app/components/WorldGlobe.tsx), just darker + more opaque and slowly
+// auto-rotating instead of drag-driven. Decorative hero background only.
+function rotateGlobePoint(p: { x: number; y: number; z: number }, rx: number, ry: number) {
+  const x = p.x * Math.cos(ry) - p.z * Math.sin(ry);
+  const z = p.x * Math.sin(ry) + p.z * Math.cos(ry);
+  return { x, y: p.y * Math.cos(rx) - z * Math.sin(rx), z: p.y * Math.sin(rx) + z * Math.cos(rx) };
+}
+function globeS2C(theta: number, phi: number, r: number) {
+  return { x: r * Math.sin(phi) * Math.cos(theta), y: r * Math.cos(phi), z: r * Math.sin(phi) * Math.sin(theta) };
+}
 function GridGlobe() {
-  // Even grid — meridians and latitudes share one color and opacity.
-  const gridLine = '1px solid rgba(150,150,150,0.3)';
-  // Spin by default; hold still if the visitor prefers reduced motion.
-  const [spin, setSpin] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => setSpin(!mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const DENSITY = 10; // degrees between grid lines — matches WorldGlobe
+    const STEP = 4;     // sampling step for smooth curves
+    // Darker, more opaque grey than the world globe's depth fade.
+    const R = 150, Gc = 150, B = 150;
+    const alpha = (zf: number) => 0.12 + zf * 0.46; // ~0.12 (back) → ~0.58 (front)
+
+    let raf = 0;
+    let ry = 0;
+    const rx = 0.32; // slight tilt, like the world globe's resting rotation
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (reduce) draw();
+    };
+
+    const draw = () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) * 0.46;
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineWidth = 1;
+
+      // Latitude lines
+      for (let lat = DENSITY; lat < 180; lat += DENSITY) {
+        const phi = (lat * Math.PI) / 180;
+        ctx.beginPath();
+        for (let lon = 0; lon <= 360; lon += STEP) {
+          const p = rotateGlobePoint(globeS2C((lon * Math.PI) / 180, phi, radius), rx, ry);
+          if (lon === 0) ctx.moveTo(cx + p.x, cy - p.y);
+          else ctx.lineTo(cx + p.x, cy - p.y);
+        }
+        const tp = rotateGlobePoint(globeS2C(0, phi, radius), rx, ry);
+        ctx.strokeStyle = `rgba(${R},${Gc},${B},${alpha((tp.z + radius) / (2 * radius))})`;
+        ctx.stroke();
+      }
+
+      // Longitude lines
+      for (let lon = 0; lon < 360; lon += DENSITY) {
+        const theta = (lon * Math.PI) / 180;
+        ctx.beginPath();
+        for (let lat = 0; lat <= 180; lat += STEP) {
+          const p = rotateGlobePoint(globeS2C(theta, (lat * Math.PI) / 180, radius), rx, ry);
+          if (lat === 0) ctx.moveTo(cx + p.x, cy - p.y);
+          else ctx.lineTo(cx + p.x, cy - p.y);
+        }
+        const tp = rotateGlobePoint(globeS2C(theta, Math.PI / 2, radius), rx, ry);
+        ctx.strokeStyle = `rgba(${R},${Gc},${B},${alpha((tp.z + radius) / (2 * radius))})`;
+        ctx.stroke();
+      }
+
+      if (!reduce) {
+        ry += 0.0016; // slow auto-rotation
+        raf = requestAnimationFrame(draw);
+      }
+    };
+
+    resize();
+    draw();
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, []);
+
   return (
-    <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px', transform: 'translateZ(0)' }}>
-      {/* Faint dark-grey sphere body */}
-      <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(80,80,80,0.16), rgba(35,35,35,0.07) 60%, transparent 80%)' }} />
-      <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', willChange: 'transform', animation: spin ? 'globeSpin 90s linear infinite' : undefined }}>
-        {Array.from({ length: GLOBE_MERIDIANS }).map((_, i) => (
-          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: gridLine, transform: `rotateY(${(i * 180) / GLOBE_MERIDIANS}deg)`, backfaceVisibility: 'hidden' }} />
-        ))}
-        {GLOBE_LATITUDES.map((deg, i) => {
-          const r = Math.cos((deg * Math.PI) / 180);
-          const y = Math.sin((deg * Math.PI) / 180);
-          return (
-            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: gridLine }} />
-          );
-        })}
-      </div>
+    <div ref={containerRef} aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(820px,120vw)] aspect-square">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
     </div>
   );
 }
