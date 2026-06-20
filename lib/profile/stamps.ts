@@ -193,13 +193,11 @@ export async function computeProfileStamps(opts: {
     if (e) e.followsMe = true;
     else conns.set(f.id, { name: f.name, username: f.username, avatarUrl: f.avatarUrl, at: f.at, iFollow: false, followsMe: true });
   }
-  [...conns.values()].filter((p) => p.username).slice(0, 12).forEach((p) => {
-    const who = p.name || `@${p.username}`;
-    const rel = p.iFollow && p.followsMe ? 'You and @' + p.username + ' follow each other.'
-      : p.iFollow ? `You follow @${p.username}.`
-      : `@${p.username} follows you.`;
-    add({ label: (p.name || p.username || '').toUpperCase().slice(0, 14), caption: 'ORBIT', date: ym(p.at), color: 'magenta', shape: 'circle', rarity: 'common',
-      title: who, description: rel, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
+  // Only mutual follows earn an Orbit stamp. Subtle, mixed colors.
+  const ORBIT_COLORS = ['dust', 'slate', 'sage', 'mauveGrey', 'clayGrey'];
+  [...conns.values()].filter((p) => p.username && p.iFollow && p.followsMe).slice(0, 12).forEach((p, i) => {
+    add({ label: (p.name || p.username || '').toUpperCase().slice(0, 12), caption: 'ORBIT', date: ym(p.at), color: ORBIT_COLORS[i % ORBIT_COLORS.length], shape: 'rect', rarity: 'common',
+      title: p.name || `@${p.username}`, description: `You and @${p.username} follow each other.`, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
   });
 
   // Rarest first, then by insertion order (stable).

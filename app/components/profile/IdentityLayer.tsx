@@ -194,9 +194,26 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
           {isRare && <rect x="0.5" y="0.5" width="119" height="54" rx="4" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
           <rect x="2" y="2" width="116" height="51" rx="3" fill="none" stroke={c} strokeWidth={isRare ? 2.6 : 2.2} opacity={ringOp} />
           <rect x="6" y="6" width="108" height="43" rx="1" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.6} />
-          <text x="60" y="18" textAnchor="middle" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '3px', textTransform: 'uppercase' }}>{stamp.caption}</text>
-          <text x="60" y="32" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>{stamp.label}</text>
-          <text x="60" y="44" textAnchor="middle" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px' }}>{stamp.date}</text>
+          {stamp.avatarUrl ? (
+            <>
+              {/* Connection stamp — atom mark + name */}
+              <g transform="translate(27 27.5)" stroke={c} fill="none" strokeWidth="1.4" opacity={ringOp}>
+                <ellipse rx="11" ry="4.2" />
+                <ellipse rx="11" ry="4.2" transform="rotate(60)" />
+                <ellipse rx="11" ry="4.2" transform="rotate(120)" />
+                <circle r="1.9" fill={c} stroke="none" />
+              </g>
+              <text x="47" y="22" textAnchor="start" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>{stamp.caption}</text>
+              <text x="47" y="33" textAnchor="start" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '7.5px', fontWeight: 'bold', letterSpacing: '0.5px' }}>{stamp.label}</text>
+              <text x="47" y="43" textAnchor="start" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5.5px' }}>{stamp.date}</text>
+            </>
+          ) : (
+            <>
+              <text x="60" y="18" textAnchor="middle" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '3px', textTransform: 'uppercase' }}>{stamp.caption}</text>
+              <text x="60" y="32" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>{stamp.label}</text>
+              <text x="60" y="44" textAnchor="middle" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px' }}>{stamp.date}</text>
+            </>
+          )}
         </g>
       </svg>
     );
@@ -208,7 +225,6 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
         <path id={`arcTop-${idKey}`} d="M 50,50 m -34,0 a 34,34 0 1,1 68,0" />
         <path id={`arcBot-${idKey}`} d="M 50,50 m 34,0 a 34,34 0 1,1 -68,0" />
         {!branded && <InkFilter idKey={idKey} seed={seed} />}
-        {stamp.avatarUrl && <clipPath id={`av-${idKey}`}><circle cx="50" cy="50" r="20" /></clipPath>}
       </defs>
       <g filter={inkF} opacity={inkOp}>
         {isLegend && <circle cx="50" cy="50" r="46" fill={c} opacity={0.1} />}
@@ -225,15 +241,8 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
         <text fill={c} opacity={0.55} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
           <textPath href={`#arcBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} • TOPIA •`}</textPath>
         </text>
-        {!stamp.avatarUrl && <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>}
+        <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>
       </g>
-      {stamp.avatarUrl && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <image href={stamp.avatarUrl} x="30" y="30" width="40" height="40" clipPath={`url(#av-${idKey})`} preserveAspectRatio="xMidYMid slice" />
-          <circle cx="50" cy="50" r="20" fill="none" stroke={c} strokeWidth="1.2" opacity={0.7} />
-        </>
-      )}
     </svg>
   );
 }
