@@ -196,16 +196,18 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
           <rect x="6" y="6" width="108" height="43" rx="1" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.6} />
           {stamp.avatarUrl ? (
             <>
-              {/* Connection stamp — atom mark + name */}
-              <g transform="translate(27 27.5)" stroke={c} fill="none" strokeWidth="1.4" opacity={ringOp}>
-                <ellipse rx="11" ry="4.2" />
-                <ellipse rx="11" ry="4.2" transform="rotate(60)" />
-                <ellipse rx="11" ry="4.2" transform="rotate(120)" />
-                <circle r="1.9" fill={c} stroke="none" />
-              </g>
-              <text x="47" y="22" textAnchor="start" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>{stamp.caption}</text>
-              <text x="47" y="33" textAnchor="start" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '7.5px', fontWeight: 'bold', letterSpacing: '0.5px' }}>{stamp.label}</text>
-              <text x="47" y="43" textAnchor="start" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5.5px' }}>{stamp.date}</text>
+              {/* Connection stamp — name centered, everything else small around it */}
+              {[17, 103].map((ax) => (
+                <g key={ax} transform={`translate(${ax} 27.5)`} stroke={c} fill="none" strokeWidth="1" opacity={ringOp * 0.8}>
+                  <ellipse rx="6" ry="2.3" />
+                  <ellipse rx="6" ry="2.3" transform="rotate(60)" />
+                  <ellipse rx="6" ry="2.3" transform="rotate(120)" />
+                  <circle r="1.1" fill={c} stroke="none" />
+                </g>
+              ))}
+              <text x="60" y="14" textAnchor="middle" fill={c} opacity={0.65} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '3px', textTransform: 'uppercase' }}>{stamp.caption}</text>
+              <text x="60" y="32" textAnchor="middle" fill={c} opacity={0.97} style={{ fontFamily: "'Space Mono', monospace", fontSize: '9px', fontWeight: 'bold', letterSpacing: '0.5px' }}>{stamp.label}</text>
+              <text x="60" y="45" textAnchor="middle" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5.5px', letterSpacing: '1px' }}>{stamp.date}</text>
             </>
           ) : (
             <>
