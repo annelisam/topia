@@ -68,18 +68,27 @@ function layoutStamps(stamps: Stamp[], areaW: number) {
   });
 }
 
-// Aged-ink versions of the brand colors — deeper and a touch more saturated
-// than pastel so they read like real passport-stamp ink. Silver (TOPIA) stays.
-const STAMP_INK: Record<string, string> = {
-  lime: '#b39433',   // ochre / aged gold
-  blue: '#48619e',   // ink blue
-  pink: '#a85565',   // dusty rose-red
-  orange: '#b65f37', // faded rust
-  green: '#3f8a5f',  // faded forest
-};
+// Stamp colors come straight from the TOPIA brand palette; the inky/aged look
+// comes from reduced opacity + a distress texture at render time (see StampSvg).
 function inkColor(color: string, fallback: string): string {
-  if (color === 'silver') return COLOR_HEX.silver;
-  return STAMP_INK[color] || COLOR_HEX[color] || fallback;
+  return COLOR_HEX[color] || fallback;
+}
+
+// TOPIA logo (logo-vector.svg) as a path so it can be filled any color.
+const TOPIA_LOGO_VIEWBOX = '0 0 468 309';
+const TOPIA_LOGO_PATH = 'M248.244 0L249.567 0.534218C253.772 5.33588 268.237 51.6617 271.697 60.619C284.721 62.5024 301.944 69.6949 312.074 78.5385C334.862 70.9857 439.759 43.3727 459.298 46.3637C461.484 46.6985 462.317 47.3396 463.571 49.0776C465.702 60.2407 418.051 96.8812 407.934 104.568C398.897 111.44 364.575 134.502 361.352 143.426C360.265 146.449 361.346 149.374 363.035 151.895C367.19 158.093 376.047 165.05 381.599 170.415C393.226 181.651 464.838 248.37 466.894 253.53C467.503 255.059 467.372 255.385 466.745 256.79C464.751 257.837 462.31 257.453 460.273 256.646C447.845 251.725 434.926 245.672 422.753 240.223L344.023 204.894C333.831 200.33 316.223 191.852 306.099 189.27C293.771 205.447 277.044 216.059 259.418 225.553C262.722 206.006 266.939 198.44 280.616 183.724C253.176 201.589 251.517 218.376 246.822 248.511L240.052 290.743C239.381 294.816 238.307 307.771 233.965 308.234C229.102 305.491 216.287 266.833 213.231 258.28C211.027 251.366 208.603 244.524 205.962 237.765C190.337 237.905 177.772 234.302 163.662 228.192C150.793 231.326 138.046 235.939 125.301 239.61C107.921 244.617 22.5531 267.918 11.5262 261.181C10.399 260.492 9.91204 259.752 9.6754 258.429C7.76243 247.734 60.1691 206.796 70.5041 198.825C79.5652 191.839 97.6129 180.372 103.89 171.683C106.356 168.27 107.214 164.968 105.426 161.031C101.754 152.946 89.7704 143.608 83.1539 137.198L35.7116 91.749C29.2976 85.7031 1.00058 60.5289 0 54.5035C1.84713 51.5213 5.91839 52.8537 8.69903 54.0432C54.5271 73.6443 99.6694 95.0959 145.538 114.571C166.759 87.3145 183.573 75.3569 217.473 64.2429C220.258 63.3298 224.912 61.8744 227.492 63.2291C227.084 64.5845 226.105 66.0362 224.718 66.4996C205.103 73.0791 184.079 82.0028 170.459 98.2129C162.061 108.208 164.898 116.703 177.611 118.819C188.237 120.588 193.362 118.159 203.182 116.633L203.824 117.256L203.017 119.542L203.641 119.496L203.042 119.552L203.057 119.215L204.14 119.187C218.667 109.653 225.494 99.9361 231.642 83.452C237.108 68.8023 241.375 9.82322 247.915 0.464021L248.244 0ZM127.123 170.093C115.992 179.188 104.264 188.198 95.9739 199.982C93.7969 202.864 91.6573 205.924 92.3212 209.741C92.6628 211.705 93.7932 213.388 95.449 214.493C105.763 221.372 141.135 213.987 152.546 211.191C177.85 204.991 202.285 196.759 226.506 187.192C264.368 172.237 351.352 131.884 371.972 97.5477C373.482 95.0332 374.438 92.2019 375.419 89.4482C369.854 79.3243 362.37 81.1984 352.097 81.3823C343.178 81.6637 327.813 85.1615 318.664 87.0356C321.999 94.7953 331.85 115.583 328.968 124.298C327.819 127.766 315.478 134.659 311.602 136.988C269.119 162.33 223.691 182.369 176.333 196.657C164.044 200.304 149.084 203.651 136.324 203.945C129.054 187.856 129.113 187.892 127.123 170.093ZM135.125 166.47C140.35 159.41 159.48 132.169 152.141 124.272C150.467 123.501 150.138 123.303 148.314 123.174C138.823 130.001 128.168 155.269 132.383 166.421L133.306 167.331C134.698 167.072 134.124 167.376 135.125 166.47ZM295.857 79.5722C295.137 73.4058 279.032 67.3009 273.833 65.3511C278.374 76.6608 282.609 81.8463 295.857 79.5722Z';
+
+// Distress texture so stamp ink reads aged/mottled (not bright/flat). Reused
+// per stamp; TOPIA-branded stamps skip it.
+function InkFilter({ idKey, seed }: { idKey: string; seed: number }) {
+  return (
+    <filter id={`ink-${idKey}`} x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.45 0.6" numOctaves="2" seed={seed} result="n" />
+      {/* white RGB + mottled alpha so the multiply only varies opacity (keeps the color) */}
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.45 0 0 0 0.62" result="a" />
+      <feComposite in="SourceGraphic" in2="a" operator="arithmetic" k1="1" k2="0" k3="0" k4="0" />
+    </filter>
+  );
 }
 
 // One stamp's SVG — reused in the strip and the detail modal.
@@ -89,21 +98,25 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   const isRare = stamp.rarity !== 'common';
   const isLegend = stamp.rarity === 'legendary';
   const ringOp = 0.7 + stamp.weight * 0.3;
+  const branded = stamp.emblem === 'topia';                  // TOPIA-branded → full color, no texture
+  const inkF = branded ? undefined : `url(#ink-${idKey})`;
+  const inkOp = branded ? 1 : 0.94;                           // slightly opaque so it isn't too bright
+  const seed = (Number(idKey) || 7) % 90;
+
+  const topiaEmblem = (fill: string) => (
+    <svg x="19" y="33.5" width="62" height="40" viewBox={TOPIA_LOGO_VIEWBOX} preserveAspectRatio="xMidYMid meet">
+      <path d={TOPIA_LOGO_PATH} fill={fill} />
+    </svg>
+  );
 
   if (stamp.shape === 'seal') {
-    const topia = stamp.emblem === 'topia';
-    const chrome = topia && stamp.color === 'silver'; // only the TOPIA member seal is metallic
+    const chrome = branded && stamp.color === 'silver'; // only the TOPIA member seal is metallic
     return (
       <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
         <defs>
           <path id={`sealTop-${idKey}`} d="M 50,50 m -33,0 a 33,33 0 1,1 66,0" />
           <path id={`sealBot-${idKey}`} d="M 50,50 m 33,0 a 33,33 0 1,1 -66,0" />
-          {topia && (
-            <mask id={`logo-${idKey}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <image href="/brand/topia-mark.png" x="18.5" y="29" width="63" height="42" preserveAspectRatio="xMidYMid meet" />
-            </mask>
-          )}
+          {!branded && <InkFilter idKey={idKey} seed={seed} />}
           {chrome && (
             <>
               <linearGradient id={`chrome-${idKey}`} x1="0" y1="0" x2="0.9" y2="1">
@@ -129,33 +142,33 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
             </>
           )}
         </defs>
-        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={chrome ? 0.72 : 0.55} />
-        {chrome ? (
-          <>
-            <circle cx="50" cy="50" r="41" fill={`url(#holoGlow-${idKey})`} />
-            <circle cx="50" cy="50" r="47.6" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity={0.5} />
-            <circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="3.4" />
-            <circle cx="50" cy="50" r="42.4" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="1.2" opacity={0.85} />
-            <circle cx="50" cy="50" r="44.6" fill="none" stroke={`url(#holo-${idKey})`} strokeWidth="2" opacity={0.6} strokeDasharray="0.6 2.3" />
-          </>
-        ) : (
-          <>
-            <circle cx="50" cy="50" r="47" fill="none" stroke={c} strokeWidth="3" opacity={ringOp} />
-            <circle cx="50" cy="50" r="42" fill="none" stroke={c} strokeWidth="1" opacity={ringOp * 0.75} />
-            <circle cx="50" cy="50" r="44.5" fill="none" stroke={c} strokeWidth="1.4" opacity={ringOp * 0.7} strokeDasharray="0.4 2.6" />
-          </>
-        )}
-        <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 1 : 0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
-          <textPath href={`#sealTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
-        </text>
-        <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 0.92 : 0.8} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
-          <textPath href={`#sealBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} •`}</textPath>
-        </text>
-        {topia ? (
-          <rect x="17" y="27" width="66" height="46" fill={chrome ? `url(#chrome-${idKey})` : c} mask={`url(#logo-${idKey})`} />
-        ) : (
-          <path d={STAR} fill="none" stroke={c} strokeWidth="2.4" opacity={0.9} transform="translate(15 15) scale(0.7)" />
-        )}
+        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={chrome ? 0.72 : 0.5} />
+        <g filter={inkF} opacity={inkOp}>
+          {chrome ? (
+            <>
+              <circle cx="50" cy="50" r="41" fill={`url(#holoGlow-${idKey})`} />
+              <circle cx="50" cy="50" r="47.6" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity={0.5} />
+              <circle cx="50" cy="50" r="46.5" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="3.4" />
+              <circle cx="50" cy="50" r="42.4" fill="none" stroke={`url(#chrome-${idKey})`} strokeWidth="1.2" opacity={0.85} />
+              <circle cx="50" cy="50" r="44.6" fill="none" stroke={`url(#holo-${idKey})`} strokeWidth="2" opacity={0.6} strokeDasharray="0.6 2.3" />
+            </>
+          ) : (
+            <>
+              <circle cx="50" cy="50" r="47" fill="none" stroke={c} strokeWidth="3" opacity={ringOp} />
+              <circle cx="50" cy="50" r="42" fill="none" stroke={c} strokeWidth="1" opacity={ringOp * 0.75} />
+              <circle cx="50" cy="50" r="44.5" fill="none" stroke={c} strokeWidth="1.4" opacity={ringOp * 0.7} strokeDasharray="0.4 2.6" />
+            </>
+          )}
+          <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 1 : 0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
+            <textPath href={`#sealTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
+          </text>
+          <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 0.92 : 0.8} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
+            <textPath href={`#sealBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} •`}</textPath>
+          </text>
+          {branded ? topiaEmblem(chrome ? `url(#chrome-${idKey})` : c) : (
+            <path d={STAR} fill="none" stroke={c} strokeWidth="2.4" opacity={0.9} transform="translate(15 15) scale(0.7)" />
+          )}
+        </g>
       </svg>
     );
   }
@@ -163,38 +176,44 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   if (isRect) {
     return (
       <svg viewBox="0 0 120 55" className="w-full h-full">
-        {isLegend && <rect x="2" y="2" width="116" height="51" rx="3" fill={c} opacity={0.1} />}
-        {isRare && <rect x="0.5" y="0.5" width="119" height="54" rx="4" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
-        <rect x="2" y="2" width="116" height="51" rx="3" fill="none" stroke={c} strokeWidth={isRare ? 2.6 : 2.2} opacity={ringOp} />
-        <rect x="6" y="6" width="108" height="43" rx="1" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.6} />
-        <text x="60" y="18" textAnchor="middle" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '3px', textTransform: 'uppercase' }}>{stamp.caption}</text>
-        <text x="60" y="32" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>{stamp.label}</text>
-        <text x="60" y="44" textAnchor="middle" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px' }}>{stamp.date}</text>
+        <defs>{!branded && <InkFilter idKey={idKey} seed={seed} />}</defs>
+        <g filter={inkF} opacity={inkOp}>
+          {isLegend && <rect x="2" y="2" width="116" height="51" rx="3" fill={c} opacity={0.1} />}
+          {isRare && <rect x="0.5" y="0.5" width="119" height="54" rx="4" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
+          <rect x="2" y="2" width="116" height="51" rx="3" fill="none" stroke={c} strokeWidth={isRare ? 2.6 : 2.2} opacity={ringOp} />
+          <rect x="6" y="6" width="108" height="43" rx="1" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.6} />
+          <text x="60" y="18" textAnchor="middle" fill={c} opacity={0.7} style={{ fontFamily: "'Space Mono', monospace", fontSize: '5px', letterSpacing: '3px', textTransform: 'uppercase' }}>{stamp.caption}</text>
+          <text x="60" y="32" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>{stamp.label}</text>
+          <text x="60" y="44" textAnchor="middle" fill={c} opacity={0.6} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px' }}>{stamp.date}</text>
+        </g>
       </svg>
     );
   }
 
   return (
     <svg viewBox="0 0 100 100" className="w-full h-full">
-      {isLegend && <circle cx="50" cy="50" r="46" fill={c} opacity={0.1} />}
-      {isRare && <circle cx="50" cy="50" r="49" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
-      <circle cx="50" cy="50" r="46" fill="none" stroke={c} strokeWidth={isRare ? 2.8 : 2.2} opacity={ringOp} />
-      <circle cx="50" cy="50" r="38" fill="none" stroke={c} strokeWidth="0.9" opacity={ringOp * 0.65} />
-      {isLegend && [0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
-        const rad = (a * Math.PI) / 180;
-        return <circle key={a} cx={50 + Math.cos(rad) * 49} cy={50 + Math.sin(rad) * 49} r="1.3" fill={c} opacity={0.85} />;
-      })}
       <defs>
         <path id={`arcTop-${idKey}`} d="M 50,50 m -34,0 a 34,34 0 1,1 68,0" />
         <path id={`arcBot-${idKey}`} d="M 50,50 m 34,0 a 34,34 0 1,1 -68,0" />
+        {!branded && <InkFilter idKey={idKey} seed={seed} />}
       </defs>
-      <text fill={c} opacity={0.9} style={{ fontFamily: "'Space Mono', monospace", fontSize: '7px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
-        <textPath href={`#arcTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
-      </text>
-      <text fill={c} opacity={0.55} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
-        <textPath href={`#arcBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} • TOPIA •`}</textPath>
-      </text>
-      <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>
+      <g filter={inkF} opacity={inkOp}>
+        {isLegend && <circle cx="50" cy="50" r="46" fill={c} opacity={0.1} />}
+        {isRare && <circle cx="50" cy="50" r="49" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
+        <circle cx="50" cy="50" r="46" fill="none" stroke={c} strokeWidth={isRare ? 2.8 : 2.2} opacity={ringOp} />
+        <circle cx="50" cy="50" r="38" fill="none" stroke={c} strokeWidth="0.9" opacity={ringOp * 0.65} />
+        {isLegend && [0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
+          const rad = (a * Math.PI) / 180;
+          return <circle key={a} cx={50 + Math.cos(rad) * 49} cy={50 + Math.sin(rad) * 49} r="1.3" fill={c} opacity={0.85} />;
+        })}
+        <text fill={c} opacity={0.9} style={{ fontFamily: "'Space Mono', monospace", fontSize: '7px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <textPath href={`#arcTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
+        </text>
+        <text fill={c} opacity={0.55} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
+          <textPath href={`#arcBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} • TOPIA •`}</textPath>
+        </text>
+        <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>
+      </g>
     </svg>
   );
 }

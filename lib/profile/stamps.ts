@@ -99,7 +99,8 @@ export async function computeProfileStamps(opts: {
   // ── Path seal — everyone has a resolved path ───────────────────────────────
   const path = resolvePath(opts.path, roleTagList, hasOwnedWorlds);
   const pathCfg = PATH_CONFIG[path];
-  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathCfg.color, shape: 'seal', rarity: 'rare', emblem: 'star',
+  const pathBrand = pathCfg.color === 'blue' ? 'cyan' : pathCfg.color === 'pink' ? 'magenta' : pathCfg.color;
+  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathBrand, shape: 'seal', rarity: 'rare', emblem: 'star',
     title: `${pathCfg.label} Seal`, description: 'Your official path seal — the lane you build in across TOPIA.' });
 
   // ── Early citizen ──────────────────────────────────────────────────────────
@@ -140,35 +141,35 @@ export async function computeProfileStamps(opts: {
   // ── Events: first stamp + frequent flyer + check-in ────────────────────────
   if (rsvpRows.length > 0) {
     const first = rsvpRows[0];
-    add({ label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'green', shape: 'circle', rarity: 'common',
+    add({ label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'cyan', shape: 'circle', rarity: 'common',
       title: 'First Stamp', description: `Your very first RSVP — ${first.name}. Every passport starts somewhere.` });
   }
   if (rsvpRows.length >= FF_COMMON) {
     const rarity: StampRarity = rsvpRows.length >= FF_LEGENDARY ? 'legendary' : rsvpRows.length >= FF_RARE ? 'rare' : 'common';
-    add({ label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'blue', shape: 'circle', rarity,
+    add({ label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'purple', shape: 'circle', rarity,
       title: 'Frequent Flyer', description: `RSVP'd to ${rsvpRows.length} events. A regular on the circuit.` });
   }
   if (checkIns.length > 0) {
     const latest = checkIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
-    add({ label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'green', shape: 'rect', rarity: 'rare',
+    add({ label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
       title: 'Checked In', description: 'Showed up and checked in on-site. Presence verified.' });
   }
 
   // ── Connector — invited someone who joined ─────────────────────────────────
   if (invites.length > 0) {
-    add({ label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'pink', shape: 'rect', rarity: 'rare',
+    add({ label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'rare',
       title: 'Connector', description: `Brought ${invites.length} ${invites.length === 1 ? 'person' : 'people'} into TOPIA through an invite.` });
   }
 
   // ── Guestbook — signed at least one guestbook ──────────────────────────────
   if (gbRows.length > 0) {
-    add({ label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'pink', shape: 'rect', rarity: 'common',
+    add({ label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'common',
       title: 'Guestbook', description: 'Signed a guestbook and left your mark on someone’s profile.' });
   }
 
   // ── Toolmaker — contributed a tool to Resources ────────────────────────────
   if (toolRows.length > 0) {
-    add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'blue', shape: 'rect', rarity: 'rare',
+    add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'purple', shape: 'rect', rarity: 'rare',
       title: 'Toolmaker', description: 'Contributed a tool to the TOPIA Resources library.' });
   }
 
