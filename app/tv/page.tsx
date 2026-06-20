@@ -60,6 +60,7 @@ export default function TVPage() {
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(true);
   const [needsUnmute, setNeedsUnmute] = useState(false);
+  const [controlsHidden, setControlsHidden] = useState(false);
   const [volume, setVolume] = useState(0.85);
 
   /* ── Load episodes + auto-select the first one so the channel
@@ -265,7 +266,7 @@ export default function TVPage() {
 
                   {/* Category pill */}
                   <div className="absolute top-3 left-3 z-[5]">
-                    {activeEp && (
+                    {activeEp && !controlsHidden && (
                       <div className={`${c?.bg} px-2 py-1 rounded-sm`}>
                         <span className={`font-mono text-[13px] font-bold uppercase ${c?.textOn}`}>{activeEp.category}</span>
                       </div>
@@ -305,7 +306,8 @@ export default function TVPage() {
                     </button>
                   )}
 
-                  {/* Bottom overlay: title + controls */}
+                  {/* Bottom overlay: title + controls (hidden via the toggle) */}
+                  {(!controlsHidden || !activeEp) && (
                   <div className="absolute bottom-0 left-0 right-0 z-[5] bg-gradient-to-t from-black/95 via-black/50 to-transparent p-4">
                     {activeEp ? (
                       <>
@@ -316,7 +318,7 @@ export default function TVPage() {
                                 {activeEp.seriesTitle}{activeEp.episodeNumber ? ` · EP ${String(activeEp.episodeNumber).padStart(3, '0')}` : ''}{activeEp.partNumber ? ` · PART ${activeEp.partNumber === 1 ? 'I' : activeEp.partNumber === 2 ? 'II' : activeEp.partNumber}` : ''}
                               </span>
                             )}
-                            <h2 className="font-basement font-black text-[clamp(20px,2.5vw,32px)] uppercase text-bone leading-[0.9] truncate">{activeEp.title}</h2>
+                            <h2 className={`font-basement font-black uppercase text-bone leading-[0.9] line-clamp-2 ${activeEp.title.length > 45 ? 'text-[clamp(15px,1.8vw,22px)]' : activeEp.title.length > 28 ? 'text-[clamp(18px,2.2vw,28px)]' : 'text-[clamp(22px,2.8vw,36px)]'}`}>{activeEp.title}</h2>
                             {activeEp.guestName && (
                               <span className="font-mono text-[11px] text-bone/50 tracking-wider mt-1 block">w/ {activeEp.guestName}</span>
                             )}
@@ -381,6 +383,9 @@ export default function TVPage() {
                             <button onClick={toggleFullscreen} className="text-bone hover:opacity-70 transition-opacity bg-transparent border-none cursor-pointer" title="Fullscreen">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
                             </button>
+                            <button onClick={() => setControlsHidden(true)} className="text-bone hover:opacity-70 transition-opacity bg-transparent border-none cursor-pointer" title="Hide controls">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
                           </div>
                         </div>
                       </>
@@ -391,6 +396,19 @@ export default function TVPage() {
                       </div>
                     )}
                   </div>
+                  )}
+
+                  {/* Floating "show controls" button when hidden */}
+                  {activeEp && controlsHidden && (
+                    <button
+                      onClick={() => setControlsHidden(false)}
+                      className="absolute bottom-3 right-3 z-[7] inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.5px] bg-bone/15 backdrop-blur-sm text-bone border border-bone/30 px-2.5 py-1.5 rounded-sm cursor-pointer hover:bg-bone/25 transition"
+                      title="Show controls"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      Controls
+                    </button>
+                  )}
                 </div>
 
                 {/* "Power" indicator */}
