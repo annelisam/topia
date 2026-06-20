@@ -34,24 +34,21 @@ interface Props {
   showEndorsed?: boolean;
 }
 
-// Random-looking scatter — stamps sit at varied heights & angles in a short
-// band, lightly overlapping like a real passport page. Scrolls sideways.
-const BAND_H = 150;
-const STEP = 84;            // px advance per stamp
-// Deterministic pseudo-random in [0,1) — stable across SSR/CSR (Math.random
-// would cause a hydration mismatch; Math.sin of a constant won't).
+// Stamps wrap across multiple rows like a passport page — spaced out, each at
+// a slight angle and vertical offset. Deterministic pseudo-random in [0,1) so
+// it's stable across SSR/CSR (Math.random would cause a hydration mismatch).
 function rng(n: number): number { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
 // 4-point sparkle star fallback emblem (path seals).
 const STAR = 'M50 30 L55 45 L70 50 L55 55 L50 70 L45 55 L30 50 L45 45 Z';
 
-// Muted "ink" versions of the brand colors — desaturated so stamps read like
-// faded passport ink instead of neon. Silver (the TOPIA seal) is left vivid.
+// Aged-ink versions of the brand colors — deeper and a touch more saturated
+// than pastel so they read like real passport-stamp ink. Silver (TOPIA) stays.
 const STAMP_INK: Record<string, string> = {
-  lime: '#a7b06a',
-  blue: '#8786bd',
-  pink: '#bd83ac',
-  orange: '#c5816a',
-  green: '#67a78b',
+  lime: '#b39433',   // ochre / aged gold
+  blue: '#48619e',   // ink blue
+  pink: '#a85565',   // dusty rose-red
+  orange: '#b65f37', // faded rust
+  green: '#3f8a5f',  // faded forest
 };
 function inkColor(color: string, fallback: string): string {
   if (color === 'silver') return COLOR_HEX.silver;
@@ -222,32 +219,29 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
           {stamps.length > 0 && <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/20">{stamps.length} earned</span>}
         </div>
         {stamps.length === 0 ? (
-          <div className="flex items-center justify-center relative z-10" style={{ height: BAND_H }}>
+          <div className="flex items-center justify-center relative z-10" style={{ minHeight: 180 }}>
             <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No travel yet</span>
           </div>
         ) : (
-          <div className="relative z-10 overflow-x-auto overflow-y-hidden" style={{ scrollbarWidth: 'thin' }}>
-            <div className="relative" style={{ height: BAND_H, width: (stamps.length - 1) * STEP + 130 }}>
-              {stamps.map((stamp, i) => {
-                const size = 84 + stamp.weight * 18;
-                const isRect = stamp.shape === 'rect';
-                const stampH = isRect ? size * 0.56 : size;
-                const jx = (rng(i * 2 + 1) - 0.5) * 30;
-                const top = rng(i * 2 + 9) * (BAND_H - stampH);
-                const rot = (rng(i * 3 + 4) - 0.5) * 28;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setSelected(stamp)}
-                    title={`${stamp.title} — ${stamp.date}`}
-                    className="absolute group cursor-pointer transition-transform duration-300 hover:!z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
-                    style={{ left: `${i * STEP + jx}px`, top: `${top}px`, transform: `rotate(${rot}deg)`, width: `${size}px`, height: `${stampH}px`, zIndex: Math.floor(rng(i * 5 + 2) * 20) + 1 }}
-                  >
-                    <StampSvg stamp={stamp} idKey={String(i)} config={config} />
-                  </button>
-                );
-              })}
-            </div>
+          <div className="relative z-10 flex flex-wrap items-center gap-x-2.5 gap-y-2 px-1 pb-1 mx-auto max-w-[600px]">
+            {stamps.map((stamp, i) => {
+              const size = 96 + stamp.weight * 16;
+              const isRect = stamp.shape === 'rect';
+              const stampH = isRect ? size * 0.56 : size;
+              const rot = (rng(i * 3 + 4) - 0.5) * 18;       // ±9°
+              const ty = (rng(i * 2 + 7) - 0.5) * 16;        // ±8px vertical offset
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelected(stamp)}
+                  title={`${stamp.title} — ${stamp.date}`}
+                  className="relative shrink-0 group cursor-pointer transition-transform duration-300 hover:z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
+                  style={{ width: `${size}px`, height: `${stampH}px`, transform: `translateY(${ty}px) rotate(${rot}deg)`, zIndex: Math.floor(rng(i * 5 + 2) * 10) + 1 }}
+                >
+                  <StampSvg stamp={stamp} idKey={String(i)} config={config} />
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
