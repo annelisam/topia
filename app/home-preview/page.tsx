@@ -101,7 +101,7 @@ function GridGlobe() {
     const STEP = 4;     // sampling step for smooth curves
     // Darker, more opaque grey than the world globe's depth fade.
     const R = 150, Gc = 150, B = 150;
-    const alpha = (zf: number) => 0.12 + zf * 0.46; // ~0.12 (back) → ~0.58 (front)
+    const alpha = (zf: number) => 0.3 + zf * 0.35; // ~0.3 (back) → ~0.65 (front)
 
     let raf = 0;
     let ry = 0;
