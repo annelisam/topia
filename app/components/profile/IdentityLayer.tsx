@@ -42,6 +42,8 @@ interface Props {
   editable?: boolean;
   /** localStorage key (the profile username) for the saved arrangement. */
   storageKey?: string;
+  /** Profile owner's display name — used to swap "You" in descriptions. */
+  ownerName?: string;
 }
 
 // Deterministic pseudo-random in [0,1) — stable across SSR/CSR (Math.random
@@ -249,7 +251,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   );
 }
 
-export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true, editable = false, storageKey }: Props) {
+export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true, editable = false, storageKey, ownerName }: Props) {
   const [selected, setSelected] = useState<Stamp | null>(null);
   const selColor = selected ? inkColor(selected.color, config.hex) : config.hex;
   const selRectShape = selected?.shape === 'rect';
@@ -430,7 +432,7 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
                 {selected.rarity}
               </span>
               <h3 className="font-basement font-black text-[24px] uppercase leading-[0.95] text-bone">{selected.title}</h3>
-              <p className="font-mono text-[11px] leading-[1.7] text-bone/55">{selected.description}</p>
+              <p className="font-mono text-[11px] leading-[1.7] text-bone/55">{editable && ownerName && selected.description.startsWith(ownerName + ' ') ? 'You ' + selected.description.slice(ownerName.length + 1) : selected.description}</p>
               {selected.href && (
                 <Link href={selected.href} onClick={() => setSelected(null)} className="flex items-center gap-2.5 no-underline group/avatar mt-0.5">
                   <span className="w-9 h-9 rounded-full overflow-hidden border border-bone/20 shrink-0 bg-obsidian flex items-center justify-center">

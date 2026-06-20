@@ -54,6 +54,7 @@ export async function computeProfileStamps(opts: {
   bio: string | null;
   roleTags: string | null;
   path: string | null;
+  ownerName?: string | null;     // the profile owner's display name (for descriptions)
   worldMemberships: Membership[];
 }): Promise<ProfileStamp[]> {
   const { userId, worldMemberships } = opts;
@@ -197,7 +198,7 @@ export async function computeProfileStamps(opts: {
   const ORBIT_COLORS = ['dust', 'slate', 'sage', 'mauveGrey', 'clayGrey'];
   [...conns.values()].filter((p) => p.username && p.iFollow && p.followsMe).slice(0, 12).forEach((p, i) => {
     add({ label: (p.name || p.username || '').toUpperCase().slice(0, 12), caption: 'ORBIT', date: ym(p.at), color: ORBIT_COLORS[i % ORBIT_COLORS.length], shape: 'rect', rarity: 'common',
-      title: p.name || `@${p.username}`, description: `You and @${p.username} follow each other.`, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
+      title: p.name || `@${p.username}`, description: `${opts.ownerName || 'They'} and @${p.username} follow each other.`, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
   });
 
   // Rarest first, then by insertion order (stable).
