@@ -100,7 +100,7 @@ function GridGlobe() {
     const DENSITY = 10; // degrees between grid lines — matches WorldGlobe
     const STEP = 4;     // sampling step for smooth curves
     // Darker, more opaque grey than the world globe's depth fade.
-    const R = 150, Gc = 150, B = 150;
+    const R = 54, Gc = 54, B = 54; // #363636
     const alpha = (zf: number) => 0.3 + zf * 0.35; // ~0.3 (back) → ~0.65 (front)
 
     let raf = 0;
