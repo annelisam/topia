@@ -12,9 +12,10 @@ export interface ProfileStamp {
   caption: string;
   date: string;
   color: string;            // COLOR_HEX key: lime | blue | pink | orange | green
-  shape: 'circle' | 'rect';
+  shape: 'circle' | 'rect' | 'seal';
   rarity: StampRarity;
   weight: number;           // drives size + opacity (legendary biggest/boldest)
+  emblem?: 'topia' | 'star'; // central glyph for seal-shaped stamps
 }
 
 // Anyone who joins before this date is an "Early Citizen" of the beta.
@@ -36,7 +37,7 @@ function ym(d: Date | string | null | undefined): string {
   return `${m} '${String(date.getFullYear()).slice(2)}`;
 }
 
-interface Membership { worldId: string; worldTitle: string; role: string }
+interface Membership { worldId: string; worldTitle: string; worldSlug?: string; role: string }
 
 /**
  * Compute the passport stamps a user has earned. Pure reads — no migrations,
@@ -77,10 +78,18 @@ export async function computeProfileStamps(opts: {
   const stamps: ProfileStamp[] = [];
   const add = (s: Omit<ProfileStamp, 'weight'>) => stamps.push({ ...s, weight: WEIGHT[s.rarity] });
 
+  // ── TOPIA member — a special seal for members of the TOPIA world ───────────
+  const inTopia = worldMemberships.some(
+    (w) => (w.worldTitle || '').trim().toUpperCase() === 'TOPIA' || (w.worldSlug || '').toLowerCase() === 'topia',
+  );
+  if (inTopia) {
+    add({ label: 'TOPIA', caption: 'MEMBER', date: ym(opts.createdAt), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia' });
+  }
+
   // ── Path seal — everyone has a resolved path ───────────────────────────────
   const path = resolvePath(opts.path, roleTagList, hasOwnedWorlds);
   const pathCfg = PATH_CONFIG[path];
-  add({ label: 'SEAL', caption: pathCfg.label, date: ym(opts.createdAt), color: pathCfg.color, shape: 'circle', rarity: 'rare' });
+  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathCfg.color, shape: 'seal', rarity: 'rare', emblem: 'star' });
 
   // ── Early citizen ──────────────────────────────────────────────────────────
   if (new Date(opts.createdAt) <= BETA_CUTOFF) {
