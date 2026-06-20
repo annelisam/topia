@@ -16,6 +16,7 @@ import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
+import { shortenPath } from '../../../lib/shortlink';
 
 interface EventHost {
   userId: string;
@@ -230,6 +231,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
   const [pendingNotice, setPendingNotice] = useState(false);
@@ -384,11 +386,24 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   };
 
+  // Pre-resolve the short link once the event loads so handleShare can fire the
+  // native share sheet synchronously (iOS invalidates the gesture after a fetch).
+  useEffect(() => {
+    if (!event) return;
+    let alive = true;
+    shortenPath(window.location.pathname, 'event').then((u) => {
+      if (alive) setShortUrl(u);
+    });
+    return () => { alive = false; };
+  }, [event]);
+
   // Share — native share sheet on mobile/supported browsers, clipboard fallback
   // everywhere else (shows a transient "Link copied" confirmation).
   const handleShare = async () => {
     if (!event) return;
-    const url = typeof window !== 'undefined' ? window.location.href.split('?')[0] : '';
+    // Prefer the prefetched short link; fall back to the full URL if it isn't
+    // ready yet (keeps navigator.share inside the user gesture on iOS).
+    const url = shortUrl ?? (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '');
     const shareData = {
       title: event.eventName,
       text: `${event.eventName}${event.city ? ` · ${event.city}` : ''} — on TOPIA`,

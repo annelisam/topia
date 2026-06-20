@@ -489,3 +489,17 @@ export const tickets = pgTable('tickets', {
   checkedInAt: timestamp('checked_in_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// Short links — maps a compact code to an internal path so shareable URLs can
+// be tiny (topia.vision/s/<code>). Deduped by targetPath (unique) so a given
+// page always resolves to the same code. `clicks` is a best-effort tally
+// bumped on each redirect.
+export const shortLinks = pgTable('short_links', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  code: text('code').notNull().unique(),               // base62 slug in the /s/ URL
+  targetPath: text('target_path').notNull().unique(),  // internal path, e.g. /events/foo
+  kind: text('kind'),                                  // 'event' | 'profile' | 'world' | null
+  createdBy: uuid('created_by').references(() => users.id),
+  clicks: integer('clicks').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
