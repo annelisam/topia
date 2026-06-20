@@ -20,6 +20,17 @@ export const COLOR_HEX: Record<string, string> = {
   pink: '#FF5BD7',
   orange: '#FF5C34',
   green: '#00FF88',
+  silver: '#d4d8e0',
+  // TOPIA brand signal colors (brand guide v3)
+  cyan: '#00F5FF',
+  magenta: '#FF21D8',
+  purple: '#6A2CC2',
+  // Subtle, desaturated tones for connection ("Orbit") stamps.
+  dust: '#9b8e83',
+  slate: '#7f8b99',
+  sage: '#8a9b85',
+  mauveGrey: '#9a8a97',
+  clayGrey: '#a8897a',
 };
 
 export function derivePath(roleTags: string[], hasOwnedWorlds: boolean): UserPath {

@@ -7,7 +7,7 @@ import { ReadOnlyBanner } from '../../_components/ReadOnlyBanner';
 import { useWorldDashboard } from './layout';
 
 export default function WorldOverviewPage() {
-  const { projects, members, pendingInvites, isBuilder } = useWorldDashboard();
+  const { projects, members, pendingInvites, isBuilder, slug } = useWorldDashboard();
 
   return (
     <div>
@@ -36,13 +36,13 @@ export default function WorldOverviewPage() {
         <div className="mb-8">
           <p className={labelCls} style={{ color: 'var(--foreground)' }}>Quick Actions</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="./projects" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href={`/dashboard/worlds/${slug}/projects`} className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               + Add Project
             </Link>
-            <Link href="./members" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href={`/dashboard/worlds/${slug}/members`} className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               + Invite Member
             </Link>
-            <Link href="./details" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+            <Link href={`/dashboard/worlds/${slug}/details`} className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
               Edit Details
             </Link>
           </div>

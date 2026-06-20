@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, worlds, worldMembers } from '@/lib/db/schema';
+import { users, worlds, worldMembers, eventHosts } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // DELETE – owner-only world deletion
@@ -30,7 +30,9 @@ export async function DELETE(request: NextRequest) {
     const [world] = await db.select({ id: worlds.id }).from(worlds).where(eq(worlds.id, worldId)).limit(1);
     if (!world) return NextResponse.json({ error: 'World not found' }, { status: 404 });
 
-    // Delete world (cascade will handle worldMembers, worldInvitations, worldProjects)
+    // Detach event-host links (eventHosts.worldId has no cascade), then delete
+    // the world (cascade handles worldMembers, worldInvitations, worldProjects).
+    await db.update(eventHosts).set({ worldId: null }).where(eq(eventHosts.worldId, worldId));
     await db.delete(worlds).where(eq(worlds.id, worldId));
 
     return NextResponse.json({ ok: true });
