@@ -236,6 +236,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
   const [pendingNotice, setPendingNotice] = useState(false);
+  // Which viewer the loaded `event` reflects (null = anonymous). Used to avoid
+  // acting on stale RSVP status during the login → refetch race.
+  const [statusViewer, setStatusViewer] = useState<string | null>(null);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
   const privyEmail =
@@ -278,6 +281,8 @@ export default function EventDetailClient({ slug }: { slug: string }) {
         if (data.events?.length > 0) {
           setEvent(data.events[0]);
         }
+        // Mark that the loaded status now reflects this viewer (or anonymous).
+        setStatusViewer(privyUser?.id ?? null);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -337,7 +342,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   };
 
-  const handleRsvpDone = (status: string) => {
+  const handleRsvpDone = (status: string, alreadyRegistered = false) => {
     setRsvpFormOpen(false);
     try { sessionStorage.removeItem(INVITE_KEY); } catch {}
     setInviteToken(null);
@@ -346,7 +351,8 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       ...event,
       userRsvped: true,
       userStatus: status,
-      rsvpCount: status === 'going' ? event.rsvpCount + 1 : event.rsvpCount,
+      // Don't re-count an RSVP that already existed (idempotent re-submit).
+      rsvpCount: !alreadyRegistered && status === 'going' ? event.rsvpCount + 1 : event.rsvpCount,
     });
     if (status === 'going') setShowRsvpModal(true);
     else setPendingNotice(true);
@@ -356,13 +362,16 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   // registration modal automatically when arriving via an invite link.
   useEffect(() => {
     if (!event || !privyUser?.id || event.userRsvped || event.isHost || event.rsvpClosed) return;
+    // Wait until `event` has been refetched for THIS viewer — otherwise we'd act
+    // on the stale anonymous status and open the form for someone already in.
+    if (statusViewer !== privyUser.id) return;
     let intent: string | null = null;
     try { intent = sessionStorage.getItem(PENDING_KEY); } catch {}
     if (intent === slug || inviteToken) {
       try { sessionStorage.removeItem(PENDING_KEY); } catch {}
       setRsvpFormOpen(true);
     }
-  }, [event, privyUser?.id, slug, inviteToken]);
+  }, [event, privyUser?.id, slug, inviteToken, statusViewer]);
 
   // "Save" — toggles the event slug in users.savedEventSlugs CSV so the user
   // can bookmark it (shows under the "Saved" tab on /events). Commenting is

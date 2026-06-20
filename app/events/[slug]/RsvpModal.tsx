@@ -25,7 +25,7 @@ interface Props {
   inviteToken?: string | null;
   approvalRequired?: boolean;
   onClose: () => void;
-  onDone: (status: string) => void;
+  onDone: (status: string, alreadyRegistered?: boolean) => void;
 }
 
 const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] rounded-lg outline-none';
@@ -136,7 +136,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
-      onDone(data.status ?? 'going');
+      onDone(data.status ?? 'going', data.alreadyRegistered === true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register');
     } finally {

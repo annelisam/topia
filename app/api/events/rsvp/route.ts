@@ -102,12 +102,16 @@ export async function POST(request: NextRequest) {
     const userId = await resolveOrCreateUser(privyId, { email, name, phone });
     if (!userId) return NextResponse.json({ error: 'Could not resolve user' }, { status: 500 });
 
-    // Already registered?
+    // Already registered? Respond idempotently — re-submitting (e.g. when a
+    // login race re-opens the form) just confirms the existing RSVP instead of
+    // erroring with "already registered".
     const [existing] = await db
-      .select({ id: eventRsvps.id })
+      .select({ id: eventRsvps.id, status: eventRsvps.status })
       .from(eventRsvps)
       .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId)));
-    if (existing) return NextResponse.json({ error: "You're already registered" }, { status: 409 });
+    if (existing) {
+      return NextResponse.json({ rsvp: existing, status: existing.status, alreadyRegistered: true }, { status: 200 });
+    }
 
     // Validate required questions + snapshot answers.
     const questions = await db
