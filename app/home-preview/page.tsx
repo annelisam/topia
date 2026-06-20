@@ -78,22 +78,21 @@ function CyclingHeadline() {
 function GridGlobe() {
   const meridians = Array.from({ length: 30 });
   const latitudes = [0, 10, 20, 30, 40, 50, 60, 70, 80, -10, -20, -30, -40, -50, -60, -70, -80];
-  // Vertical meridians are the prominent lines; horizontal latitudes stay faint.
-  const meridianLine = '1px solid rgba(170,170,170,0.4)';
-  const latitudeLine = '1px solid rgba(120,120,120,0.14)';
+  // Even grid — meridians and latitudes share one color and opacity.
+  const gridLine = '1px solid rgba(150,150,150,0.3)';
   return (
     <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(800px,118vw)] aspect-square" style={{ perspective: '1200px' }}>
       {/* Faint dark-grey sphere body */}
       <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 42% 36%, rgba(80,80,80,0.16), rgba(35,35,35,0.07) 60%, transparent 80%)' }} />
       <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', animation: 'globeSpin 44s linear infinite' }}>
         {meridians.map((_, i) => (
-          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: meridianLine, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
+          <div key={`m${i}`} className="absolute inset-0 rounded-full" style={{ border: gridLine, transform: `rotateY(${(i * 180) / meridians.length}deg)` }} />
         ))}
         {latitudes.map((deg, i) => {
           const r = Math.cos((deg * Math.PI) / 180);
           const y = Math.sin((deg * Math.PI) / 180);
           return (
-            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: latitudeLine }} />
+            <div key={`l${i}`} className="absolute rounded-full" style={{ left: '50%', top: `${50 - y * 50}%`, width: `${r * 100}%`, height: `${r * 100}%`, transform: 'translate(-50%, -50%) rotateX(90deg)', border: gridLine }} />
           );
         })}
       </div>
