@@ -58,6 +58,16 @@ function isNewProfile(createdAt?: string): boolean {
   return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
+// Fisher-Yates shuffle — returns a new randomly-ordered array.
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 // Hero headline that types + cycles through taglines with a blinking cursor.
 const HERO_PHRASES = ['It is what you make it.', 'A network you own.', 'Culture before tech.', 'Built by us — for us.'];
 function CyclingHeadline() {
@@ -220,11 +230,15 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
       const b = boundsRef.current?.getBoundingClientRect();
       const c = elRef.current?.getBoundingClientRect();
       if (!b || !c) return;
-      const mobile = b.width < 768;
-      const x = mobile ? Math.max(16, (b.width - c.width) / 2) : Math.max(16, b.width - c.width - 40);
-      const y = mobile
-        ? Math.min(Math.max(16, b.height - c.height - 76), b.height * 0.5)
-        : Math.max(16, b.height * 0.32);
+      // Find the bottom of the hero text (kicker/wordmark + glitch tagline),
+      // ignoring the scroll-cue button, so the popup defaults just below it.
+      let textBottom = b.height * 0.3;
+      boundsRef.current!.querySelectorAll('[data-keepclear]').forEach((z) => {
+        if (z.tagName === 'BUTTON') return;
+        textBottom = Math.max(textBottom, z.getBoundingClientRect().bottom - b.top);
+      });
+      const x = (b.width - c.width) / 2; // horizontally centered on the page
+      const y = textBottom + 24;         // just under the header text
       setPos(clamp(x, y));
     };
     place();
@@ -356,8 +370,19 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
+    // Muted inline autoplay: set the property imperatively (React's muted prop
+    // isn't reliable for this) and retry once the media is ready, since the
+    // first play() can land before the source is buffered on mobile.
     v.muted = true;
-    v.play().catch(() => {});
+    v.defaultMuted = true;
+    const tryPlay = () => { v.play().catch(() => {}); };
+    tryPlay();
+    v.addEventListener('canplay', tryPlay);
+    v.addEventListener('loadeddata', tryPlay);
+    return () => {
+      v.removeEventListener('canplay', tryPlay);
+      v.removeEventListener('loadeddata', tryPlay);
+    };
   }, [episode.id]);
 
   const toggleMute = () => {
@@ -375,8 +400,10 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
         src={episode.videoUrl}
         poster={episode.thumbnailUrl ?? undefined}
         muted={muted}
+        autoPlay
         loop
         playsInline
+        preload="auto"
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent 50%)' }} />
@@ -436,8 +463,10 @@ export default function HomePreview() {
       const upcoming = all.filter((e) => !e.dateIso || e.dateIso >= today);
       setEvents((upcoming.length ? upcoming : all).slice(0, 7));
     }).catch(() => {});
-    // Only completed profiles (photo + name + tags), most recent first.
-    fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(d.profiles ?? [])).catch(() => {});
+    // Only completed profiles (photo + name + tags). Shuffle on each visit so
+    // the Discover order is fresh every time (the "complete your profile" CTA
+    // card is rendered separately and always stays first).
+    fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(shuffle(d.profiles ?? []))).catch(() => {});
   }, []);
 
   const heroRef = useRef<HTMLElement>(null);
@@ -446,6 +475,14 @@ export default function HomePreview() {
     const el = carouselRef.current;
     if (el) el.scrollBy({ left: dir * Math.max(260, el.clientWidth * 0.8), behavior: 'smooth' });
   };
+
+  // The "complete your profile" CTA is prepended once viewerComplete resolves
+  // (which lands after the profile cards have already rendered). Browser scroll
+  // anchoring keeps the old offset, pushing the new first card off-screen to the
+  // left — so snap the carousel back to the start whenever the lineup changes.
+  useEffect(() => {
+    if (carouselRef.current) carouselRef.current.scrollLeft = 0;
+  }, [viewerComplete, profiles]);
 
   const featuredEp = episodes[0];
   const moreEps = episodes.slice(1, 5);
@@ -673,7 +710,7 @@ export default function HomePreview() {
             {profiles.length === 0 && viewerComplete !== false ? (
               <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
             ) : (
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none' }}>
+              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none', overflowAnchor: 'none' }}>
                 {/* Nudge the viewer to finish their own profile */}
                 {viewerComplete === false && (
                   <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>

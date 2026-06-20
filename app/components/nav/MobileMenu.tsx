@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import LoginButton from '../LoginButton';
+import { usePrivy } from '@privy-io/react-auth';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 type NavItem = {
@@ -37,20 +37,30 @@ interface MobileMenuProps {
   onClose: () => void;
 }
 
+const rowClass =
+  'font-mono text-[15px] tracking-[1.5px] uppercase no-underline py-3 block transition-opacity hover:opacity-60';
+
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
-  const { profile } = useUserProfile();
+  const { profile, ready, authenticated } = useUserProfile();
+  const { login, logout } = usePrivy();
   const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
+  const displayName = profile?.name || 'Anonymous';
+  const initial = (displayName[0] || '?').toUpperCase();
+
   return (
     <div
       className={`
         fixed inset-0 z-[2000] flex flex-col
-        transition-all duration-500 ease-out
+        transition-opacity duration-300 ease-out
         ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
       `}
       style={{ backgroundColor: 'var(--page-bg)' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 h-[var(--nav-height)]">
+      <div
+        className="flex items-center justify-between px-6 h-[var(--nav-height)] shrink-0 border-b"
+        style={{ borderColor: 'var(--border-color)' }}
+      >
         <span
           className="font-basement font-black text-sm tracking-[4px] uppercase"
           style={{ color: 'var(--page-text)' }}
@@ -70,75 +80,100 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         </button>
       </div>
 
-      {/* Links */}
-      <div className="flex-1 flex flex-col justify-center px-8 gap-1">
-        {NAV_LINKS.map((item, i) =>
+      {/* Links — scrollable so they never push the auth footer off-screen */}
+      <nav className="flex-1 overflow-y-auto px-6 py-4" style={{ color: 'var(--page-text)' }}>
+        {NAV_LINKS.map((item) =>
           item.children ? (
-            <div key={item.label} className="mt-2">
-              <span
-                className="font-mono text-[13px] tracking-[2px] uppercase opacity-30 block mb-1"
-                style={{
-                  color: 'var(--page-text)',
-                  transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
-                }}
-              >
+            <div key={item.label} className="py-2">
+              <span className="font-mono text-[11px] tracking-[2px] uppercase opacity-30 block mb-0.5">
                 {item.label}
               </span>
               {item.children.map((child) => (
-                <Link
-                  key={child.href}
-                  href={child.href}
-                  onClick={onClose}
-                  className="font-basement font-black text-[clamp(22px,5vw,38px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70 block pl-5"
-                  style={{ color: 'var(--page-text)' }}
-                >
+                <Link key={child.href} href={child.href} onClick={onClose} className={`${rowClass} pl-4`} style={{ color: 'var(--page-text)' }}>
                   {child.label}
                 </Link>
               ))}
             </div>
           ) : item.comingSoon ? (
-            <span
-              key={item.label}
-              className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase leading-tight opacity-25 cursor-default flex items-baseline gap-3"
-              style={{
-                color: 'var(--page-text)',
-                transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
-              }}
-            >
+            <span key={item.label} className={`${rowClass} opacity-25 cursor-default flex items-baseline gap-2`}>
               {item.label}
-              <span className="font-mono text-[11px] tracking-[1px] opacity-70">Soon</span>
+              <span className="font-mono text-[9px] tracking-[1px] opacity-70">Soon</span>
             </span>
           ) : (
             <Link
               key={item.href}
               href={item.label === 'Passport' ? passportHref : item.href!}
               onClick={onClose}
-              className="font-basement font-black text-[clamp(28px,6vw,48px)] uppercase transition-colors duration-300 no-underline leading-tight hover:opacity-70"
-              style={{
-                color: 'var(--page-text)',
-                transitionDelay: isOpen ? `${i * 50}ms` : '0ms',
-              }}
+              className={`${rowClass} font-bold`}
+              style={{ color: 'var(--page-text)' }}
             >
               {item.label}
             </Link>
           )
         )}
+
+        <div className="border-t my-2" style={{ borderColor: 'var(--border-color)' }} />
+
         {STATIC_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onClose}
-            className="font-basement font-black text-[clamp(20px,4vw,28px)] uppercase no-underline leading-tight opacity-30 hover:opacity-60 transition-opacity mt-4"
-            style={{ color: 'var(--page-text)' }}
-          >
+          <Link key={link.href} href={link.href} onClick={onClose} className={`${rowClass} opacity-40`} style={{ color: 'var(--page-text)' }}>
             {link.label}
           </Link>
         ))}
-      </div>
+      </nav>
 
-      {/* CTA */}
-      <div className="px-8 pb-24">
-        <LoginButton />
+      {/* Auth footer — always pinned & reachable */}
+      <div
+        className="shrink-0 border-t px-6 pt-4"
+        style={{ borderColor: 'var(--border-color)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)', color: 'var(--page-text)' }}
+      >
+        {!ready ? null : authenticated ? (
+          <>
+            <Link
+              href={passportHref}
+              onClick={onClose}
+              className="flex items-center gap-3 no-underline mb-3"
+              style={{ color: 'var(--page-text)' }}
+            >
+              <span className="w-10 h-10 rounded-full overflow-hidden border shrink-0 flex items-center justify-center" style={{ borderColor: 'var(--page-text)' }}>
+                {profile?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-mono text-[14px] font-bold" style={{ color: 'var(--page-text)' }}>{initial}</span>
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="font-mono text-[14px] font-bold uppercase truncate block">{displayName}</span>
+                {profile?.username && <span className="font-mono text-[11px] opacity-50 truncate block">@{profile.username}</span>}
+              </span>
+            </Link>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="/dashboard"
+                onClick={onClose}
+                className="text-center font-mono text-[12px] uppercase tracking-[1.5px] py-2.5 border rounded-md no-underline transition-opacity hover:opacity-70"
+                style={{ color: 'var(--page-text)', borderColor: 'var(--border-color)' }}
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { logout(); onClose(); }}
+                className="font-mono text-[12px] uppercase tracking-[1.5px] py-2.5 border rounded-md cursor-pointer transition-opacity hover:opacity-70"
+                style={{ color: 'var(--page-text)', borderColor: 'var(--border-color)', background: 'transparent' }}
+              >
+                Log out
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            onClick={() => { login(); onClose(); }}
+            className="w-full font-mono text-[13px] uppercase tracking-[2px] font-bold py-3.5 rounded-md cursor-pointer transition-opacity hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent, #e4fe52)', color: '#1a1a1a', border: 'none' }}
+          >
+            Log in
+          </button>
+        )}
       </div>
     </div>
   );
