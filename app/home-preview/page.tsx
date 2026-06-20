@@ -157,7 +157,7 @@ function GridGlobe() {
       }
 
       if (!reduce) {
-        ry += 0.0016; // slow auto-rotation
+        ry += 0.0007; // very slow auto-rotation
         raf = requestAnimationFrame(draw);
       }
     };
