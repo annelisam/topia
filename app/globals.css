@@ -327,15 +327,6 @@ h3 {
   to { transform: rotateY(360deg); }
 }
 
-.globe-spin {
-  animation: globeSpin 60s linear infinite;
-}
-
-/* Respect reduced-motion: hold the globe still instead of spinning forever. */
-@media (prefers-reduced-motion: reduce) {
-  .globe-spin { animation: none; }
-}
-
 /* TOPIA logo cursor on the home-preview (desktop only). Interactive elements
    keep their own cursor (pointer / grab) since `cursor` is inherited. */
 @media (min-width: 768px) and (pointer: fine) {
