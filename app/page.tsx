@@ -11,14 +11,12 @@ export default function Home() {
   const [phase, setPhase] = useState(0);
   const [routing, setRouting] = useState(false);
 
-  // When authenticated, decide where to send the user:
-  //   - no username yet → /onboarding (first-time builder)
-  // Authenticated users go straight to the main page (Topia TV).
+  // When authenticated, send the user to the main homepage (home-preview).
   // Onboarding is optional — we never auto-force it.
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
-    router.replace('/tv');
+    router.replace('/home-preview');
   }, [ready, authenticated, user, router]);
 
   useEffect(() => {
