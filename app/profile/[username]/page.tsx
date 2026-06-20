@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
+import ShareButton from '../../components/ShareButton';
 import { SocialIcon } from '../../components/SocialIcons';
 import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
@@ -452,7 +453,14 @@ export default function PublicProfilePage() {
                             <span className="font-mono text-[11px] text-bone/20">—</span>
                           )}
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <ShareButton
+                            kind="profile"
+                            title={profile.name || username}
+                            text={`${profile.name || username} on TOPIA`}
+                            iconSize={11}
+                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-bone/30 hover:text-bone/60 transition-colors border border-bone/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                          />
                           {isOwnProfile && (
                             <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-bone/30 hover:text-bone/60 transition-colors border border-bone/[0.08] rounded-sm px-2 py-0.5 no-underline">
                               Edit

@@ -16,6 +16,8 @@ import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
+import { shortenPath } from '../../../lib/shortlink';
+import ShareModal from '../../components/ShareModal';
 
 interface EventHost {
   userId: string;
@@ -229,7 +231,8 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
   const [showRsvpModal, setShowRsvpModal] = useState(false);
   const [rsvpFormOpen, setRsvpFormOpen] = useState(false);
   const [pendingNotice, setPendingNotice] = useState(false);
@@ -384,28 +387,20 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   };
 
-  // Share — native share sheet on mobile/supported browsers, clipboard fallback
-  // everywhere else (shows a transient "Link copied" confirmation).
-  const handleShare = async () => {
+  // Pre-resolve the short link once the event loads so handleShare can fire the
+  // native share sheet synchronously (iOS invalidates the gesture after a fetch).
+  useEffect(() => {
     if (!event) return;
-    const url = typeof window !== 'undefined' ? window.location.href.split('?')[0] : '';
-    const shareData = {
-      title: event.eventName,
-      text: `${event.eventName}${event.city ? ` · ${event.city}` : ''} — on TOPIA`,
-      url,
-    };
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
-    } catch { /* user cancelled the native sheet — fall through to nothing */ return; }
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 1800);
-    } catch { /* clipboard blocked — no-op */ }
-  };
+    let alive = true;
+    shortenPath(window.location.pathname, 'event', privyUser?.id).then((u) => {
+      if (alive) setShortUrl(u);
+    });
+    return () => { alive = false; };
+  }, [event, privyUser?.id]);
+
+  // Share — opens our custom share sheet (copy link + Email/X/WhatsApp/FB +
+  // Instagram Story). The short link is prefetched into shortUrl above.
+  const handleShare = () => setShareOpen(true);
 
   if (loading) {
     return (
@@ -459,6 +454,16 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       <SentientText />
 
       <Navigation />
+
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        url={shortUrl ?? (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '')}
+        title={event.eventName}
+        text={`${event.eventName}${event.city ? ` · ${event.city}` : ''} — on TOPIA`}
+        storyImageUrl={`/events/${slug}/story`}
+        storyFilename={`${slug}-story.png`}
+      />
 
       <div className="pt-6 md:pt-24 pb-16">
         {/* Luma-style two-column layout — sticky cover on the left, all the
@@ -678,7 +683,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/events/${event.slug}/edit`} className="flex-1 min-w-[100px] inline-flex items-center justify-center px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center no-underline" style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}>Edit Event</Link>
                   <Link href={`/events/${event.slug}/manage`} className="flex-1 min-w-[100px] inline-flex items-center justify-center px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg text-center no-underline" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: 0.75 }}>Manage</Link>
-                  <button onClick={handleShare} className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}><ShareIcon size={12} />{shareCopied ? 'Copied' : 'Share'}</button>
+                  <button onClick={handleShare} className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-1.5 px-4 py-3 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg cursor-pointer" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}><ShareIcon size={12} />Share</button>
                 </div>
               )}
 
@@ -722,7 +727,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 title="Share"
               >
                 <ShareIcon size={12} />
-                {shareCopied ? 'Copied' : 'Share'}
+                Share
               </button>
               </div>
               {isPending && (
@@ -766,7 +771,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 title="Share"
               >
                 <ShareIcon size={12} />
-                {shareCopied ? 'Copied' : 'Share'}
+                Share
               </button>
             </div>
           )}
@@ -780,7 +785,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                     style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                   >
                     <ShareIcon size={12} />
-                    {shareCopied ? 'Copied' : 'Share'}
+                    Share
                   </button>
                 )}
                 {hasCalendarData && (

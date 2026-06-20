@@ -115,7 +115,7 @@ interface UserRow {
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
-type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects';
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1319,6 +1319,94 @@ function SimplePublishTab({ type, noun }: { type: string; noun: string }) {
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
+// ─── Links (short-link analytics) ───────────────────────────────────────────
+
+interface ShortLinkRow {
+  id: string;
+  code: string;
+  targetPath: string;
+  kind: string | null;
+  clicks: number;
+  createdAt: string | null;
+  creatorName: string | null;
+  creatorUsername: string | null;
+}
+
+function LinksTab() {
+  const [items, setItems] = useState<ShortLinkRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch('/api/admin/links')
+      .then((r) => r.json())
+      .then((d) => setItems(d.links || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalClicks = items.reduce((s, l) => s + (l.clicks || 0), 0);
+  const th = 'text-left px-3 py-2 font-mono text-[11px] uppercase tracking-widest';
+  const td = 'px-3 py-2 font-mono text-[12px] align-top';
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-mono text-[12px]" style={{ color: '#1a1a1a' }}>
+          {items.length} link{items.length === 1 ? '' : 's'} · {totalClicks} total click{totalClicks === 1 ? '' : 's'}
+        </p>
+        <button onClick={load} className="font-mono text-[12px] uppercase tracking-widest px-3 py-1 border border-[#1a1a1a] hover:bg-[#1a1a1a]/5" style={{ color: '#1a1a1a' }}>
+          Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="font-mono text-[12px]" style={{ color: '#1a1a1a' }}>Loading…</p>
+      ) : (
+        <div className="border border-[#1a1a1a] overflow-x-auto">
+          <table className="w-full" style={{ color: '#1a1a1a' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+                <th className={th}>Clicks</th>
+                <th className={th}>Short</th>
+                <th className={th}>Target</th>
+                <th className={th}>Kind</th>
+                <th className={th}>Creator</th>
+                <th className={th}>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((l) => {
+                const shortPath = l.kind === 'profile'
+                  ? `/@${l.targetPath.replace(/^\/profile\//, '')}`
+                  : `/s/${l.code}`;
+                return (
+                  <tr key={l.id} className="border-t border-[#1a1a1a]/15">
+                    <td className={`${td} font-bold`}>{l.clicks}</td>
+                    <td className={td}>
+                      <a href={shortPath} target="_blank" rel="noreferrer" className="underline hover:opacity-60">{shortPath}</a>
+                    </td>
+                    <td className={`${td} break-all`}>
+                      <a href={l.targetPath} target="_blank" rel="noreferrer" className="underline hover:opacity-60">{l.targetPath}</a>
+                    </td>
+                    <td className={td}>{l.kind || '—'}</td>
+                    <td className={td}>{l.creatorUsername ? `@${l.creatorUsername}` : l.creatorName || '—'}</td>
+                    <td className={td}>{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : '—'}</td>
+                  </tr>
+                );
+              })}
+              {items.length === 0 && (
+                <tr><td colSpan={6} className="px-3 py-6 text-center font-mono text-[12px] opacity-50">No short links yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TABS: { id: Tab; label: string }[] = [
   { id: 'worlds', label: 'WORLDS' },
   { id: 'users', label: 'USERS' },
@@ -1329,6 +1417,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'catalysts', label: 'CATALYSTS' },
   { id: 'tv', label: 'TV' },
   { id: 'projects', label: 'PROJECTS' },
+  { id: 'links', label: 'LINKS' },
 ];
 
 export default function AdminDashboard() {
@@ -1385,6 +1474,7 @@ export default function AdminDashboard() {
         {tab === 'catalysts' && <SimplePublishTab type="catalysts" noun="catalysts" />}
         {tab === 'tv' && <SimplePublishTab type="tv-episodes" noun="episodes" />}
         {tab === 'projects' && <SimplePublishTab type="world-projects" noun="projects" />}
+        {tab === 'links' && <LinksTab />}
       </main>
     </div>
   );

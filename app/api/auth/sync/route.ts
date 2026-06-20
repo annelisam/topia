@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { ensureShortLink } from '@/lib/shortlinkStore';
 
 // Normalize a profile string field: trim whitespace, convert empty to null.
 // Returns undefined if the key was not present in the body (meaning "don't update").
@@ -97,6 +98,12 @@ export async function POST(request: NextRequest) {
         .where(eq(users.privyId, privyId))
         .returning();
 
+      // Generate the profile short link the first time a username is set
+      // (deduped, so re-saves are cheap no-ops).
+      if (username !== undefined && updated[0].username) {
+        try { await ensureShortLink({ path: `/profile/${updated[0].username}`, kind: 'profile', createdBy: updated[0].id }); } catch { /* ignore */ }
+      }
+
       return NextResponse.json({ user: updated[0] });
     }
 
@@ -128,6 +135,10 @@ export async function POST(request: NextRequest) {
         verifiedProviders: nextVerifiedProviders(null),
       })
       .returning();
+
+    if (newUser[0].username) {
+      try { await ensureShortLink({ path: `/profile/${newUser[0].username}`, kind: 'profile', createdBy: newUser[0].id }); } catch { /* ignore */ }
+    }
 
     return NextResponse.json({ user: newUser[0] });
   } catch (error) {

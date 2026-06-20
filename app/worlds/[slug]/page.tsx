@@ -9,6 +9,7 @@ import remarkGfm from 'remark-gfm';
 import PageShell from '../../components/PageShell';
 import LoadingBar from '../../components/LoadingBar';
 import WorldGlobe from '../../components/WorldGlobe';
+import ShareButton from '../../components/ShareButton';
 import { SocialIcon } from '../../components/SocialIcons';
 import ProjectContent from '../../components/ProjectContent';
 import { markdownComponents } from '../../components/ProjectContent';
@@ -261,11 +262,21 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             <div className="p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[13px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>worlds // {slug}</span>
-                {isWorldBuilder && (
-                  <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-sm transition hover:opacity-70" style={{ backgroundColor: 'var(--accent-text)', color: 'var(--accent)' }}>
-                    Manage
-                  </Link>
-                )}
+                <div className="flex items-center gap-2">
+                  <ShareButton
+                    kind="world"
+                    title={world.title}
+                    text={`${world.title} — a world on TOPIA`}
+                    iconSize={11}
+                    className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-sm border transition hover:opacity-70 cursor-pointer bg-transparent"
+                    style={{ color: 'var(--accent-text, #1a1a1a)', borderColor: 'color-mix(in srgb, var(--accent-text, #1a1a1a) 35%, transparent)' }}
+                  />
+                  {isWorldBuilder && (
+                    <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-sm transition hover:opacity-70" style={{ backgroundColor: 'var(--accent-text)', color: 'var(--accent)' }}>
+                      Manage
+                    </Link>
+                  )}
+                </div>
               </div>
               <h1 className="font-basement font-black text-[clamp(24px,4vw,48px)] leading-[0.85] uppercase mt-2" style={{ color: 'var(--accent-text, #1a1a1a)' }}>
                 {world.title}

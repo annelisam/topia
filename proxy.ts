@@ -27,6 +27,16 @@ function verifyToken(token: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Vanity profile URLs: /@username → the tracked redirect handler /u/username
+  // (bumps clicks, forwards to /profile/username). App Router can't use a
+  // literal "@" path segment, so it's handled here.
+  const vanity = pathname.match(/^\/@([^/]+)\/?$/);
+  if (vanity) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/u/${vanity[1]}`;
+    return NextResponse.rewrite(url);
+  }
+
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminApi = pathname.startsWith('/api/admin') && pathname !== '/api/admin/auth';
 
@@ -52,5 +62,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/@:username'],
 };
