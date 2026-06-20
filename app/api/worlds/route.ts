@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worlds, creators, worldMembers, worldInvitations, users } from '@/lib/db/schema';
-import { ilike, asc, eq, and } from 'drizzle-orm';
+import { ilike, asc, eq, and, inArray } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
@@ -9,22 +9,24 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
     const creatorSlug = searchParams.get('creator');
     const slug = searchParams.get('slug');
+    // Manage mode: an owner/builder loading their own world's dashboard can see
+    // it even when unpublished (archived). Everyone else sees published only.
+    const manage = searchParams.get('manage') === '1';
+    const privyId = searchParams.get('privyId');
 
-    const conditions = [eq(worlds.published, true)];
+    const conditions = [];
+    if (slug) conditions.push(eq(worlds.slug, slug));
+    if (category && category !== 'all') conditions.push(ilike(worlds.category, category));
+    if (creatorSlug) conditions.push(eq(creators.slug, creatorSlug));
 
-    if (slug) {
-      conditions.push(eq(worlds.slug, slug));
+    let managerUserId: string | null = null;
+    if (manage && privyId && slug) {
+      const [caller] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId)).limit(1);
+      managerUserId = caller?.id ?? null;
     }
+    if (!managerUserId) conditions.push(eq(worlds.published, true));
 
-    if (category && category !== 'all') {
-      conditions.push(ilike(worlds.category, category));
-    }
-
-    if (creatorSlug) {
-      conditions.push(eq(creators.slug, creatorSlug));
-    }
-
-    const results = await db
+    let results = await db
       .select({
         id: worlds.id,
         title: worlds.title,
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
         collaborators: worlds.collaborators,
         socialLinks: worlds.socialLinks,
         dateAdded: worlds.dateAdded,
+        published: worlds.published,
         creatorId: worlds.creatorId,
         creatorName: creators.name,
         creatorSlug: creators.slug,
@@ -49,6 +52,17 @@ export async function GET(request: Request) {
       .leftJoin(creators, eq(worlds.creatorId, creators.id))
       .where(and(...conditions))
       .orderBy(asc(worlds.displayOrder), asc(worlds.title));
+
+    // In manage mode only keep unpublished worlds the caller actually builds.
+    if (managerUserId && results.some((w) => !w.published)) {
+      const ids = results.map((w) => w.id);
+      const mine = await db
+        .select({ worldId: worldMembers.worldId })
+        .from(worldMembers)
+        .where(and(eq(worldMembers.userId, managerUserId), inArray(worldMembers.worldId, ids), inArray(worldMembers.role, ['owner', 'world_builder'])));
+      const mineSet = new Set(mine.map((m) => m.worldId));
+      results = results.filter((w) => w.published || mineSet.has(w.id));
+    }
 
     // Fetch world members for all returned worlds
     const worldIds = results.map(w => w.id);

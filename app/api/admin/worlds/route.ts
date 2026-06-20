@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worlds, creators, worldMembers, users } from '@/lib/db/schema';
+import { worlds, creators, worldMembers, users, eventHosts } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { isAdminRequest } from '@/lib/adminAuth';
 
@@ -155,7 +155,9 @@ export async function DELETE(request: Request) {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    // World members cascade-delete via FK
+    // Detach event-host links first — eventHosts.worldId has no cascade, so it
+    // would block the delete. Members, invitations and projects cascade via FK.
+    await db.update(eventHosts).set({ worldId: null }).where(eq(eventHosts.worldId, data.id));
     await db.delete(worlds).where(eq(worlds.id, data.id));
     return NextResponse.json({ ok: true });
   } catch (error) {
