@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { eventRsvps, events, tickets, guestbookEntries, tools, eventInvites, worldMembers } from '@/lib/db/schema';
+import { eventRsvps, events, tickets, guestbookEntries, tools, eventInvites, worldMembers, follows, users } from '@/lib/db/schema';
 import { and, eq, inArray, asc, isNotNull } from 'drizzle-orm';
 import { resolvePath, PATH_CONFIG } from '@/app/components/profile/pathConfig';
 
@@ -18,6 +18,8 @@ export interface ProfileStamp {
   emblem?: 'topia' | 'star'; // central glyph for seal-shaped stamps
   title: string;            // human title shown in the detail modal
   description: string;      // short blurb shown in the detail modal
+  avatarUrl?: string;       // for connection ("Orbit") stamps — the person's PFP
+  href?: string;            // link to that person's profile (shown in the modal)
 }
 
 // Anyone who joins before this date is an "Early Citizen" of the beta.
@@ -59,7 +61,7 @@ export async function computeProfileStamps(opts: {
   const roleTagList = (opts.roleTags ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   const hasOwnedWorlds = worldMemberships.some((w) => w.role === 'owner' || w.role === 'world_builder');
 
-  const [rsvpRows, checkIns, gbRows, toolRows, invites, worldMemberRows] = await Promise.all([
+  const [rsvpRows, checkIns, gbRows, toolRows, invites, worldMemberRows, followingRows, followerRows] = await Promise.all([
     db.select({ name: events.eventName, dateIso: events.dateIso, at: eventRsvps.createdAt })
       .from(eventRsvps).innerJoin(events, eq(eventRsvps.eventId, events.id))
       .where(and(eq(eventRsvps.userId, userId), eq(eventRsvps.status, 'going')))
@@ -75,6 +77,12 @@ export async function computeProfileStamps(opts: {
       ? db.select({ worldId: worldMembers.worldId, userId: worldMembers.userId, at: worldMembers.createdAt })
           .from(worldMembers).where(inArray(worldMembers.worldId, worldIds))
       : Promise.resolve([] as { worldId: string; userId: string; at: Date }[]),
+    // People this user follows.
+    db.select({ id: users.id, name: users.name, username: users.username, avatarUrl: users.avatarUrl, at: follows.createdAt })
+      .from(follows).innerJoin(users, eq(follows.followingId, users.id)).where(eq(follows.followerId, userId)),
+    // People who follow this user.
+    db.select({ id: users.id, name: users.name, username: users.username, avatarUrl: users.avatarUrl, at: follows.createdAt })
+      .from(follows).innerJoin(users, eq(follows.followerId, users.id)).where(eq(follows.followingId, userId)),
   ]);
 
   const stamps: ProfileStamp[] = [];
@@ -172,6 +180,27 @@ export async function computeProfileStamps(opts: {
     add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'purple', shape: 'rect', rarity: 'rare',
       title: 'Toolmaker', description: 'Contributed a tool to the TOPIA Resources library.' });
   }
+
+  // ── Orbit — a stamp for everyone in your network (you follow / follows you) ─
+  const conns = new Map<string, { name: string | null; username: string | null; avatarUrl: string | null; at: Date; iFollow: boolean; followsMe: boolean }>();
+  for (const f of followingRows) {
+    if (f.id === userId) continue;
+    conns.set(f.id, { name: f.name, username: f.username, avatarUrl: f.avatarUrl, at: f.at, iFollow: true, followsMe: false });
+  }
+  for (const f of followerRows) {
+    if (f.id === userId) continue;
+    const e = conns.get(f.id);
+    if (e) e.followsMe = true;
+    else conns.set(f.id, { name: f.name, username: f.username, avatarUrl: f.avatarUrl, at: f.at, iFollow: false, followsMe: true });
+  }
+  [...conns.values()].filter((p) => p.username).slice(0, 12).forEach((p) => {
+    const who = p.name || `@${p.username}`;
+    const rel = p.iFollow && p.followsMe ? 'You and @' + p.username + ' follow each other.'
+      : p.iFollow ? `You follow @${p.username}.`
+      : `@${p.username} follows you.`;
+    add({ label: (p.name || p.username || '').toUpperCase().slice(0, 14), caption: 'ORBIT', date: ym(p.at), color: 'magenta', shape: 'circle', rarity: 'common',
+      title: who, description: rel, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
+  });
 
   // Rarest first, then by insertion order (stable).
   return stamps

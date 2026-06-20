@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { PathConfig, COLOR_HEX } from './pathConfig';
 
 interface ContentItem {
@@ -23,6 +24,8 @@ export interface Stamp {
   emblem?: 'topia' | 'star';
   title: string;
   description: string;
+  avatarUrl?: string;
+  href?: string;
 }
 
 export type StampLayout = Record<string, { x: number; y: number; rot: number }>;
@@ -54,7 +57,9 @@ const BAND_H = 212;
 function layoutStamps(stamps: Stamp[], areaW: number) {
   const N = stamps.length;
   const PAD = 4;
-  const baseSize = Math.max(60, Math.min(116, (areaW / Math.max(5, N)) * 1.15));
+  // Keep stamps a healthy size — pack tighter (overlap) on narrow screens
+  // rather than shrinking them much.
+  const baseSize = Math.max(86, Math.min(118, (areaW / Math.max(5, N)) * 1.25));
   // Uneven cumulative horizontal steps → varied spacing (some touching).
   let acc = 0;
   const cum = stamps.map((_, i) => { acc += i === 0 ? 0 : 0.4 + rng(i * 3 + 1) * 1.1; return acc; });
@@ -203,6 +208,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
         <path id={`arcTop-${idKey}`} d="M 50,50 m -34,0 a 34,34 0 1,1 68,0" />
         <path id={`arcBot-${idKey}`} d="M 50,50 m 34,0 a 34,34 0 1,1 -68,0" />
         {!branded && <InkFilter idKey={idKey} seed={seed} />}
+        {stamp.avatarUrl && <clipPath id={`av-${idKey}`}><circle cx="50" cy="50" r="20" /></clipPath>}
       </defs>
       <g filter={inkF} opacity={inkOp}>
         {isLegend && <circle cx="50" cy="50" r="46" fill={c} opacity={0.1} />}
@@ -219,8 +225,15 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
         <text fill={c} opacity={0.55} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
           <textPath href={`#arcBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} • TOPIA •`}</textPath>
         </text>
-        <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>
+        {!stamp.avatarUrl && <text x="50" y="48" textAnchor="middle" fill={c} opacity={0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', fontWeight: 'bold' }}>{stamp.date}</text>}
       </g>
+      {stamp.avatarUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <image href={stamp.avatarUrl} x="30" y="30" width="40" height="40" clipPath={`url(#av-${idKey})`} preserveAspectRatio="xMidYMid slice" />
+          <circle cx="50" cy="50" r="20" fill="none" stroke={c} strokeWidth="1.2" opacity={0.7} />
+        </>
+      )}
     </svg>
   );
 }
@@ -407,6 +420,21 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
               </span>
               <h3 className="font-basement font-black text-[24px] uppercase leading-[0.95] text-bone">{selected.title}</h3>
               <p className="font-mono text-[11px] leading-[1.7] text-bone/55">{selected.description}</p>
+              {selected.href && (
+                <Link href={selected.href} onClick={() => setSelected(null)} className="flex items-center gap-2.5 no-underline group/avatar mt-0.5">
+                  <span className="w-9 h-9 rounded-full overflow-hidden border border-bone/20 shrink-0 bg-obsidian flex items-center justify-center">
+                    {selected.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={selected.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-mono text-[12px] text-bone/40">{(selected.title[0] || '?').toUpperCase()}</span>
+                    )}
+                  </span>
+                  <span className="font-mono text-[12px] text-bone/70 group-hover/avatar:text-bone underline decoration-bone/20 transition-colors truncate">
+                    {selected.href.replace('/profile/', '@')} →
+                  </span>
+                </Link>
+              )}
               <div className="mt-1 pt-3 border-t border-bone/10">
                 <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30 block">Issued</span>
                 <span className="font-mono text-[13px] uppercase tracking-wider text-bone">{selected.date}</span>

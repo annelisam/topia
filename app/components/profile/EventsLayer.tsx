@@ -88,28 +88,28 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
             <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No events yet</span>
           </div>
         ) : view === 'grid' ? (
-          /* Gallery — compact cards that scroll sideways (carousel), not down */
-          <div className="flex gap-2 overflow-x-auto overflow-y-hidden p-2.5" style={{ scrollbarWidth: 'thin' }}>
+          /* Gallery — wide cards that fill the panel height and scroll sideways */
+          <div className="flex gap-3 overflow-x-auto overflow-y-hidden p-3 h-full" style={{ scrollbarWidth: 'thin' }}>
             {rows.map(({ ev, role }) => {
               const chip = dayChip(ev.date);
               return (
-                <Link key={ev.id} href={`/events/${ev.slug}`} className="group block w-[140px] shrink-0 rounded-md overflow-hidden border border-bone/[0.08] bg-obsidian no-underline hover:border-bone/20 transition-colors">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.05]">
+                <Link key={ev.id} href={`/events/${ev.slug}`} className="group flex flex-col w-[min(320px,80vw)] shrink-0 h-full rounded-lg overflow-hidden border border-bone/[0.08] bg-obsidian no-underline hover:border-bone/20 transition-colors">
+                  <div className="relative flex-1 min-h-0 overflow-hidden bg-bone/[0.05]">
                     {ev.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={ev.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     ) : (
-                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[14px] uppercase text-bone/10">TOPIA</span>
+                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[28px] uppercase text-bone/10">TOPIA</span>
                     )}
-                    <div className="absolute top-1.5 left-1.5 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-1 py-0.5 text-center min-w-[24px]">
-                      <div className="font-basement font-black text-[10px] leading-none text-bone">{chip.day}</div>
-                      <div className="font-mono text-[5px] uppercase tracking-[1px] text-bone/60">{chip.mon}</div>
+                    <div className="absolute top-2 left-2 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-1.5 py-0.5 text-center min-w-[30px]">
+                      <div className="font-basement font-black text-[14px] leading-none text-bone">{chip.day}</div>
+                      <div className="font-mono text-[7px] uppercase tracking-[1px] text-bone/60">{chip.mon}</div>
                     </div>
                   </div>
-                  <div className="p-1.5">
-                    <h3 className="font-mono text-[9px] font-bold uppercase text-bone leading-tight line-clamp-2">{ev.eventName}</h3>
-                    <div className="flex items-center justify-between gap-1 mt-1">
-                      <span className="font-mono text-[7px] text-bone/40 truncate">{ev.city || fmtDate(ev.date)}</span>
+                  <div className="p-3 shrink-0">
+                    <h3 className="font-mono text-[clamp(12px,2.6vw,15px)] font-bold uppercase text-bone leading-tight line-clamp-2">{ev.eventName}</h3>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <span className="font-mono text-[10px] text-bone/40 truncate">{ev.city || fmtDate(ev.date)}</span>
                       <span className={`${roleBadge(role)} shrink-0`}>{role}</span>
                     </div>
                   </div>
