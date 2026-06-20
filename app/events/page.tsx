@@ -238,39 +238,12 @@ export default function EventsPage() {
 
   /* ── Optimistic toggles ─────────────────────────────────────── */
 
-  async function toggleRsvp(eventId: string, going: boolean) {
-    if (!user?.id) return;
-    // Optimistic local update
-    setEvents((list) =>
-      list.map((e) => e.id === eventId
-        ? { ...e, isGoing: going, rsvpCount: Math.max(0, e.rsvpCount + (going ? 1 : -1)) }
-        : e
-      ),
-    );
-    try {
-      if (going) {
-        await fetch('/api/events/rsvp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: user.id, eventId }),
-        });
-      } else {
-        await fetch('/api/events/rsvp', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ privyId: user.id, eventId }),
-        });
-      }
-    } catch (err) {
-      console.error('RSVP failed', err);
-      // Revert
-      setEvents((list) =>
-        list.map((e) => e.id === eventId
-          ? { ...e, isGoing: !going, rsvpCount: Math.max(0, e.rsvpCount + (going ? -1 : 1)) }
-          : e
-        ),
-      );
-    }
+  // RSVP now lives on the event page (the full modal + withdraw-confirm flow),
+  // so the list's attendance buttons just open the event instead of toggling
+  // attendance from here (which made it too easy to accidentally un-RSVP).
+  function openEventById(eventId: string) {
+    const ev = events.find((e) => e.id === eventId);
+    if (ev) router.push(`/events/${ev.slug}`);
   }
 
   async function toggleSave(slug: string, saved: boolean) {
@@ -429,7 +402,7 @@ export default function EventsPage() {
                             authenticated={authenticated}
                             today={today}
                             onOpen={() => router.push(`/events/${ev.slug}`)}
-                            onToggleRsvp={() => toggleRsvp(ev.id, !ev.isGoing)}
+                            onToggleRsvp={() => openEventById(ev.id)}
                             onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
                             staggerIndex={gi * 8 + i}
                           />
@@ -451,7 +424,7 @@ export default function EventsPage() {
                             authenticated={authenticated}
                             today={today}
                             onOpen={() => router.push(`/events/${ev.slug}`)}
-                            onToggleRsvp={() => toggleRsvp(ev.id, !ev.isGoing)}
+                            onToggleRsvp={() => openEventById(ev.id)}
                             onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
                             staggerIndex={gi * 8 + i}
                           />
@@ -470,7 +443,7 @@ export default function EventsPage() {
                     authenticated={authenticated}
                     compact={viewMode === 'grid'}
                     onOpen={(slug) => router.push(`/events/${slug}`)}
-                    onToggleRsvp={(eventId, going) => toggleRsvp(eventId, going)}
+                    onToggleRsvp={(eventId) => openEventById(eventId)}
                     onToggleSave={(slug, saved) => toggleSave(slug, saved)}
                   />
                 </div>
@@ -575,17 +548,13 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
               {externalLinkLabel(event.externalSource)}
             </a>
           )
-        ) : !isPast && authenticated ? (
+        ) : !isPast ? (
           <button
             onClick={onToggleRsvp}
-            className={`inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1.5 rounded-sm border transition cursor-pointer ${
-              event.isGoing
-                ? 'bg-green/15 border-green/40 text-green'
-                : 'bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)]'
-            }`}
-            title={event.isGoing ? 'Click to un-RSVP' : 'RSVP — going'}
+            className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1.5 rounded-sm border transition cursor-pointer bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
+            title="View event"
           >
-            {event.isGoing ? (<><CheckIcon size={9} /> Going</>) : 'RSVP'}
+            View Event
           </button>
         ) : null}
         {authenticated && (
@@ -652,7 +621,7 @@ interface FeaturedRowProps {
   authenticated: boolean;
   compact?: boolean;
   onOpen: (slug: string) => void;
-  onToggleRsvp: (eventId: string, going: boolean) => Promise<void>;
+  onToggleRsvp: (eventId: string, going?: boolean) => void;
   onToggleSave: (slug: string, saved: boolean) => Promise<void>;
 }
 
@@ -754,16 +723,12 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                   >
                     {externalLinkLabel(ev.externalSource)}
                   </a>
-                ) : authenticated && !ev.isHosting && (
+                ) : !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
-                    className={`font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm border transition cursor-pointer ${
-                      ev.isGoing
-                        ? 'bg-green/15 border-green/40 text-green'
-                        : 'bg-transparent border-[var(--border-color)] text-[var(--foreground)]/70 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]'
-                    }`}
+                    className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 rounded-sm border transition cursor-pointer bg-transparent border-[var(--border-color)] text-[var(--foreground)]/70 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
                   >
-                    {ev.isGoing ? (<span className="inline-flex items-center gap-1"><CheckIcon size={8} /> Going</span>) : 'RSVP'}
+                    View Event
                   </button>
                 )}
               </div>
@@ -851,18 +816,12 @@ function FeaturedRowCompact({
                   >
                     {externalLinkShort(ev.externalSource)}
                   </a>
-                ) : authenticated && !ev.isHosting && (
+                ) : !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
-                    className={`font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer shrink-0 inline-flex items-center justify-center ${
-                      // Match the compact save-star (w-6 h-6) so going state
-                      // is a square icon button, not a stubby pill.
-                      ev.isGoing
-                        ? 'w-6 h-6 bg-green/15 border-green/40 text-green'
-                        : 'px-1.5 py-0.5 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]'
-                    }`}
+                    className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer shrink-0 inline-flex items-center justify-center px-1.5 py-0.5 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
                   >
-                    {ev.isGoing ? (<CheckIcon size={10} />) : 'RSVP'}
+                    View
                   </button>
                 )}
               </div>
@@ -966,20 +925,13 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                 >
                   {externalLinkShort(event.externalSource)}
                 </a>
-              ) : !isPast && authenticated && (
+              ) : !isPast && (
                 <button
                   onClick={onToggleRsvp}
-                  className={`font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer inline-flex items-center justify-center ${
-                    // Match the save-star button's 24×24 square footprint
-                    // when collapsed to just the checkmark icon; expand to
-                    // pill width when the label is "RSVP".
-                    event.isGoing
-                      ? 'w-6 h-6 bg-green/15 border-green/40 text-green'
-                      : 'px-2 py-1 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]'
-                  }`}
-                  title={event.isGoing ? 'Click to un-RSVP' : 'RSVP'}
+                  className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer inline-flex items-center justify-center px-2 py-1 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
+                  title="View event"
                 >
-                  {event.isGoing ? (<CheckIcon size={10} />) : 'RSVP'}
+                  View
                 </button>
               )}
               {authenticated && (
