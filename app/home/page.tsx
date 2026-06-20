@@ -370,8 +370,19 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
+    // Muted inline autoplay: set the property imperatively (React's muted prop
+    // isn't reliable for this) and retry once the media is ready, since the
+    // first play() can land before the source is buffered on mobile.
     v.muted = true;
-    v.play().catch(() => {});
+    v.defaultMuted = true;
+    const tryPlay = () => { v.play().catch(() => {}); };
+    tryPlay();
+    v.addEventListener('canplay', tryPlay);
+    v.addEventListener('loadeddata', tryPlay);
+    return () => {
+      v.removeEventListener('canplay', tryPlay);
+      v.removeEventListener('loadeddata', tryPlay);
+    };
   }, [episode.id]);
 
   const toggleMute = () => {
@@ -389,8 +400,10 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
         src={episode.videoUrl}
         poster={episode.thumbnailUrl ?? undefined}
         muted={muted}
+        autoPlay
         loop
         playsInline
+        preload="auto"
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent 50%)' }} />
@@ -462,6 +475,14 @@ export default function HomePreview() {
     const el = carouselRef.current;
     if (el) el.scrollBy({ left: dir * Math.max(260, el.clientWidth * 0.8), behavior: 'smooth' });
   };
+
+  // The "complete your profile" CTA is prepended once viewerComplete resolves
+  // (which lands after the profile cards have already rendered). Browser scroll
+  // anchoring keeps the old offset, pushing the new first card off-screen to the
+  // left — so snap the carousel back to the start whenever the lineup changes.
+  useEffect(() => {
+    if (carouselRef.current) carouselRef.current.scrollLeft = 0;
+  }, [viewerComplete, profiles]);
 
   const featuredEp = episodes[0];
   const moreEps = episodes.slice(1, 5);
@@ -689,7 +710,7 @@ export default function HomePreview() {
             {profiles.length === 0 && viewerComplete !== false ? (
               <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
             ) : (
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none' }}>
+              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none', overflowAnchor: 'none' }}>
                 {/* Nudge the viewer to finish their own profile */}
                 {viewerComplete === false && (
                   <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
