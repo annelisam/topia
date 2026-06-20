@@ -25,6 +25,9 @@ export interface Stamp {
   description: string;
 }
 
+export type StampLayout = Record<string, { x: number; y: number; rot: number }>;
+function stampKey(s: Stamp): string { return `${s.caption}|${s.label}`; }
+
 interface Props {
   config: PathConfig;
   sectionLabel: string;
@@ -32,6 +35,10 @@ interface Props {
   stamps: Stamp[];
   /** When false, only the visa stamps show (full-width); endorsed list hidden. */
   showEndorsed?: boolean;
+  /** Profile owner — can reorder & save the stamp arrangement. */
+  editable?: boolean;
+  /** localStorage key (the profile username) for the saved arrangement. */
+  storageKey?: string;
 }
 
 // Deterministic pseudo-random in [0,1) — stable across SSR/CSR (Math.random
@@ -218,7 +225,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   );
 }
 
-export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true }: Props) {
+export default function IdentityLayer({ config, sectionLabel, items, stamps, showEndorsed = true, editable = false, storageKey }: Props) {
   const [selected, setSelected] = useState<Stamp | null>(null);
   const selColor = selected ? inkColor(selected.color, config.hex) : config.hex;
   const selRectShape = selected?.shape === 'rect';
@@ -235,7 +242,63 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const placed = layoutStamps(stamps, areaW);
+
+  // Owner reorder: custom positions stored as fractions of the area so they
+  // stay responsive. Falls back to the auto scatter for un-placed stamps.
+  const lsKey = storageKey ? `topia:stamp-layout:${storageKey}` : null;
+  const [reorder, setReorder] = useState(false);
+  const [custom, setCustom] = useState<StampLayout>({});
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Load any saved arrangement (client-side; per-device).
+  useEffect(() => {
+    if (!lsKey) return;
+    try { const raw = localStorage.getItem(lsKey); if (raw) setCustom(JSON.parse(raw)); } catch { /* ignore */ }
+  }, [lsKey]);
+  const drag = useRef<{ key: string; offX: number; offY: number; size: number; stampH: number; rot: number } | null>(null);
+
+  const placedAuto = layoutStamps(stamps, areaW);
+  const placed = stamps.map((stamp, i) => {
+    const base = placedAuto[i];
+    const cp = custom[stampKey(stamp)];
+    if (!cp) return base;
+    return {
+      ...base,
+      left: Math.min(Math.max(0, cp.x * (areaW - base.size)), Math.max(0, areaW - base.size)),
+      top: Math.min(Math.max(0, cp.y * (BAND_H - base.stampH)), Math.max(0, BAND_H - base.stampH)),
+      rot: cp.rot,
+    };
+  });
+
+  const onDragStart = (e: React.PointerEvent, stamp: Stamp, p: { size: number; stampH: number; left: number; top: number; rot: number }) => {
+    if (!reorder) return;
+    e.preventDefault();
+    const rect = areaRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    drag.current = { key: stampKey(stamp), offX: e.clientX - rect.left - p.left, offY: e.clientY - rect.top - p.top, size: p.size, stampH: p.stampH, rot: p.rot };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onDragMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    const rect = areaRef.current?.getBoundingClientRect();
+    if (!d || !rect) return;
+    const left = Math.min(Math.max(0, e.clientX - rect.left - d.offX), Math.max(0, areaW - d.size));
+    const top = Math.min(Math.max(0, e.clientY - rect.top - d.offY), Math.max(0, BAND_H - d.stampH));
+    const x = areaW - d.size > 0 ? left / (areaW - d.size) : 0;
+    const y = BAND_H - d.stampH > 0 ? top / (BAND_H - d.stampH) : 0;
+    setCustom((c) => ({ ...c, [d.key]: { x, y, rot: d.rot } }));
+    setDirty(true);
+  };
+  const onDragEnd = () => { drag.current = null; };
+
+  const saveLayout = () => {
+    setSaving(true);
+    try { if (lsKey) localStorage.setItem(lsKey, JSON.stringify(custom)); } catch { /* ignore */ }
+    setDirty(false);
+    setReorder(false);
+    setSaving(false);
+  };
+  const resetLayout = () => { setCustom({}); setDirty(true); };
 
   return (
     <div className={`grid grid-cols-1 ${showEndorsed ? 'md:grid-cols-[2fr_3fr]' : ''} gap-[3px] h-full`}>
@@ -280,10 +343,27 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
             <ellipse key={i} cx="150" cy="200" rx={60 + i * 20} ry={40 + i * 15} fill="none" stroke="#f5f0e8" strokeWidth="0.4" transform={`rotate(${i * 12} 150 200)`} />
           ))}
         </svg>
-        <div className="flex items-center justify-between mb-3 relative z-10">
-          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25">visa stamps // travel log</span>
-          {stamps.length > 0 && <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/20">{stamps.length} earned</span>}
+        <div className="flex items-center justify-between mb-3 relative z-10 gap-2">
+          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 shrink-0">visa stamps // travel log</span>
+          <div className="flex items-center gap-2">
+            {stamps.length > 0 && !reorder && <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/20">{stamps.length} earned</span>}
+            {editable && stamps.length > 0 && (
+              reorder ? (
+                <>
+                  <button onClick={resetLayout} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent">Reset</button>
+                  <button onClick={() => { setReorder(false); setDirty(false); try { const raw = lsKey && localStorage.getItem(lsKey); setCustom(raw ? JSON.parse(raw) : {}); } catch { setCustom({}); } }} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent">Cancel</button>
+                  <button onClick={saveLayout} disabled={saving} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2.5 py-1 rounded-sm font-bold text-obsidian transition cursor-pointer disabled:opacity-50" style={{ backgroundColor: config.hex }}>{saving ? 'Saving…' : dirty ? 'Save' : 'Done'}</button>
+                </>
+              ) : (
+                <button onClick={() => setReorder(true)} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent flex items-center gap-1">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" /></svg>
+                  Reorder
+                </button>
+              )
+            )}
+          </div>
         </div>
+        {reorder && <p className="font-mono text-[8px] uppercase tracking-[1.5px] text-bone/30 mb-2 relative z-10">Drag stamps to rearrange · then save</p>}
         {stamps.length === 0 ? (
           <div className="flex items-center justify-center relative z-10" style={{ minHeight: 180 }}>
             <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No travel yet</span>
@@ -295,10 +375,13 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
               return (
                 <button
                   key={i}
-                  onClick={() => setSelected(stamp)}
-                  title={`${stamp.title} — ${stamp.date}`}
-                  className="absolute group cursor-pointer transition-transform duration-300 hover:!z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
-                  style={{ left: `${p.left}px`, top: `${p.top}px`, width: `${p.size}px`, height: `${p.stampH}px`, transform: `rotate(${p.rot}deg)`, zIndex: p.z }}
+                  onClick={() => { if (!reorder) setSelected(stamp); }}
+                  onPointerDown={reorder ? (e) => onDragStart(e, stamp, p) : undefined}
+                  onPointerMove={reorder ? onDragMove : undefined}
+                  onPointerUp={reorder ? onDragEnd : undefined}
+                  title={reorder ? 'Drag to move' : `${stamp.title} — ${stamp.date}`}
+                  className={`absolute group bg-transparent border-none p-0 ${reorder ? 'cursor-grab active:cursor-grabbing touch-none' : 'cursor-pointer transition-transform duration-300 hover:!z-[60] hover:scale-[1.14]'}`}
+                  style={{ left: `${p.left}px`, top: `${p.top}px`, width: `${p.size}px`, height: `${p.stampH}px`, transform: `rotate(${p.rot}deg)`, zIndex: drag.current?.key === stampKey(stamp) ? 70 : p.z }}
                 >
                   <StampSvg stamp={stamp} idKey={String(i)} config={config} />
                 </button>

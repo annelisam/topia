@@ -238,7 +238,7 @@ export default function PublicProfilePage() {
       case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
       case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
-      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} />;
+      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} editable={isOwnProfile} storageKey={username} />;
     }
   }
 
