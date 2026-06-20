@@ -89,6 +89,13 @@ export async function computeProfileStamps(opts: {
       title: 'TOPIA Member', description: 'A member of TOPIA — the world at the center of it all. The rarest seal on the passport.' });
   }
 
+  // ── TOPIA Like Minds — RSVP'd to the flagship gathering ────────────────────
+  const likeMinds = rsvpRows.find((r) => /like\s*minds/i.test(r.name));
+  if (likeMinds) {
+    add({ label: 'LIKE MINDS', caption: 'TOPIA', date: ym(likeMinds.dateIso ?? likeMinds.at), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia',
+      title: 'TOPIA Like Minds', description: "RSVP'd to TOPIA Like Minds — in the room with the others." });
+  }
+
   // ── Path seal — everyone has a resolved path ───────────────────────────────
   const path = resolvePath(opts.path, roleTagList, hasOwnedWorlds);
   const pathCfg = PATH_CONFIG[path];

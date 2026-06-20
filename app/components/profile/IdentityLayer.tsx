@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PathConfig, COLOR_HEX } from './pathConfig';
 
 interface ContentItem {
@@ -34,12 +34,39 @@ interface Props {
   showEndorsed?: boolean;
 }
 
-// Stamps wrap across multiple rows like a passport page — spaced out, each at
-// a slight angle and vertical offset. Deterministic pseudo-random in [0,1) so
-// it's stable across SSR/CSR (Math.random would cause a hydration mismatch).
+// Deterministic pseudo-random in [0,1) — stable across SSR/CSR (Math.random
+// would cause a hydration mismatch; Math.sin of a constant won't).
 function rng(n: number): number { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
 // 4-point sparkle star fallback emblem (path seals).
 const STAR = 'M50 30 L55 45 L70 50 L55 55 L50 70 L45 55 L30 50 L45 45 Z';
+
+// Two-lane (top + bottom) asymmetric scatter that fills the whole width with
+// uneven gaps — some stamps sit close/overlapping, others have air. Responsive:
+// positions are recomputed from the measured area width.
+const BAND_H = 212;
+function layoutStamps(stamps: Stamp[], areaW: number) {
+  const N = stamps.length;
+  const PAD = 4;
+  const baseSize = Math.max(60, Math.min(116, (areaW / Math.max(5, N)) * 1.15));
+  // Uneven cumulative horizontal steps → varied spacing (some touching).
+  let acc = 0;
+  const cum = stamps.map((_, i) => { acc += i === 0 ? 0 : 0.4 + rng(i * 3 + 1) * 1.1; return acc; });
+  const span = cum[N - 1] || 1;
+  let prevLane = rng(2) > 0.5 ? 1 : 0;
+  return stamps.map((stamp, i) => {
+    const size = baseSize * (0.9 + stamp.weight * 0.14);
+    const stampH = stamp.shape === 'rect' ? size * 0.56 : size;
+    const maxLeft = Math.max(size, areaW - size - PAD * 2);
+    const left = N > 1 ? PAD + (cum[i] / span) * maxLeft : Math.max(PAD, (areaW - size) / 2);
+    // Lane mostly alternates (uses top & bottom) but sometimes repeats → asymmetry + overlap.
+    const lane = i === 0 ? prevLane : rng(i * 7 + 3) > 0.5 ? 1 - prevLane : prevLane;
+    prevLane = lane;
+    const top = lane === 0 ? PAD + rng(i * 3 + 5) * 22 : Math.max(PAD, BAND_H - stampH - PAD - rng(i * 3 + 9) * 22);
+    const rot = (rng(i * 5 + 2) - 0.5) * 18;
+    const z = Math.floor(rng(i * 11 + 4) * 12) + 1;
+    return { size, stampH, left, top, rot, z };
+  });
+}
 
 // Aged-ink versions of the brand colors — deeper and a touch more saturated
 // than pastel so they read like real passport-stamp ink. Silver (TOPIA) stays.
@@ -65,12 +92,19 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
 
   if (stamp.shape === 'seal') {
     const topia = stamp.emblem === 'topia';
+    const chrome = topia && stamp.color === 'silver'; // only the TOPIA member seal is metallic
     return (
       <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
         <defs>
           <path id={`sealTop-${idKey}`} d="M 50,50 m -33,0 a 33,33 0 1,1 66,0" />
           <path id={`sealBot-${idKey}`} d="M 50,50 m 33,0 a 33,33 0 1,1 -66,0" />
           {topia && (
+            <mask id={`logo-${idKey}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <image href="/brand/topia-mark.png" x="18.5" y="29" width="63" height="42" preserveAspectRatio="xMidYMid meet" />
+            </mask>
+          )}
+          {chrome && (
             <>
               <linearGradient id={`chrome-${idKey}`} x1="0" y1="0" x2="0.9" y2="1">
                 <stop offset="0%" stopColor="#ffffff" />
@@ -95,8 +129,8 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
             </>
           )}
         </defs>
-        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={topia ? 0.72 : 0.55} />
-        {topia ? (
+        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={chrome ? 0.72 : 0.55} />
+        {chrome ? (
           <>
             <circle cx="50" cy="50" r="41" fill={`url(#holoGlow-${idKey})`} />
             <circle cx="50" cy="50" r="47.6" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity={0.5} />
@@ -111,15 +145,14 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
             <circle cx="50" cy="50" r="44.5" fill="none" stroke={c} strokeWidth="1.4" opacity={ringOp * 0.7} strokeDasharray="0.4 2.6" />
           </>
         )}
-        <text fill={topia ? `url(#chrome-${idKey})` : c} opacity={topia ? 1 : 0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
+        <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 1 : 0.95} style={{ fontFamily: "'Space Mono', monospace", fontSize: '8.5px', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>
           <textPath href={`#sealTop-${idKey}`} startOffset="50%" textAnchor="middle">{stamp.label}</textPath>
         </text>
-        <text fill={topia ? `url(#chrome-${idKey})` : c} opacity={topia ? 0.92 : 0.75} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
+        <text fill={chrome ? `url(#chrome-${idKey})` : c} opacity={chrome ? 0.92 : 0.8} style={{ fontFamily: "'Space Mono', monospace", fontSize: '6px', letterSpacing: '2.5px', textTransform: 'uppercase' }}>
           <textPath href={`#sealBot-${idKey}`} startOffset="50%" textAnchor="middle">{`• ${stamp.caption} •`}</textPath>
         </text>
         {topia ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <image href="/brand/topia-mark.png" x="18.5" y="29" width="63" height="42" preserveAspectRatio="xMidYMid meet" opacity={1} />
+          <rect x="17" y="27" width="66" height="46" fill={chrome ? `url(#chrome-${idKey})` : c} mask={`url(#logo-${idKey})`} />
         ) : (
           <path d={STAR} fill="none" stroke={c} strokeWidth="2.4" opacity={0.9} transform="translate(15 15) scale(0.7)" />
         )}
@@ -170,6 +203,20 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
   const [selected, setSelected] = useState<Stamp | null>(null);
   const selColor = selected ? inkColor(selected.color, config.hex) : config.hex;
   const selRectShape = selected?.shape === 'rect';
+
+  // Measure the stamp area so the scatter fills the width responsively.
+  const areaRef = useRef<HTMLDivElement>(null);
+  const [areaW, setAreaW] = useState(640);
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const measure = () => setAreaW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const placed = layoutStamps(stamps, areaW);
 
   return (
     <div className={`grid grid-cols-1 ${showEndorsed ? 'md:grid-cols-[2fr_3fr]' : ''} gap-[3px] h-full`}>
@@ -223,20 +270,16 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
             <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No travel yet</span>
           </div>
         ) : (
-          <div className="relative z-10 flex flex-wrap items-center gap-x-2.5 gap-y-2 px-1 pb-1 mx-auto max-w-[600px]">
+          <div ref={areaRef} className="relative z-10" style={{ height: BAND_H }}>
             {stamps.map((stamp, i) => {
-              const size = 96 + stamp.weight * 16;
-              const isRect = stamp.shape === 'rect';
-              const stampH = isRect ? size * 0.56 : size;
-              const rot = (rng(i * 3 + 4) - 0.5) * 18;       // ±9°
-              const ty = (rng(i * 2 + 7) - 0.5) * 16;        // ±8px vertical offset
+              const p = placed[i];
               return (
                 <button
                   key={i}
                   onClick={() => setSelected(stamp)}
                   title={`${stamp.title} — ${stamp.date}`}
-                  className="relative shrink-0 group cursor-pointer transition-transform duration-300 hover:z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
-                  style={{ width: `${size}px`, height: `${stampH}px`, transform: `translateY(${ty}px) rotate(${rot}deg)`, zIndex: Math.floor(rng(i * 5 + 2) * 10) + 1 }}
+                  className="absolute group cursor-pointer transition-transform duration-300 hover:!z-[60] hover:scale-[1.14] bg-transparent border-none p-0"
+                  style={{ left: `${p.left}px`, top: `${p.top}px`, width: `${p.size}px`, height: `${p.stampH}px`, transform: `rotate(${p.rot}deg)`, zIndex: p.z }}
                 >
                   <StampSvg stamp={stamp} idKey={String(i)} config={config} />
                 </button>
