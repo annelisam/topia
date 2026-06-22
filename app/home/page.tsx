@@ -79,7 +79,7 @@ function CyclingHeadline() {
   return (
     <span className="inline-flex items-baseline">
       <GlitchType key={i} text={HERO_PHRASES[i]} speed={24} flicker={false} />
-      <span className="ml-1.5 w-[3px] h-[0.8em] bg-[var(--accent-ink)] inline-block self-center animate-pulse" />
+      <span className="ml-1.5 w-[3px] h-[0.8em] bg-[var(--accent-text)] inline-block self-center animate-pulse" />
     </span>
   );
 }
@@ -515,7 +515,7 @@ export default function HomePreview() {
               </h1>
             </div>
             {/* The only glitching element — the lime cycling tagline. */}
-            <div data-keepclear className="block w-fit max-w-full font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 text-[var(--accent-ink)]" style={{ minHeight: '1.2em' }}>
+            <div data-keepclear className="inline-block w-fit max-w-full font-mono font-bold text-[clamp(20px,3.2vw,40px)] uppercase mt-3 bg-[var(--accent)] text-[var(--accent-text)] px-2.5 py-1 leading-tight" style={{ minHeight: '1.2em' }}>
               <CyclingHeadline />
             </div>
           </div>
