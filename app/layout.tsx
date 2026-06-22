@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
+import CookieConsent from "./components/CookieConsent";
 
 export const metadata: Metadata = {
   title: "TOPIA - Culture Before Tech",
@@ -51,6 +52,7 @@ export default function RootLayout({
         <PrivyProviderWrapper>
           {children}
         </PrivyProviderWrapper>
+        <CookieConsent />
       </body>
     </html>
   );
