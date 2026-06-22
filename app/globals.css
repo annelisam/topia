@@ -72,12 +72,6 @@
      keeps the lime. Use for accent labels/links on the page, NOT for filled
      accent buttons (those keep --accent + --accent-text). */
   --accent-ink: #5c6e0c;
-  /* Passport visa-stamp coin backing. Stamps are neon ink designed for a dark
-     canvas; on the light profile they need a dark coin behind them to read.
-     Light → opaque dark coin; dark → transparent/subtle (unchanged look). */
-  --stamp-bg-op: 0.82;
-  --stamp-coin-op: 0.86;
-  --stamp-coin-chrome-op: 0.86;
   --page-tint: rgba(228, 254, 82, 0.08);
   --page-glow: rgba(228, 254, 82, 0.03);
   --border-accent: rgba(228, 254, 82, 0.25);
@@ -125,9 +119,6 @@
   --page-bg: #1a1a1a;
   --page-text: #f5f0e8;
   --accent-ink: #e4fe52;
-  --stamp-bg-op: 0;
-  --stamp-coin-op: 0.5;
-  --stamp-coin-chrome-op: 0.72;
   --sentient-color: #f5f0e8;
   --nav-bg: rgba(26, 26, 26, 0.95);
   --nav-border: rgba(245, 240, 232, 0.06);
@@ -463,6 +454,37 @@ body[data-accent] .font-basement {
 body[data-accent] ::-webkit-scrollbar-thumb {
   background: var(--border-accent);
 }
+
+/* ── Hero cycling tagline ────────────────────────────────────
+   Light mode: lime highlight with black text (reads on the bone bg).
+   Dark mode: plain lime text on the obsidian bg (the original look). */
+.hero-tagline {
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 0.25rem 0.6rem;
+}
+.hero-cursor { background: var(--accent-text); }
+[data-theme="dark"] .hero-tagline {
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+}
+[data-theme="dark"] .hero-cursor { background: var(--accent); }
+
+/* ── Passport visa-stamps ────────────────────────────────────
+   Stamps are bright neon ink built for the dark canvas. On the light bg
+   they wash out, so darken/saturate the ink in light mode — reads like
+   colored rubber-stamp ink on paper. Dark mode keeps the raw neon. */
+.stamp-svg { filter: brightness(0.62) saturate(1.3); }
+[data-theme="dark"] .stamp-svg { filter: none; }
+
+/* ── Muted micro-labels in light mode ────────────────────────
+   Low-opacity utilities read fine as light text on the dark canvas, but as
+   dark text on the light bg they're too faint. Lift the floor in light mode
+   only (dark unchanged). Unlayered so it beats Tailwind's layered utilities. */
+html:not([data-theme="dark"]) .opacity-30 { opacity: 0.5; }
+html:not([data-theme="dark"]) .opacity-40 { opacity: 0.62; }
+html:not([data-theme="dark"]) .opacity-50 { opacity: 0.7; }
 
 /* ── Theme-aware hover utilities ─────────────────────────────── */
 

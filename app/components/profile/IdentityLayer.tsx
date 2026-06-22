@@ -126,7 +126,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   if (stamp.shape === 'seal') {
     const chrome = branded && stamp.color === 'silver'; // only the TOPIA member seal is metallic
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
+      <svg viewBox="0 0 100 100" className="stamp-svg w-full h-full" shapeRendering="geometricPrecision">
         <defs>
           <path id={`sealTop-${idKey}`} d="M 50,50 m -33,0 a 33,33 0 1,1 66,0" />
           <path id={`sealBot-${idKey}`} d="M 50,50 m 33,0 a 33,33 0 1,1 -66,0" />
@@ -156,7 +156,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
             </>
           )}
         </defs>
-        <circle cx="50" cy="50" r="48" fill="#0c0c0e" style={{ opacity: chrome ? 'var(--stamp-coin-chrome-op, 0.72)' : 'var(--stamp-coin-op, 0.5)' }} />
+        <circle cx="50" cy="50" r="48" fill="#0c0c0e" opacity={chrome ? 0.72 : 0.5} />
         <g filter={inkF} opacity={inkOp}>
           {chrome ? (
             <>
@@ -189,9 +189,8 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
 
   if (isRect) {
     return (
-      <svg viewBox="0 0 120 55" className="w-full h-full">
+      <svg viewBox="0 0 120 55" className="stamp-svg w-full h-full">
         <defs>{!branded && <InkFilter idKey={idKey} seed={seed} />}</defs>
-        <rect x="2" y="2" width="116" height="51" rx="3" fill="#0c0c0e" style={{ opacity: 'var(--stamp-bg-op, 0)' }} />
         <g filter={inkF} opacity={inkOp}>
           {isLegend && <rect x="2" y="2" width="116" height="51" rx="3" fill={c} opacity={0.1} />}
           {isRare && <rect x="0.5" y="0.5" width="119" height="54" rx="4" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
@@ -225,13 +224,12 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   }
 
   return (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
+    <svg viewBox="0 0 100 100" className="stamp-svg w-full h-full">
       <defs>
         <path id={`arcTop-${idKey}`} d="M 50,50 m -34,0 a 34,34 0 1,1 68,0" />
         <path id={`arcBot-${idKey}`} d="M 50,50 m 34,0 a 34,34 0 1,1 -68,0" />
         {!branded && <InkFilter idKey={idKey} seed={seed} />}
       </defs>
-      <circle cx="50" cy="50" r="47" fill="#0c0c0e" style={{ opacity: 'var(--stamp-bg-op, 0)' }} />
       <g filter={inkF} opacity={inkOp}>
         {isLegend && <circle cx="50" cy="50" r="46" fill={c} opacity={0.1} />}
         {isRare && <circle cx="50" cy="50" r="49" fill="none" stroke={c} strokeWidth="0.7" opacity={ringOp * 0.65} strokeDasharray="1 4" />}
