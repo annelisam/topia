@@ -230,7 +230,7 @@ export default function TVPage() {
 
             {/* THE TV */}
             <div className="bg-[var(--page-bg)] p-4 md:p-6 flex items-center justify-center min-h-[300px]">
-              <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ border: '3px solid var(--border-color)', boxShadow: '0 0 20px rgba(0,0,0,0.12)' }}>
+              <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
                 <div className="relative w-full h-full rounded overflow-hidden bg-[var(--page-bg)]">
                   {activeEp ? (
                     // Real video — keeps event handlers tied to the ref.
@@ -347,7 +347,7 @@ export default function TVPage() {
                             <button onClick={() => skip(-10)} className="text-ink hover:opacity-70 transition-opacity bg-transparent border-none cursor-pointer" title="Back 10s">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 3L2 12l10.5 9V3zm11 0L13 12l10.5 9V3z"/></svg>
                             </button>
-                            <button onClick={togglePlay} className="w-8 h-8 rounded-full border border-ink hover:bg-ink/10 flex items-center justify-center transition-colors bg-transparent cursor-pointer" title={playing ? 'Pause' : 'Play'}>
+                            <button onClick={togglePlay} className="w-8 h-8 rounded-full border border-ink/30 hover:bg-ink/10 flex items-center justify-center transition-colors bg-transparent cursor-pointer" title={playing ? 'Pause' : 'Play'}>
                               {playing ? (
                                 <svg width="10" height="12" viewBox="0 0 10 12"><rect x="0" y="0" width="3.5" height="12" fill="currentColor" className="text-ink" /><rect x="6.5" y="0" width="3.5" height="12" fill="currentColor" className="text-ink" /></svg>
                               ) : (
