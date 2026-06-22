@@ -67,6 +67,11 @@
   /* Accent system — fixed site-wide to lime */
   --accent: #e4fe52;
   --accent-text: #1a1a1a;
+  /* Accent-colored TEXT that sits on the page background. Lime is unreadable
+     on the light bone bg, so light mode uses a dark chartreuse; dark mode
+     keeps the lime. Use for accent labels/links on the page, NOT for filled
+     accent buttons (those keep --accent + --accent-text). */
+  --accent-ink: #5c6e0c;
   --page-tint: rgba(228, 254, 82, 0.08);
   --page-glow: rgba(228, 254, 82, 0.03);
   --border-accent: rgba(228, 254, 82, 0.25);
@@ -113,6 +118,7 @@
 [data-theme="dark"] {
   --page-bg: #1a1a1a;
   --page-text: #f5f0e8;
+  --accent-ink: #e4fe52;
   --sentient-color: #f5f0e8;
   --nav-bg: rgba(26, 26, 26, 0.95);
   --nav-border: rgba(245, 240, 232, 0.06);
@@ -144,6 +150,10 @@
   --color-magenta: #FF21D8;
   --color-obsidian: #1a1a1a;
   --color-bone: #f5f0e8;
+  /* Theme-aware foreground — bone in dark, obsidian in light. Use `ink`
+     (text-ink, border-ink/20, …) for UI that must read on the page bg in
+     BOTH themes, instead of hardcoding bone/obsidian. */
+  --color-ink: var(--page-text);
 
   /* Neutral Colors */
   --color-near-black: #1a1a1a;

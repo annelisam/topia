@@ -623,7 +623,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 title="Open in Google Maps"
               >
                 <div className="shrink-0 w-12 h-12 rounded-lg border flex items-center justify-center" style={{ borderColor: 'var(--border-color)' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
@@ -632,7 +632,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   <p className="font-mono text-[14px] font-bold group-hover:opacity-70 transition truncate" style={{ color: 'var(--foreground)' }}>
                     {event.address || event.city}
                   </p>
-                  <p className="font-mono text-[12px]" style={{ color: 'var(--accent)' }}>
+                  <p className="font-mono text-[12px]" style={{ color: 'var(--accent-ink)' }}>
                     {event.address && event.city ? `${event.city} · ` : ''}View on Google Maps ↗
                   </p>
                 </div>
