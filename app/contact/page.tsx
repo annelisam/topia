@@ -35,17 +35,17 @@ export default function ContactPage() {
                 CONNECT.
               </h1>
             </div>
-            <div className="bg-obsidian border-l border-bone/[0.04] p-4 flex flex-col justify-end">
-              <span className="font-mono text-[11px] text-bone">
+            <div className="bg-[var(--page-bg)] border-l border-ink/[0.04] p-4 flex flex-col justify-end">
+              <span className="font-mono text-[11px] text-ink">
                 we&apos;re here. let&apos;s talk.
               </span>
-              <span className="font-mono text-[13px] text-bone mt-2">
+              <span className="font-mono text-[13px] text-ink mt-2">
                 culture before tech. depth before data.
               </span>
             </div>
 
             {/* Left — animated hero text */}
-            <div className="bg-obsidian p-8 md:p-12 flex flex-col justify-center relative">
+            <div className="bg-[var(--page-bg)] p-8 md:p-12 flex flex-col justify-center relative">
               {/* Crosshatch */}
               <div
                 className="absolute inset-0 opacity-[0.03]"
@@ -55,10 +55,10 @@ export default function ContactPage() {
                 }}
               />
               <div className="relative z-10">
-                <div className="font-mono text-[clamp(28px,5vw,56px)] leading-[1.4] text-bone">
+                <div className="font-mono text-[clamp(28px,5vw,56px)] leading-[1.4] text-ink">
                   <GlitchType text="reach out." onComplete={handleDone} speed={80} />
                 </div>
-                <p className="font-mono text-[11px] text-bone mt-6 max-w-sm leading-relaxed">
+                <p className="font-mono text-[11px] text-ink mt-6 max-w-sm leading-relaxed">
                   whether you&apos;re building a world, looking for collaborators, or just
                   want to connect — we&apos;re listening.
                 </p>
@@ -66,8 +66,8 @@ export default function ContactPage() {
             </div>
 
             {/* Right — contact links */}
-            <div className="bg-obsidian border-l border-bone/[0.04] p-6 md:p-8 flex flex-col justify-center">
-              <span className="font-mono text-[13px] uppercase tracking-[2px] text-bone block mb-6">
+            <div className="bg-[var(--page-bg)] border-l border-ink/[0.04] p-6 md:p-8 flex flex-col justify-center">
+              <span className="font-mono text-[13px] uppercase tracking-[2px] text-ink block mb-6">
                 channels
               </span>
               <div
@@ -77,13 +77,13 @@ export default function ContactPage() {
               >
                 <a
                   href="mailto:hello@topia.vision"
-                  className="block px-5 py-4 border border-bone/[0.06] hover:border-lime hover:bg-lime/5 transition-all duration-300 group no-underline rounded-sm"
+                  className="block px-5 py-4 border border-ink/[0.06] hover:border-lime hover:bg-lime/5 transition-all duration-300 group no-underline rounded-sm"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[13px] text-bone group-hover:text-lime transition-colors">
+                    <span className="font-mono text-[13px] text-ink group-hover:text-lime transition-colors">
                       hello@topia.vision
                     </span>
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-ink">
                       email
                     </span>
                   </div>
@@ -92,13 +92,13 @@ export default function ContactPage() {
                   href="https://instagram.com/topia.vision"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block px-5 py-4 border border-bone/[0.06] hover:border-pink hover:bg-pink/5 transition-all duration-300 group no-underline rounded-sm"
+                  className="block px-5 py-4 border border-ink/[0.06] hover:border-pink hover:bg-pink/5 transition-all duration-300 group no-underline rounded-sm"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[13px] text-bone group-hover:text-pink transition-colors">
+                    <span className="font-mono text-[13px] text-ink group-hover:text-pink transition-colors">
                       @topia.vision
                     </span>
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-ink">
                       instagram
                     </span>
                   </div>
@@ -107,13 +107,13 @@ export default function ContactPage() {
                   href="https://twitter.com/TopiaTV"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block px-5 py-4 border border-bone/[0.06] hover:border-blue hover:bg-blue/5 transition-all duration-300 group no-underline rounded-sm"
+                  className="block px-5 py-4 border border-ink/[0.06] hover:border-blue hover:bg-blue/5 transition-all duration-300 group no-underline rounded-sm"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[13px] text-bone group-hover:text-blue transition-colors">
+                    <span className="font-mono text-[13px] text-ink group-hover:text-blue transition-colors">
                       @TopiaTV
                     </span>
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-bone">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-ink">
                       twitter
                     </span>
                   </div>
