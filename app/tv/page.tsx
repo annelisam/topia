@@ -230,8 +230,8 @@ export default function TVPage() {
 
             {/* THE TV */}
             <div className="bg-[var(--page-bg)] p-4 md:p-6 flex items-center justify-center min-h-[300px]">
-              <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ border: '3px solid #2a2a2a', boxShadow: 'inset 0 0 30px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)' }}>
-                <div className="relative w-full h-full rounded overflow-hidden bg-[#111]">
+              <div className="relative w-full h-full rounded-lg overflow-hidden" style={{ border: '3px solid var(--border-color)', boxShadow: '0 0 20px rgba(0,0,0,0.12)' }}>
+                <div className="relative w-full h-full rounded overflow-hidden bg-[var(--page-bg)]">
                   {activeEp ? (
                     // Real video — keeps event handlers tied to the ref.
                     // Autoplay is managed imperatively in the effect on
