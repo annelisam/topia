@@ -72,6 +72,12 @@
      keeps the lime. Use for accent labels/links on the page, NOT for filled
      accent buttons (those keep --accent + --accent-text). */
   --accent-ink: #5c6e0c;
+  /* Passport visa-stamp coin backing. Stamps are neon ink designed for a dark
+     canvas; on the light profile they need a dark coin behind them to read.
+     Light → opaque dark coin; dark → transparent/subtle (unchanged look). */
+  --stamp-bg-op: 0.82;
+  --stamp-coin-op: 0.86;
+  --stamp-coin-chrome-op: 0.86;
   --page-tint: rgba(228, 254, 82, 0.08);
   --page-glow: rgba(228, 254, 82, 0.03);
   --border-accent: rgba(228, 254, 82, 0.25);
@@ -119,6 +125,9 @@
   --page-bg: #1a1a1a;
   --page-text: #f5f0e8;
   --accent-ink: #e4fe52;
+  --stamp-bg-op: 0;
+  --stamp-coin-op: 0.5;
+  --stamp-coin-chrome-op: 0.72;
   --sentient-color: #f5f0e8;
   --nav-bg: rgba(26, 26, 26, 0.95);
   --nav-border: rgba(245, 240, 232, 0.06);

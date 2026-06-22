@@ -256,8 +256,8 @@ export default function PublicProfilePage() {
                   {/* Path-colored accent strip */}
                   <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
                     <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
-                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40 relative z-10`}>topia://identity</span>
-                    <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-30 relative z-10`}>TOPIA-ID-{profile.id.slice(0, 4).toUpperCase()}</span>
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-70 relative z-10`}>topia://identity</span>
+                    <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>TOPIA-ID-{profile.id.slice(0, 4).toUpperCase()}</span>
                   </div>
 
                   {/* Photo + Fields */}
@@ -305,7 +305,7 @@ export default function PublicProfilePage() {
                     {/* Identity fields */}
                     <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
                       <div className="py-1 border-b border-ink/[0.04]">
-                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">full name</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">full name</span>
                         <div className="flex items-baseline gap-2 mt-0.5">
                           <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-ink">{profile.name || username}</h1>
                           {profile.pronouns && (
@@ -317,21 +317,21 @@ export default function PublicProfilePage() {
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">handle</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">handle</span>
                           <span className="font-mono text-[13px] text-ink/60 mt-0.5 block">@{username}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">path</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">path</span>
                           <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{config.label}</span>
                         </div>
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">issued</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">issued</span>
                           <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">{memberSince || '—'}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">status</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">status</span>
                           <div className="flex items-center gap-1.5 mt-0.5 justify-end">
                             <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
                             <span className="font-mono text-[11px] text-ink/50">VALID</span>
@@ -340,19 +340,19 @@ export default function PublicProfilePage() {
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] grid grid-cols-2 gap-x-6">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">location</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">location</span>
                           <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">—</span>
                         </div>
                         {profile.bio && (
                           <div>
-                            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block">declaration</span>
+                            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">declaration</span>
                             <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{profile.bio}&rdquo;</span>
                           </div>
                         )}
                       </div>
                       <div className="py-1 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 block mb-1.5">links</span>
+                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block mb-1.5">links</span>
                           {socialLinks.length > 0 ? (
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
                               {socialLinks.map((link) => {
@@ -388,7 +388,7 @@ export default function PublicProfilePage() {
                                     href={link.url!}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-ink/30 hover:text-ink/60 transition-colors"
+                                    className="text-ink/50 hover:text-ink/60 transition-colors"
                                     title={link.label}
                                   >
                                     <SocialIcon type={link.type} size={16} />
@@ -436,10 +436,10 @@ export default function PublicProfilePage() {
                             title={profile.name || username}
                             text={`${profile.name || username} on TOPIA`}
                             iconSize={11}
-                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/30 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           />
                           {isOwnProfile && (
-                            <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/30 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
+                            <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
                               Edit
                             </Link>
                           )}
@@ -488,7 +488,7 @@ export default function PublicProfilePage() {
                       <button
                         key={s.id}
                         onClick={() => setActiveSection(s.id)}
-                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/30 hover:text-ink/50 bg-transparent'}`}
+                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/50 bg-transparent'}`}
                       >
                         {s.label}
                       </button>
