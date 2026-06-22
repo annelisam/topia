@@ -64,16 +64,16 @@ export default function ToolModal({ slug, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         {loading && (
-          <div className="bg-obsidian text-bone rounded-lg border border-bone/[0.08] py-12 text-center">
-            <span className="font-mono text-[11px] uppercase tracking-[3px] text-bone/40">loading…</span>
+          <div className="bg-[var(--page-bg)] text-ink rounded-lg border border-ink/[0.08] py-12 text-center">
+            <span className="font-mono text-[11px] uppercase tracking-[3px] text-ink/40">loading…</span>
           </div>
         )}
         {error && !loading && (
-          <div className="bg-obsidian text-bone rounded-lg border border-bone/[0.08] py-12 text-center">
+          <div className="bg-[var(--page-bg)] text-ink rounded-lg border border-ink/[0.08] py-12 text-center">
             <span className="font-mono text-[11px] uppercase tracking-[3px] text-pink/80">{error}</span>
             <button
               onClick={onClose}
-              className="block mx-auto mt-4 font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border-none cursor-pointer"
+              className="block mx-auto mt-4 font-mono text-[10px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border-none cursor-pointer"
             >
               close
             </button>
