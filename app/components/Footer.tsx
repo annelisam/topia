@@ -98,9 +98,11 @@ export default function Footer() {
           <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
             &copy; {new Date().getFullYear()} TOPIA. All rights reserved.
           </span>
-          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
-            Culture first. Systems second. Ownership always.
-          </span>
+          <div className="flex items-center gap-5 flex-wrap justify-center">
+            <FooterLink href="/legal/terms">Terms</FooterLink>
+            <FooterLink href="/legal/privacy">Privacy</FooterLink>
+            <FooterLink href="/legal/cookies">Cookies</FooterLink>
+          </div>
         </div>
       </div>
     </footer>
