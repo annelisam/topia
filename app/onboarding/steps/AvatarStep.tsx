@@ -77,22 +77,22 @@ export default function AvatarStep({ step, total, config, initialValue, fallback
           style={{ width: 160, height: 160 }}
         >
           {/* Corner marks */}
-          <span className="absolute -top-2 -left-2 w-4 h-4"><span className="absolute top-0 left-0 w-full h-[1px] bg-bone/30" /><span className="absolute top-0 left-0 h-full w-[1px] bg-bone/30" /></span>
-          <span className="absolute -top-2 -right-2 w-4 h-4"><span className="absolute top-0 right-0 w-full h-[1px] bg-bone/30" /><span className="absolute top-0 right-0 h-full w-[1px] bg-bone/30" /></span>
-          <span className="absolute -bottom-2 -left-2 w-4 h-4"><span className="absolute bottom-0 left-0 w-full h-[1px] bg-bone/30" /><span className="absolute bottom-0 left-0 h-full w-[1px] bg-bone/30" /></span>
-          <span className="absolute -bottom-2 -right-2 w-4 h-4"><span className="absolute bottom-0 right-0 w-full h-[1px] bg-bone/30" /><span className="absolute bottom-0 right-0 h-full w-[1px] bg-bone/30" /></span>
-          <div className="w-full h-full rounded-full overflow-hidden border-2 border-dashed border-bone/15 group-hover:border-bone/40 transition-colors">
+          <span className="absolute -top-2 -left-2 w-4 h-4"><span className="absolute top-0 left-0 w-full h-[1px] bg-ink/30" /><span className="absolute top-0 left-0 h-full w-[1px] bg-ink/30" /></span>
+          <span className="absolute -top-2 -right-2 w-4 h-4"><span className="absolute top-0 right-0 w-full h-[1px] bg-ink/30" /><span className="absolute top-0 right-0 h-full w-[1px] bg-ink/30" /></span>
+          <span className="absolute -bottom-2 -left-2 w-4 h-4"><span className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/30" /><span className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/30" /></span>
+          <span className="absolute -bottom-2 -right-2 w-4 h-4"><span className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/30" /><span className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/30" /></span>
+          <div className="w-full h-full rounded-full overflow-hidden border-2 border-dashed border-ink/15 group-hover:border-ink/40 transition-colors">
             {avatarUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-bone/[0.04]">
-                <span className="font-basement text-5xl text-bone/20">{initial}</span>
+              <div className="w-full h-full flex items-center justify-center bg-ink/[0.04]">
+                <span className="font-basement text-5xl text-ink/20">{initial}</span>
               </div>
             )}
           </div>
-          <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-obsidian/60">
-            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone">{avatarUrl ? 'change' : 'upload'}</span>
+          <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--page-bg)]/60">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink">{avatarUrl ? 'change' : 'upload'}</span>
           </div>
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -100,7 +100,7 @@ export default function AvatarStep({ step, total, config, initialValue, fallback
         <div className="flex flex-col gap-3">
           <button
             onClick={submit}
-            className="font-mono text-[12px] uppercase tracking-[2px] text-bone/70 hover:text-bone transition-colors bg-transparent border border-bone/30 hover:border-bone/70 px-4 py-2 cursor-pointer w-fit"
+            className="font-mono text-[12px] uppercase tracking-[2px] text-ink/70 hover:text-ink transition-colors bg-transparent border border-ink/30 hover:border-ink/70 px-4 py-2 cursor-pointer w-fit"
             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           >
             continue →
@@ -108,7 +108,7 @@ export default function AvatarStep({ step, total, config, initialValue, fallback
           {avatarUrl && (
             <button
               onClick={() => setAvatarUrl('')}
-              className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-bone/60 transition-colors bg-transparent border-none cursor-pointer w-fit"
+              className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-ink/60 transition-colors bg-transparent border-none cursor-pointer w-fit"
             >
               remove
             </button>

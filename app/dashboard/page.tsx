@@ -32,7 +32,7 @@ export default function DashboardOverviewPage() {
   return (
     <div>
       {/* ═══ HERO: greeting · identity · date · stats — one unified band ═══ */}
-      <div className="border border-bone/[0.08] rounded-lg overflow-hidden mb-6">
+      <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-6">
         {/* Lime band */}
         <div className="bg-lime px-5 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-center gap-4 min-w-0">
@@ -41,7 +41,7 @@ export default function DashboardOverviewPage() {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-obsidian">
+                <div className="w-full h-full flex items-center justify-center bg-[var(--page-bg)]">
                   <span className="font-basement text-[20px] text-lime">{initial}</span>
                 </div>
               )}
@@ -72,7 +72,7 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Stats strip + quick actions */}
-        <div className="bg-obsidian border-t border-bone/[0.04] flex flex-col lg:flex-row lg:items-stretch lg:divide-x divide-bone/[0.06]">
+        <div className="bg-[var(--page-bg)] border-t border-ink/[0.04] flex flex-col lg:flex-row lg:items-stretch lg:divide-x divide-ink/[0.06]">
           {/* Stats */}
           <div className="px-5 py-3 flex items-center gap-0 overflow-x-auto lg:flex-1">
             {([
@@ -83,9 +83,9 @@ export default function DashboardOverviewPage() {
               { label: 'Following', value: stats?.following ?? 0,    delta: undefined,                href: null },
             ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
               const inner = (
-                <div className={`flex flex-col px-3 md:px-4 ${i < arr.length - 1 ? 'border-r border-bone/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
-                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">{stat.label}</span>
-                  <span className="font-mono text-[20px] md:text-[24px] text-bone font-bold leading-none mt-1 flex items-baseline">
+                <div className={`flex flex-col px-3 md:px-4 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">{stat.label}</span>
+                  <span className="font-mono text-[20px] md:text-[24px] text-ink font-bold leading-none mt-1 flex items-baseline">
                     {stat.value}
                     <Delta n={stat.delta} />
                   </span>
@@ -109,19 +109,19 @@ export default function DashboardOverviewPage() {
             </Link>
             <Link
               href="/events/create"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/15 hover:border-lime/50 hover:text-bone px-3 py-1.5 rounded-sm transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Event
             </Link>
             <Link
               href="/dashboard/submit-tool"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/15 hover:border-lime/50 hover:text-bone px-3 py-1.5 rounded-sm transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Tool
             </Link>
             <Link
               href="/dashboard/submit-grant"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/15 hover:border-lime/50 hover:text-bone px-3 py-1.5 rounded-sm transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Grant
             </Link>
@@ -184,21 +184,21 @@ interface WorldMembership {
 
 function YourWorldsSection({ worldMemberships }: { worldMemberships: WorldMembership[] }) {
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden">
-      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40">
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">
           Your worlds · {worldMemberships.length}
         </span>
-        <Link href="/worlds" className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-bone no-underline">
+        <Link href="/worlds" className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-ink no-underline">
           browse all →
         </Link>
       </div>
-      <div className="divide-y divide-bone/[0.04]">
+      <div className="divide-y divide-ink/[0.04]">
         {worldMemberships.slice(0, 6).map((w) => (
           <Link
             key={w.worldId}
             href={`/dashboard/worlds/${w.worldSlug}`}
-            className="bg-obsidian hover:bg-bone/[0.03] transition px-4 py-2.5 flex items-center gap-3 no-underline"
+            className="bg-[var(--page-bg)] hover:bg-ink/[0.03] transition px-4 py-2.5 flex items-center gap-3 no-underline"
           >
             {w.worldImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -209,10 +209,10 @@ function YourWorldsSection({ worldMemberships }: { worldMemberships: WorldMember
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{w.worldTitle}</div>
-              {w.worldCategory && <div className="font-mono text-[10px] text-bone/30 truncate">{w.worldCategory}</div>}
+              <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{w.worldTitle}</div>
+              {w.worldCategory && <div className="font-mono text-[10px] text-ink/30 truncate">{w.worldCategory}</div>}
             </div>
-            <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30 shrink-0">
+            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 shrink-0">
               {w.role === 'owner' ? 'OWNER' : w.role === 'world_builder' ? 'BUILDER' : 'COLLAB'}
             </span>
           </Link>
@@ -224,13 +224,13 @@ function YourWorldsSection({ worldMemberships }: { worldMemberships: WorldMember
 
 function EmptyWorldsCard() {
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden">
-      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40">Your worlds</span>
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">Your worlds</span>
       </div>
-      <div className="bg-obsidian p-6 text-center">
-        <p className="font-basement font-black text-[24px] uppercase text-bone leading-tight">No worlds yet.</p>
-        <p className="font-mono text-[12px] text-bone/50 mt-2 max-w-xs mx-auto">
+      <div className="bg-[var(--page-bg)] p-6 text-center">
+        <p className="font-basement font-black text-[24px] uppercase text-ink leading-tight">No worlds yet.</p>
+        <p className="font-mono text-[12px] text-ink/50 mt-2 max-w-xs mx-auto">
           A world is your scene — a place creators rally around. Start one, or join one you love.
         </p>
         <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
@@ -242,7 +242,7 @@ function EmptyWorldsCard() {
           </Link>
           <Link
             href="/worlds"
-            className="font-mono text-[11px] uppercase tracking-[2px] text-bone/60 border border-bone/20 hover:border-bone/60 hover:text-bone px-4 py-2 rounded-sm transition no-underline"
+            className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/20 hover:border-ink/60 hover:text-ink px-4 py-2 rounded-sm transition no-underline"
           >
             Explore worlds
           </Link>

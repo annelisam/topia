@@ -62,18 +62,18 @@ function resizeImage(file: File): Promise<string> {
 /** Section header — used across all blocks for visual consistency. */
 function Section({ label, sub, children, id }: { label: string; sub?: string; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="border-t border-bone/[0.06] pt-6 mt-6 first:border-t-0 first:mt-0 first:pt-0">
+    <section id={id} className="border-t border-ink/[0.06] pt-6 mt-6 first:border-t-0 first:mt-0 first:pt-0">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="font-mono text-[11px] uppercase tracking-[3px] text-bone/80">{label}</h2>
-        {sub && <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">{sub}</span>}
+        <h2 className="font-mono text-[11px] uppercase tracking-[3px] text-ink/80">{label}</h2>
+        {sub && <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">{sub}</span>}
       </div>
       {children}
     </section>
   );
 }
 
-const fieldLabel = 'block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1.5';
-const fieldInput = 'w-full bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[13px] text-bone placeholder:text-bone/25 outline-none transition-colors';
+const fieldLabel = 'block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1.5';
+const fieldInput = 'w-full bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[13px] text-ink placeholder:text-ink/25 outline-none transition-colors';
 
 export default function ProfilePage() {
   const {
@@ -304,7 +304,7 @@ export default function ProfilePage() {
 
   if (!ready || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-obsidian">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--page-bg)]">
         <LoadingBar />
       </div>
     );
@@ -313,21 +313,21 @@ export default function ProfilePage() {
   const handleChanged = username !== originalUsername;
 
   return (
-    <div className="min-h-screen bg-obsidian text-bone">
+    <div className="min-h-screen bg-[var(--page-bg)] text-ink">
       <PageShell>
         {/* ── Sticky top action bar — sits below the nav ────────── */}
         <div
-          className="sticky top-0 md:top-[var(--nav-height,56px)] z-30 backdrop-blur-md border-b border-bone/[0.06]"
-          style={{ backgroundColor: 'rgba(10,10,10,0.88)' }}
+          className="sticky top-0 md:top-[var(--nav-height,56px)] z-30 backdrop-blur-md border-b border-ink/[0.06]"
+          style={{ backgroundColor: 'var(--nav-bg)' }}
         >
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/50 hover:text-bone transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition no-underline"
             >
               ← Dashboard
             </Link>
-            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25 ml-auto">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/25 ml-auto">
               {saving ? 'Saving…'
                 : saved ? (<span className="text-green inline-flex items-center gap-1.5"><CheckIcon size={9} /> Saved</span>)
                 : isDirty ? 'Unsaved changes'
@@ -346,10 +346,10 @@ export default function ProfilePage() {
           </div>
           {username && (
             <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-2 -mt-1 flex items-center gap-3">
-              <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/25">Public:</span>
+              <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/25">Public:</span>
               <Link
                 href={`/profile/${username}`}
-                className="font-mono text-[11px] text-bone/60 hover:text-lime no-underline transition truncate"
+                className="font-mono text-[11px] text-ink/60 hover:text-lime no-underline transition truncate"
               >
                 topia.so/profile/@{username}
               </Link>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
               >
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="block w-28 h-28 rounded-full overflow-hidden border-2 border-dashed border-bone/20 hover:border-lime/50 transition bg-bone/[0.03] cursor-pointer"
+                  className="block w-28 h-28 rounded-full overflow-hidden border-2 border-dashed border-ink/20 hover:border-lime/50 transition bg-ink/[0.03] cursor-pointer"
                   title="Click or drop an image"
                 >
                   {avatarUrl ? (
@@ -390,18 +390,18 @@ export default function ProfilePage() {
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="font-basement text-[36px] text-bone/20">{name ? name[0].toUpperCase() : '?'}</span>
+                      <span className="font-basement text-[36px] text-ink/20">{name ? name[0].toUpperCase() : '?'}</span>
                     </div>
                   )}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                <p className="text-center mt-2 font-mono text-[9px] uppercase tracking-[2px] text-bone/30">
+                <p className="text-center mt-2 font-mono text-[9px] uppercase tracking-[2px] text-ink/30">
                   {avatarDragging ? 'drop' : 'click or drop'}
                 </p>
                 {avatarUrl && (
                   <button
                     onClick={() => setAvatarUrl('')}
-                    className="block mx-auto mt-1 font-mono text-[9px] uppercase tracking-[2px] text-bone/30 hover:text-pink bg-transparent border-none cursor-pointer"
+                    className="block mx-auto mt-1 font-mono text-[9px] uppercase tracking-[2px] text-ink/30 hover:text-pink bg-transparent border-none cursor-pointer"
                   >
                     × Remove photo
                   </button>
@@ -424,9 +424,9 @@ export default function ProfilePage() {
                 {/* Handle — locked behind a confirm modal */}
                 <div>
                   <label className={fieldLabel}>Handle</label>
-                  <div className="flex items-center bg-bone/[0.04] border border-bone/15 rounded-sm px-3 py-2">
-                    <span className="font-mono text-[13px] text-bone/25 mr-1">@</span>
-                    <span className={`flex-1 font-mono text-[13px] truncate ${username ? 'text-bone' : 'text-bone/30'}`}>
+                  <div className="flex items-center bg-ink/[0.04] border border-ink/15 rounded-sm px-3 py-2">
+                    <span className="font-mono text-[13px] text-ink/25 mr-1">@</span>
+                    <span className={`flex-1 font-mono text-[13px] truncate ${username ? 'text-ink' : 'text-ink/30'}`}>
                       {username || 'pick a handle'}
                     </span>
                     {handleChanged && (
@@ -436,12 +436,12 @@ export default function ProfilePage() {
                     )}
                     <button
                       onClick={() => setHandleModalOpen(true)}
-                      className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
+                      className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
                     >
                       {username ? '✎ change' : '+ set handle'}
                     </button>
                   </div>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[2px] text-bone/25">
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[2px] text-ink/25">
                     your public URL · changes break old links
                   </p>
                 </div>
@@ -460,7 +460,7 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
                     <label className={`${fieldLabel} mb-0`}>Bio · declaration</label>
-                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${bio.length > 260 ? (bio.length >= 280 ? 'text-pink' : 'text-lime/70') : 'text-bone/25'}`}>
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${bio.length > 260 ? (bio.length >= 280 ? 'text-pink' : 'text-lime/70') : 'text-ink/25'}`}>
                       {bio.length}/280
                     </span>
                   </div>
@@ -490,14 +490,14 @@ export default function ProfilePage() {
                     key={p}
                     onClick={() => setPath(p)}
                     className={`text-left p-4 rounded-md border transition cursor-pointer ${
-                      selected ? `${cfg.bg} ${cfg.textOn} border-transparent` : 'bg-transparent border-bone/15 text-bone hover:border-bone/40'
+                      selected ? `${cfg.bg} ${cfg.textOn} border-transparent` : 'bg-transparent border-ink/15 text-ink hover:border-ink/40'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className={`font-basement font-black text-[24px] leading-none ${selected ? cfg.textOn : 'text-bone/40'}`}>{icon}</span>
-                      <span className={`font-mono text-[10px] uppercase tracking-[2px] ${selected ? `${cfg.textOn} opacity-60` : 'text-bone/25'}`}>{cfg.label}</span>
+                      <span className={`font-basement font-black text-[24px] leading-none ${selected ? cfg.textOn : 'text-ink/40'}`}>{icon}</span>
+                      <span className={`font-mono text-[10px] uppercase tracking-[2px] ${selected ? `${cfg.textOn} opacity-60` : 'text-ink/25'}`}>{cfg.label}</span>
                     </div>
-                    <div className={`font-basement font-black text-[clamp(14px,1.5vw,18px)] uppercase ${selected ? cfg.textOn : 'text-bone'}`}>{tagline}</div>
+                    <div className={`font-basement font-black text-[clamp(14px,1.5vw,18px)] uppercase ${selected ? cfg.textOn : 'text-ink'}`}>{tagline}</div>
                   </button>
                 );
               })}
@@ -516,7 +516,7 @@ export default function ProfilePage() {
                     className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
                       on
                         ? 'bg-lime text-obsidian border-lime'
-                        : 'bg-transparent text-bone/60 border-bone/15 hover:text-bone hover:border-bone/40'
+                        : 'bg-transparent text-ink/60 border-ink/15 hover:text-ink hover:border-ink/40'
                     }`}
                   >
                     {label}
@@ -560,18 +560,18 @@ export default function ProfilePage() {
 
             {/* Result list */}
             {toolsLoading ? (
-              <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 py-4 text-center">loading…</p>
+              <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 py-4 text-center">loading…</p>
             ) : filteredTools.length === 0 ? (
-              <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 py-4 text-center">no tools match</p>
+              <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 py-4 text-center">no tools match</p>
             ) : (
-              <div className="max-h-[280px] overflow-y-auto border border-bone/[0.06] rounded-sm divide-y divide-bone/[0.04]" style={{ scrollbarWidth: 'thin' }}>
+              <div className="max-h-[280px] overflow-y-auto border border-ink/[0.06] rounded-sm divide-y divide-ink/[0.04]" style={{ scrollbarWidth: 'thin' }}>
                 {filteredTools.map((tool) => {
                   const on = selectedTools.includes(tool.slug);
                   return (
                     <button
                       key={tool.slug}
                       onClick={() => toggleTool(tool.slug)}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-left transition cursor-pointer border-none ${on ? 'bg-bone/[0.04]' : 'bg-transparent hover:bg-bone/[0.02]'}`}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-left transition cursor-pointer border-none ${on ? 'bg-ink/[0.04]' : 'bg-transparent hover:bg-ink/[0.02]'}`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <span
@@ -583,10 +583,10 @@ export default function ProfilePage() {
                         >
                           {on && <CheckIcon size={9} className="text-obsidian" />}
                         </span>
-                        <span className="font-mono text-[12px] text-bone truncate">{tool.name}</span>
+                        <span className="font-mono text-[12px] text-ink truncate">{tool.name}</span>
                       </div>
                       {tool.category && (
-                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 shrink-0 ml-2">{tool.category}</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 shrink-0 ml-2">{tool.category}</span>
                       )}
                     </button>
                   );
@@ -601,7 +601,7 @@ export default function ProfilePage() {
               {/* Verified provider connections (Twitter, Farcaster, etc.) */}
               {ENABLED_SOCIAL_PROVIDERS.length > 0 && (
                 <div>
-                  <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">Verified accounts</span>
+                  <span className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mb-2">Verified accounts</span>
                   <div className="space-y-3">
                     {([
                       { p: 'twitter'   as const, v: socialTwitter,   set: setSocialTwitter   },
@@ -627,22 +627,22 @@ export default function ProfilePage() {
 
               {/* Plain URL fields */}
               <div>
-                <span className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">Links</span>
+                <span className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mb-2">Links</span>
                 <div className="space-y-2.5">
                   {[
                     { key: 'website',    label: 'Website',    value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',          icon: <SocialIcon type="website" /> },
                     { key: 'soundcloud', label: 'SoundCloud', value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle', icon: <SocialIcon type="soundcloud" /> },
                     { key: 'substack',   label: 'Substack',   value: socialSubstack,   set: setSocialSubstack,   placeholder: 'https://handle.substack.com',   icon: <SocialIcon type="substack" /> },
                   ].map(({ key, label, value, set, placeholder, icon }) => (
-                    <div key={key} className="flex items-center gap-2 bg-bone/[0.03] border border-bone/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
-                      <span className="text-bone/40 shrink-0 w-4 flex items-center justify-center">{icon}</span>
-                      <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 w-20 shrink-0">{label}</span>
+                    <div key={key} className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
+                      <span className="text-ink/40 shrink-0 w-4 flex items-center justify-center">{icon}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 w-20 shrink-0">{label}</span>
                       <input
                         type="url"
                         value={value}
                         onChange={(e) => set(e.target.value)}
                         placeholder={placeholder}
-                        className="flex-1 bg-transparent border-none outline-none font-mono text-[12px] text-bone placeholder:text-bone/20"
+                        className="flex-1 bg-transparent border-none outline-none font-mono text-[12px] text-ink placeholder:text-ink/20"
                       />
                     </div>
                   ))}
@@ -652,11 +652,11 @@ export default function ProfilePage() {
               {/* Custom labeled links */}
               <div>
                 <div className="flex items-baseline justify-between mb-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">Custom links</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/20">{customLinks.length}/10</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">Custom links</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/20">{customLinks.length}/10</span>
                 </div>
                 {customLinks.length === 0 && (
-                  <p className="font-mono text-[11px] text-bone/30 mb-2">Newsletter, portfolio, music release… anything else.</p>
+                  <p className="font-mono text-[11px] text-ink/30 mb-2">Newsletter, portfolio, music release… anything else.</p>
                 )}
                 <div className="space-y-1.5">
                   {customLinks.map((link, idx) => (
@@ -671,7 +671,7 @@ export default function ProfilePage() {
                         }}
                         placeholder="LABEL"
                         maxLength={20}
-                        className="w-28 bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] text-bone outline-none transition-colors"
+                        className="w-28 bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] text-ink outline-none transition-colors"
                       />
                       <input
                         type="url"
@@ -682,11 +682,11 @@ export default function ProfilePage() {
                           setCustomLinks(next);
                         }}
                         placeholder="https://"
-                        className="flex-1 bg-bone/[0.04] border border-bone/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[12px] text-bone outline-none transition-colors"
+                        className="flex-1 bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[12px] text-ink outline-none transition-colors"
                       />
                       <button
                         onClick={() => setCustomLinks(customLinks.filter((_, i) => i !== idx))}
-                        className="w-7 h-7 flex items-center justify-center font-mono text-[14px] text-bone/30 hover:text-pink bg-transparent border border-bone/10 rounded-sm cursor-pointer transition"
+                        className="w-7 h-7 flex items-center justify-center font-mono text-[14px] text-ink/30 hover:text-pink bg-transparent border border-ink/10 rounded-sm cursor-pointer transition"
                         aria-label="Remove"
                       >
                         ×
@@ -697,7 +697,7 @@ export default function ProfilePage() {
                 {customLinks.length < 10 && (
                   <button
                     onClick={() => setCustomLinks([...customLinks, { label: '', url: '' }])}
-                    className="mt-2 font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone bg-transparent border border-bone/15 hover:border-bone/40 rounded-sm px-3 py-1.5 cursor-pointer transition"
+                    className="mt-2 font-mono text-[10px] uppercase tracking-[2px] text-ink/50 hover:text-ink bg-transparent border border-ink/15 hover:border-ink/40 rounded-sm px-3 py-1.5 cursor-pointer transition"
                   >
                     + add link
                   </button>
@@ -709,11 +709,11 @@ export default function ProfilePage() {
           {/* ─── 6. ACCOUNTS ─── */}
           <Section label="Accounts" sub="auth methods · email / phone / google / wallet">
             {!canUnlink && (
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mb-2">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mb-2">
                 Add a second account before removing this one
               </p>
             )}
-            <div className="divide-y divide-bone/[0.06]">
+            <div className="divide-y divide-ink/[0.06]">
               <AccountRow label="EMAIL"  value={emailAccount?.address ?? null}   isLinked={!!emailAccount}  unlinking={unlinking === 'email'}  canUnlink={canUnlink} onConnect={linkEmail}  onUnlink={() => handleUnlink('email',  () => unlinkEmail(emailAccount!.address))} />
               <AccountRow label="PHONE"  value={phoneAccount?.number ?? null}    isLinked={!!phoneAccount}  unlinking={unlinking === 'phone'}  canUnlink={canUnlink} onConnect={linkPhone}  onUnlink={() => handleUnlink('phone',  () => unlinkPhone(phoneAccount!.number))} />
               <AccountRow label="GOOGLE" value={googleAccount?.email ?? (googleAccount ? 'Connected' : null)} isLinked={!!googleAccount} unlinking={unlinking === 'google'} canUnlink={canUnlink} onConnect={linkGoogle} onUnlink={() => handleUnlink('google', () => unlinkGoogle(googleAccount!.subject))} />
@@ -736,13 +736,13 @@ export default function ProfilePage() {
             <div className="flex flex-wrap items-center gap-3 mt-4 text-[11px]">
               <Link
                 href="/onboarding?from=profile"
-                className="font-mono uppercase tracking-[2px] text-bone/50 hover:text-bone no-underline transition"
+                className="font-mono uppercase tracking-[2px] text-ink/50 hover:text-ink no-underline transition"
               >
                 ↺ Redo intro
               </Link>
               <button
                 onClick={logout}
-                className="font-mono uppercase tracking-[2px] text-bone/30 hover:text-pink bg-transparent border-none cursor-pointer transition"
+                className="font-mono uppercase tracking-[2px] text-ink/30 hover:text-pink bg-transparent border-none cursor-pointer transition"
               >
                 Log out
               </button>
@@ -777,15 +777,15 @@ function AccountRow({ label, value, isLinked, unlinking, canUnlink, onConnect, o
 }) {
   return (
     <div className="flex justify-between items-center py-2.5 gap-3">
-      <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 shrink-0">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 shrink-0">{label}</span>
       <div className="flex items-center gap-3 min-w-0">
         {isLinked ? (
           <>
-            <span className="font-mono text-[11px] text-bone truncate">{value}</span>
+            <span className="font-mono text-[11px] text-ink truncate">{value}</span>
             <button
               onClick={onUnlink}
               disabled={!canUnlink || unlinking}
-              className="font-mono text-[9px] uppercase tracking-[2px] text-bone/40 hover:text-pink disabled:opacity-20 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer transition shrink-0"
+              className="font-mono text-[9px] uppercase tracking-[2px] text-ink/40 hover:text-pink disabled:opacity-20 disabled:cursor-not-allowed bg-transparent border-none cursor-pointer transition shrink-0"
             >
               {unlinking ? 'removing…' : 'remove'}
             </button>
@@ -793,7 +793,7 @@ function AccountRow({ label, value, isLinked, unlinking, canUnlink, onConnect, o
         ) : (
           <button
             onClick={onConnect}
-            className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-transparent border border-bone/15 hover:border-lime/50 hover:text-lime text-bone/60 rounded-sm cursor-pointer transition"
+            className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-transparent border border-ink/15 hover:border-lime/50 hover:text-lime text-ink/60 rounded-sm cursor-pointer transition"
           >
             + connect
           </button>

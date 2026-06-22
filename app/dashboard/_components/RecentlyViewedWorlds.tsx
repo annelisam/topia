@@ -42,10 +42,10 @@ export default function RecentlyViewedWorldsWidget() {
   if (items.length === 0) return null;
 
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden mb-6 bg-obsidian">
-      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40">Recently viewed</span>
-        <Link href="/worlds" className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-bone no-underline">
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-6 bg-[var(--page-bg)]">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">Recently viewed</span>
+        <Link href="/worlds" className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-ink no-underline">
           all worlds →
         </Link>
       </div>
@@ -54,17 +54,17 @@ export default function RecentlyViewedWorldsWidget() {
           <Link
             key={w.slug}
             href={`/worlds/${w.slug}`}
-            className="inline-flex items-center gap-2 border border-bone/10 hover:border-lime/40 px-2.5 py-1.5 rounded-sm transition no-underline"
+            className="inline-flex items-center gap-2 border border-ink/10 hover:border-lime/40 px-2.5 py-1.5 rounded-sm transition no-underline"
           >
             {w.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={w.imageUrl} alt="" className="w-5 h-5 rounded-sm object-cover" />
             ) : (
-              <span className="w-5 h-5 rounded-sm bg-bone/10 flex items-center justify-center">
-                <span className="font-basement text-[9px] text-bone/40">{w.title[0]?.toUpperCase()}</span>
+              <span className="w-5 h-5 rounded-sm bg-ink/10 flex items-center justify-center">
+                <span className="font-basement text-[9px] text-ink/40">{w.title[0]?.toUpperCase()}</span>
               </span>
             )}
-            <span className="font-mono text-[11px] text-bone">{w.title}</span>
+            <span className="font-mono text-[11px] text-ink">{w.title}</span>
           </Link>
         ))}
       </div>

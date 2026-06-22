@@ -58,51 +58,51 @@ export default function ActivityFeedWidget() {
   const unread = recent.filter((n) => !n.read).length;
 
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
-      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 flex items-center gap-2">
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden bg-[var(--page-bg)]">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 flex items-center gap-2">
           Activity · last 7d
           {unread > 0 && <span className="bg-lime text-obsidian font-bold px-1.5 py-0.5 rounded-sm text-[10px]">{unread} new</span>}
         </span>
       </div>
-      <div className="divide-y divide-bone/[0.04]">
+      <div className="divide-y divide-ink/[0.04]">
         {recent.map((n) => {
           const d = describe(n);
           const actorHref = n.actorUsername ? `/profile/${n.actorUsername}` : null;
           return (
-            <div key={n.id} className={`flex items-center gap-3 px-4 py-2.5 ${n.read ? '' : 'bg-bone/[0.02]'}`}>
+            <div key={n.id} className={`flex items-center gap-3 px-4 py-2.5 ${n.read ? '' : 'bg-ink/[0.02]'}`}>
               {actorHref ? (
                 <Link href={actorHref} className="shrink-0 no-underline">
                   {n.actorAvatar ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={n.actorAvatar} alt="" className="w-7 h-7 rounded-full object-cover border border-bone/15" />
+                    <img src={n.actorAvatar} alt="" className="w-7 h-7 rounded-full object-cover border border-ink/15" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-bone/10 border border-bone/15 flex items-center justify-center">
-                      <span className="font-basement text-[11px] text-bone/40">{(n.actorName || n.actorUsername || '?')[0]?.toUpperCase()}</span>
+                    <div className="w-7 h-7 rounded-full bg-ink/10 border border-ink/15 flex items-center justify-center">
+                      <span className="font-basement text-[11px] text-ink/40">{(n.actorName || n.actorUsername || '?')[0]?.toUpperCase()}</span>
                     </div>
                   )}
                 </Link>
               ) : null}
 
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[12px] text-bone truncate">
+                <div className="font-mono text-[12px] text-ink truncate">
                   {actorHref ? (
-                    <Link href={actorHref} className="font-bold uppercase text-bone hover:text-lime no-underline">
+                    <Link href={actorHref} className="font-bold uppercase text-ink hover:text-lime no-underline">
                       {n.actorName || `@${n.actorUsername}`}
                     </Link>
                   ) : (
                     <span className="font-bold uppercase">{n.actorName || `@${n.actorUsername}` || 'Someone'}</span>
                   )}
-                  <span className="text-bone/60"> {d.verb} </span>
+                  <span className="text-ink/60"> {d.verb} </span>
                   {d.objectHref && d.objectLabel ? (
                     <Link href={d.objectHref} className="font-bold uppercase text-lime hover:opacity-80 no-underline">{d.objectLabel}</Link>
                   ) : d.objectLabel ? (
-                    <span className="font-bold uppercase text-bone">{d.objectLabel}</span>
+                    <span className="font-bold uppercase text-ink">{d.objectLabel}</span>
                   ) : null}
                 </div>
               </div>
 
-              <span className="font-mono text-[10px] text-bone/30 shrink-0">{relativeTime(n.createdAt)}</span>
+              <span className="font-mono text-[10px] text-ink/30 shrink-0">{relativeTime(n.createdAt)}</span>
               {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" />}
             </div>
           );
@@ -114,16 +114,16 @@ export default function ActivityFeedWidget() {
 
 function ActivitySkeleton() {
   return (
-    <div className="border border-bone/[0.08] rounded-lg overflow-hidden bg-obsidian">
-      <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2">
-        <div className="h-3 w-32 bg-bone/[0.06] rounded animate-pulse" />
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden bg-[var(--page-bg)]">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2">
+        <div className="h-3 w-32 bg-ink/[0.06] rounded animate-pulse" />
       </div>
-      <div className="divide-y divide-bone/[0.04]">
+      <div className="divide-y divide-ink/[0.04]">
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-            <div className="w-7 h-7 rounded-full bg-bone/[0.06] animate-pulse shrink-0" />
-            <div className="flex-1 h-3 bg-bone/[0.04] rounded animate-pulse" />
-            <div className="h-2.5 w-6 bg-bone/[0.04] rounded animate-pulse shrink-0" />
+            <div className="w-7 h-7 rounded-full bg-ink/[0.06] animate-pulse shrink-0" />
+            <div className="flex-1 h-3 bg-ink/[0.04] rounded animate-pulse" />
+            <div className="h-2.5 w-6 bg-ink/[0.04] rounded animate-pulse shrink-0" />
           </div>
         ))}
       </div>
