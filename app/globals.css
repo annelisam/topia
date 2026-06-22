@@ -485,6 +485,13 @@ body[data-accent] ::-webkit-scrollbar-thumb {
 html:not([data-theme="dark"]) .opacity-30 { opacity: 0.5; }
 html:not([data-theme="dark"]) .opacity-40 { opacity: 0.62; }
 html:not([data-theme="dark"]) .opacity-50 { opacity: 0.7; }
+/* Same problem for low color-opacity foreground text (text-ink/15..40):
+   too faint as dark text on the light bg. Lift the floor in light mode only. */
+html:not([data-theme="dark"]) .text-ink\/15 { color: color-mix(in srgb, var(--page-text) 42%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/20 { color: color-mix(in srgb, var(--page-text) 48%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/25 { color: color-mix(in srgb, var(--page-text) 52%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/30 { color: color-mix(in srgb, var(--page-text) 56%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/40 { color: color-mix(in srgb, var(--page-text) 62%, transparent); }
 
 /* ── Theme-aware hover utilities ─────────────────────────────── */
 
