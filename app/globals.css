@@ -366,8 +366,13 @@ h3 {
   background-color: #1a1a1a;
 }
 
-/* Grid gap always dark */
+/* Grid-gap divider (gap-[3px] reveals this bg between panels).
+   Light: a subtle grey line like the regular pages. Dark: obsidian so it
+   blends with the dark panels (the original look). */
 section.min-h-screen .border-obsidian\/15 {
+  background-color: var(--border-color);
+}
+[data-theme="dark"] section.min-h-screen .border-obsidian\/15 {
   background-color: #1a1a1a;
 }
 
