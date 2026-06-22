@@ -305,7 +305,7 @@ export default function PublicProfilePage() {
                     {/* Identity fields */}
                     <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
                       <div className="py-1 border-b border-ink/[0.04]">
-                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">full name</span>
+                        <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">full name</span>
                         <div className="flex items-baseline gap-2 mt-0.5">
                           <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-ink">{profile.name || username}</h1>
                           {profile.pronouns && (
@@ -317,21 +317,21 @@ export default function PublicProfilePage() {
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">handle</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">handle</span>
                           <span className="font-mono text-[13px] text-ink/60 mt-0.5 block">@{username}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">path</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">path</span>
                           <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{config.label}</span>
                         </div>
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">issued</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">issued</span>
                           <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">{memberSince || '—'}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">status</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">status</span>
                           <div className="flex items-center gap-1.5 mt-0.5 justify-end">
                             <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
                             <span className="font-mono text-[11px] text-ink/50">VALID</span>
@@ -340,19 +340,19 @@ export default function PublicProfilePage() {
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] grid grid-cols-2 gap-x-6">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">location</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">location</span>
                           <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">—</span>
                         </div>
                         {profile.bio && (
                           <div>
-                            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block">declaration</span>
+                            <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block">declaration</span>
                             <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{profile.bio}&rdquo;</span>
                           </div>
                         )}
                       </div>
                       <div className="py-1 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/50 block mb-1.5">links</span>
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-[1.2px] text-ink/55 block mb-1.5">links</span>
                           {socialLinks.length > 0 ? (
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
                               {socialLinks.map((link) => {
@@ -469,7 +469,7 @@ export default function PublicProfilePage() {
                       { label: 'Followers', value: String(stats.followers) },
                     ].map((stat, i, arr) => (
                       <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/20">{stat.label}</span>
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[1.2px] text-ink/45">{stat.label}</span>
                         <span className="font-mono text-[15px] md:text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
                       </div>
                     ))}
