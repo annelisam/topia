@@ -99,15 +99,15 @@ export default function ProjectsLayer({
 }) {
   const router = useRouter();
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
-  const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
-  const handleSelectProject = useCallback((proj: { id: string; name: string; slug: string } | null) => {
+  const openProject = useCallback((proj: { id: string; name: string; slug: string } | null) => {
     if (!proj) { setSelectedProject(null); return; }
     const full = projects.find((p) => p.id === proj.id);
     setSelectedProject(full || (proj as ProjectItem));
   }, [projects]);
 
-  const activeProj = projects.find((p) => p.slug === activeProject);
+  const isEmpty = projects.length === 0;
 
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
@@ -116,103 +116,56 @@ export default function ProjectsLayer({
         <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
       </div>
 
-      {/* Globe */}
-      <div className="relative overflow-hidden" style={{ height: 'max(38vh, 280px)' }}>
-        <WorldGlobe projects={projects} onSelectProject={handleSelectProject} selectedProjectSlug={selectedProject?.slug || null} />
-        <div className="absolute bottom-3 left-4 z-10">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-ink/40">topia://{slug}</span>
+      {/* Globe — interactive when populated, ambient when empty */}
+      <div className="relative overflow-hidden border-b border-ink/[0.06]" style={{ height: isEmpty ? 'max(34vh, 260px)' : 'max(40vh, 300px)' }}>
+        <WorldGlobe projects={projects} onSelectProject={openProject} selectedProjectSlug={selectedProject?.slug || null} />
+        <div className="absolute bottom-3 left-4 z-10 pointer-events-none">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30">topia://{slug}</span>
         </div>
-      </div>
-
-      {/* Status bar */}
-      <div className="border-t border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
-        <span className="font-mono text-[13px] tracking-wider">
-          {activeProj ? (
-            <><span className="text-ink/40">project:</span> <span className="font-bold" style={{ color: config.hex }}>{activeProj.name}</span></>
-          ) : <span className="text-ink/40">hover a project to preview</span>}
-        </span>
-        <div className="flex items-center gap-2">
-          {projects.map((p) => (
-            <div key={p.id} className={`w-1.5 h-1.5 rounded-full ${activeProject === p.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} style={{ backgroundColor: config.hex }} />
-          ))}
-        </div>
-      </div>
-
-      {/* Ledger + preview */}
-      <div className="grid grid-cols-1 md:grid-cols-2">
-        {/* Ledger index */}
-        <div className="relative overflow-y-auto min-h-[200px] border-b md:border-b-0 border-ink/[0.06]" style={{ scrollbarWidth: 'thin', maxHeight: '400px' }}>
-          <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-ink/[0.06] pointer-events-none z-[1]" />
-          <div className="relative z-10">
-            {projects.length === 0 ? (
-              <div className="flex items-center justify-center py-10">
-                <span className="font-mono text-[13px] text-ink/30 uppercase tracking-wider">No projects yet</span>
-              </div>
-            ) : projects.map((proj, i) => {
-              const isActive = activeProject === proj.slug;
-              const isSelected = selectedProject?.slug === proj.slug;
-              return (
-                <div
-                  key={proj.id}
-                  className={`flex items-center cursor-pointer transition-all duration-150 border-b border-ink/[0.04] ${isSelected ? 'bg-ink/[0.06]' : isActive ? 'bg-ink/[0.04]' : 'hover:bg-ink/[0.02]'}`}
-                  style={{ minHeight: '48px' }}
-                  onMouseEnter={() => setActiveProject(proj.slug)}
-                  onMouseLeave={() => setActiveProject(null)}
-                  onClick={() => handleSelectProject(selectedProject?.slug === proj.slug ? null : proj)}
-                >
-                  <div className="w-[28px] shrink-0 flex items-center justify-center">
-                    <span className="font-mono text-[13px] text-ink/20">{String(i + 1).padStart(2, '0')}</span>
-                  </div>
-                  <div className="w-[2px] shrink-0 self-stretch" style={{ backgroundColor: config.hex }} />
-                  <div className="flex-1 flex items-center justify-between px-3 py-2.5 min-w-0">
-                    <div className="min-w-0">
-                      <span className="font-mono text-[13px] uppercase font-bold truncate block transition-colors" style={{ color: isSelected || isActive ? config.hex : 'color-mix(in srgb, var(--page-text) 50%, transparent)' }}>{proj.name}</span>
-                      {proj.tags && proj.tags.length > 0 && <span className="font-mono text-[11px] text-ink/30">{proj.tags[0]}</span>}
-                    </div>
-                    {isSelected && (
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-ink/30 border border-ink/[0.12] rounded-sm px-2 py-0.5 shrink-0">VIEWING</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        {isEmpty && (
+          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 pb-7 pointer-events-none">
+            <span className="font-mono text-[12px] uppercase tracking-[2px] text-ink/40">No projects in orbit yet</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ink/25">this world is still being built</span>
           </div>
-        </div>
-
-        {/* Preview */}
-        <div className="overflow-hidden md:border-l border-ink/[0.06] min-h-[200px]" style={{ maxHeight: '400px' }}>
-          {activeProj ? (
-            <div className="h-full grid grid-rows-[1fr_auto]">
-              <div className="relative overflow-hidden">
-                {activeProj.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activeProj.imageUrl} alt={activeProj.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-ink/[0.03]">
-                    <span className="font-basement text-[48px] text-ink/10">{activeProj.name[0]}</span>
-                  </div>
-                )}
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2) 50%, transparent)' }} />
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: config.hex }} />
-                    {activeProj.tags && activeProj.tags[0] && <span className="font-mono text-[11px] uppercase tracking-wider text-bone/60">{activeProj.tags[0]}</span>}
-                  </div>
-                  <h2 className="font-basement font-black text-[clamp(22px,2.5vw,30px)] uppercase text-bone leading-[0.9]">{activeProj.name}</h2>
-                </div>
-              </div>
-              <div className="border-t border-ink/[0.06] p-3">
-                <p className="font-mono text-[13px] text-ink/50 leading-relaxed">{activeProj.description || 'Click to explore this project.'}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center gap-1 p-6 text-center">
-              <span className="font-basement font-black text-[clamp(22px,2vw,28px)] uppercase text-ink/15">EXPLORE</span>
-              <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">hover or click a project</span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Project card grid — consistent with Team / Events */}
+      {!isEmpty && (
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {projects.map((proj) => {
+            const isSelected = selectedProject?.slug === proj.slug;
+            return (
+              <button
+                key={proj.id}
+                onClick={() => openProject(proj)}
+                onMouseEnter={() => setActiveSlug(proj.slug)}
+                onMouseLeave={() => setActiveSlug(null)}
+                className="group flex flex-col text-left rounded-lg overflow-hidden border bg-[var(--page-bg)] transition-colors cursor-pointer"
+                style={{ borderColor: isSelected ? config.hex : 'color-mix(in srgb, var(--page-text) 8%, transparent)' }}
+              >
+                <div className="relative aspect-[16/10] overflow-hidden bg-ink/[0.04]">
+                  {proj.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={proj.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-basement font-black text-[clamp(28px,6vw,44px)] uppercase text-ink/10">{proj.name[0]}</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.78), transparent 55%)' }} />
+                  {proj.tags && proj.tags[0] && <span className="absolute bottom-2.5 left-3 font-mono text-[9px] uppercase tracking-[2px] text-bone/70">{proj.tags[0]}</span>}
+                  {isSelected && <span className="absolute top-2.5 right-2.5 font-mono text-[8px] uppercase tracking-wider rounded-sm px-2 py-0.5 backdrop-blur-sm" style={{ backgroundColor: config.hex, color: '#0a0a0a' }}>viewing</span>}
+                </div>
+                <div className="p-3 flex items-center justify-between gap-2">
+                  <span className="font-mono text-[13px] font-bold uppercase truncate transition-colors" style={{ color: isSelected || activeSlug === proj.slug ? config.hex : 'var(--page-text)' }}>{proj.name}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink/30 group-hover:text-ink/60 transition-colors"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {selectedProject && (
         <ProjectPanel
