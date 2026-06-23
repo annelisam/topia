@@ -3,29 +3,7 @@
 import { useEffect, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
-
-const ROLE_TAGS = [
-  { slug: 'music', label: 'Music' },
-  { slug: 'dj', label: 'DJ' },
-  { slug: 'visual-artist', label: 'Visual Artist' },
-  { slug: 'filmmaker', label: 'Filmmaker' },
-  { slug: 'photographer', label: 'Photographer' },
-  { slug: 'writer', label: 'Writer' },
-  { slug: 'poet', label: 'Poet' },
-  { slug: 'dancer', label: 'Dancer' },
-  { slug: 'performer', label: 'Performer' },
-  { slug: 'producer', label: 'Producer' },
-  { slug: 'designer', label: 'Designer' },
-  { slug: 'illustrator', label: 'Illustrator' },
-  { slug: 'game-designer', label: 'Game Designer' },
-  { slug: 'architect', label: 'Architect' },
-  { slug: 'technologist', label: 'Technologist' },
-  { slug: 'curator', label: 'Curator' },
-  { slug: 'educator', label: 'Educator' },
-  { slug: 'community-builder', label: 'Community Builder' },
-  { slug: 'entrepreneur', label: 'Entrepreneur' },
-  { slug: 'researcher', label: 'Researcher' },
-];
+import { ROLE_TAGS } from '../../../lib/profile/roleTags';
 
 interface Props {
   step: number;
