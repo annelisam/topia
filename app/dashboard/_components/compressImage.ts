@@ -1,4 +1,8 @@
+import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+
 export function compressImage(file: File, maxW = 1200, q = 0.8): Promise<string> {
+  // Animated GIFs can't survive canvas re-encoding — upload them raw to Blob.
+  if (isGif(file)) return uploadToBlob(file);
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {

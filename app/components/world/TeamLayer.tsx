@@ -1,0 +1,79 @@
+'use client';
+
+import Link from 'next/link';
+import { WorldConfig } from './worldConfig';
+
+export interface WorldMember {
+  userId: string;
+  role: string;
+  userName: string | null;
+  userUsername: string | null;
+  userAvatarUrl: string | null;
+}
+
+function MemberCard({ member }: { member: WorldMember }) {
+  const inner = (
+    <div className="flex items-center gap-3 p-3 rounded-lg border border-ink/[0.08] bg-[var(--page-bg)] transition-colors hover:border-ink/25">
+      {member.userAvatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={member.userAvatarUrl} alt={member.userName || ''} className="w-10 h-10 rounded-full object-cover border border-ink/10" />
+      ) : (
+        <div className="w-10 h-10 rounded-full flex items-center justify-center font-mono text-[13px] font-bold bg-ink/10 text-ink">
+          {(member.userName || member.userUsername || '?')[0]?.toUpperCase()}
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="font-mono text-[13px] font-bold leading-tight text-ink truncate uppercase">{member.userName || member.userUsername || 'Unknown'}</p>
+        {member.userUsername && <p className="font-mono text-[11px] text-ink/40 leading-tight truncate">@{member.userUsername}</p>}
+        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 mt-1 block">{member.role.replace('_', ' ')}</span>
+      </div>
+    </div>
+  );
+  if (member.userUsername) return <Link href={`/profile/${member.userUsername}`} className="block no-underline">{inner}</Link>;
+  return <div>{inner}</div>;
+}
+
+export default function TeamLayer({
+  config,
+  builders,
+  collaborators,
+}: {
+  config: WorldConfig;
+  builders: WorldMember[];
+  collaborators: WorldMember[];
+}) {
+  const total = builders.length + collaborators.length;
+  return (
+    <div className="bg-[var(--page-bg)] flex flex-col h-full">
+      <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
+        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Team</span>
+        <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{total} {total === 1 ? 'member' : 'members'}</span>
+      </div>
+
+      {total === 0 ? (
+        <div className="flex-1 flex items-center justify-center py-10">
+          <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No team yet</span>
+        </div>
+      ) : (
+        <div className="p-4 space-y-5">
+          {builders.length > 0 && (
+            <div>
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 block mb-2">Built by</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {builders.map((b) => <MemberCard key={b.userId} member={b} />)}
+              </div>
+            </div>
+          )}
+          {collaborators.length > 0 && (
+            <div>
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 block mb-2">Collaborators</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {collaborators.map((c) => <MemberCard key={c.userId} member={c} />)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

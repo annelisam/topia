@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
+import { isGif, uploadToBlob } from '../../../lib/uploadImage';
 
 interface Props {
   step: number;
@@ -16,6 +17,8 @@ interface Props {
 
 // Resize image to max 256×256 and return a base64 data URL
 function resizeImage(file: File): Promise<string> {
+  // GIFs would lose their animation through the canvas — upload raw to Blob.
+  if (isGif(file)) return uploadToBlob(file);
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

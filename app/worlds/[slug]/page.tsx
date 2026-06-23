@@ -1,39 +1,19 @@
 'use client';
 
-import { useState, useEffect, use, useRef, useCallback } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import PageShell from '../../components/PageShell';
-import LoadingBar from '../../components/LoadingBar';
-import WorldGlobe from '../../components/WorldGlobe';
+import LoadingScreen from '../../components/LoadingScreen';
 import ShareButton from '../../components/ShareButton';
-import { SocialIcon } from '../../components/SocialIcons';
-import ProjectContent from '../../components/ProjectContent';
-import { markdownComponents } from '../../components/ProjectContent';
+import { getWorldConfig } from '../../components/world/worldConfig';
+import OverviewLayer, { type SocialLinks } from '../../components/world/OverviewLayer';
+import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
+import TeamLayer, { type WorldMember } from '../../components/world/TeamLayer';
+import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
 /* ── Types ────────────────────────────────────────────────────── */
-
-interface WorldMember {
-  userId: string;
-  role: string;
-  userName: string | null;
-  userUsername: string | null;
-  userAvatarUrl: string | null;
-}
-
-interface SocialLinks {
-  website?: string;
-  twitter?: string;
-  instagram?: string;
-  soundcloud?: string;
-  spotify?: string;
-  linkedin?: string;
-  substack?: string;
-}
 
 interface WorldDetail {
   id: string;
@@ -56,127 +36,13 @@ interface WorldDetail {
   members: WorldMember[];
 }
 
-interface ProjectItem {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  content?: string | null;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
-  url?: string | null;
-  links?: { label: string; url: string }[] | null;
-  tags?: string[] | null;
-}
-
-interface WorldEvent {
-  id: string;
-  eventName: string;
-  slug: string;
-  date: string | null;
-  city: string | null;
-  imageUrl: string | null;
-}
-
-const COLOR_DOT: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pink: 'bg-pink', orange: 'bg-orange', green: 'bg-green' };
-const COLOR_TXT: Record<string, string> = { lime: 'text-lime', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
-
-/* ── Project Detail Slide Panel ───────────────────────────────── */
-
-function ProjectPanel({
-  project,
-  onClose,
-  onExpand,
-}: {
-  project: ProjectItem;
-  onClose: () => void;
-  onExpand: () => void;
-}) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const closingRef = useRef(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px)');
-    setIsDesktop(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  useEffect(() => {
-    requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    if (closingRef.current) return;
-    closingRef.current = true;
-    setVisible(false);
-    setTimeout(onClose, 300);
-  }, [onClose]);
-
-  const hiddenTransform = isDesktop ? 'translateX(100%)' : 'translateY(100%)';
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-40"
-        style={{ backgroundColor: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)', opacity: visible ? 1 : 0, transition: 'opacity 300ms ease-out' }}
-        onClick={handleClose}
-      />
-      <div
-        ref={panelRef}
-        className="fixed z-50 overflow-y-auto bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl sm:rounded-t-none sm:bottom-auto sm:left-auto sm:top-0 sm:right-0 sm:h-full sm:w-[560px] lg:w-[640px] sm:max-w-[55vw] sm:max-h-none sm:pt-16"
-        style={{ backgroundColor: 'var(--background)', borderLeft: '1px solid var(--border-color)', transform: visible ? 'translate(0, 0)' : hiddenTransform, transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1)' }}
-      >
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--foreground)', opacity: 0.15 }} />
-        </div>
-        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3" style={{ backgroundColor: 'var(--background)', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 className="font-mono text-[13px] font-bold uppercase truncate pr-4" style={{ color: 'var(--foreground)' }}>{project.name}</h3>
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={onExpand} className="w-8 h-8 flex items-center justify-center rounded-lg transition hover:opacity-60" style={{ color: 'var(--foreground)' }} title="Open full page">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </button>
-            <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg transition hover:opacity-60 font-mono text-[18px]" style={{ color: 'var(--foreground)' }}>×</button>
-          </div>
-        </div>
-        <div className="p-5 sm:p-6" style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 250ms ease-out 100ms, transform 250ms ease-out 100ms' }}>
-          <ProjectContent project={project} maxImageHeight="250px" />
-        </div>
-      </div>
-    </>
-  );
-}
-
-/* ── Member Card ──────────────────────────────────────────────── */
-
-function MemberCard({ member }: { member: WorldMember }) {
-  const inner = (
-    <div className="flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg transition-colors hover:bg-ink/[0.04]">
-      {member.userAvatarUrl ? (
-        <img src={member.userAvatarUrl} alt={member.userName || ''} className="w-8 h-8 rounded-full object-cover border border-ink/10" />
-      ) : (
-        <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold bg-ink/10 text-ink">
-          {(member.userName || member.userUsername || '?')[0]?.toUpperCase()}
-        </div>
-      )}
-      <div>
-        <p className="font-mono text-[12px] font-bold leading-tight text-ink">{member.userName || member.userUsername || 'Unknown'}</p>
-        {member.userUsername && <p className="font-mono text-[13px] text-ink/40 leading-tight">@{member.userUsername}</p>}
-      </div>
-    </div>
-  );
-  if (member.userUsername) return <Link href={`/profile/${member.userUsername}`} className="block">{inner}</Link>;
-  return <div>{inner}</div>;
-}
+const SECTIONS = [
+  { id: 'overview', label: 'OVERVIEW' },
+  { id: 'projects', label: 'PROJECTS' },
+  { id: 'team',     label: 'TEAM' },
+  { id: 'events',   label: 'EVENTS' },
+] as const;
+type SectionId = typeof SECTIONS[number]['id'];
 
 /* ── Main Page ────────────────────────────────────────────────── */
 
@@ -184,13 +50,12 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const { slug } = use(params);
   const [world, setWorld] = useState<WorldDetail | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
-  const [activeProject, setActiveProject] = useState<string | null>(null);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
   const { user, authenticated } = usePrivy();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionId>('overview');
 
   useEffect(() => {
     const worldPromise = fetch(`/api/worlds?slug=${slug}`)
@@ -199,8 +64,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
     const userPromise = (authenticated && user?.id)
       ? fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
-          .then(r => r.json())
-          .then(d => { if (d.user) setCurrentUserId(d.user.id); })
+          .then((r) => r.json())
+          .then((d) => { if (d.user) setCurrentUserId(d.user.id); })
           .catch(() => {})
       : Promise.resolve();
 
@@ -210,307 +75,272 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   useEffect(() => {
     if (!world?.id) return;
     fetch(`/api/worlds/projects?worldId=${world.id}`)
-      .then(r => r.json())
-      .then(data => setProjects(data.projects || []))
+      .then((r) => r.json())
+      .then((data) => setProjects(data.projects || []))
       .catch(console.error);
     fetch(`/api/events?worldId=${world.id}`)
-      .then(r => r.json())
-      .then(data => setWorldEvents(data.events || []))
+      .then((r) => r.json())
+      .then((data) => setWorldEvents(data.events || []))
       .catch(console.error);
   }, [world?.id]);
 
-  // Record this world view for the dashboard's "Recently viewed" widget
   useRecordWorldView(world ? { slug: world.slug, title: world.title, imageUrl: world.imageUrl } : null);
 
-  const handleSelectProject = useCallback((proj: { id: string; name: string; slug: string } | null) => {
-    if (!proj) { setSelectedProject(null); return; }
-    const full = projects.find(p => p.id === proj.id);
-    setSelectedProject(full || proj as ProjectItem);
-  }, [projects]);
+  const config = useMemo(() => getWorldConfig(slug), [slug]);
 
-  if (loading) {
-    return <PageShell><div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}><LoadingBar /></div></PageShell>;
+  const worldBuilders = useMemo(() => world?.members?.filter((m) => m.role === 'world_builder' || m.role === 'owner') || [], [world]);
+  const collaboratorMembers = useMemo(() => world?.members?.filter((m) => m.role === 'collaborator') || [], [world]);
+  const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
+  const toolsList = world?.tools ? world.tools.split(',').map((t) => t.trim()).filter(Boolean) : [];
+
+  const established = world?.dateAdded
+    ? new Date(world.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
+    : null;
+
+  // Overview + Projects (with the globe) always show; Team/Events hide when empty.
+  const visibleSections = SECTIONS.filter((s) => {
+    if (s.id === 'team') return worldBuilders.length + collaboratorMembers.length > 0;
+    if (s.id === 'events') return worldEvents.length > 0;
+    return true; // overview + projects always
+  });
+
+  // Barcode + machine-readable zone, keyed off the world.
+  const bars = (slug || 'TOPIA').split('').flatMap((ch, i) => {
+    const code = ch.charCodeAt(0);
+    return [
+      { type: 'bar' as const, w: ((code * (i + 1)) % 4) + 1 },
+      { type: 'gap' as const, w: ((code + i) % 3) + 1 },
+    ];
+  });
+  const mrzLine1 = `W<TOPIA<${(world?.title || slug || '').replace(/[.\s]/g, '<').toUpperCase().padEnd(20, '<')}<<<<<<<<<`;
+  const mrzLine2 = `${(world?.id || '').slice(0, 10).padEnd(10, '<')}<<${(established || '').replace(/\s/g, '').padEnd(6, '<')}<<${(world?.category || 'GEN').substring(0, 3).toUpperCase()}<${(slug || '').padEnd(14, '<')}<<`;
+
+  function renderSection() {
+    switch (activeSection) {
+      case 'projects': return <ProjectsLayer config={config} projects={projects} slug={slug} />;
+      case 'team':     return <TeamLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} />;
+      case 'events':   return <EventsLayer config={config} events={worldEvents} />;
+      default:         return <OverviewLayer config={config} description={world?.description ?? null} shortDescription={world?.shortDescription ?? null} tools={toolsList} socialLinks={world?.socialLinks ?? null} />;
+    }
   }
 
-  if (!world) {
+  if (!loading && !world) {
     return (
       <PageShell>
-        <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--page-bg)' }}>
-          <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>World not found.</p>
-          <Link href="/worlds" className="font-mono text-[13px] underline" style={{ color: 'var(--foreground)' }}>← Back to Worlds</Link>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--page-bg)]">
+          <p className="font-mono text-[13px] mb-4 text-ink">World not found.</p>
+          <Link href="/worlds" className="font-mono text-[13px] underline text-ink">← Back to Worlds</Link>
         </div>
       </PageShell>
     );
   }
 
-  const worldBuilders = world.members?.filter(m => m.role === 'world_builder' || m.role === 'owner') || [];
-  const collaboratorMembers = world.members?.filter(m => m.role === 'collaborator') || [];
-  const isWorldBuilder = currentUserId && worldBuilders.some(b => b.userId === currentUserId);
-  const socialLinks = world.socialLinks as SocialLinks | null;
-  const hasSocialLinks = socialLinks && Object.values(socialLinks).some(v => v);
-  const toolsList = world.tools ? world.tools.split(',').map(t => t.trim()).filter(Boolean) : [];
-  const color = 'lime';
-  const activeProj = projects.find(p => p.slug === activeProject);
-
   return (
-    <PageShell>
-      <section className="min-h-screen px-4 md:px-6 py-4 md:py-6" style={{ backgroundColor: 'var(--page-bg)' }}>
-        <div className="max-w-[var(--content-max)] mx-auto">
-          <div className="grid grid-rows-[auto_auto_minmax(300px,50vh)_auto] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] border border-obsidian/15 rounded-lg overflow-hidden">
+    <div className="min-h-screen bg-[var(--page-bg)]">
+      <LoadingScreen onComplete={() => setIsLoaded(true)} />
+      <PageShell>
+        <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="max-w-[var(--content-max)] mx-auto">
+            {world && (
+              <div className="grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
-            {/* ROW 1 — Header */}
-            <div className="p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[13px] uppercase tracking-[2px]" style={{ color: 'var(--accent-text, #1a1a1a)', opacity: 0.5 }}>worlds // {slug}</span>
-                <div className="flex items-center gap-2">
-                  <ShareButton
-                    kind="world"
-                    title={world.title}
-                    text={`${world.title} — a world on TOPIA`}
-                    iconSize={11}
-                    className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-sm border transition hover:opacity-70 cursor-pointer bg-transparent"
-                    style={{ color: 'var(--accent-text, #1a1a1a)', borderColor: 'color-mix(in srgb, var(--accent-text, #1a1a1a) 35%, transparent)' }}
-                  />
-                  {isWorldBuilder && (
-                    <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-sm transition hover:opacity-70" style={{ backgroundColor: 'var(--accent-text)', color: 'var(--accent)' }}>
-                      Manage
-                    </Link>
-                  )}
-                </div>
-              </div>
-              <h1 className="font-basement font-black text-[clamp(24px,4vw,48px)] leading-[0.85] uppercase mt-2" style={{ color: 'var(--accent-text, #1a1a1a)' }}>
-                {world.title}
-              </h1>
-            </div>
-
-            {/* Stats grid */}
-            <div className="bg-[var(--page-bg)] grid grid-cols-2 grid-rows-2 gap-[1px]">
-              <div className="p-3 border-b border-r border-ink/[0.06]">
-                <span className="font-basement font-black text-[24px] text-ink leading-none block">{projects.length}</span>
-                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">projects</span>
-              </div>
-              <div className="p-3 border-b border-ink/[0.06]">
-                <span className="font-basement font-black text-[24px] text-ink leading-none block">{world.members?.length || 0}</span>
-                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">members</span>
-              </div>
-              <div className="p-3 border-r border-ink/[0.06]">
-                <span className="font-basement font-black text-[24px] text-ink leading-none block">{worldEvents.length}</span>
-                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">events</span>
-              </div>
-              <div className="p-3">
-                {world.category ? (
-                  <>
-                    <span className="font-basement font-black text-[16px] text-ink leading-none block uppercase">{world.category}</span>
-                    <span className="font-mono text-[13px] text-ink uppercase tracking-wider">category</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-basement font-black text-[24px] text-ink leading-none block">—</span>
-                    <span className="font-mono text-[13px] text-ink uppercase tracking-wider">category</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* ROW 2 — Nav bar */}
-            <div className="md:col-span-2 bg-[var(--page-bg)] border-t border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
-              <span className="font-mono text-[13px] text-ink tracking-wider">
-                {activeProj ? (
-                  <><span className="text-ink/50">project:</span> <span className={`font-bold ${COLOR_TXT[color]}`}>{activeProj.name}</span></>
-                ) : <span className="text-ink/40">hover a project to preview</span>}
-              </span>
-              <div className="flex items-center gap-2">
-                {projects.map(p => (
-                  <div key={p.id} className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[color]} ${activeProject === p.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} />
-                ))}
-              </div>
-            </div>
-
-            {/* ROW 3 — Globe */}
-            <div className="md:col-span-2 bg-[var(--page-bg)] relative overflow-hidden min-h-[300px]" style={{ height: 'max(40vh, 300px)' }}>
-              <WorldGlobe
-                projects={projects}
-                onSelectProject={handleSelectProject}
-                selectedProjectSlug={selectedProject?.slug || null}
-              />
-              <div className="absolute bottom-3 left-4 z-10">
-                <span className="font-mono text-[13px] uppercase tracking-wider text-ink/40">topia://{slug}</span>
-              </div>
-            </div>
-
-            {/* ROW 4 — Project index + Preview */}
-            {/* Left: Project ledger index */}
-            <div className="relative bg-[var(--page-bg)] overflow-y-auto min-h-[200px]" style={{ scrollbarWidth: 'thin', maxHeight: '400px' }}>
-              {/* Crosshatch */}
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px)' }}
-              />
-              <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-                style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(245,240,232,1) 47px, rgba(245,240,232,1) 48px)' }}
-              />
-              <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-ink/[0.06] pointer-events-none z-[1]" />
-
-              <div className="relative z-10">
-                {projects.length === 0 ? (
-                  <div className="flex items-center justify-center py-8">
-                    <span className="font-mono text-[13px] text-ink/30 uppercase tracking-wider">No projects yet</span>
+                {/* ═══ ROW 1 — REGISTRY CARD ═══ */}
+                <div className="bg-[var(--page-bg)] relative overflow-hidden">
+                  {/* Category-colored accent strip */}
+                  <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
+                    <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-70 relative z-10`}>topia://world</span>
+                    <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>WORLD-{world.id.slice(0, 4).toUpperCase()}</span>
                   </div>
-                ) : projects.map((proj, i) => {
-                  const isActive = activeProject === proj.slug;
-                  const isSelected = selectedProject?.slug === proj.slug;
-                  return (
-                    <div
-                      key={proj.id}
-                      className={`flex items-center cursor-pointer transition-all duration-150 border-b border-ink/[0.04] ${isSelected ? 'bg-ink/[0.06]' : isActive ? 'bg-ink/[0.04]' : 'hover:bg-ink/[0.02]'}`}
-                      style={{ minHeight: '48px' }}
-                      onMouseEnter={() => setActiveProject(proj.slug)}
-                      onMouseLeave={() => setActiveProject(null)}
-                      onClick={() => handleSelectProject(selectedProject?.slug === proj.slug ? null : proj)}
-                    >
-                      <div className="w-[28px] shrink-0 flex items-center justify-center">
-                        <span className="font-mono text-[13px] text-ink/15">{String(i + 1).padStart(2, '0')}</span>
-                      </div>
-                      <div className={`w-[2px] shrink-0 self-stretch ${COLOR_DOT[color]}`} />
-                      <div className="flex-1 flex items-center justify-between px-3 py-2.5 min-w-0">
-                        <div className="min-w-0">
-                          <span className={`font-mono text-[13px] uppercase font-bold ${isSelected || isActive ? COLOR_TXT[color] : 'text-ink/50'} transition-colors truncate block`}>{proj.name}</span>
-                          {proj.tags && proj.tags.length > 0 && <span className="font-mono text-[13px] text-ink/30">{proj.tags[0]}</span>}
+
+                  {/* Image + Fields */}
+                  <div className="flex flex-col md:flex-row relative">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.03] select-none" draggable={false} />
+                    </div>
+
+                    {/* World image — compact on mobile, larger photo slot on desktop */}
+                    <div className="flex items-center justify-center pt-5 pb-2 px-4 md:p-5 relative z-10 md:w-[28%] shrink-0">
+                      <div className="relative">
+                        <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/15" /></div>
+                        <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/15" /></div>
+                        <div className="absolute -bottom-2 -left-2 w-4 h-4 z-30"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/15" /></div>
+                        <div className="absolute -bottom-2 -right-2 w-4 h-4 z-30"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/15" /></div>
+                        <div className="w-24 h-24 md:w-44 md:h-44 rounded-lg relative overflow-hidden border border-dashed border-ink/15 p-1.5">
+                          <div className="w-full h-full rounded-md relative overflow-hidden border-2 border-ink/20">
+                            {world.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={world.imageUrl} alt={world.title} className="w-full h-full object-cover relative z-10" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-ink/5 p-3">
+                                <span className="font-basement font-black text-[clamp(22px,5vw,36px)] text-ink/20 text-center uppercase leading-none">{world.title}</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 pointer-events-none z-20" style={{ opacity: 0.1, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.4) 1px, rgba(0,0,0,0.4) 2px)', backgroundSize: '100% 2px' }} />
+                          </div>
                         </div>
-                        {isSelected && (
-                          <span className="font-mono text-[12px] uppercase tracking-wider text-ink/25 border border-ink/[0.08] rounded-sm px-2 py-0.5 shrink-0">VIEWING</span>
+                      </div>
+                    </div>
+
+                    {/* Registry fields */}
+                    <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
+                      <div className="py-1 border-b border-ink/[0.04]">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">designation</span>
+                        <h1 className="font-basement font-black text-[clamp(20px,2.6vw,34px)] leading-[0.9] uppercase text-ink mt-0.5">{world.title}</h1>
+                      </div>
+                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
+                        <div>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">handle</span>
+                          <span className="font-mono text-[13px] text-ink/60 mt-0.5 block">topia://{slug}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">category</span>
+                          <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{world.category || 'GENERAL'}</span>
+                        </div>
+                      </div>
+                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
+                        <div>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">established</span>
+                          <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">{established || '—'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">status</span>
+                          <div className="flex items-center gap-1.5 mt-0.5 justify-end">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
+                            <span className="font-mono text-[11px] text-ink/50">LIVE</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-1 border-b border-ink/[0.04]">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">architect{worldBuilders.length > 1 ? 's' : ''}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          {worldBuilders.length > 0 ? (
+                            worldBuilders.map((b) => {
+                              const chip = (
+                                <span className="inline-flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full border border-ink/[0.08] hover:border-ink/25 transition-colors">
+                                  {b.userAvatarUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={b.userAvatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                  ) : (
+                                    <span className="w-5 h-5 rounded-full bg-ink/10 flex items-center justify-center font-mono text-[9px] font-bold text-ink">{(b.userName || b.userUsername || '?')[0]?.toUpperCase()}</span>
+                                  )}
+                                  <span className="font-mono text-[11px] text-ink/60 truncate max-w-[140px]">{b.userName || b.userUsername || 'Unknown'}</span>
+                                </span>
+                              );
+                              return b.userUsername
+                                ? <Link key={b.userId} href={`/profile/${b.userUsername}`} className="no-underline">{chip}</Link>
+                                : <span key={b.userId}>{chip}</span>;
+                            })
+                          ) : world.creatorName ? (
+                            world.creatorSlug ? (
+                              <Link href={`/profile/${world.creatorSlug}`} className="font-mono text-[11px] text-ink/50 no-underline hover:text-ink/80 transition-colors">{world.creatorName}</Link>
+                            ) : (
+                              <span className="font-mono text-[11px] text-ink/40">{world.creatorName}</span>
+                            )
+                          ) : (
+                            <span className="font-mono text-[11px] text-ink/40">—</span>
+                          )}
+                        </div>
+                      </div>
+                      {world.shortDescription && (
+                        <div className="py-1 border-b border-ink/[0.04]">
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">declaration</span>
+                          <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{world.shortDescription}&rdquo;</span>
+                        </div>
+                      )}
+                      <div className="py-1.5 flex items-center justify-end gap-1.5">
+                        <ShareButton
+                          kind="world"
+                          title={world.title}
+                          text={`${world.title} — a world on TOPIA`}
+                          iconSize={11}
+                          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                        />
+                        {isWorldBuilder && (
+                          <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
+                            Manage
+                          </Link>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-
-                {/* World info rows */}
-                {worldBuilders.length > 0 && (
-                  <div className="border-t border-ink/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Built by</span>
-                    <div className="flex flex-wrap gap-1">
-                      {worldBuilders.map(b => <MemberCard key={b.userId} member={b} />)}
-                    </div>
                   </div>
-                )}
+                </div>
 
-                {collaboratorMembers.length > 0 && (
-                  <div className="border-t border-ink/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Collaborators</span>
-                    <div className="flex flex-wrap gap-1">
-                      {collaboratorMembers.map(c => <MemberCard key={c.userId} member={c} />)}
-                    </div>
+                {/* ═══ ROW 2 — STATS BAR ═══ */}
+                <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-0">
+                    {[
+                      { label: 'Projects', value: String(projects.length) },
+                      { label: 'Members', value: String(world.members?.length || 0) },
+                      { label: 'Events', value: String(worldEvents.length) },
+                      { label: 'Collabs', value: String(collaboratorMembers.length) },
+                    ].map((stat, i, arr) => (
+                      <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
+                        <span className="font-mono text-[9px] font-semibold uppercase tracking-[2px] text-ink/20">{stat.label}</span>
+                        <span className="font-mono text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                  <div className="hidden md:flex items-center gap-3">
+                    <div className="w-32 h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${config.hex}30, ${config.hex}60, ${config.hex}30, transparent)` }} />
+                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/15">topia://stats</span>
+                  </div>
+                </div>
 
-                {toolsList.length > 0 && (
-                  <div className="border-t border-ink/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Tools</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {toolsList.map(tool => (
-                        <span key={tool} className="font-mono text-[12px] px-2 py-0.5 border border-ink/[0.08] rounded text-ink/50">{tool}</span>
+                {/* ═══ ROW 3 — SECTION TAB NAV ═══ */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {visibleSections.map((s) => {
+                    const isActive = activeSection === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/70 bg-transparent'}`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                </div>
+
+                {/* ═══ ROW 4 — ACTIVE SECTION ═══ */}
+                <div className="bg-[var(--page-bg)] min-h-[280px]">
+                  {renderSection()}
+                </div>
+
+                {/* ═══ ROW 5 — MRZ STRIP ═══ */}
+                <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04]">
+                  <div className="flex-1 flex flex-col gap-1 min-w-0">
+                    <div className="flex items-end gap-0 h-4">
+                      {bars.map((b, i) => (
+                        <div key={i} className={b.type === 'bar' ? 'bg-ink/10' : ''} style={{ width: `${b.w}px`, height: b.type === 'bar' ? `${12 + (b.w * 2)}px` : '0px', marginRight: b.type === 'gap' ? `${b.w}px` : '0px' }} />
                       ))}
                     </div>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block">{mrzLine1}</span>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block">{mrzLine2}</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    <span className="font-mono text-[9px] text-ink/10 hidden md:block">{world.id.slice(0, 6)}···{world.id.slice(-4)}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <span className="font-mono text-[8px] text-ink/10 uppercase">W1</span>
+                  </div>
+                </div>
 
-                {hasSocialLinks && (
-                  <div className="border-t border-ink/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Links</span>
-                    <div className="flex gap-3">
-                      {Object.entries(socialLinks!).map(([key, url]) =>
-                        url ? (
-                          <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/30 hover:text-ink/60 transition-opacity" title={key}>
-                            <SocialIcon type={key} size={16} />
-                          </a>
-                        ) : null
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
+
+            {/* Back link */}
+            <div className="mt-4">
+              <Link href="/worlds" className="font-mono text-[12px] uppercase tracking-wider text-ink/40 hover:text-ink/70 transition-colors no-underline">
+                ← back to worlds
+              </Link>
             </div>
-
-            {/* Right: Preview panel */}
-            <div className="border-l border-ink/[0.04] overflow-hidden bg-[var(--page-bg)] min-h-[200px]" style={{ maxHeight: '400px' }}>
-              {activeProj ? (
-                <div className="h-full grid grid-rows-[1fr_auto]">
-                  <div className="relative overflow-hidden">
-                    {activeProj.imageUrl ? (
-                      <img src={activeProj.imageUrl} alt={activeProj.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[var(--page-bg)]">
-                        <span className="font-basement text-[48px] text-ink/10">{activeProj.name[0]}</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${COLOR_DOT[color]}`} />
-                        {activeProj.tags && activeProj.tags[0] && <span className="font-mono text-[13px] uppercase tracking-wider text-ink/50">{activeProj.tags[0]}</span>}
-                      </div>
-                      <h2 className="font-basement font-black text-[clamp(24px,2.5vw,32px)] uppercase text-ink leading-[0.9]">{activeProj.name}</h2>
-                    </div>
-                  </div>
-                  <div className="border-t border-ink/[0.06] p-3">
-                    <p className="font-mono text-[13px] text-ink/40 leading-relaxed">{activeProj.description || 'Click to explore this project.'}</p>
-                  </div>
-                </div>
-              ) : world.description ? (
-                <div className="h-full flex flex-col">
-                  <div className="flex-1 p-5 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-3">About</span>
-                    <div className="prose prose-invert prose-sm max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{world.description}</ReactMarkdown>
-                    </div>
-                  </div>
-                  {worldEvents.length > 0 && (
-                    <div className="border-t border-ink/[0.06] p-4">
-                      <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Events</span>
-                      <div className="space-y-1">
-                        {worldEvents.slice(0, 3).map(ev => (
-                          <Link key={ev.id} href={`/events/${ev.slug}`} className="flex items-center justify-between py-1.5 hover:bg-ink/[0.02] transition-colors rounded px-1 no-underline">
-                            <span className="font-mono text-[13px] text-ink/60 font-bold uppercase truncate">{ev.eventName}</span>
-                            {ev.date && <span className="font-mono text-[11px] text-ink/30 shrink-0 ml-2">{ev.date}</span>}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-full relative overflow-hidden">
-                  <video src="/brand/vhs-loop.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 pointer-events-none z-[2] opacity-[0.05]"
-                    style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(245,240,232,0.3) 2px, rgba(245,240,232,0.3) 4px)' }}
-                  />
-                  <div className="absolute inset-0 pointer-events-none z-[3]" style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)' }} />
-                  <div className="absolute bottom-0 left-0 right-0 z-[4] bg-gradient-to-t from-obsidian/90 via-obsidian/40 to-transparent p-4">
-                    <span className="font-basement font-black text-[clamp(24px,2vw,28px)] uppercase text-ink/80">EXPLORE</span>
-                    <span className="font-mono text-[12px] text-ink/25 block mt-1">click a project</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
           </div>
-
-          {/* Back link */}
-          <div className="mt-4">
-            <Link href="/worlds" className="font-mono text-[12px] uppercase tracking-wider opacity-40 hover:opacity-70 transition-opacity no-underline" style={{ color: 'var(--page-text)' }}>
-              ← back to worlds
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {selectedProject && (
-        <ProjectPanel
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-          onExpand={() => router.push(`/worlds/${slug}/projects/${selectedProject.slug}`)}
-        />
-      )}
-    </PageShell>
+        </section>
+      </PageShell>
+    </div>
   );
 }
