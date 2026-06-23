@@ -126,7 +126,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   if (stamp.shape === 'seal') {
     const chrome = branded && stamp.color === 'silver'; // only the TOPIA member seal is metallic
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
+      <svg viewBox="0 0 100 100" className="stamp-svg w-full h-full" shapeRendering="geometricPrecision">
         <defs>
           <path id={`sealTop-${idKey}`} d="M 50,50 m -33,0 a 33,33 0 1,1 66,0" />
           <path id={`sealBot-${idKey}`} d="M 50,50 m 33,0 a 33,33 0 1,1 -66,0" />
@@ -189,7 +189,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
 
   if (isRect) {
     return (
-      <svg viewBox="0 0 120 55" className="w-full h-full">
+      <svg viewBox="0 0 120 55" className="stamp-svg w-full h-full">
         <defs>{!branded && <InkFilter idKey={idKey} seed={seed} />}</defs>
         <g filter={inkF} opacity={inkOp}>
           {isLegend && <rect x="2" y="2" width="116" height="51" rx="3" fill={c} opacity={0.1} />}
@@ -224,7 +224,7 @@ function StampSvg({ stamp, idKey, config }: { stamp: Stamp; idKey: string; confi
   }
 
   return (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
+    <svg viewBox="0 0 100 100" className="stamp-svg w-full h-full">
       <defs>
         <path id={`arcTop-${idKey}`} d="M 50,50 m -34,0 a 34,34 0 1,1 68,0" />
         <path id={`arcBot-${idKey}`} d="M 50,50 m 34,0 a 34,34 0 1,1 -68,0" />
@@ -335,25 +335,25 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
           <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>{sectionLabel}</span>
           <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-30`}>{items.length} entries</span>
         </div>
-        <div className="relative bg-obsidian overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+        <div className="relative bg-[var(--page-bg)] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px)' }} />
           <div className="absolute inset-0 pointer-events-none opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(245,240,232,1) 47px, rgba(245,240,232,1) 48px)' }} />
-          <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-bone/[0.06] pointer-events-none z-[1]" />
+          <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-ink/[0.06] pointer-events-none z-[1]" />
           <div className="relative z-10">
             {items.length === 0 ? (
               <div className="flex items-center justify-center py-10">
-                <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No entries yet</span>
+                <span className="font-mono text-[11px] text-ink/20 uppercase tracking-wider">No entries yet</span>
               </div>
             ) : items.map((item, i) => (
-              <div key={item.name} className="flex items-center hover:bg-bone/[0.02] transition-colors cursor-pointer border-b border-bone/[0.04]" style={{ minHeight: '48px' }}>
-                <div className="w-[28px] shrink-0 flex items-center justify-center"><span className="font-mono text-[9px] text-bone/15">{String(i + 1).padStart(2, '0')}</span></div>
+              <div key={item.name} className="flex items-center hover:bg-ink/[0.02] transition-colors cursor-pointer border-b border-ink/[0.04]" style={{ minHeight: '48px' }}>
+                <div className="w-[28px] shrink-0 flex items-center justify-center"><span className="font-mono text-[9px] text-ink/15">{String(i + 1).padStart(2, '0')}</span></div>
                 <div className="w-[2px] shrink-0 self-stretch" style={{ backgroundColor: COLOR_HEX[item.color] || '#f5f0e8' }} />
                 <div className="flex-1 flex items-center justify-between gap-3 px-3 py-3 min-w-0">
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono text-[12px] uppercase font-bold text-bone block truncate">{item.name}</span>
-                    <span className="font-mono text-[9px] text-bone/30">{item.sub}</span>
+                    <span className="font-mono text-[12px] uppercase font-bold text-ink block truncate">{item.name}</span>
+                    <span className="font-mono text-[9px] text-ink/30">{item.sub}</span>
                   </div>
-                  <span className="font-mono text-[8px] uppercase tracking-wider text-bone/25 border border-bone/[0.08] rounded-sm px-2 py-0.5 shrink-0">{item.status}</span>
+                  <span className="font-mono text-[8px] uppercase tracking-wider text-ink/25 border border-ink/[0.08] rounded-sm px-2 py-0.5 shrink-0">{item.status}</span>
                 </div>
               </div>
             ))}
@@ -363,25 +363,25 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
       )}
 
       {/* Right — Visa stamps (organic scatter, scrolls sideways) */}
-      <div className={`${showEndorsed ? 'border-l border-bone/[0.04]' : ''} bg-obsidian p-4 relative overflow-hidden`}>
+      <div className={`${showEndorsed ? 'border-l border-ink/[0.04]' : ''} bg-[var(--page-bg)] p-4 relative overflow-hidden`}>
         <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.02]" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice">
           {Array.from({ length: 8 }, (_, i) => (
             <ellipse key={i} cx="150" cy="200" rx={60 + i * 20} ry={40 + i * 15} fill="none" stroke="#f5f0e8" strokeWidth="0.4" transform={`rotate(${i * 12} 150 200)`} />
           ))}
         </svg>
         <div className="flex items-center justify-between mb-3 relative z-10 gap-2">
-          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 shrink-0">visa stamps // travel log</span>
+          <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 shrink-0">visa stamps // travel log</span>
           <div className="flex items-center gap-2">
-            {stamps.length > 0 && !reorder && <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/20">{stamps.length} earned</span>}
+            {stamps.length > 0 && !reorder && <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/20">{stamps.length} earned</span>}
             {editable && stamps.length > 0 && (
               reorder ? (
                 <>
-                  <button onClick={resetLayout} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent">Reset</button>
-                  <button onClick={() => { setReorder(false); setDirty(false); try { const raw = lsKey && localStorage.getItem(lsKey); setCustom(raw ? JSON.parse(raw) : {}); } catch { setCustom({}); } }} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent">Cancel</button>
+                  <button onClick={resetLayout} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-ink/15 text-ink/50 hover:text-ink hover:border-ink/40 transition cursor-pointer bg-transparent">Reset</button>
+                  <button onClick={() => { setReorder(false); setDirty(false); try { const raw = lsKey && localStorage.getItem(lsKey); setCustom(raw ? JSON.parse(raw) : {}); } catch { setCustom({}); } }} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-ink/15 text-ink/50 hover:text-ink hover:border-ink/40 transition cursor-pointer bg-transparent">Cancel</button>
                   <button onClick={saveLayout} disabled={saving} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2.5 py-1 rounded-sm font-bold text-obsidian transition cursor-pointer disabled:opacity-50" style={{ backgroundColor: config.hex }}>{saving ? 'Saving…' : dirty ? 'Save' : 'Done'}</button>
                 </>
               ) : (
-                <button onClick={() => setReorder(true)} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-bone/15 text-bone/50 hover:text-bone hover:border-bone/40 transition cursor-pointer bg-transparent flex items-center gap-1">
+                <button onClick={() => setReorder(true)} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-ink/15 text-ink/50 hover:text-ink hover:border-ink/40 transition cursor-pointer bg-transparent flex items-center gap-1">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" /></svg>
                   Reorder
                 </button>
@@ -389,10 +389,10 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
             )}
           </div>
         </div>
-        {reorder && <p className="font-mono text-[8px] uppercase tracking-[1.5px] text-bone/30 mb-2 relative z-10">Drag stamps to rearrange · then save</p>}
+        {reorder && <p className="font-mono text-[8px] uppercase tracking-[1.5px] text-ink/30 mb-2 relative z-10">Drag stamps to rearrange · then save</p>}
         {stamps.length === 0 ? (
           <div className="flex items-center justify-center relative z-10" style={{ minHeight: 180 }}>
-            <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No travel yet</span>
+            <span className="font-mono text-[11px] text-ink/20 uppercase tracking-wider">No travel yet</span>
           </div>
         ) : (
           <div ref={areaRef} className="relative z-10" style={{ height: BAND_H }}>
@@ -422,7 +422,7 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
         <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4" onClick={() => setSelected(null)}>
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
           <div
-            className="relative z-10 w-full max-w-[460px] bg-obsidian border border-bone/15 rounded-2xl overflow-hidden flex"
+            className="relative z-10 w-full max-w-[460px] bg-[var(--page-bg)] border border-ink/15 rounded-2xl overflow-hidden flex"
             style={{ boxShadow: `0 0 0 1px ${selColor}22, 0 24px 60px rgba(0,0,0,0.6)` }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -431,30 +431,30 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
               <span className="font-mono text-[9px] uppercase tracking-[2px] px-2 py-0.5 rounded-sm self-start border" style={{ color: selColor, borderColor: `${selColor}55` }}>
                 {selected.rarity}
               </span>
-              <h3 className="font-basement font-black text-[24px] uppercase leading-[0.95] text-bone">{selected.title}</h3>
-              <p className="font-mono text-[11px] leading-[1.7] text-bone/55">{editable && ownerName && selected.description.startsWith(ownerName + ' ') ? 'You ' + selected.description.slice(ownerName.length + 1) : selected.description}</p>
+              <h3 className="font-basement font-black text-[24px] uppercase leading-[0.95] text-ink">{selected.title}</h3>
+              <p className="font-mono text-[11px] leading-[1.7] text-ink/55">{editable && ownerName && selected.description.startsWith(ownerName + ' ') ? 'You ' + selected.description.slice(ownerName.length + 1) : selected.description}</p>
               {selected.href && (
                 <Link href={selected.href} onClick={() => setSelected(null)} className="flex items-center gap-2.5 no-underline group/avatar mt-0.5">
-                  <span className="w-9 h-9 rounded-full overflow-hidden border border-bone/20 shrink-0 bg-obsidian flex items-center justify-center">
+                  <span className="w-9 h-9 rounded-full overflow-hidden border border-ink/20 shrink-0 bg-[var(--page-bg)] flex items-center justify-center">
                     {selected.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={selected.avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="font-mono text-[12px] text-bone/40">{(selected.title[0] || '?').toUpperCase()}</span>
+                      <span className="font-mono text-[12px] text-ink/40">{(selected.title[0] || '?').toUpperCase()}</span>
                     )}
                   </span>
-                  <span className="font-mono text-[12px] text-bone/70 group-hover/avatar:text-bone underline decoration-bone/20 transition-colors truncate">
+                  <span className="font-mono text-[12px] text-ink/70 group-hover/avatar:text-ink underline decoration-ink/20 transition-colors truncate">
                     {selected.href.replace('/profile/', '@')} →
                   </span>
                 </Link>
               )}
-              <div className="mt-1 pt-3 border-t border-bone/10">
-                <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30 block">Issued</span>
-                <span className="font-mono text-[13px] uppercase tracking-wider text-bone">{selected.date}</span>
+              <div className="mt-1 pt-3 border-t border-ink/10">
+                <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/30 block">Issued</span>
+                <span className="font-mono text-[13px] uppercase tracking-wider text-ink">{selected.date}</span>
               </div>
             </div>
             {/* Right — the stamp */}
-            <div className="w-[176px] shrink-0 flex items-center justify-center border-l border-bone/10 bg-bone/[0.02] p-5">
+            <div className="w-[176px] shrink-0 flex items-center justify-center border-l border-ink/10 bg-ink/[0.02] p-5">
               <div style={{ width: 150, height: selRectShape ? 84 : 150 }}>
                 <StampSvg stamp={selected} idKey="modal" config={config} />
               </div>
@@ -463,7 +463,7 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
             <button
               onClick={() => setSelected(null)}
               aria-label="Close"
-              className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full text-bone/50 hover:text-bone hover:bg-bone/10 transition cursor-pointer bg-transparent border-none"
+              className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full text-ink/50 hover:text-ink hover:bg-ink/10 transition cursor-pointer bg-transparent border-none"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>

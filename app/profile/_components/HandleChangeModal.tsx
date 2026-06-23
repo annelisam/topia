@@ -60,7 +60,7 @@ export default function HandleChangeModal({ open, currentHandle, privyId, onClos
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-obsidian text-bone rounded-lg border border-bone/[0.08] overflow-hidden"
+        className="relative w-full max-w-md bg-[var(--page-bg)] text-ink rounded-lg border border-ink/[0.08] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -68,30 +68,30 @@ export default function HandleChangeModal({ open, currentHandle, privyId, onClos
           <span className="font-mono text-[10px] uppercase tracking-[2px] text-pink/80 block">
             ⚠ Heads up
           </span>
-          <h2 className="font-basement font-black text-[20px] uppercase text-bone mt-1 leading-tight">
+          <h2 className="font-basement font-black text-[20px] uppercase text-ink mt-1 leading-tight">
             Change your handle?
           </h2>
         </div>
 
         <div className="p-5 space-y-4">
-          <p className="font-mono text-[12px] text-bone/60 leading-relaxed">
-            Your handle is your public URL: <span className="text-bone">topia.so/profile/@{currentHandle || '…'}</span>.
+          <p className="font-mono text-[12px] text-ink/60 leading-relaxed">
+            Your handle is your public URL: <span className="text-ink">topia.so/profile/@{currentHandle || '…'}</span>.
             Changing it will <span className="text-pink">break any existing links to your profile</span> — old links won&apos;t redirect to the new handle.
           </p>
 
           <div>
-            <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">
+            <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">
               New handle
             </label>
-            <div className="flex items-center bg-bone/[0.04] border border-bone/15 focus-within:border-lime/40 rounded-sm px-3 py-2 transition-colors">
-              <span className="font-mono text-[13px] text-bone/25 mr-1">@</span>
+            <div className="flex items-center bg-ink/[0.04] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-2 transition-colors">
+              <span className="font-mono text-[13px] text-ink/25 mr-1">@</span>
               <input
                 type="text"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 placeholder="handle"
                 autoFocus
-                className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] text-bone placeholder:text-bone/25"
+                className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] text-ink placeholder:text-ink/25"
               />
             </div>
             {/* Live availability indicator */}
@@ -114,10 +114,10 @@ export default function HandleChangeModal({ open, currentHandle, privyId, onClos
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-bone/[0.06] flex items-center justify-end gap-2">
+        <div className="px-5 py-3 border-t border-ink/[0.06] flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone rounded-sm transition cursor-pointer"
+            className="font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink rounded-sm transition cursor-pointer"
           >
             Cancel
           </button>

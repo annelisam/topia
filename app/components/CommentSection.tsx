@@ -203,21 +203,21 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
     // Authors can delete their own comment; event hosts can delete any.
     const canDelete = !!viewerId && (c.authorId === viewerId || viewerIsHost);
     return (
-      <div className={`flex items-start gap-3 ${isReply ? 'pl-3 border-l-2 border-bone/[0.06]' : 'border border-bone/[0.06] rounded-md p-3 bg-bone/[0.015]'}`}>
+      <div className={`flex items-start gap-3 ${isReply ? 'pl-3 border-l-2 border-ink/[0.06]' : 'border border-ink/[0.06] rounded-md p-3 bg-ink/[0.015]'}`}>
         {c.authorAvatarUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={c.authorAvatarUrl} alt="" className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full object-cover shrink-0`} />
         ) : (
-          <div className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full bg-bone/10 flex items-center justify-center shrink-0`}>
-            <span className="font-basement text-[12px] text-bone/50">{(c.authorName || c.authorUsername || '?')[0]?.toUpperCase()}</span>
+          <div className={`${isReply ? 'w-6 h-6' : 'w-7 h-7'} rounded-full bg-ink/10 flex items-center justify-center shrink-0`}>
+            <span className="font-basement text-[12px] text-ink/50">{(c.authorName || c.authorUsername || '?')[0]?.toUpperCase()}</span>
           </div>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             {c.authorUsername ? (
-              <Link href={`/profile/${c.authorUsername}`} className="font-mono text-[11px] text-bone font-bold no-underline hover:text-lime">@{c.authorUsername}</Link>
+              <Link href={`/profile/${c.authorUsername}`} className="font-mono text-[11px] text-ink font-bold no-underline hover:text-lime">@{c.authorUsername}</Link>
             ) : (
-              <span className="font-mono text-[11px] text-bone/60 font-bold">{c.authorName || 'anon'}</span>
+              <span className="font-mono text-[11px] text-ink/60 font-bold">{c.authorName || 'anon'}</span>
             )}
             {c.isHost && (
               <span className="font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold leading-none">Host</span>
@@ -225,24 +225,24 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             {kind === 'tool' && c.rating != null && !isReply && (
               <span className="flex items-center gap-0.5 text-lime">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <StarIcon key={n} size={9} filled={n <= (c.rating ?? 0)} className={n <= (c.rating ?? 0) ? 'text-lime' : 'text-bone/15'} />
+                  <StarIcon key={n} size={9} filled={n <= (c.rating ?? 0)} className={n <= (c.rating ?? 0) ? 'text-lime' : 'text-ink/15'} />
                 ))}
               </span>
             )}
-            <span className="font-mono text-[9px] text-bone/25 ml-auto">{timeAgo(c.createdAt)}</span>
+            <span className="font-mono text-[9px] text-ink/25 ml-auto">{timeAgo(c.createdAt)}</span>
           </div>
           {c.body && (
-            <p className="font-zirkon text-[13px] text-bone/75 leading-relaxed whitespace-pre-wrap mt-1">{c.body}</p>
+            <p className="font-zirkon text-[13px] text-ink/75 leading-relaxed whitespace-pre-wrap mt-1">{c.body}</p>
           )}
           {c.imageUrl && (
             <div className="mt-2">
               {/\.(mp4|mov|webm)(\?|#|$)/i.test(c.imageUrl) ? (
-                <video src={c.imageUrl} className="rounded-sm border border-bone/10 max-w-[260px]" controls muted playsInline preload="metadata" />
+                <video src={c.imageUrl} className="rounded-sm border border-ink/10 max-w-[260px]" controls muted playsInline preload="metadata" />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={c.imageUrl} alt={c.body || 'attachment'} className="rounded-sm border border-bone/10 max-w-[220px]" />
+                <img src={c.imageUrl} alt={c.body || 'attachment'} className="rounded-sm border border-ink/10 max-w-[220px]" />
               )}
-              {c.giphyId && <span className="block font-mono text-[8px] uppercase tracking-[2px] text-bone/20 mt-0.5">via giphy</span>}
+              {c.giphyId && <span className="block font-mono text-[8px] uppercase tracking-[2px] text-ink/20 mt-0.5">via giphy</span>}
             </div>
           )}
 
@@ -263,7 +263,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 setReplyGif(null);
                 setReplyMedia(null);
               }}
-              className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border-none cursor-pointer mt-1.5 px-0"
+              className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border-none cursor-pointer mt-1.5 px-0"
             >
               {replyOpenFor === c.id ? '× cancel' : '↪ reply'}
             </button>
@@ -273,7 +273,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
           {canDelete && (
             <button
               onClick={() => handleDelete(c.id)}
-              className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 hover:text-[#FF5C34] bg-transparent border-none cursor-pointer mt-1.5 px-0 ml-3"
+              className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-[#FF5C34] bg-transparent border-none cursor-pointer mt-1.5 px-0 ml-3"
               title={c.authorId === viewerId ? 'Delete your comment' : 'Delete (host)'}
             >
               🗑 delete
@@ -282,44 +282,44 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
           {/* Inline reply composer */}
           {!isReply && replyOpenFor === c.id && (
-            <div className="mt-2 border border-bone/15 focus-within:border-lime/40 rounded-md p-2.5 bg-bone/[0.02] transition-colors">
+            <div className="mt-2 border border-ink/15 focus-within:border-lime/40 rounded-md p-2.5 bg-ink/[0.02] transition-colors">
               <textarea
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
                 placeholder={`Replying to @${c.authorUsername || 'them'}…`}
                 rows={2}
                 maxLength={1000}
-                className="w-full bg-transparent border-none outline-none font-mono text-[12px] text-bone placeholder:text-bone/25 resize-none"
+                className="w-full bg-transparent border-none outline-none font-mono text-[12px] text-ink placeholder:text-ink/25 resize-none"
               />
               {replyGif && (
                 <div className="relative inline-block mt-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={replyGif.previewUrl} alt={replyGif.title} className="rounded-sm border border-bone/15 max-w-[120px]" />
+                  <img src={replyGif.previewUrl} alt={replyGif.title} className="rounded-sm border border-ink/15 max-w-[120px]" />
                   <button onClick={() => setReplyGif(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-obsidian border border-bone/20 text-bone text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove gif">×</button>
                 </div>
               )}
               {replyMedia && (
                 <div className="relative inline-block mt-1.5">
                   {replyMedia.isVideo ? (
-                    <video src={replyMedia.url} className="rounded-sm border border-bone/15 max-w-[150px]" muted playsInline controls />
+                    <video src={replyMedia.url} className="rounded-sm border border-ink/15 max-w-[150px]" muted playsInline controls />
                   ) : (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={replyMedia.url} alt="upload" className="rounded-sm border border-bone/15 max-w-[150px]" />
+                    <img src={replyMedia.url} alt="upload" className="rounded-sm border border-ink/15 max-w-[150px]" />
                   )}
                   <button onClick={() => setReplyMedia(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-obsidian border border-bone/20 text-bone text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
                 </div>
               )}
-              <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-bone/[0.05]">
+              <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-ink/[0.05]">
                 {kind === 'event' && (
                   <>
-                    <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                    <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                       {replyUploading ? '…' : '+ photo / video'}
                       <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={replyUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReplyMedia(f); e.currentTarget.value = ''; }} />
                     </label>
                     <button
                       type="button"
                       onClick={() => setReplyGifOpen(true)}
-                      className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
+                      className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
                     >
                       + GIF
                     </button>
@@ -350,30 +350,30 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   }
 
   return (
-    <div className="border-t border-bone/[0.06] pt-5 mt-5">
+    <div className="border-t border-ink/[0.06] pt-5 mt-5">
       <div className="flex items-baseline justify-between mb-3">
-        <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/50">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/50">
           {title ?? (kind === 'tool' ? 'Reviews' : 'Comments')}
           {!loading && ` · ${items.length}`}
         </span>
         {kind === 'tool' && avg != null && (
-          <span className="font-mono text-[11px] text-bone/60 flex items-center gap-1">
+          <span className="font-mono text-[11px] text-ink/60 flex items-center gap-1">
             <StarIcon size={11} filled /> {avg.toFixed(1)}{' '}
-            <span className="text-bone/30">({ratingCount})</span>
+            <span className="text-ink/30">({ratingCount})</span>
           </span>
         )}
       </div>
 
       {/* Top-level composer */}
       {!authenticated ? (
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 py-2">log in to leave a comment</p>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 py-2">log in to leave a comment</p>
       ) : !canPost ? (
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 py-2">{gateHint}</p>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 py-2">{gateHint}</p>
       ) : (
-        <div className="border border-bone/10 hover:border-bone/20 focus-within:border-lime/40 rounded-md p-3 mb-4 transition-colors bg-bone/[0.02]">
+        <div className="border border-ink/10 hover:border-ink/20 focus-within:border-lime/40 rounded-md p-3 mb-4 transition-colors bg-ink/[0.02]">
           {kind === 'tool' && (
             <div className="flex items-center gap-1.5 mb-2.5">
-              <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mr-1">rating</span>
+              <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mr-1">rating</span>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
@@ -381,14 +381,14 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                   onClick={() => setRating(rating === n ? 0 : n)}
                   onMouseEnter={() => setHoverRating(n)}
                   onMouseLeave={() => setHoverRating(0)}
-                  className="bg-transparent border-none cursor-pointer text-bone/30 hover:text-lime transition p-0"
+                  className="bg-transparent border-none cursor-pointer text-ink/30 hover:text-lime transition p-0"
                   title={`${n} of 5`}
                 >
-                  <StarIcon size={16} filled={n <= (hoverRating || rating)} className={n <= (hoverRating || rating) ? 'text-lime' : 'text-bone/25'} />
+                  <StarIcon size={16} filled={n <= (hoverRating || rating)} className={n <= (hoverRating || rating) ? 'text-lime' : 'text-ink/25'} />
                 </button>
               ))}
               {rating > 0 && (
-                <button onClick={() => setRating(0)} className="font-mono text-[9px] uppercase tracking-[2px] text-bone/30 hover:text-bone bg-transparent border-none cursor-pointer ml-2">
+                <button onClick={() => setRating(0)} className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 hover:text-ink bg-transparent border-none cursor-pointer ml-2">
                   clear
                 </button>
               )}
@@ -401,13 +401,13 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             placeholder={kind === 'tool' ? 'share what you think — pros, cons, workflow…' : 'what are you thinking?'}
             rows={2}
             maxLength={1500}
-            className="w-full bg-transparent border-none outline-none font-mono text-[13px] text-bone placeholder:text-bone/25 resize-none"
+            className="w-full bg-transparent border-none outline-none font-mono text-[13px] text-ink placeholder:text-ink/25 resize-none"
           />
 
           {gif && (
             <div className="relative inline-block mt-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={gif.previewUrl} alt={gif.title} className="rounded-sm border border-bone/15 max-w-[140px]" />
+              <img src={gif.previewUrl} alt={gif.title} className="rounded-sm border border-ink/15 max-w-[140px]" />
               <button onClick={() => setGif(null)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-obsidian border border-bone/20 text-bone text-[12px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove gif">×</button>
             </div>
           )}
@@ -415,26 +415,26 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
           {media && (
             <div className="relative inline-block mt-1.5">
               {media.isVideo ? (
-                <video src={media.url} className="rounded-sm border border-bone/15 max-w-[180px]" muted playsInline controls />
+                <video src={media.url} className="rounded-sm border border-ink/15 max-w-[180px]" muted playsInline controls />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={media.url} alt="upload" className="rounded-sm border border-bone/15 max-w-[180px]" />
+                <img src={media.url} alt="upload" className="rounded-sm border border-ink/15 max-w-[180px]" />
               )}
               <button onClick={() => setMedia(null)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-obsidian border border-bone/20 text-bone text-[12px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-bone/[0.05]">
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-ink/[0.05]">
             {kind === 'event' && (
               <>
-                <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                   {uploadingMedia ? 'uploading…' : '+ photo / video'}
                   <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={uploadingMedia} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f); e.currentTarget.value = ''; }} />
                 </label>
                 <button
                   type="button"
                   onClick={() => setGifOpen(true)}
-                  className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-bone/15 text-bone/60 hover:text-bone hover:border-lime/40 rounded-sm transition cursor-pointer"
+                  className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
                 >
                   + GIF
                 </button>
@@ -454,9 +454,9 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
       {/* Comments list */}
       {loading ? (
-        <p className="font-mono text-[11px] text-bone/30 py-4 text-center">loading…</p>
+        <p className="font-mono text-[11px] text-ink/30 py-4 text-center">loading…</p>
       ) : items.length === 0 ? (
-        <p className="font-mono text-[11px] uppercase tracking-[2px] text-bone/25 py-4 text-center">no comments yet</p>
+        <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/25 py-4 text-center">no comments yet</p>
       ) : (
         <div className="space-y-3">
           {items.map((c) => <CommentRow key={c.id} c={c} />)}

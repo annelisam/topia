@@ -67,6 +67,11 @@
   /* Accent system — fixed site-wide to lime */
   --accent: #e4fe52;
   --accent-text: #1a1a1a;
+  /* Accent-colored TEXT that sits on the page background. Lime is unreadable
+     on the light bone bg, so light mode uses a dark chartreuse; dark mode
+     keeps the lime. Use for accent labels/links on the page, NOT for filled
+     accent buttons (those keep --accent + --accent-text). */
+  --accent-ink: #5c6e0c;
   --page-tint: rgba(228, 254, 82, 0.08);
   --page-glow: rgba(228, 254, 82, 0.03);
   --border-accent: rgba(228, 254, 82, 0.25);
@@ -100,7 +105,7 @@
 
   --background: #f5f0e8;
   --foreground: #1a1a1a;
-  --border-color: rgba(26, 26, 26, 0.15);
+  --border-color: rgba(26, 26, 26, 0.08);
   --border-color-strong: #1a1a1a;
   --surface: #f5f0e8;
   --surface-hover: rgba(26, 26, 26, 0.05);
@@ -113,6 +118,7 @@
 [data-theme="dark"] {
   --page-bg: #1a1a1a;
   --page-text: #f5f0e8;
+  --accent-ink: #e4fe52;
   --sentient-color: #f5f0e8;
   --nav-bg: rgba(26, 26, 26, 0.95);
   --nav-border: rgba(245, 240, 232, 0.06);
@@ -144,6 +150,10 @@
   --color-magenta: #FF21D8;
   --color-obsidian: #1a1a1a;
   --color-bone: #f5f0e8;
+  /* Theme-aware foreground — bone in dark, obsidian in light. Use `ink`
+     (text-ink, border-ink/20, …) for UI that must read on the page bg in
+     BOTH themes, instead of hardcoding bone/obsidian. */
+  --color-ink: var(--page-text);
 
   /* Neutral Colors */
   --color-near-black: #1a1a1a;
@@ -356,8 +366,13 @@ h3 {
   background-color: #1a1a1a;
 }
 
-/* Grid gap always dark */
+/* Grid-gap divider (gap-[3px] reveals this bg between panels).
+   Light: a subtle grey line like the regular pages. Dark: obsidian so it
+   blends with the dark panels (the original look). */
 section.min-h-screen .border-obsidian\/15 {
+  background-color: var(--border-color);
+}
+[data-theme="dark"] section.min-h-screen .border-obsidian\/15 {
   background-color: #1a1a1a;
 }
 
@@ -444,6 +459,44 @@ body[data-accent] .font-basement {
 body[data-accent] ::-webkit-scrollbar-thumb {
   background: var(--border-accent);
 }
+
+/* ── Hero cycling tagline ────────────────────────────────────
+   Light mode: lime highlight with black text (reads on the bone bg).
+   Dark mode: plain lime text on the obsidian bg (the original look). */
+.hero-tagline {
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 0.25rem 0.6rem;
+}
+.hero-cursor { background: var(--accent-text); }
+[data-theme="dark"] .hero-tagline {
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+}
+[data-theme="dark"] .hero-cursor { background: var(--accent); }
+
+/* ── Passport visa-stamps ────────────────────────────────────
+   Stamps are bright neon ink built for the dark canvas. On the light bg
+   they wash out, so darken/saturate the ink in light mode — reads like
+   colored rubber-stamp ink on paper. Dark mode keeps the raw neon. */
+.stamp-svg { filter: brightness(0.62) saturate(1.3); }
+[data-theme="dark"] .stamp-svg { filter: none; }
+
+/* ── Muted micro-labels in light mode ────────────────────────
+   Low-opacity utilities read fine as light text on the dark canvas, but as
+   dark text on the light bg they're too faint. Lift the floor in light mode
+   only (dark unchanged). Unlayered so it beats Tailwind's layered utilities. */
+html:not([data-theme="dark"]) .opacity-30 { opacity: 0.5; }
+html:not([data-theme="dark"]) .opacity-40 { opacity: 0.62; }
+html:not([data-theme="dark"]) .opacity-50 { opacity: 0.7; }
+/* Same problem for low color-opacity foreground text (text-ink/15..40):
+   too faint as dark text on the light bg. Lift the floor in light mode only. */
+html:not([data-theme="dark"]) .text-ink\/15 { color: color-mix(in srgb, var(--page-text) 42%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/20 { color: color-mix(in srgb, var(--page-text) 48%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/25 { color: color-mix(in srgb, var(--page-text) 52%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/30 { color: color-mix(in srgb, var(--page-text) 56%, transparent); }
+html:not([data-theme="dark"]) .text-ink\/40 { color: color-mix(in srgb, var(--page-text) 62%, transparent); }
 
 /* ── Theme-aware hover utilities ─────────────────────────────── */
 

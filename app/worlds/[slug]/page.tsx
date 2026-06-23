@@ -160,17 +160,17 @@ function ProjectPanel({
 
 function MemberCard({ member }: { member: WorldMember }) {
   const inner = (
-    <div className="flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg transition-colors hover:bg-bone/[0.04]">
+    <div className="flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg transition-colors hover:bg-ink/[0.04]">
       {member.userAvatarUrl ? (
-        <img src={member.userAvatarUrl} alt={member.userName || ''} className="w-8 h-8 rounded-full object-cover border border-bone/10" />
+        <img src={member.userAvatarUrl} alt={member.userName || ''} className="w-8 h-8 rounded-full object-cover border border-ink/10" />
       ) : (
-        <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold bg-bone/10 text-bone">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold bg-ink/10 text-ink">
           {(member.userName || member.userUsername || '?')[0]?.toUpperCase()}
         </div>
       )}
       <div>
-        <p className="font-mono text-[12px] font-bold leading-tight text-bone">{member.userName || member.userUsername || 'Unknown'}</p>
-        {member.userUsername && <p className="font-mono text-[13px] text-bone/40 leading-tight">@{member.userUsername}</p>}
+        <p className="font-mono text-[12px] font-bold leading-tight text-ink">{member.userName || member.userUsername || 'Unknown'}</p>
+        {member.userUsername && <p className="font-mono text-[13px] text-ink/40 leading-tight">@{member.userUsername}</p>}
       </div>
     </div>
   );
@@ -284,40 +284,40 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             </div>
 
             {/* Stats grid */}
-            <div className="bg-obsidian grid grid-cols-2 grid-rows-2 gap-[1px]">
-              <div className="p-3 border-b border-r border-bone/[0.06]">
-                <span className="font-basement font-black text-[24px] text-bone leading-none block">{projects.length}</span>
-                <span className="font-mono text-[13px] text-bone uppercase tracking-wider">projects</span>
+            <div className="bg-[var(--page-bg)] grid grid-cols-2 grid-rows-2 gap-[1px]">
+              <div className="p-3 border-b border-r border-ink/[0.06]">
+                <span className="font-basement font-black text-[24px] text-ink leading-none block">{projects.length}</span>
+                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">projects</span>
               </div>
-              <div className="p-3 border-b border-bone/[0.06]">
-                <span className="font-basement font-black text-[24px] text-bone leading-none block">{world.members?.length || 0}</span>
-                <span className="font-mono text-[13px] text-bone uppercase tracking-wider">members</span>
+              <div className="p-3 border-b border-ink/[0.06]">
+                <span className="font-basement font-black text-[24px] text-ink leading-none block">{world.members?.length || 0}</span>
+                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">members</span>
               </div>
-              <div className="p-3 border-r border-bone/[0.06]">
-                <span className="font-basement font-black text-[24px] text-bone leading-none block">{worldEvents.length}</span>
-                <span className="font-mono text-[13px] text-bone uppercase tracking-wider">events</span>
+              <div className="p-3 border-r border-ink/[0.06]">
+                <span className="font-basement font-black text-[24px] text-ink leading-none block">{worldEvents.length}</span>
+                <span className="font-mono text-[13px] text-ink uppercase tracking-wider">events</span>
               </div>
               <div className="p-3">
                 {world.category ? (
                   <>
-                    <span className="font-basement font-black text-[16px] text-bone leading-none block uppercase">{world.category}</span>
-                    <span className="font-mono text-[13px] text-bone uppercase tracking-wider">category</span>
+                    <span className="font-basement font-black text-[16px] text-ink leading-none block uppercase">{world.category}</span>
+                    <span className="font-mono text-[13px] text-ink uppercase tracking-wider">category</span>
                   </>
                 ) : (
                   <>
-                    <span className="font-basement font-black text-[24px] text-bone leading-none block">—</span>
-                    <span className="font-mono text-[13px] text-bone uppercase tracking-wider">category</span>
+                    <span className="font-basement font-black text-[24px] text-ink leading-none block">—</span>
+                    <span className="font-mono text-[13px] text-ink uppercase tracking-wider">category</span>
                   </>
                 )}
               </div>
             </div>
 
             {/* ROW 2 — Nav bar */}
-            <div className="md:col-span-2 bg-obsidian border-t border-b border-bone/[0.06] px-4 py-2 flex items-center justify-between">
-              <span className="font-mono text-[13px] text-bone tracking-wider">
+            <div className="md:col-span-2 bg-[var(--page-bg)] border-t border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
+              <span className="font-mono text-[13px] text-ink tracking-wider">
                 {activeProj ? (
-                  <><span className="text-bone/50">project:</span> <span className={`font-bold ${COLOR_TXT[color]}`}>{activeProj.name}</span></>
-                ) : <span className="text-bone/40">hover a project to preview</span>}
+                  <><span className="text-ink/50">project:</span> <span className={`font-bold ${COLOR_TXT[color]}`}>{activeProj.name}</span></>
+                ) : <span className="text-ink/40">hover a project to preview</span>}
               </span>
               <div className="flex items-center gap-2">
                 {projects.map(p => (
@@ -327,20 +327,20 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             </div>
 
             {/* ROW 3 — Globe */}
-            <div className="md:col-span-2 bg-obsidian relative overflow-hidden min-h-[300px]" style={{ height: 'max(40vh, 300px)' }}>
+            <div className="md:col-span-2 bg-[var(--page-bg)] relative overflow-hidden min-h-[300px]" style={{ height: 'max(40vh, 300px)' }}>
               <WorldGlobe
                 projects={projects}
                 onSelectProject={handleSelectProject}
                 selectedProjectSlug={selectedProject?.slug || null}
               />
               <div className="absolute bottom-3 left-4 z-10">
-                <span className="font-mono text-[13px] uppercase tracking-wider text-bone/40">topia://{slug}</span>
+                <span className="font-mono text-[13px] uppercase tracking-wider text-ink/40">topia://{slug}</span>
               </div>
             </div>
 
             {/* ROW 4 — Project index + Preview */}
             {/* Left: Project ledger index */}
-            <div className="relative bg-obsidian overflow-y-auto min-h-[200px]" style={{ scrollbarWidth: 'thin', maxHeight: '400px' }}>
+            <div className="relative bg-[var(--page-bg)] overflow-y-auto min-h-[200px]" style={{ scrollbarWidth: 'thin', maxHeight: '400px' }}>
               {/* Crosshatch */}
               <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(245,240,232,1) 4px, rgba(245,240,232,1) 5px)' }}
@@ -348,12 +348,12 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
               <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
                 style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(245,240,232,1) 47px, rgba(245,240,232,1) 48px)' }}
               />
-              <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-bone/[0.06] pointer-events-none z-[1]" />
+              <div className="absolute top-0 bottom-0 left-[28px] w-[1px] bg-ink/[0.06] pointer-events-none z-[1]" />
 
               <div className="relative z-10">
                 {projects.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
-                    <span className="font-mono text-[13px] text-bone/30 uppercase tracking-wider">No projects yet</span>
+                    <span className="font-mono text-[13px] text-ink/30 uppercase tracking-wider">No projects yet</span>
                   </div>
                 ) : projects.map((proj, i) => {
                   const isActive = activeProject === proj.slug;
@@ -361,23 +361,23 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   return (
                     <div
                       key={proj.id}
-                      className={`flex items-center cursor-pointer transition-all duration-150 border-b border-bone/[0.04] ${isSelected ? 'bg-bone/[0.06]' : isActive ? 'bg-bone/[0.04]' : 'hover:bg-bone/[0.02]'}`}
+                      className={`flex items-center cursor-pointer transition-all duration-150 border-b border-ink/[0.04] ${isSelected ? 'bg-ink/[0.06]' : isActive ? 'bg-ink/[0.04]' : 'hover:bg-ink/[0.02]'}`}
                       style={{ minHeight: '48px' }}
                       onMouseEnter={() => setActiveProject(proj.slug)}
                       onMouseLeave={() => setActiveProject(null)}
                       onClick={() => handleSelectProject(selectedProject?.slug === proj.slug ? null : proj)}
                     >
                       <div className="w-[28px] shrink-0 flex items-center justify-center">
-                        <span className="font-mono text-[13px] text-bone/15">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="font-mono text-[13px] text-ink/15">{String(i + 1).padStart(2, '0')}</span>
                       </div>
                       <div className={`w-[2px] shrink-0 self-stretch ${COLOR_DOT[color]}`} />
                       <div className="flex-1 flex items-center justify-between px-3 py-2.5 min-w-0">
                         <div className="min-w-0">
-                          <span className={`font-mono text-[13px] uppercase font-bold ${isSelected || isActive ? COLOR_TXT[color] : 'text-bone/50'} transition-colors truncate block`}>{proj.name}</span>
-                          {proj.tags && proj.tags.length > 0 && <span className="font-mono text-[13px] text-bone/30">{proj.tags[0]}</span>}
+                          <span className={`font-mono text-[13px] uppercase font-bold ${isSelected || isActive ? COLOR_TXT[color] : 'text-ink/50'} transition-colors truncate block`}>{proj.name}</span>
+                          {proj.tags && proj.tags.length > 0 && <span className="font-mono text-[13px] text-ink/30">{proj.tags[0]}</span>}
                         </div>
                         {isSelected && (
-                          <span className="font-mono text-[12px] uppercase tracking-wider text-bone/25 border border-bone/[0.08] rounded-sm px-2 py-0.5 shrink-0">VIEWING</span>
+                          <span className="font-mono text-[12px] uppercase tracking-wider text-ink/25 border border-ink/[0.08] rounded-sm px-2 py-0.5 shrink-0">VIEWING</span>
                         )}
                       </div>
                     </div>
@@ -386,8 +386,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
                 {/* World info rows */}
                 {worldBuilders.length > 0 && (
-                  <div className="border-t border-bone/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-2">Built by</span>
+                  <div className="border-t border-ink/[0.08] px-4 py-3">
+                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Built by</span>
                     <div className="flex flex-wrap gap-1">
                       {worldBuilders.map(b => <MemberCard key={b.userId} member={b} />)}
                     </div>
@@ -395,8 +395,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                 )}
 
                 {collaboratorMembers.length > 0 && (
-                  <div className="border-t border-bone/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-2">Collaborators</span>
+                  <div className="border-t border-ink/[0.08] px-4 py-3">
+                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Collaborators</span>
                     <div className="flex flex-wrap gap-1">
                       {collaboratorMembers.map(c => <MemberCard key={c.userId} member={c} />)}
                     </div>
@@ -404,23 +404,23 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                 )}
 
                 {toolsList.length > 0 && (
-                  <div className="border-t border-bone/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-2">Tools</span>
+                  <div className="border-t border-ink/[0.08] px-4 py-3">
+                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Tools</span>
                     <div className="flex flex-wrap gap-1.5">
                       {toolsList.map(tool => (
-                        <span key={tool} className="font-mono text-[12px] px-2 py-0.5 border border-bone/[0.08] rounded text-bone/50">{tool}</span>
+                        <span key={tool} className="font-mono text-[12px] px-2 py-0.5 border border-ink/[0.08] rounded text-ink/50">{tool}</span>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {hasSocialLinks && (
-                  <div className="border-t border-bone/[0.08] px-4 py-3">
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-2">Links</span>
+                  <div className="border-t border-ink/[0.08] px-4 py-3">
+                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Links</span>
                     <div className="flex gap-3">
                       {Object.entries(socialLinks!).map(([key, url]) =>
                         url ? (
-                          <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-bone/30 hover:text-bone/60 transition-opacity" title={key}>
+                          <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/30 hover:text-ink/60 transition-opacity" title={key}>
                             <SocialIcon type={key} size={16} />
                           </a>
                         ) : null
@@ -432,46 +432,46 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             </div>
 
             {/* Right: Preview panel */}
-            <div className="border-l border-bone/[0.04] overflow-hidden bg-obsidian min-h-[200px]" style={{ maxHeight: '400px' }}>
+            <div className="border-l border-ink/[0.04] overflow-hidden bg-[var(--page-bg)] min-h-[200px]" style={{ maxHeight: '400px' }}>
               {activeProj ? (
                 <div className="h-full grid grid-rows-[1fr_auto]">
                   <div className="relative overflow-hidden">
                     {activeProj.imageUrl ? (
                       <img src={activeProj.imageUrl} alt={activeProj.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-obsidian">
-                        <span className="font-basement text-[48px] text-bone/10">{activeProj.name[0]}</span>
+                      <div className="w-full h-full flex items-center justify-center bg-[var(--page-bg)]">
+                        <span className="font-basement text-[48px] text-ink/10">{activeProj.name[0]}</span>
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/30 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <div className={`w-2 h-2 rounded-full ${COLOR_DOT[color]}`} />
-                        {activeProj.tags && activeProj.tags[0] && <span className="font-mono text-[13px] uppercase tracking-wider text-bone/50">{activeProj.tags[0]}</span>}
+                        {activeProj.tags && activeProj.tags[0] && <span className="font-mono text-[13px] uppercase tracking-wider text-ink/50">{activeProj.tags[0]}</span>}
                       </div>
-                      <h2 className="font-basement font-black text-[clamp(24px,2.5vw,32px)] uppercase text-bone leading-[0.9]">{activeProj.name}</h2>
+                      <h2 className="font-basement font-black text-[clamp(24px,2.5vw,32px)] uppercase text-ink leading-[0.9]">{activeProj.name}</h2>
                     </div>
                   </div>
-                  <div className="border-t border-bone/[0.06] p-3">
-                    <p className="font-mono text-[13px] text-bone/40 leading-relaxed">{activeProj.description || 'Click to explore this project.'}</p>
+                  <div className="border-t border-ink/[0.06] p-3">
+                    <p className="font-mono text-[13px] text-ink/40 leading-relaxed">{activeProj.description || 'Click to explore this project.'}</p>
                   </div>
                 </div>
               ) : world.description ? (
                 <div className="h-full flex flex-col">
                   <div className="flex-1 p-5 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                    <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-3">About</span>
+                    <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-3">About</span>
                     <div className="prose prose-invert prose-sm max-w-none">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{world.description}</ReactMarkdown>
                     </div>
                   </div>
                   {worldEvents.length > 0 && (
-                    <div className="border-t border-bone/[0.06] p-4">
-                      <span className="font-mono text-[13px] uppercase tracking-wider text-bone/30 block mb-2">Events</span>
+                    <div className="border-t border-ink/[0.06] p-4">
+                      <span className="font-mono text-[13px] uppercase tracking-wider text-ink/30 block mb-2">Events</span>
                       <div className="space-y-1">
                         {worldEvents.slice(0, 3).map(ev => (
-                          <Link key={ev.id} href={`/events/${ev.slug}`} className="flex items-center justify-between py-1.5 hover:bg-bone/[0.02] transition-colors rounded px-1 no-underline">
-                            <span className="font-mono text-[13px] text-bone/60 font-bold uppercase truncate">{ev.eventName}</span>
-                            {ev.date && <span className="font-mono text-[11px] text-bone/30 shrink-0 ml-2">{ev.date}</span>}
+                          <Link key={ev.id} href={`/events/${ev.slug}`} className="flex items-center justify-between py-1.5 hover:bg-ink/[0.02] transition-colors rounded px-1 no-underline">
+                            <span className="font-mono text-[13px] text-ink/60 font-bold uppercase truncate">{ev.eventName}</span>
+                            {ev.date && <span className="font-mono text-[11px] text-ink/30 shrink-0 ml-2">{ev.date}</span>}
                           </Link>
                         ))}
                       </div>
@@ -486,8 +486,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   />
                   <div className="absolute inset-0 pointer-events-none z-[3]" style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)' }} />
                   <div className="absolute bottom-0 left-0 right-0 z-[4] bg-gradient-to-t from-obsidian/90 via-obsidian/40 to-transparent p-4">
-                    <span className="font-basement font-black text-[clamp(24px,2vw,28px)] uppercase text-bone/80">EXPLORE</span>
-                    <span className="font-mono text-[12px] text-bone/25 block mt-1">click a project</span>
+                    <span className="font-basement font-black text-[clamp(24px,2vw,28px)] uppercase text-ink/80">EXPLORE</span>
+                    <span className="font-mono text-[12px] text-ink/25 block mt-1">click a project</span>
                   </div>
                 </div>
               )}

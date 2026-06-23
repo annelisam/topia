@@ -110,8 +110,8 @@ function firstIncompleteStep(data: Partial<WizardData>): number {
 
 function LoadingFrame() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-obsidian text-bone">
-      <span className="font-mono text-[11px] uppercase tracking-[3px] text-bone/40">loading…</span>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--page-bg)] text-ink">
+      <span className="font-mono text-[11px] uppercase tracking-[3px] text-ink/40">loading…</span>
     </div>
   );
 }
@@ -218,7 +218,7 @@ function OnboardingWizard() {
 
   /* Step routing */
   return (
-    <div key={current} className="min-h-screen bg-obsidian">
+    <div key={current} className="min-h-screen bg-[var(--page-bg)]">
       {current === 'welcome' && (
         <WelcomeStep
           onAdvance={() => dispatch({ type: 'NEXT' })}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { SocialIcon } from '../../components/SocialIcons';
 import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
+import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 
 interface Question {
   id: string;
@@ -49,6 +50,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // The signed-in user's existing profile role tags (slugs) — used to prefill
+  // any "What do you do?" (roles) question so it carries over from the profile.
+  const [profileRoleSlugs, setProfileRoleSlugs] = useState<string[]>([]);
   // Consent: registering creates a Topia profile and lets us contact them.
   const [consent, setConsent] = useState(false);
 
@@ -93,9 +97,32 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         setContactEmail((prev) => prev || u.email || '');
         const { code, rest } = splitPhone(u.phone);
         if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
+        if (u.roleTags) {
+          setProfileRoleSlugs(String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean));
+        }
       })
       .catch(() => {});
   }, [privyId]);
+
+  // Carry the user's saved craft into any "What do you do?" question — but only
+  // seed empties, so we never stomp an answer the guest is actively editing.
+  useEffect(() => {
+    if (!questions || profileRoleSlugs.length === 0) return;
+    const seed = profileRoleSlugs.map(roleSlugToLabel).slice(0, ROLES_MAX);
+    if (seed.length === 0) return;
+    setAnswers((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const q of questions) {
+        if (q.type !== 'roles') continue;
+        const cur = prev[q.id];
+        if (Array.isArray(cur) && cur.length > 0) continue;
+        next[q.id] = seed;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [questions, profileRoleSlugs]);
 
   const set = (id: string, v: AnswerValue) => setAnswers((a) => ({ ...a, [id]: v }));
   const toggleMulti = (id: string, opt: string) =>

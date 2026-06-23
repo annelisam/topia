@@ -98,7 +98,7 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-obsidian text-bone rounded-lg border border-bone/[0.08] overflow-hidden"
+        className="relative w-full max-w-lg bg-[var(--page-bg)] text-ink rounded-lg border border-ink/[0.08] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-lime px-4 py-2 flex items-center justify-between">
@@ -114,10 +114,10 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
 
         {!authenticated ? (
           <div className="p-6 text-center">
-            <p className="font-mono text-[12px] uppercase tracking-[2px] text-bone/60 mb-3">Log in to submit a tool</p>
+            <p className="font-mono text-[12px] uppercase tracking-[2px] text-ink/60 mb-3">Log in to submit a tool</p>
             <button
               onClick={onClose}
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border border-bone/20 px-4 py-1.5 cursor-pointer"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border border-ink/20 px-4 py-1.5 cursor-pointer"
             >
               close
             </button>
@@ -125,77 +125,77 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
         ) : success ? (
           <div className="p-6 text-center">
             <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2 inline-flex items-center gap-2">Submitted <CheckIcon size={18} strokeWidth={2.2} /></h2>
-            <p className="font-mono text-[12px] text-bone/60 leading-relaxed">
+            <p className="font-mono text-[12px] text-ink/60 leading-relaxed">
               Your tool is pending review. It will appear in the public list once an admin approves it.
             </p>
             <button
               onClick={onClose}
-              className="mt-5 font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border border-bone/20 px-4 py-1.5 cursor-pointer"
+              className="mt-5 font-mono text-[11px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border border-ink/20 px-4 py-1.5 cursor-pointer"
             >
               close
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 md:p-6">
-            <h2 className="font-basement font-black text-[clamp(20px,2vw,28px)] uppercase text-bone mb-1">Submit a tool</h2>
-            <p className="font-mono text-[11px] text-bone/40 mb-5">Add a tool you use to the public library. Pending review.</p>
+            <h2 className="font-basement font-black text-[clamp(20px,2vw,28px)] uppercase text-ink mb-1">Submit a tool</h2>
+            <p className="font-mono text-[11px] text-ink/40 mb-5">Add a tool you use to the public library. Pending review.</p>
 
             <div className="space-y-3">
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Name *</label>
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">Name *</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone px-3 py-1.5 rounded-sm outline-none transition-colors"
+                  className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink px-3 py-1.5 rounded-sm outline-none transition-colors"
                   required
                 />
               </div>
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">URL</label>
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">URL</label>
                 <input
                   type="url"
                   value={form.url}
                   onChange={(e) => setForm({ ...form, url: e.target.value })}
                   placeholder="https://"
-                  className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone px-3 py-1.5 rounded-sm outline-none transition-colors"
+                  className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink px-3 py-1.5 rounded-sm outline-none transition-colors"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Category</label>
+                  <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[12px] text-bone px-3 py-1.5 rounded-sm outline-none transition-colors cursor-pointer"
+                    className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[12px] text-ink px-3 py-1.5 rounded-sm outline-none transition-colors cursor-pointer"
                   >
-                    <option value="" className="bg-obsidian text-bone">—</option>
+                    <option value="" className="bg-[var(--page-bg)] text-ink">—</option>
                     {TOOL_CATEGORIES.map((c) => (
-                      <option key={c} value={c.toLowerCase()} className="bg-obsidian text-bone">{c}</option>
+                      <option key={c} value={c.toLowerCase()} className="bg-[var(--page-bg)] text-ink">{c}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Pricing</label>
+                  <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">Pricing</label>
                   <select
                     value={form.pricing}
                     onChange={(e) => setForm({ ...form, pricing: e.target.value })}
-                    className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[12px] text-bone px-3 py-1.5 rounded-sm outline-none transition-colors cursor-pointer"
+                    className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[12px] text-ink px-3 py-1.5 rounded-sm outline-none transition-colors cursor-pointer"
                   >
-                    <option value="" className="bg-obsidian text-bone">—</option>
+                    <option value="" className="bg-[var(--page-bg)] text-ink">—</option>
                     {PRICING_OPTIONS.map((p) => (
-                      <option key={p} value={p} className="bg-obsidian text-bone">{p}</option>
+                      <option key={p} value={p} className="bg-[var(--page-bg)] text-ink">{p}</option>
                     ))}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-bone/40 mb-1">Description</label>
+                <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">Description</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
-                  className="w-full bg-transparent border border-bone/15 focus:border-bone/40 font-mono text-[13px] text-bone px-3 py-1.5 rounded-sm outline-none transition-colors resize-none"
+                  className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink px-3 py-1.5 rounded-sm outline-none transition-colors resize-none"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border-none cursor-pointer"
+                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border-none cursor-pointer"
               >
                 cancel
               </button>
@@ -221,7 +221,7 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
               </button>
             </div>
 
-            <p className="mt-3 font-mono text-[10px] uppercase tracking-[2px] text-bone/20">
+            <p className="mt-3 font-mono text-[10px] uppercase tracking-[2px] text-ink/20">
               Tools require world membership + admin approval before going public.
             </p>
           </form>

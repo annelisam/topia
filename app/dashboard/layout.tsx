@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!ready || loading) {
     return (
-      <div className="min-h-screen bg-obsidian text-bone">
+      <div className="min-h-screen bg-[var(--page-bg)] text-ink">
         <Navigation />
         <div className="flex items-center justify-center pt-40">
           <LoadingBar text="LOADING DASHBOARD" />
@@ -89,7 +89,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [toggle]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden relative z-10 bg-obsidian text-bone">
+    <div className="min-h-screen overflow-x-hidden relative z-10 bg-[var(--page-bg)] text-ink">
       {/* Subtle texture overlays */}
       <div className="grain-overlay" />
       <div className="scanlines-overlay" />
