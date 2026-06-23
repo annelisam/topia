@@ -12,6 +12,7 @@ import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '..
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
 import HandleChangeModal from './_components/HandleChangeModal';
+import { isGif, uploadToBlob } from '../../lib/uploadImage';
 
 const ROLE_TAGS = [
   { slug: 'music',             label: 'Music' },
@@ -40,6 +41,8 @@ interface Tool { id: string; name: string; slug: string; category: string | null
 
 /** Resize image to a max 256×256 JPEG data URL (kept as-is — used for avatars). */
 function resizeImage(file: File): Promise<string> {
+  // GIFs would lose their animation through the canvas — upload raw to Blob.
+  if (isGif(file)) return uploadToBlob(file);
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
