@@ -11,16 +11,22 @@ export default function Home() {
   const [phase, setPhase] = useState(0);
   const [routing, setRouting] = useState(false);
 
-  // When authenticated, route to ?next= if it's a safe internal path (e.g. a
-  // "complete your profile" email sends logged-out users here with
-  // next=/onboarding), otherwise the main homepage (/home).
+  // When authenticated, route to a remembered destination (e.g. a "complete your
+  // profile" email sends logged-out users here intending /onboarding), otherwise
+  // the main homepage (/home). The destination comes from ?next= (modal logins,
+  // query preserved) or sessionStorage (OAuth logins, which redirect and drop the
+  // query). Only safe internal paths are honored (guards against open redirects).
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
+    const isSafe = (p: string | null): p is string => !!p && p.startsWith('/') && !p.startsWith('//');
     let dest = '/home';
     try {
-      const next = new URLSearchParams(window.location.search).get('next');
-      if (next && next.startsWith('/') && !next.startsWith('//')) dest = next;
+      const fromQuery = new URLSearchParams(window.location.search).get('next');
+      const stored = sessionStorage.getItem('topia:postLogin');
+      if (stored) sessionStorage.removeItem('topia:postLogin');
+      if (isSafe(fromQuery)) dest = fromQuery;
+      else if (isSafe(stored)) dest = stored;
     } catch { /* ignore */ }
     router.replace(dest);
   }, [ready, authenticated, user, router]);
