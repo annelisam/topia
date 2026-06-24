@@ -267,7 +267,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
-    if (!consent) { setError('Please agree to create a Topia profile to continue'); return; }
+    if (!consent) { setError('Please agree to create a TOPIA profile to continue'); return; }
     const phone = digits.length ? `${phoneCode}${digits}` : null;
     setSubmitting(true);
     setError('');
@@ -383,13 +383,13 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               ))}
             </div>
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
-              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Complete Topia passport' : "You're in"}
+              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Complete TOPIA passport' : "You're in"}
             </p>
             {step < 3 && (
               <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
                 {step === 1
-                  ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free Topia profile.')
-                  : 'Claim your handle, add a photo, and tell people what you do.'}
+                  ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free TOPIA profile.')
+                  : 'Your passport, your way — handle, photo, and what you create.'}
               </p>
             )}
 
@@ -399,7 +399,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Name<span style={{ color: '#FF5C34' }}> *</span>
-                  {existingName && <LockHint text="Your name is set on your Topia profile. To change it, edit your profile in settings." />}
+                  {existingName && <LockHint text="Your name is set on your TOPIA profile. To change it, edit your profile in settings." />}
                 </label>
                 <input
                   type="text" value={contactName}
@@ -529,7 +529,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Handle<span style={{ color: '#FF5C34' }}> *</span>
-                  {existingUsername && <LockHint text="Your handle is set on your Topia profile. To change it, edit your profile in settings." />}
+                  {existingUsername && <LockHint text="Your handle is set on your TOPIA profile. To change it, edit your profile in settings." />}
                 </label>
                 <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle}>
                   <span className="opacity-40 font-mono text-[13px]">@</span>
@@ -672,9 +672,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       {confirmPhotoOpen && (
         <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => setConfirmPhotoOpen(false)}>
           <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
-            <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Update your Topia photo?</h4>
+            <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Update your TOPIA photo?</h4>
             <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
-              This changes your profile photo everywhere on Topia. You can always update it later in settings.
+              This changes your profile photo everywhere on TOPIA. You can always update it later in settings.
             </p>
             <div className="flex items-center gap-2.5">
               <button onClick={() => setConfirmPhotoOpen(false)} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80" style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
