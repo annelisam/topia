@@ -3,28 +3,24 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import { SocialIcon } from './SocialIcons';
+import { useUserProfile } from '../hooks/useUserProfile';
 
-// Shared footer-nav atoms — keep the link + coming-soon styling consistent
-// with the main menu nav.
+// Single footer-nav atom — keep link styling consistent with the main menu nav.
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="font-mono text-xs text-bone/50 hover:text-lime transition-colors no-underline">
+    <Link href={href} className="font-mono text-xs text-bone/55 hover:text-lime transition-colors no-underline">
       {children}
     </Link>
   );
 }
 
-function FooterSoon({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-mono text-xs text-bone/30 flex items-center gap-2 cursor-default">
-      {children}
-      <span className="text-[9px] tracking-[1px] uppercase opacity-70">Soon</span>
-    </span>
-  );
-}
-
 export default function Footer() {
   const pathname = usePathname();
+  const { profile } = useUserProfile();
+
+  // Passport routes to the viewer's own passport — matches the main nav.
+  const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
 
   // Hide footer on certain pages
   if (pathname === '/waitlist') return null;
@@ -32,73 +28,52 @@ export default function Footer() {
 
   return (
     <footer className="topia-footer bg-obsidian text-bone border-t border-bone/[0.06]">
-      <div className="max-w-[var(--content-max)] mx-auto px-[var(--page-pad)] py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-8">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <div className="font-basement font-black text-sm tracking-[4px] uppercase mb-4">
+      <div className="max-w-[var(--content-max)] mx-auto px-[var(--page-pad)] py-6">
+        {/* Single row — wordmark + inline nav on the left, socials + toggle on the right */}
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-7">
+            <Link href="/" className="font-basement font-black text-sm tracking-[4px] uppercase no-underline text-bone shrink-0">
               TOPIA<span style={{ color: 'var(--accent, #e4fe52)' }}>.</span>
-            </div>
-            <div className="font-zirkon text-sm text-bone/50 leading-relaxed">
-              Culture before tech.<br />
-              Depth before data.
-            </div>
-          </div>
-
-          {/* Explore — mirrors the main menu order, coming-soon items tagged */}
-          <div>
-            <div className="font-mono text-[13px] tracking-wider uppercase opacity-40 mb-4">
-              Explore
-            </div>
-            <div className="flex flex-col gap-3">
-              <FooterLink href="/onboarding">Onboarding</FooterLink>
-              <FooterSoon>Passport</FooterSoon>
+            </Link>
+            <nav className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <FooterLink href={passportHref}>Passport</FooterLink>
               <FooterLink href="/tv">Topia TV</FooterLink>
               <FooterLink href="/events">Events</FooterLink>
-              <FooterSoon>Tiers</FooterSoon>
-              <FooterSoon>Builder</FooterSoon>
-              <FooterSoon>Catalysts</FooterSoon>
-            </div>
-          </div>
-
-          {/* Resources — its own category, nesting Tools + Grants (matches menu) */}
-          <div>
-            <div className="font-mono text-[13px] tracking-wider uppercase opacity-40 mb-4">
-              Resources
-            </div>
-            <div className="flex flex-col gap-3">
               <FooterLink href="/resources/tools">Tools</FooterLink>
               <FooterLink href="/resources/grants">Grants</FooterLink>
-            </div>
-          </div>
-
-          {/* Connect */}
-          <div>
-            <div className="font-mono text-[13px] tracking-wider uppercase opacity-40 mb-4">
-              Connect
-            </div>
-            <div className="flex flex-col gap-3">
               <FooterLink href="/about">About</FooterLink>
-              <a href="mailto:contact@topia.vision" className="font-mono text-xs text-bone/50 hover:text-lime transition-colors no-underline">Contact</a>
-              <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-bone/50 hover:text-lime transition-colors no-underline">Instagram</a>
-              <a href="https://x.com/TopiaTV" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-bone/50 hover:text-lime transition-colors no-underline">X / Twitter</a>
-            </div>
+              <FooterLink href="/contact">Contact</FooterLink>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <a href="https://www.instagram.com/topia.vision" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-bone/55 hover:text-lime transition-colors">
+              <SocialIcon type="instagram" size={18} />
+            </a>
+            <a href="https://x.com/topiavision" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter" className="text-bone/55 hover:text-lime transition-colors">
+              <SocialIcon type="twitter" size={18} />
+            </a>
+            <a href="https://linkedin.com/company/topiavision" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-bone/55 hover:text-lime transition-colors">
+              <SocialIcon type="linkedin" size={18} />
+            </a>
+            <span className="hidden md:inline w-px h-3.5 bg-bone/15" />
+            <ThemeToggle embedded />
           </div>
         </div>
 
-        {/* Appearance control — light/dark, moved here from the floating
-            corner widget. */}
-        <div className="mt-16 pt-6 border-t border-bone/[0.06] flex items-center gap-6">
-          <span className="font-mono text-[11px] uppercase tracking-[2px] opacity-30">Appearance</span>
-          <ThemeToggle embedded />
-        </div>
-
-        {/* Bottom bar */}
-        <div className="mt-8 pt-6 border-t border-bone/[0.06] flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
-            &copy; {new Date().getFullYear()} TOPIA. All rights reserved.
-          </span>
-          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
+        {/* Compact bottom line — copyright, legal, tagline */}
+        <div className="mt-5 pt-4 border-t border-bone/[0.06] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+            <span className="font-mono text-[11px] uppercase tracking-wider opacity-30">
+              &copy; {new Date().getFullYear()} TOPIA VISION HOLDINGS LLC
+            </span>
+            <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-wider">
+              <Link href="/legal/terms" className="text-bone/40 hover:text-lime transition-colors no-underline">Terms</Link>
+              <Link href="/legal/privacy" className="text-bone/40 hover:text-lime transition-colors no-underline">Privacy</Link>
+              <Link href="/legal/cookies" className="text-bone/40 hover:text-lime transition-colors no-underline">Cookie Policy</Link>
+            </nav>
+          </div>
+          <span className="font-mono text-[11px] uppercase tracking-wider opacity-30">
             Culture first. Systems second. Ownership always.
           </span>
         </div>
