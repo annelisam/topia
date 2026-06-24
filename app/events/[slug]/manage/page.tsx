@@ -259,8 +259,9 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [decideMsg, setDecideMsg] = useState('');
-  // Pending approve/decline awaiting an "are you sure?" confirm.
-  const [confirmDecision, setConfirmDecision] = useState<{ userId: string; decision: 'approve' | 'decline' } | null>(null);
+  // Host action awaiting an "are you sure?" confirm (approve/decline a request,
+  // or remove a guest from the list).
+  const [confirmAction, setConfirmAction] = useState<{ userId: string; action: 'approve' | 'decline' | 'remove' } | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/events/rsvps?eventId=${eventId}&privyId=${privyId}`)
@@ -288,6 +289,24 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
       }
     } catch {
       setDecideMsg('Could not update request.');
+    } finally { setBusyId(null); }
+  };
+
+  const remove = async (guestUserId: string) => {
+    setBusyId(guestUserId); setDecideMsg('');
+    const who = rsvps.find((r) => r.userId === guestUserId);
+    const label = who?.name || who?.username || 'Guest';
+    try {
+      const res = await fetch(`/api/events/rsvps?eventId=${eventId}&guestUserId=${guestUserId}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDecideMsg(`${label} removed.`);
+        load();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setDecideMsg(d.error || 'Could not remove guest.');
+      }
+    } catch {
+      setDecideMsg('Could not remove guest.');
     } finally { setBusyId(null); }
   };
 
@@ -333,8 +352,8 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
               <GuestRow key={r.userId} r={r} expanded={expanded === r.userId} onToggle={() => setExpanded(expanded === r.userId ? null : r.userId)}
                 actions={
                   <span className="flex gap-2">
-                    <button disabled={busyId === r.userId} onClick={() => setConfirmDecision({ userId: r.userId, decision: 'approve' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#00b36b' }}>Approve</button>
-                    <button disabled={busyId === r.userId} onClick={() => setConfirmDecision({ userId: r.userId, decision: 'decline' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Decline</button>
+                    <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'approve' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#00b36b' }}>Approve</button>
+                    <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'decline' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Decline</button>
                   </span>
                 } />
             ))}
@@ -348,36 +367,45 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
       ) : (
         <div className="space-y-2">
           {goingList.map((r) => (
-            <GuestRow key={r.userId} r={r} expanded={expanded === r.userId} onToggle={() => setExpanded(expanded === r.userId ? null : r.userId)} />
+            <GuestRow key={r.userId} r={r} expanded={expanded === r.userId} onToggle={() => setExpanded(expanded === r.userId ? null : r.userId)}
+              actions={
+                <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'remove' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Remove</button>
+              } />
           ))}
         </div>
       )}
 
-      {/* Approve/decline confirmation — guards against an accidental tap */}
-      {confirmDecision && (() => {
-        const who = rsvps.find((r) => r.userId === confirmDecision.userId);
+      {/* Approve / decline / remove confirmation — guards against an accidental tap */}
+      {confirmAction && (() => {
+        const who = rsvps.find((r) => r.userId === confirmAction.userId);
         const label = who?.name || who?.username || 'this guest';
-        const approving = confirmDecision.decision === 'approve';
+        const { action } = confirmAction;
+        const verb = action === 'approve' ? 'Approve' : action === 'decline' ? 'Decline' : 'Remove';
+        const blurb = action === 'approve'
+          ? `They'll be confirmed as going and notified.`
+          : action === 'decline'
+            ? `Their request will be declined and they'll be notified.`
+            : `They'll be removed from the guest list. You can re-invite them later.`;
+        const danger = action !== 'approve';
+        const color = danger ? '#FF5C34' : '#00b36b';
         return (
-          <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !busyId && setConfirmDecision(null)}>
+          <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !busyId && setConfirmAction(null)}>
             <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
               <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-                {approving ? 'Approve' : 'Decline'} {label}?
+                {verb} {label}?
               </p>
               <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
-                {approving
-                  ? `They'll be confirmed as going and notified.`
-                  : `Their request will be declined and they'll be notified.`}
+                {blurb}
               </p>
               <div className="flex gap-2">
-                <button onClick={() => setConfirmDecision(null)} disabled={!!busyId} className={`flex-1 ${btnPrimary}`} style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Cancel</button>
+                <button onClick={() => setConfirmAction(null)} disabled={!!busyId} className={`flex-1 ${btnPrimary}`} style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Cancel</button>
                 <button
-                  onClick={() => { const d = confirmDecision; setConfirmDecision(null); decide(d.userId, d.decision); }}
+                  onClick={() => { const c = confirmAction; setConfirmAction(null); if (c.action === 'remove') remove(c.userId); else decide(c.userId, c.action); }}
                   disabled={!!busyId}
                   className={`flex-1 ${btnGhost}`}
-                  style={{ color: approving ? '#00b36b' : '#FF5C34', borderColor: approving ? '#00b36b' : '#FF5C34' }}
+                  style={{ color, borderColor: color }}
                 >
-                  {approving ? 'Approve' : 'Decline'}
+                  {verb}
                 </button>
               </div>
             </div>
