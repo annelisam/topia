@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, users, eventRsvps } from '@/lib/db';
+import { db, users, eventRsvps, eventHosts } from '@/lib/db';
 import { eq, and, count } from 'drizzle-orm';
 
 // GET /api/events/rsvps?eventId=X&privyId=Y — RSVP list + counts + answers.
@@ -64,5 +64,40 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('GET event RSVPs:', error);
     return NextResponse.json({ error: 'Failed to fetch RSVPs' }, { status: 500 });
+  }
+}
+
+// DELETE /api/events/rsvps?eventId=X&guestUserId=Y&privyId=Z
+// Host removes a guest from the list (any status). Deletes the RSVP row, which
+// also frees a capacity slot when the guest was 'going'.
+export async function DELETE(request: NextRequest) {
+  try {
+    const sp = request.nextUrl.searchParams;
+    const eventId = sp.get('eventId');
+    const guestUserId = sp.get('guestUserId');
+    const privyId = sp.get('privyId');
+    if (!eventId || !guestUserId || !privyId) {
+      return NextResponse.json({ error: 'eventId, guestUserId and privyId are required' }, { status: 400 });
+    }
+
+    // Auth: caller must host the event.
+    const [caller] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
+    if (!caller) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const [isHost] = await db
+      .select({ id: eventHosts.id })
+      .from(eventHosts)
+      .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, caller.id)));
+    if (!isHost) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+
+    const deleted = await db
+      .delete(eventRsvps)
+      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, guestUserId)))
+      .returning({ userId: eventRsvps.userId });
+    if (deleted.length === 0) return NextResponse.json({ error: 'RSVP not found' }, { status: 404 });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('DELETE event RSVP (host remove):', error);
+    return NextResponse.json({ error: 'Failed to remove guest' }, { status: 500 });
   }
 }
