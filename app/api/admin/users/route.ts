@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, worldMembers, worlds } from '@/lib/db/schema';
+import {
+  users, worldMembers, worlds, creators, events, tools, eventInvites,
+  tvContent, eventGalleryPhotos, tvEpisodes, shortLinks, ticketOrders, tickets,
+} from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { isAdminRequest } from '@/lib/adminAuth';
 
@@ -108,12 +111,33 @@ export async function DELETE(request: Request) {
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const id = data.id as string;
 
-    // worldMembers cascade-delete via FK, but clear creator links manually
-    const { creators } = await import('@/lib/db/schema');
-    await db.update(creators).set({ userId: null }).where(eq(creators.userId, data.id));
+    // Many tables reference users.id. Cascade FKs (memberships, follows,
+    // notifications, RSVPs, hosts, comments, reactions, guestbook…) delete
+    // automatically with the user. The references below are RESTRICT, so they'd
+    // block the delete — clear them first, all in one transaction.
+    await db.transaction(async (tx) => {
+      // Nullable authorship/attribution links → detach (preserve the content).
+      await tx.update(creators).set({ userId: null }).where(eq(creators.userId, id));
+      await tx.update(worlds).set({ artistId: null }).where(eq(worlds.artistId, id));
+      await tx.update(events).set({ createdBy: null }).where(eq(events.createdBy, id));
+      await tx.update(tools).set({ submittedBy: null }).where(eq(tools.submittedBy, id));
+      await tx.update(tvContent).set({ artistId: null }).where(eq(tvContent.artistId, id));
+      await tx.update(tvEpisodes).set({ createdBy: null }).where(eq(tvEpisodes.createdBy, id));
+      await tx.update(eventGalleryPhotos).set({ uploadedBy: null }).where(eq(eventGalleryPhotos.uploadedBy, id));
+      await tx.update(shortLinks).set({ createdBy: null }).where(eq(shortLinks.createdBy, id));
+      await tx.update(eventInvites).set({ invitedBy: null }).where(eq(eventInvites.invitedBy, id));
+      await tx.update(eventInvites).set({ acceptedByUserId: null }).where(eq(eventInvites.acceptedByUserId, id));
 
-    await db.delete(users).where(eq(users.id, data.id));
+      // NOT-NULL ticket links can't be detached — delete those rows. Deleting an
+      // order cascades to its tickets; also clear tickets transferred to this user.
+      await tx.delete(tickets).where(eq(tickets.ownerId, id));
+      await tx.delete(ticketOrders).where(eq(ticketOrders.buyerId, id));
+
+      await tx.delete(users).where(eq(users.id, id));
+    });
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Admin DELETE user:', error);
