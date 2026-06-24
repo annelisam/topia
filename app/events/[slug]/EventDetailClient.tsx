@@ -10,6 +10,7 @@ import SentientText from '../../components/ui/SentientText';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
 import RsvpModal from './RsvpModal';
+import WhosGoing from './WhosGoing';
 import TicketPurchase from './TicketPurchase';
 import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
@@ -549,6 +550,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 </div>
               </div>
             )}
+
+            {/* Who's going — Luma-style avatar stack + guest list (gated to RSVPs) */}
+            <WhosGoing eventId={event.id} goingCount={event.rsvpCount} canView={event.isHost || event.userRsvped} />
           </div>
 
           {/* RIGHT — details */}

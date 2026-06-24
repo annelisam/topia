@@ -12,7 +12,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "migrate:csv": "tsx scripts/migrate-csv.ts",
-    "seed:worlds": "tsx scripts/seed-worlds.ts"
+    "seed:worlds": "tsx scripts/seed-worlds.ts",
+    "backfill:avatars": "tsx scripts/backfill-fallback-avatars.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

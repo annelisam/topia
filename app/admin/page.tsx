@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { isRealPhoto } from '../../lib/avatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1135,6 +1136,7 @@ function UsersTab() {
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Username</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Email</th>
+              <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Photo</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Role</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Worlds</th>
               <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Visibility</th>
@@ -1147,6 +1149,15 @@ function UsersTab() {
                 <td className="px-3 py-2 font-bold">{item.name || '—'}</td>
                 <td className="px-3 py-2">{item.username ? `@${item.username}` : '—'}</td>
                 <td className="px-3 py-2 opacity-60">{item.email || '—'}</td>
+                <td className="px-3 py-2">
+                  {!item.avatarUrl ? (
+                    <span className="opacity-40">—</span>
+                  ) : isRealPhoto(item.avatarUrl) ? (
+                    <span className="font-mono text-[11px] px-2 py-0.5 border" style={{ backgroundColor: '#00FF88', color: '#1a1a1a', borderColor: '#1a1a1a' }}>UPLOADED</span>
+                  ) : (
+                    <span className="font-mono text-[11px] px-2 py-0.5 border" style={{ backgroundColor: '#FFD60A', color: '#1a1a1a', borderColor: '#1a1a1a' }} title="Auto-generated placeholder avatar — not uploaded by the user">AUTO</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">
                   <span className="font-mono text-[12px] px-2 py-0.5 border" style={{
                     backgroundColor: item.role === 'admin' ? '#8B5CF6' : item.role === 'artist' ? '#3B82F6' : '#e5e5e5',
