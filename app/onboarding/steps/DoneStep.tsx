@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import GlitchType from '../../components/ui/GlitchType';
 import { PathConfig } from '../../components/profile/pathConfig';
+import TopiaCard from '../../components/profile/TopiaCard';
 
 interface Props {
   config: PathConfig | null;
@@ -11,10 +12,27 @@ interface Props {
   username: string;
   avatarUrl: string;
   roleTags: string[];
+  path?: string;
 }
 
-export default function DoneStep({ config, name, username, avatarUrl, roleTags }: Props) {
+export default function DoneStep({ config, name, username, avatarUrl, roleTags, path }: Props) {
   const [phase, setPhase] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const saveCard = async () => {
+    if (!username) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/profile/${encodeURIComponent(username)}/card`);
+      if (!res.ok) throw new Error('failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${username}-topia-card.png`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  };
   const accent = config?.hex ?? '#e4fe52';
   const accentBg = config?.bg ?? 'bg-lime';
   const accentTextOn = config?.textOn ?? 'text-obsidian';
@@ -68,35 +86,22 @@ export default function DoneStep({ config, name, username, avatarUrl, roleTags }
             </h1>
           )}
 
-          {/* Mini passport preview */}
+          {/* Interactive Topia card — move it, then save to share */}
           {phase >= 3 && (
             <div
-              className="mt-12 mx-auto max-w-md border border-ink/15 rounded-lg overflow-hidden"
+              className="mt-12 flex flex-col items-center"
               style={{ opacity: 0, animation: 'fadeUp 0.7s ease forwards' }}
             >
-              <div className={`${accentBg} px-4 py-2 flex items-center justify-between`}>
-                <span className={`font-mono text-[9px] uppercase tracking-[2px] ${accentTextOn} opacity-70`}>topia://identity</span>
-                <span className={`font-mono text-[10px] uppercase tracking-wider ${accentTextOn} opacity-50`}>{config?.label ?? 'creator'}</span>
-              </div>
-              <div className="bg-[var(--page-bg)] p-5 flex items-center gap-4">
-                {avatarUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={avatarUrl} alt={name} className="w-16 h-16 rounded-full object-cover border-2 border-ink/20" />
-                ) : (
-                  <div className="w-16 h-16 rounded-full border-2 border-ink/20 bg-ink/5 flex items-center justify-center">
-                    <span className="font-basement text-2xl text-ink/40">{(name || 'Y')[0]?.toUpperCase()}</span>
-                  </div>
-                )}
-                <div className="text-left flex-1 min-w-0">
-                  <div className="font-basement text-[20px] uppercase text-ink leading-none truncate">{name || 'unnamed'}</div>
-                  <div className="font-mono text-[11px] text-ink/50 mt-1">@{username}</div>
-                  {roleTags.length > 0 && (
-                    <div className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 mt-1.5 truncate">
-                      {roleTags.slice(0, 3).join(' · ')}{roleTags.length > 3 && ` +${roleTags.length - 3}`}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <TopiaCard name={name} username={username} avatarUrl={avatarUrl} roleTags={roleTags} path={path} />
+              {username && (
+                <button
+                  onClick={saveCard}
+                  disabled={saving}
+                  className="mt-4 font-mono text-[11px] uppercase tracking-[2px] text-ink/50 hover:text-ink underline bg-transparent border-none cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? 'saving…' : 'save your card image →'}
+                </button>
+              )}
             </div>
           )}
 
@@ -108,16 +113,17 @@ export default function DoneStep({ config, name, username, avatarUrl, roleTags }
               {username && (
                 <Link
                   href={`/profile/${username}`}
-                  className={`font-basement font-black text-[clamp(20px,3vw,32px)] uppercase ${accentBg} ${accentTextOn} px-6 py-3 hover:opacity-90 transition-opacity no-underline`}
+                  className={`font-mono font-bold text-[13px] md:text-[15px] uppercase tracking-[2px] ${accentBg} ${accentTextOn} px-7 py-3.5 rounded-md no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03]`}
+                  style={{ boxShadow: `0 8px 28px -6px ${accent}99` }}
                 >
                   view your profile →
                 </Link>
               )}
               <Link
-                href="/tv"
+                href="/home"
                 className="font-mono text-[12px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition-colors no-underline border border-ink/20 hover:border-ink/50 px-4 py-2.5"
               >
-                explore topia tv
+                explore topia
               </Link>
             </div>
           )}
