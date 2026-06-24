@@ -133,11 +133,14 @@ function OnboardingWizard() {
   const [hydrated, setHydrated] = useState(false);
 
   /* Not logged in (e.g. arriving from a "complete your profile" email): send to
-   * the enter/login screen, but carry a `next` so we return here after login
-   * instead of dropping the user on /home. */
+   * the enter/login screen, but remember where to return so login lands the user
+   * back here instead of /home. We stash it in sessionStorage (survives Privy's
+   * full-page OAuth redirect, which drops the URL query) and also pass ?next as a
+   * visible fallback for modal logins. */
   useEffect(() => {
     if (ready && !authenticated) {
       const here = window.location.pathname + window.location.search;
+      try { sessionStorage.setItem('topia:postLogin', here); } catch { /* ignore */ }
       router.replace(`/?next=${encodeURIComponent(here)}`);
     }
   }, [ready, authenticated, router]);
