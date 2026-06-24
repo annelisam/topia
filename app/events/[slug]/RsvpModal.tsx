@@ -358,8 +358,18 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                       </span>
                     )}
                     {!existingPhoto && (
-                      <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add'}</span>
+                      <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                        {uploadingAvatar ? (
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-white">…</span>
+                        ) : (
+                          <>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
+                            <span className="font-mono text-[8px] uppercase tracking-wider text-white">{avatarUrl ? 'change' : 'add'}</span>
+                          </>
+                        )}
                       </span>
                     )}
                   </button>
