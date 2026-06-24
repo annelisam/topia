@@ -11,12 +11,18 @@ export default function Home() {
   const [phase, setPhase] = useState(0);
   const [routing, setRouting] = useState(false);
 
-  // When authenticated, send the user to the main homepage (/home).
-  // Onboarding is optional — we never auto-force it.
+  // When authenticated, route to ?next= if it's a safe internal path (e.g. a
+  // "complete your profile" email sends logged-out users here with
+  // next=/onboarding), otherwise the main homepage (/home).
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
-    router.replace('/home');
+    let dest = '/home';
+    try {
+      const next = new URLSearchParams(window.location.search).get('next');
+      if (next && next.startsWith('/') && !next.startsWith('//')) dest = next;
+    } catch { /* ignore */ }
+    router.replace(dest);
   }, [ready, authenticated, user, router]);
 
   useEffect(() => {

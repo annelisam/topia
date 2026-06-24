@@ -132,10 +132,13 @@ function OnboardingWizard() {
   const [state, dispatch] = useReducer(reducer, { step: 0, data: EMPTY_DATA, saving: false });
   const [hydrated, setHydrated] = useState(false);
 
-  /* Redirect to home if not authenticated */
+  /* Not logged in (e.g. arriving from a "complete your profile" email): send to
+   * the enter/login screen, but carry a `next` so we return here after login
+   * instead of dropping the user on /home. */
   useEffect(() => {
     if (ready && !authenticated) {
-      router.replace('/');
+      const here = window.location.pathname + window.location.search;
+      router.replace(`/?next=${encodeURIComponent(here)}`);
     }
   }, [ready, authenticated, router]);
 
