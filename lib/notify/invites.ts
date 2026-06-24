@@ -20,8 +20,10 @@ export async function sendInvite(opts: {
   eventName: string;
   url: string;
   inviterName?: string | null;
+  eventWhen?: string | null;
+  eventWhere?: string | null;
 }): Promise<{ sent: boolean; reason?: string }> {
-  const { channel, to, eventName, url, inviterName } = opts;
+  const { channel, to, eventName, url, inviterName, eventWhen, eventWhere } = opts;
   const lede = inviterName ? `${inviterName} invited you` : "You're invited";
 
   if (channel === 'email') {
@@ -30,7 +32,13 @@ export async function sendInvite(opts: {
     return sendTemplateEmail({
       to,
       templateId: EVENT_TEMPLATES.invite,
-      variables: { EVENT_NAME: eventName, EVENT_URL: url, INVITER_NAME: inviterName || 'A host' },
+      variables: {
+        EVENT_NAME: eventName,
+        EVENT_URL: url,
+        INVITER_NAME: inviterName || 'A host',
+        EVENT_WHEN: eventWhen || 'Date to be announced',
+        EVENT_WHERE: eventWhere || 'Location to be announced',
+      },
     });
   }
 

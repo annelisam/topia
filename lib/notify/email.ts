@@ -58,6 +58,50 @@ function eventUrl(origin: string, slug: string): string {
   return `${origin}/events/${slug}`;
 }
 
+// Build human-readable "when" and "where" lines for email bodies from the raw
+// event fields. Returns friendly fallbacks (never empty) so templates can render
+// the rows unconditionally.
+export interface EventScheduleFields {
+  date?: string | null;
+  dateIso?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  timezone?: string | null;
+  city?: string | null;
+  address?: string | null;
+}
+
+export function formatEventSchedule(ev: EventScheduleFields): { when: string; where: string } {
+  // Date — prefer the sortable ISO (parsed as UTC to avoid an off-by-one day),
+  // else fall back to the stored display string.
+  let date = '';
+  if (ev.dateIso) {
+    const d = new Date(`${ev.dateIso}T00:00:00Z`);
+    if (!Number.isNaN(d.getTime())) {
+      date = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(d);
+    }
+  }
+  if (!date && ev.date) date = ev.date;
+
+  // Time — "1:00 PM – 5:00 PM PT" (short tz label when we can derive one).
+  let time = '';
+  if (ev.startTime) {
+    time = ev.endTime ? `${ev.startTime} – ${ev.endTime}` : ev.startTime;
+    if (ev.timezone) {
+      try {
+        const tz = new Intl.DateTimeFormat('en-US', { timeZone: ev.timezone, timeZoneName: 'short' })
+          .formatToParts(new Date())
+          .find((p) => p.type === 'timeZoneName')?.value;
+        if (tz) time += ` ${tz}`;
+      } catch { /* unknown tz — skip the label */ }
+    }
+  }
+
+  const when = [date, time].filter(Boolean).join(' · ') || 'Date to be announced';
+  const where = [ev.address, ev.city].filter(Boolean).join(' · ') || 'Location to be announced';
+  return { when, where };
+}
+
 // ── Per-touchpoint senders ────────────────────────────────────────────────
 // (Invites send via sendTemplateEmail directly from lib/notify/invites.ts so
 //  they can pass their tokenized accept URL as EVENT_URL.)
