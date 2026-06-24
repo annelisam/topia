@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import TopiaCard from '../../components/profile/TopiaCard';
+import TopiaLoader from '../../components/TopiaLoader';
 
 interface RsvpConfirmationModalProps {
   eventName: string;
@@ -22,7 +23,7 @@ function stampFor(eventName: string): { label: string; caption: string; color: s
 // their full-size Topia card with the event stamp landing on it, then a choice
 // of where to go next.
 export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfirmationModalProps) {
-  const { profile } = useUserProfile();
+  const { profile, loading } = useUserProfile();
   const stamp = stampFor(eventName);
   const roleTagsArr = profile?.roleTags ? profile.roleTags.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
@@ -51,6 +52,10 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
       >
         <button onClick={onClose} className="absolute top-4 right-4 font-mono text-[18px] opacity-40 hover:opacity-100 bg-transparent border-none cursor-pointer z-30" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
 
+        {loading && !profile ? (
+          <TopiaLoader label="Loading your passport…" />
+        ) : (
+        <>
         <h2 className="font-basement text-[24px] font-black uppercase leading-none mb-1" style={{ color: 'var(--foreground)', animation: 'headline-in 0.4s ease both' }}>
           Stamped.
         </h2>
@@ -114,6 +119,8 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
         >
           Back to event
         </button>
+        </>
+        )}
       </div>
     </div>
   );

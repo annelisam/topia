@@ -8,6 +8,7 @@ import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/usernameAvailability';
 import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
 import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+import TopiaLoader from '../../components/TopiaLoader';
 
 // Resize an image to max 256×256 → base64 JPEG (GIFs uploaded raw to keep motion).
 function resizeImage(file: File): Promise<string> {
@@ -105,8 +106,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [existingName, setExistingName] = useState(false);
   const [existingUsername, setExistingUsername] = useState(false);
   const [existingPhoto, setExistingPhoto] = useState(false);
+  // True once the profile prefill fetch settles — gates the branded loader so
+  // existing data shows up populated instead of popping in.
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  // Changing an existing real photo updates the profile everywhere, so we ask
+  // first. `photoUnlocked` flips once they confirm.
+  const [photoUnlocked, setPhotoUnlocked] = useState(false);
+  const [confirmPhotoOpen, setConfirmPhotoOpen] = useState(false);
 
-  // Three-step flow: 1 = basic info, 2 = add details + confirm, 3 = success
+  // Three-step flow: 1 = basic info, 2 = complete Topia passport, 3 = success
   // (get tickets · share · done).
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [resultStatus, setResultStatus] = useState<string>('going');
@@ -190,8 +198,17 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           setProfileRoleSlugs(String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setProfileLoaded(true));
   }, [privyId]);
+
+  // Open the file picker — but if they're replacing a photo that's already on
+  // their Topia profile, confirm first (it changes everywhere).
+  const onPhotoClick = () => {
+    if (uploadingAvatar) return;
+    if (existingPhoto && !photoUnlocked) { setConfirmPhotoOpen(true); return; }
+    fileRef.current?.click();
+  };
 
   // Carry the user's saved craft into any "What do you do?" question — but only
   // seed empties, so we never stomp an answer the guest is actively editing.
@@ -227,25 +244,23 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     return !!(v && String(v).trim());
   };
 
-  // Step 1 → 2: validate the "your details" fields, then advance.
+  // Step 1 → 2: validate the basic-info fields + consent, then advance.
   const goToStep2 = () => {
     setError('');
     if (!contactName.trim()) { setError('Please add your name'); return; }
-    if (!username.trim()) { setError('Pick a username to claim your TOPIA profile'); return; }
-    if (availability === 'invalid') { setError('Username must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
-    if (availability === 'taken') { setError('That username is taken — try another'); return; }
-    if (availability === 'checking') { setError('Hang on — still checking that username'); return; }
     if (!verifiedEmail) { setError('Please verify your email to register'); return; }
     const digits = phoneNumber.replace(/\D/g, '');
     if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); return; }
+    if (!consent) { setError('Please agree to continue'); return; }
     setStep(2);
   };
 
   const submit = async () => {
-    if (!contactName.trim()) { setError('Please add your name'); setStep(1); return; }
-    if (!username.trim() || availability !== 'available') { setError('Pick a valid username'); setStep(1); return; }
-    // Email must be verified through Privy — no free-typed addresses.
-    if (!verifiedEmail) { setError('Please verify your email to register'); setStep(1); return; }
+    if (!contactName.trim() || !verifiedEmail || !consent) { setError('Please complete the first step'); setStep(1); return; }
+    if (!username.trim()) { setError('Pick a handle to claim your TOPIA passport'); return; }
+    if (availability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
+    if (availability === 'taken') { setError('That handle is taken — try another'); return; }
+    if (availability === 'checking') { setError('Hang on — still checking that handle'); return; }
     // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
     if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); setStep(1); return; }
@@ -357,132 +372,42 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           <button onClick={onClose} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
         </div>
 
-        {questions === null ? (
-          <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>Loading…</p>
+        {(questions === null || !profileLoaded) ? (
+          <TopiaLoader label="Loading your details…" />
         ) : (
           <>
-            {/* Step progress — basic info · add details · you're in */}
+            {/* Step progress — basic info · complete passport · you're in */}
             <div className="flex items-center gap-1.5 mb-3">
               {[1, 2, 3].map((n) => (
                 <span key={n} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: n <= step ? 'var(--accent)' : 'var(--border-color)' }} />
               ))}
             </div>
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
-              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Add details' : "You're in"}
+              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Complete Topia passport' : "You're in"}
             </p>
             {step < 3 && (
               <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
                 {step === 1
                   ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free Topia profile.')
-                  : (questions.length ? "Last bit — a couple things from the host, then you're in." : 'Review and confirm your spot.')}
+                  : 'Claim your handle, add a photo, and tell people what you do.'}
               </p>
             )}
 
-            {/* STEP 1 · your details — photo, name, username, email, phone */}
+            {/* STEP 1 · basic info — name, email, phone, consent */}
             {step === 1 && (
             <div className="space-y-5 mb-6">
-              {/* Profile photo — left-aligned like every other field: label, the
-                  framed avatar, then an add/change link. Locked when the profile
-                  already has a photo (manage it in profile settings). */}
-              <div>
-                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                  Profile photo
-                  {existingPhoto && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
-                </label>
-                <div className="relative inline-block ml-2 mt-1">
-                  <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
-                  <span className="absolute -top-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
-                  <span className="absolute -bottom-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
-                  <span className="absolute -bottom-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
-                  <button
-                    type="button"
-                    onClick={() => { if (!existingPhoto) fileRef.current?.click(); }}
-                    disabled={existingPhoto || uploadingAvatar}
-                    title={existingPhoto ? 'Update your photo in your profile settings' : undefined}
-                    className={`relative w-20 h-20 rounded-full overflow-hidden border-2 group block ${existingPhoto ? 'cursor-default' : 'cursor-pointer'}`}
-                    style={{ borderColor: 'var(--border-color)' }}
-                    aria-label={existingPhoto ? 'Profile photo' : 'Upload profile photo'}
-                  >
-                    {avatarUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
-                        {avatarInitial(contactName || username)}
-                      </span>
-                    )}
-                    {!existingPhoto && (
-                      <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.5)' }}>
-                        {uploadingAvatar ? (
-                          <span className="font-mono text-[9px] uppercase tracking-wider text-white">…</span>
-                        ) : (
-                          <>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                            </svg>
-                            <span className="font-mono text-[8px] uppercase tracking-wider text-white">{avatarUrl ? 'change' : 'add'}</span>
-                          </>
-                        )}
-                      </span>
-                    )}
-                  </button>
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
-                <div className="mt-2.5">
-                  {existingPhoto ? (
-                    <span className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }} title="Update your photo in your profile settings">Update in your profile settings.</span>
-                  ) : (
-                    <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingAvatar} className="font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100 disabled:opacity-40" style={{ color: 'var(--foreground)' }}>
-                      {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Add photo'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Name<span style={{ color: '#FF5C34' }}> *</span>
-                  {existingName && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
+                  {existingName && <LockHint text="Your name is set on your Topia profile. To change it, edit your profile in settings." />}
                 </label>
                 <input
                   type="text" value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   readOnly={existingName} disabled={existingName}
-                  title={existingName ? 'Update your name in your profile settings' : undefined}
                   className={`${inputCls}${existingName ? ' cursor-not-allowed opacity-80' : ''}`}
                   style={fieldStyle} placeholder="Your name"
                 />
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                  Username<span style={{ color: '#FF5C34' }}> *</span>
-                  {existingUsername && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
-                </label>
-                <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle} title={existingUsername ? 'Update your username in your profile settings' : undefined}>
-                  <span className="opacity-40 font-mono text-[13px]">@</span>
-                  <input
-                    type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    value={username}
-                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
-                    readOnly={existingUsername} disabled={existingUsername}
-                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3${existingUsername ? ' cursor-not-allowed' : ''}`}
-                    style={{ color: 'var(--foreground)' }}
-                    placeholder="yourhandle"
-                  />
-                  {username && !existingUsername && (
-                    <span
-                      className="font-mono text-[10px] uppercase tracking-wider shrink-0"
-                      style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
-                    >
-                      {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
-                  {existingUsername ? 'Update your username in your profile settings.' : 'Claim your TOPIA handle — you can change it anytime.'}
-                </p>
               </div>
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -530,22 +455,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 )}
               </div>
 
-            </div>
-            )}
-
-            {/* STEP 2 · questions from the host + consent */}
-            {step === 2 && (
-            <div className="space-y-5 mb-6">
-              {questions.map((q) => (
-                <div key={q.id}>
-                  <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                    {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
-                  </label>
-                  {renderField(q)}
-                </div>
-              ))}
-
-              {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
+              {/* Consent: continuing creates a Topia profile + lets us contact them */}
               <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
                 <input
                   type="checkbox"
@@ -555,12 +465,124 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   style={{ accentColor: 'var(--foreground)' }}
                 />
                 <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                  By registering, I agree to create a Topia profile and to Topia&rsquo;s{' '}
+                  By continuing, I agree to create a Topia profile and to Topia&rsquo;s{' '}
                   <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Terms</a>{' '}
                   and{' '}
                   <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Privacy Policy</a>, and consent to receive event updates from Topia and the host.
                 </span>
               </label>
+            </div>
+            )}
+
+            {/* STEP 2 · complete Topia passport — photo, handle, what you do, socials */}
+            {step === 2 && (
+            <div className="space-y-5 mb-6">
+              {/* Photo + handle, the passport identity, up top */}
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Profile photo
+                </label>
+                <div className="relative inline-block ml-2 mt-1">
+                  <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -top-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <button
+                    type="button"
+                    onClick={onPhotoClick}
+                    disabled={uploadingAvatar}
+                    className="relative w-20 h-20 rounded-full overflow-hidden border-2 group block cursor-pointer"
+                    style={{ borderColor: 'var(--border-color)' }}
+                    aria-label={avatarUrl ? 'Change profile photo' : 'Upload profile photo'}
+                  >
+                    {avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
+                        {avatarInitial(contactName || username)}
+                      </span>
+                    )}
+                    <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                      {uploadingAvatar ? (
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">…</span>
+                      ) : (
+                        <>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                          </svg>
+                          <span className="font-mono text-[8px] uppercase tracking-wider text-white">{avatarUrl ? 'change' : 'add'}</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
+                <div className="mt-2.5">
+                  <button type="button" onClick={onPhotoClick} disabled={uploadingAvatar} className="font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100 disabled:opacity-40" style={{ color: 'var(--foreground)' }}>
+                    {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Add photo'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Handle<span style={{ color: '#FF5C34' }}> *</span>
+                  {existingUsername && <LockHint text="Your handle is set on your Topia profile. To change it, edit your profile in settings." />}
+                </label>
+                <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle}>
+                  <span className="opacity-40 font-mono text-[13px]">@</span>
+                  <input
+                    type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    value={username}
+                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                    readOnly={existingUsername} disabled={existingUsername}
+                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3${existingUsername ? ' cursor-not-allowed' : ''}`}
+                    style={{ color: 'var(--foreground)' }}
+                    placeholder="yourhandle"
+                  />
+                  {username && !existingUsername && (
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-wider shrink-0"
+                      style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
+                    >
+                      {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
+                    </span>
+                  )}
+                </div>
+                {!existingUsername && (
+                  <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+                    Claim your TOPIA handle — you can change it anytime.
+                  </p>
+                )}
+              </div>
+
+              {/* What you do + any other host questions (socials handled below) */}
+              {questions.filter((q) => q.type !== 'instagram' && q.type !== 'twitter').map((q) => (
+                <div key={q.id}>
+                  <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                    {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
+                  </label>
+                  {renderField(q)}
+                </div>
+              ))}
+
+              {/* Socials — Instagram + Twitter side by side */}
+              {(() => {
+                const socials = questions.filter((q) => q.type === 'instagram' || q.type === 'twitter');
+                if (socials.length === 0) return null;
+                return (
+                  <div>
+                    <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                      What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {socials.map((q) => <div key={q.id}>{renderField(q)}</div>)}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             )}
 
@@ -570,12 +592,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               {resultStatus === 'going' ? (
                 <>
                   <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>You&apos;re going!</h3>
-                  <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>{eventName}</p>
+                  <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>You&apos;re on the list for {eventName}.</p>
 
                   {ticketLink && (
                     <div className="mb-3 rounded-xl border p-4 text-left" style={{ borderColor: 'var(--border-color)' }}>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40 mb-1.5" style={{ color: 'var(--foreground)' }}>Almost there</p>
-                      <p className="font-mono text-[12px] leading-snug opacity-70 mb-3.5" style={{ color: 'var(--foreground)' }}>This event is ticketed — your spot isn&apos;t locked until you grab a ticket.</p>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40 mb-1.5" style={{ color: 'var(--foreground)' }}>One more thing</p>
+                      <p className="font-mono text-[12px] leading-snug opacity-70 mb-3.5" style={{ color: 'var(--foreground)' }}>This event needs a ticket too. Grab one now, or come back and get it from the event page anytime.</p>
                       <a href={ticketLink.startsWith('http') ? ticketLink : `https://${ticketLink}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[13px] uppercase tracking-widest rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Get Tickets →</a>
                     </div>
                   )}
@@ -611,15 +633,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               <>
                 {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
-                {/* Footer — Continue (step 1) · Back + Confirm RSVP (step 2) */}
+                {/* Footer — Continue (step 1) · Back + Complete RSVP (step 2) */}
                 {step === 1 ? (
                   <button
                     onClick={goToStep2}
-                    disabled={!contactName.trim() || availability !== 'available' || !verifiedEmail}
+                    disabled={!contactName.trim() || !verifiedEmail || !consent}
                     className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                   >
-                    {!contactName.trim() ? 'Add your name to continue' : availability !== 'available' ? 'Pick a username to continue' : !verifiedEmail ? 'Verify email to continue' : 'Continue →'}
+                    {!contactName.trim() ? 'Add your name to continue' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : 'Continue →'}
                   </button>
                 ) : (
                   <div className="flex items-center gap-2.5">
@@ -632,11 +654,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     </button>
                     <button
                       onClick={submit}
-                      disabled={submitting || !consent}
+                      disabled={submitting || availability !== 'available'}
                       className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                     >
-                      {submitting ? 'Submitting…' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Confirm RSVP'}
+                      {submitting ? 'Submitting…' : availability !== 'available' ? 'Pick a handle to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
                     </button>
                   </div>
                 )}
@@ -645,7 +667,56 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           </>
         )}
       </div>
+
+      {/* Confirm before replacing a photo that's already on the Topia profile */}
+      {confirmPhotoOpen && (
+        <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => setConfirmPhotoOpen(false)}>
+          <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+            <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Update your Topia photo?</h4>
+            <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
+              This changes your profile photo everywhere on Topia. You can always update it later in settings.
+            </p>
+            <div className="flex items-center gap-2.5">
+              <button onClick={() => setConfirmPhotoOpen(false)} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80" style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                Cancel
+              </button>
+              <button onClick={() => { setPhotoUnlocked(true); setConfirmPhotoOpen(false); setTimeout(() => fileRef.current?.click(), 0); }} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// A small "?" hint that explains why a field is locked — on hover or tap.
+function LockHint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex normal-case tracking-normal">
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full border text-[9px] font-bold leading-none cursor-help bg-transparent"
+        style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', opacity: 0.55 }}
+        aria-label="Why is this locked?"
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute left-0 bottom-full mb-2 w-52 rounded-lg border p-2.5 font-mono text-[10px] leading-snug z-40 text-left"
+          style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', color: 'var(--foreground)', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.6)' }}
+        >
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
 
