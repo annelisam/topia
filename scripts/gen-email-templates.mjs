@@ -50,8 +50,8 @@ function secondaryNudge() {
                 <tr>
                   <td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;">
                     <div style="padding-bottom:8px;">${hl('Finish setup')}</div>
-                    <div style="font-size:14px;line-height:1.5;color:#888888;padding-bottom:14px;">One more thing — set up your Topia profile so hosts and the community can find you.</div>
-                    <a href="{{{PROFILE_URL}}}" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:inherit;text-decoration:none;border:1px solid rgba(136,136,136,0.45);border-radius:8px;">Complete your profile &rarr;</a>
+                    <div style="font-size:14px;line-height:1.5;color:#888888;padding-bottom:14px;">You're in. Claim your TOPIA passport — just pick a username and add a profile photo. It's how you show up across the network, and you can change it anytime.</div>
+                    <a href="{{{PROFILE_URL}}}" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:inherit;text-decoration:none;border:1px solid rgba(136,136,136,0.45);border-radius:8px;">Claim your passport &rarr;</a>
                   </td>
                 </tr>
               </table>
@@ -189,12 +189,12 @@ const T = {
     primary: { label: 'Manage event &rarr;', url: 'MANAGE_URL' }, fallbackUrl: 'MANAGE_URL',
   },
   'complete-your-profile': {
-    title: 'Finish your Topia profile', preheader: 'Claim your corner of Topia &rarr;',
+    title: 'Claim your Topia passport', preheader: 'Claim your TOPIA passport &rarr;',
     lede: 'Welcome',
     intro: 'Hey <strong style="color:inherit;">{{{USER_NAME}}}</strong> —',
-    headline: 'Finish your profile',
-    note: 'Get discovered, join worlds, and RSVP faster. It only takes a minute.',
-    whenWhere: false, primary: { label: 'Complete your profile &rarr;', url: 'PROFILE_URL' }, fallbackUrl: 'PROFILE_URL',
+    headline: 'Claim your passport',
+    note: 'Just pick a username and add a profile photo to claim your TOPIA passport — your identity across the network. It takes a minute, and you can change it anytime.',
+    whenWhere: false, primary: { label: 'Claim your passport &rarr;', url: 'PROFILE_URL' }, fallbackUrl: 'PROFILE_URL',
   },
 };
 
