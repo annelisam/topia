@@ -133,6 +133,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       .catch(() => setQuestions([]));
   }, [slug]);
 
+  // Lock background scroll while the modal is open (esp. mobile). The modal body
+  // scrolls internally; the page behind stays put.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Prefill name / email / phone from the signed-in user's profile.
   useEffect(() => {
     fetch(`/api/auth/profile?privyId=${encodeURIComponent(privyId)}`)
@@ -319,11 +327,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
             {/* Standard contact fields — name auto-filled, email + optional phone */}
             <div className="space-y-4 mb-5">
-              {/* Profile photo — framed with passport-style corner brackets. Locked
-                  when the profile already has one; otherwise tap to upload (the
-                  colored fallback shows until they do). */}
-              <div className="flex flex-col items-center gap-2 pb-1">
-                <div className="relative">
+              {/* Profile photo — left-aligned like every other field: label, the
+                  framed avatar, then an add/change link. Locked when the profile
+                  already has a photo (manage it in profile settings). */}
+              <div>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Profile photo
+                  {existingPhoto && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
+                </label>
+                <div className="relative inline-block ml-2 mt-1">
                   <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
                   <span className="absolute -top-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
                   <span className="absolute -bottom-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
@@ -333,7 +345,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     onClick={() => { if (!existingPhoto) fileRef.current?.click(); }}
                     disabled={existingPhoto || uploadingAvatar}
                     title={existingPhoto ? 'Update your photo in your profile settings' : undefined}
-                    className={`relative w-20 h-20 rounded-full overflow-hidden border-2 group ${existingPhoto ? 'cursor-default' : 'cursor-pointer'}`}
+                    className={`relative w-20 h-20 rounded-full overflow-hidden border-2 group block ${existingPhoto ? 'cursor-default' : 'cursor-pointer'}`}
                     style={{ borderColor: 'var(--border-color)' }}
                     aria-label={existingPhoto ? 'Profile photo' : 'Upload profile photo'}
                   >
@@ -347,19 +359,21 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     )}
                     {!existingPhoto && (
                       <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add photo'}</span>
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add'}</span>
                       </span>
                     )}
                   </button>
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
-                {existingPhoto ? (
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-40" style={{ color: 'var(--foreground)' }} title="Update your photo in your profile settings">Photo · manage in profile</span>
-                ) : avatarUrl ? (
-                  <button type="button" onClick={() => fileRef.current?.click()} className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-50 underline bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }}>Change photo</button>
-                ) : (
-                  <button type="button" onClick={() => fileRef.current?.click()} className="font-mono text-[10px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer" style={{ color: 'var(--accent-ink)' }}>Add a profile photo →</button>
-                )}
+                <div className="mt-2.5">
+                  {existingPhoto ? (
+                    <span className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }} title="Update your photo in your profile settings">Update in your profile settings.</span>
+                  ) : (
+                    <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingAvatar} className="font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100 disabled:opacity-40" style={{ color: 'var(--foreground)' }}>
+                      {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Add photo'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
