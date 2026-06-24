@@ -115,7 +115,7 @@ interface UserRow {
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
-type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links';
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links' | 'emails';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1418,6 +1418,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'tv', label: 'TV' },
   { id: 'projects', label: 'PROJECTS' },
   { id: 'links', label: 'LINKS' },
+  { id: 'emails', label: 'EMAILS' },
 ];
 
 export default function AdminDashboard() {
@@ -1475,7 +1476,162 @@ export default function AdminDashboard() {
         {tab === 'tv' && <SimplePublishTab type="tv-episodes" noun="episodes" />}
         {tab === 'projects' && <SimplePublishTab type="world-projects" noun="projects" />}
         {tab === 'links' && <LinksTab />}
+        {tab === 'emails' && <EmailsTab />}
       </main>
+    </div>
+  );
+}
+
+// ─── Emails Tab — trigger any template to selected users, with preview ────────
+interface TemplateMeta { id: string; label: string; scope: 'event' | 'profile'; variables: string[] }
+interface EventLite { id: string; eventName: string; slug: string }
+interface SendResult { email: string | null; name: string | null; sent: boolean; reason?: string }
+
+function EmailsTab() {
+  const [templates, setTemplates] = useState<TemplateMeta[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [events, setEvents] = useState<EventLite[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
+  const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [results, setResults] = useState<{ sentCount: number; total: number; results: SendResult[] } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/emails').then(r => r.json()).then(d => setTemplates(d.templates || [])).catch(() => {});
+    fetch('/api/admin/users').then(r => r.json()).then(d => setUsers(d.users || [])).catch(() => {});
+    fetch('/api/admin/events').then(r => r.json()).then(d => setEvents((d.events || []).map((e: EventLite) => ({ id: e.id, eventName: e.eventName, slug: e.slug })))).catch(() => {});
+  }, []);
+
+  const tpl = templates.find(t => t.id === templateId);
+  const needsEvent = tpl?.scope === 'event';
+
+  const filteredUsers = users.filter(u => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [u.name, u.username, u.email].some(v => (v || '').toLowerCase().includes(q));
+  });
+
+  const toggle = (id: string) => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+  const selectAllFiltered = () => setSelected(new Set(filteredUsers.map(u => u.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const doPreview = async () => {
+    setError(''); setResults(null);
+    if (!templateId) { setError('Pick a template'); return; }
+    if (needsEvent && !eventId) { setError('Pick an event for this template'); return; }
+    setBusy(true);
+    try {
+      const sampleUserId = [...selected][0];
+      const res = await fetch('/api/admin/emails', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'preview', templateId, eventId: needsEvent ? eventId : undefined, sampleUserId }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'Preview failed'); return; }
+      setPreview({ subject: d.subject, html: d.html });
+    } catch { setError('Preview failed'); }
+    finally { setBusy(false); }
+  };
+
+  const doSend = async () => {
+    setError(''); setResults(null);
+    if (!templateId) { setError('Pick a template'); return; }
+    if (needsEvent && !eventId) { setError('Pick an event for this template'); return; }
+    if (selected.size === 0) { setError('Select at least one recipient'); return; }
+    if (!window.confirm(`Send "${tpl?.label}" to ${selected.size} recipient(s)?`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/emails', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', templateId, eventId: needsEvent ? eventId : undefined, userIds: [...selected] }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'Send failed'); return; }
+      setResults(d);
+    } catch { setError('Send failed'); }
+    finally { setBusy(false); }
+  };
+
+  const sel = { backgroundColor: '#f5f0e8', color: '#1a1a1a', borderColor: '#1a1a1a' };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ color: '#1a1a1a' }}>
+      {/* Left: controls */}
+      <div>
+        <Field label="Template">
+          <select value={templateId} onChange={e => { setTemplateId(e.target.value); setPreview(null); setResults(null); }} className="w-full border px-3 py-2 font-mono text-[13px] outline-none" style={sel}>
+            <option value="">Select a template…</option>
+            {templates.map(t => <option key={t.id} value={t.id}>{t.label} ({t.scope})</option>)}
+          </select>
+        </Field>
+
+        {needsEvent && (
+          <Field label="Event">
+            <select value={eventId} onChange={e => { setEventId(e.target.value); setPreview(null); }} className="w-full border px-3 py-2 font-mono text-[13px] outline-none" style={sel}>
+              <option value="">Select an event…</option>
+              {events.map(e => <option key={e.id} value={e.id}>{e.eventName}</option>)}
+            </select>
+          </Field>
+        )}
+
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60">Recipients · {selected.size} selected</span>
+          <span className="flex gap-3">
+            <button onClick={selectAllFiltered} className="font-mono text-[11px] uppercase underline">Select all</button>
+            <button onClick={clearSelection} className="font-mono text-[11px] uppercase underline">Clear</button>
+          </span>
+        </div>
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users…" className="w-full border px-3 py-2 font-mono text-[12px] outline-none mb-2" style={sel} />
+        <div className="border max-h-[340px] overflow-y-auto" style={{ borderColor: '#1a1a1a' }}>
+          {filteredUsers.length === 0 && <p className="font-mono text-[12px] opacity-50 p-3">No users</p>}
+          {filteredUsers.map(u => (
+            <label key={u.id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer border-b" style={{ borderColor: 'rgba(26,26,26,0.1)' }}>
+              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} />
+              <span className="font-mono text-[12px] flex-1 min-w-0 truncate">
+                {u.name || '(no name)'}{u.username ? ` @${u.username}` : ''}
+                <span className="opacity-50"> · {u.email || 'no email'}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {error && <p className="font-mono text-[12px] mt-3" style={{ color: '#FF5C34' }}>{error}</p>}
+
+        <div className="flex gap-2 mt-4">
+          <button onClick={doPreview} disabled={busy} className="px-4 py-2 font-mono text-[12px] uppercase tracking-widest border disabled:opacity-40" style={{ borderColor: '#1a1a1a' }}>{busy ? '…' : 'Preview'}</button>
+          <button onClick={doSend} disabled={busy || selected.size === 0} className="px-4 py-2 font-mono text-[12px] uppercase tracking-widest font-bold disabled:opacity-40" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>{busy ? 'Sending…' : `Send to ${selected.size}`}</button>
+        </div>
+
+        {results && (
+          <div className="mt-4 border p-3" style={{ borderColor: '#1a1a1a' }}>
+            <p className="font-mono text-[12px] font-bold mb-2">Sent {results.sentCount}/{results.total}</p>
+            {results.results.map((r, i) => (
+              <p key={i} className="font-mono text-[11px]" style={{ color: r.sent ? '#1a1a1a' : '#FF5C34' }}>
+                {r.sent ? '✓' : '✗'} {r.email || r.name || 'unknown'}{r.reason ? ` — ${r.reason}` : ''}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right: preview */}
+      <div>
+        <span className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60">Preview</span>
+        {preview ? (
+          <div className="mt-2">
+            <p className="font-mono text-[12px] mb-2"><span className="opacity-50">Subject:</span> {preview.subject}</p>
+            <iframe title="email preview" srcDoc={preview.html} className="w-full border" style={{ height: 620, borderColor: '#1a1a1a', backgroundColor: '#fff' }} />
+          </div>
+        ) : (
+          <p className="font-mono text-[12px] opacity-50 mt-2">Pick a template{`'`}s options and hit Preview. With a recipient selected, the preview uses their name; otherwise it shows sample data.</p>
+        )}
+      </div>
     </div>
   );
 }

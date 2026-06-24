@@ -60,6 +60,25 @@ function eventUrl(origin: string, slug: string): string {
   return `${origin}/events/${slug}`;
 }
 
+// Send pre-rendered HTML (used by the admin email sender, where the preview is
+// the source of truth). Best-effort; returns a reason instead of throwing.
+export async function sendRawEmail(opts: { to: string; subject: string; html: string }): Promise<{ sent: boolean; reason?: string }> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { sent: false, reason: 'not_configured' };
+  if (!opts.to) return { sent: false, reason: 'no_recipient' };
+  const from = process.env.INVITE_EMAIL_FROM || 'Topia <onboarding@resend.dev>';
+  try {
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: opts.to, subject: opts.subject, html: opts.html }),
+    });
+    return res.ok ? { sent: true } : { sent: false, reason: `resend_${res.status}` };
+  } catch {
+    return { sent: false, reason: 'resend_error' };
+  }
+}
+
 // Build human-readable "when" and "where" lines for email bodies from the raw
 // event fields. Returns friendly fallbacks (never empty) so templates can render
 // the rows unconditionally.
