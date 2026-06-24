@@ -27,9 +27,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
     .limit(1);
   if (!u) return new Response('Not found', { status: 404 });
 
-  const [bold, regular] = await Promise.all([
+  const [bold, regular, zalando] = await Promise.all([
     fetch(`${origin}/fonts/GTZirkon-Bold.otf`).then((r) => r.arrayBuffer()),
     fetch(`${origin}/fonts/GTZirkon-Regular.otf`).then((r) => r.arrayBuffer()),
+    fetch(`${origin}/fonts/ZalandoSansExpanded-900.ttf`).then((r) => r.arrayBuffer()),
   ]);
 
   const roleTags = (u.roleTags ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -40,6 +41,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const issued = u.createdAt ? new Date(u.createdAt).getFullYear() : new Date().getFullYear();
   const roleLine = roleTags.slice(0, 4).map((r) => r.replace(/-/g, ' ')).join('   ·   ').toUpperCase();
   const initial = (u.name || u.username || '?')[0]?.toUpperCase() ?? '?';
+  const displayName = (u.name || u.username || 'Unnamed').toUpperCase();
   const cardBg = `radial-gradient(circle at 50% 16%, ${accent}26 0%, rgba(13,13,13,0) 60%), linear-gradient(160deg, #181818 0%, #0c0c0c 62%, #0a0a0a 100%)`;
 
   // Self-contained card sized by width — reused across formats.
@@ -62,7 +64,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
               <span style={{ color: 'rgba(245,240,232,0.5)', fontSize: av * 0.42, fontWeight: 700 }}>{initial}</span>
             )}
           </div>
-          <div style={{ display: 'flex', color: '#f5f0e8', fontSize: w * 0.088, fontWeight: 700, marginTop: w * 0.05, textAlign: 'center', lineHeight: 1.02 }}>{u.name || u.username || 'Unnamed'}</div>
+          <div style={{ display: 'flex', color: '#f5f0e8', fontFamily: 'Zalando Expanded', fontSize: w * 0.082, fontWeight: 900, marginTop: w * 0.05, textAlign: 'center', lineHeight: 1.0 }}>{displayName}</div>
           <div style={{ display: 'flex', color: 'rgba(245,240,232,0.55)', fontSize: w * 0.036, marginTop: 8 }}>@{u.username}</div>
           <div style={{ display: 'flex', marginTop: w * 0.04, backgroundColor: accent, color: onAccent, fontSize: w * 0.028, fontWeight: 700, letterSpacing: 5, padding: `${w * 0.012}px ${w * 0.026}px`, borderRadius: 8 }}>{cfg.label}</div>
           {roleLine ? <div style={{ display: 'flex', color: 'rgba(245,240,232,0.45)', fontSize: w * 0.025, letterSpacing: 2, marginTop: w * 0.04, textAlign: 'center' }}>{roleLine}</div> : null}
@@ -79,6 +81,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const fonts = [
     { name: 'GT Zirkon', data: bold, weight: 700 as const, style: 'normal' as const },
     { name: 'GT Zirkon', data: regular, weight: 400 as const, style: 'normal' as const },
+    { name: 'Zalando Expanded', data: zalando, weight: 900 as const, style: 'normal' as const },
   ];
 
   // ── Instagram Story: 1080×1920, dark textured bg, card floating tilted ──
@@ -132,7 +135,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 56 }}>
-                <div style={{ display: 'flex', color: '#f5f0e8', fontSize: 70, fontWeight: 700, lineHeight: 1.02 }}>{u.name || u.username || 'Unnamed'}</div>
+                <div style={{ display: 'flex', color: '#f5f0e8', fontFamily: 'Zalando Expanded', fontSize: 58, fontWeight: 900, lineHeight: 1.0 }}>{displayName}</div>
                 <div style={{ display: 'flex', color: 'rgba(245,240,232,0.55)', fontSize: 30, marginTop: 8 }}>@{u.username}</div>
                 <div style={{ display: 'flex', marginTop: 24, backgroundColor: accent, color: onAccent, fontSize: 24, fontWeight: 700, letterSpacing: 5, padding: '12px 26px', borderRadius: 8 }}>{cfg.label}</div>
                 {roleLine ? <div style={{ display: 'flex', color: 'rgba(245,240,232,0.45)', fontSize: 22, letterSpacing: 2, marginTop: 22 }}>{roleLine}</div> : null}

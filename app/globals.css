@@ -52,6 +52,17 @@
   font-display: swap;
 }
 
+/* Fallback for the header/display font (Basement). Static weight-900 instance
+   (the variable original breaks Satori, which we use for the card image where
+   Basement's woff2 can't load). */
+@font-face {
+  font-family: 'Zalando Sans Expanded';
+  src: url('/fonts/ZalandoSansExpanded-900.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── CSS Variables ────────────────────────────────────────────── */
 
 :root {
@@ -77,7 +88,7 @@
   --border-accent: rgba(228, 254, 82, 0.25);
 
   /* Fonts */
-  --font-basement: 'Basement Grotesque', 'Arial Black', Impact, sans-serif;
+  --font-basement: 'Basement Grotesque', 'Zalando Sans Expanded', 'Arial Black', Impact, sans-serif;
   --font-zirkon: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
   --font-mono-ui: 'GT Zirkon', 'Segoe UI', Arial, sans-serif;
 
