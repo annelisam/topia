@@ -8,10 +8,8 @@ import WelcomeStep from './steps/WelcomeStep';
 import NameStep from './steps/NameStep';
 import UsernameStep from './steps/UsernameStep';
 import AvatarStep from './steps/AvatarStep';
-import PathStep from './steps/PathStep';
 import RoleTagsStep from './steps/RoleTagsStep';
 import BioSocialsStep from './steps/BioSocialsStep';
-import ToolsStep from './steps/ToolsStep';
 import DoneStep from './steps/DoneStep';
 
 /* ── Wizard state ─────────────────────────────────────────────── */
@@ -38,7 +36,7 @@ const EMPTY_DATA: WizardData = {
   name: '',
   username: '',
   avatarUrl: '',
-  path: '',
+  path: 'catalyst', // default path for all new signups (the explicit path step is retired)
   roleTags: [],
   bio: '',
   socialWebsite: '',
@@ -85,10 +83,8 @@ const STEPS = [
   'name',
   'username',
   'avatar',
-  'path',
   'roles',
   'bio',
-  'tools',
   'done',
 ] as const;
 
@@ -100,9 +96,8 @@ function firstIncompleteStep(data: Partial<WizardData>): number {
   if (!data.name) return 1;
   if (!data.username) return 2;
   if (!data.avatarUrl) return 3;
-  if (!data.path) return 4;
-  if (!data.roleTags || data.roleTags.length === 0) return 5;
-  // bio + socials + tools are optional — jump to done
+  if (!data.roleTags || data.roleTags.length === 0) return 4; // roles
+  // bio + socials are optional — jump to done
   return STEPS.length - 1;
 }
 
@@ -156,7 +151,7 @@ function OnboardingWizard() {
           name: saved.name ?? '',
           username: saved.username ?? '',
           avatarUrl: saved.avatarUrl ?? '',
-          path: (saved.path ?? '') as WizardData['path'],
+          path: (saved.path || 'catalyst') as WizardData['path'],
           roleTags: saved.roleTags ? saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
           bio: saved.bio ?? '',
           socialWebsite: saved.socialWebsite ?? '',
@@ -260,16 +255,6 @@ function OnboardingWizard() {
           onAdvance={(avatarUrl) => advance({ avatarUrl })}
         />
       )}
-      {current === 'path' && (
-        <PathStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          initialValue={state.data.path}
-          onBack={back}
-          onAdvance={(path, seedRoles) => advance({ path, roleTags: seedRoles })}
-        />
-      )}
       {current === 'roles' && (
         <RoleTagsStep
           step={inputStepNumber}
@@ -299,24 +284,12 @@ function OnboardingWizard() {
           onBack={back}
           onAdvance={(patch) => advance(patch)}
           saveDraft={async (patch) => {
-            // Persist current draft + advance to next step BEFORE the OAuth
-            // full-page redirect, so the user lands directly on the next step
-            // (tools) with their socials saved. Otherwise the redirect
-            // would bring them back to this step with their bio/socials
-            // potentially lost if the page reloaded mid-flow.
+            // Persist current draft BEFORE the OAuth full-page redirect (social
+            // link verification), so the user's bio/socials aren't lost if the
+            // page reloads mid-flow and resumes from the saved profile.
             dispatch({ type: 'PATCH', patch });
             await saveDiff(patch);
           }}
-        />
-      )}
-      {current === 'tools' && (
-        <ToolsStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          initialValue={state.data.toolSlugs}
-          onBack={back}
-          onAdvance={(toolSlugs) => advance({ toolSlugs })}
         />
       )}
       {current === 'done' && (

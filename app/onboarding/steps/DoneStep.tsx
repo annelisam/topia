@@ -108,16 +108,17 @@ export default function DoneStep({ config, name, username, avatarUrl, roleTags }
               {username && (
                 <Link
                   href={`/profile/${username}`}
-                  className={`font-basement font-black text-[clamp(20px,3vw,32px)] uppercase ${accentBg} ${accentTextOn} px-6 py-3 hover:opacity-90 transition-opacity no-underline`}
+                  className={`font-mono font-bold text-[13px] md:text-[15px] uppercase tracking-[2px] ${accentBg} ${accentTextOn} px-7 py-3.5 rounded-md no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03]`}
+                  style={{ boxShadow: `0 8px 28px -6px ${accent}99` }}
                 >
                   view your profile →
                 </Link>
               )}
               <Link
-                href="/tv"
+                href="/home"
                 className="font-mono text-[12px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition-colors no-underline border border-ink/20 hover:border-ink/50 px-4 py-2.5"
               >
-                explore topia tv
+                explore topia
               </Link>
             </div>
           )}

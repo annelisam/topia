@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         customLinks:      customLinks     ?? null,
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
-        path:             path            ?? null,
+        path:             path            ?? 'catalyst', // default path for all new signups
         verifiedProviders: nextVerifiedProviders(null),
       })
       .returning();
