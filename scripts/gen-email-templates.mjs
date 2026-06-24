@@ -59,23 +59,6 @@ function secondaryNudge() {
           </tr>`;
 }
 
-// A light explainer card placed after the CTA (e.g. what the passport is).
-function infoBlock(label, body) {
-  return `
-          <tr>
-            <td style="padding:22px 32px 0 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(136,136,136,0.25);border-radius:12px;">
-                <tr>
-                  <td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="padding-bottom:8px;">${hl(label)}</div>
-                    <div style="font-size:14px;line-height:1.5;color:#888888;">${body}</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>`;
-}
-
 function fallbackLink(urlVar) {
   return `
           <tr>
@@ -87,7 +70,7 @@ function fallbackLink(urlVar) {
 }
 
 // c = { title, preheader, lede, intro, headline, note, whenWhere, primary:{label,url},
-//       secondary:bool, info:{label,body}, fallbackUrl }
+//       secondary:bool, fallbackUrl }
 function shell(c) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -130,7 +113,7 @@ function shell(c) {
             <td style="padding:10px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
               ${c.note}
             </td>
-          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
+          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
 
           <tr>
             <td style="padding:28px 32px 0 32px;">
@@ -210,10 +193,8 @@ const T = {
     lede: 'Welcome',
     intro: 'Hey <strong style="color:inherit;">{{{USER_NAME}}}</strong> —',
     headline: 'Claim your passport',
-    note: 'Pick a username and add a profile photo to claim your TOPIA passport. It only takes a minute, and you can change it anytime.',
-    whenWhere: false, primary: { label: 'Claim your passport &rarr;', url: 'PROFILE_URL' },
-    info: { label: 'What is a passport', body: 'Your TOPIA passport is your identity across the network. It&rsquo;s how people find you and see what you make. Show up to events and join worlds to collect stamps that build your story over time.' },
-    fallbackUrl: 'PROFILE_URL',
+    note: 'Just pick a username and add a profile photo to claim your TOPIA passport — your identity across the network. It takes a minute, and you can change it anytime.',
+    whenWhere: false, primary: { label: 'Claim your passport &rarr;', url: 'PROFILE_URL' }, fallbackUrl: 'PROFILE_URL',
   },
 };
 
