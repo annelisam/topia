@@ -91,21 +91,22 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
           </svg>
         </div>
 
-        {/* Where to next */}
-        <Link
-          href={profile?.username ? `/profile/${profile.username}` : '/profile'}
-          className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold no-underline transition hover:opacity-90"
-          style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-        >
-          View your passport →
-        </Link>
-        <Link
-          href="/home"
-          className="mt-2.5 w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer font-bold no-underline transition hover:opacity-80"
-          style={{ backgroundColor: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border-color)' }}
-        >
-          Explore Topia
-        </Link>
+        {/* Where to next — side by side */}
+        <div className="flex items-stretch gap-2.5">
+          <Link
+            href={profile?.username ? `/profile/${profile.username}` : '/profile'}
+            className="passport-cta-outline flex-1 inline-flex items-center justify-center text-center px-3 py-3 font-mono text-[11px] uppercase tracking-[0.1em] leading-tight rounded-lg cursor-pointer font-bold no-underline transition hover:opacity-80"
+          >
+            View your passport
+          </Link>
+          <Link
+            href="/home"
+            className="flex-1 inline-flex items-center justify-center text-center px-3 py-3 font-mono text-[11px] uppercase tracking-[0.1em] leading-tight rounded-lg cursor-pointer border-none font-bold no-underline transition hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+          >
+            Explore Topia
+          </Link>
+        </div>
         <button
           onClick={onClose}
           className="mt-4 font-mono text-[11px] uppercase tracking-widest underline opacity-50 hover:opacity-100 transition cursor-pointer bg-transparent border-none block mx-auto"

@@ -476,6 +476,18 @@ body[data-accent] ::-webkit-scrollbar-thumb {
   background: var(--border-accent);
 }
 
+/* ── RSVP card-celebration outline CTA ───────────────────────
+   Lime outline + lime text on dark; black outline + black text on the
+   light bone bg (where lime would be illegible). */
+.passport-cta-outline {
+  border: 1px solid #0a0a0a;
+  color: #0a0a0a;
+}
+[data-theme="dark"] .passport-cta-outline {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ── Hero cycling tagline ────────────────────────────────────
    Light mode: lime highlight with black text (reads on the bone bg).
    Dark mode: plain lime text on the obsidian bg (the original look). */
