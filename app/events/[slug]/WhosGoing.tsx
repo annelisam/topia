@@ -122,23 +122,34 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
                 href={`/profile/${g.username}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-3 p-3 rounded-xl border no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="group flex flex-col gap-2.5 p-4 rounded-xl border no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
                 style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
-                  {/* tags ↔ "View profile" swap on hover (no layout shift) */}
-                  <div className="relative h-3.5 mt-0.5">
-                    <div className="absolute inset-0 font-mono text-[10px] uppercase tracking-wider opacity-45 truncate transition-opacity group-hover:opacity-0" style={{ color: 'var(--foreground)' }}>
-                      {g.roleTags.length > 0 ? g.roleTags.slice(0, 3).map((t) => t.replace(/-/g, ' ')).join(' · ') : 'On the list'}
-                    </div>
-                    <div className="absolute inset-0 font-mono text-[10px] uppercase tracking-wider truncate opacity-0 transition-opacity group-hover:opacity-100" style={{ color: 'var(--accent-ink)' }}>
-                      View profile ↗
-                    </div>
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
                   </div>
+                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--accent-ink)' }}>
+                    View ↗
+                  </span>
                 </div>
+                {g.roleTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {g.roleTags.map((t) => (
+                      <span
+                        key={t}
+                        className="px-2 py-0.5 rounded-full border font-mono text-[9px] uppercase tracking-wider"
+                        style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', opacity: 0.72 }}
+                      >
+                        {t.replace(/-/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="font-mono text-[10px] uppercase tracking-wider opacity-40" style={{ color: 'var(--foreground)' }}>On the list</span>
+                )}
               </a>
             ))}
           </div>
