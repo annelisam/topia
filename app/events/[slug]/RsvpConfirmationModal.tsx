@@ -93,7 +93,7 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
 
         {/* Where to next */}
         <Link
-          href="/profile"
+          href={profile?.username ? `/profile/${profile.username}` : '/profile'}
           className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold no-underline transition hover:opacity-90"
           style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
         >
