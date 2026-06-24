@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import { db, events, eventHosts, eventInvites, users } from '@/lib/db';
 import { sendInvite } from '@/lib/notify/invites';
+import { formatEventSchedule } from '@/lib/notify/email';
 
 // Classify a raw recipient string into an email or a phone (best-effort E.164).
 function classify(raw: string): { email?: string; phone?: string } | null {
@@ -68,8 +69,19 @@ export async function POST(request: NextRequest) {
     const parsed = raw.map(classify).filter(Boolean) as { email?: string; phone?: string }[];
     if (parsed.length === 0) return NextResponse.json({ error: 'No valid emails or phone numbers' }, { status: 400 });
 
-    const [ev] = await db.select({ slug: events.slug, eventName: events.eventName }).from(events).where(eq(events.id, data.eventId));
+    const [ev] = await db.select({
+      slug: events.slug,
+      eventName: events.eventName,
+      date: events.date,
+      dateIso: events.dateIso,
+      startTime: events.startTime,
+      endTime: events.endTime,
+      timezone: events.timezone,
+      city: events.city,
+      address: events.address,
+    }).from(events).where(eq(events.id, data.eventId));
     if (!ev) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    const { when: eventWhen, where: eventWhere } = formatEventSchedule(ev);
 
     // Existing invites for this event to skip duplicates.
     const existing = await db.select({ email: eventInvites.email, phone: eventInvites.phone }).from(eventInvites).where(eq(eventInvites.eventId, data.eventId));
@@ -97,7 +109,7 @@ export async function POST(request: NextRequest) {
       // Attempt delivery (no-op if provider not configured).
       const channel = p.email ? 'email' : 'sms';
       const to = (p.email ?? p.phone)!;
-      const result = await sendInvite({ channel, to, eventName: ev.eventName, url, inviterName: auth.user.name });
+      const result = await sendInvite({ channel, to, eventName: ev.eventName, url, inviterName: auth.user.name, eventWhen, eventWhere });
       if (result.sent) {
         await db.update(eventInvites).set({ sent: true, updatedAt: new Date() }).where(eq(eventInvites.id, row.id));
       }
