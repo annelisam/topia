@@ -113,6 +113,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   // first. `photoUnlocked` flips once they confirm.
   const [photoUnlocked, setPhotoUnlocked] = useState(false);
   const [confirmPhotoOpen, setConfirmPhotoOpen] = useState(false);
+  // Guard against accidental exits mid-form (steps 1–2). On step 3 the RSVP is
+  // already saved, so exiting just reveals the passport card.
+  const [confirmExit, setConfirmExit] = useState(false);
 
   // Three-step flow: 1 = basic info, 2 = complete Topia passport, 3 = success
   // (get tickets · share · done).
@@ -209,6 +212,25 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     if (existingPhoto && !photoUnlocked) { setConfirmPhotoOpen(true); return; }
     fileRef.current?.click();
   };
+
+  // Any exit attempt routes through here. Steps 1–2 confirm first (nothing is
+  // saved yet); step 3's RSVP is already saved, so exiting reveals the card.
+  const handleExit = () => {
+    if (step === 3) { onDone(resultStatus); return; }
+    setConfirmExit(true);
+  };
+
+  // Esc closes a sub-dialog first, otherwise attempts an exit.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (confirmExit) { setConfirmExit(false); return; }
+      if (confirmPhotoOpen) { setConfirmPhotoOpen(false); return; }
+      handleExit();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   // Carry the user's saved craft into any "What do you do?" question — but only
   // seed empties, so we never stomp an answer the guest is actively editing.
@@ -363,13 +385,13 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 border max-h-[88vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
+      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 border max-h-[88vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
             {step === 3 ? eventName : `Register · ${eventName}`}
           </p>
-          <button onClick={onClose} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
+          <button onClick={handleExit} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
         </div>
 
         {(questions === null || !profileLoaded) ? (
@@ -670,7 +692,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
       {/* Confirm before replacing a photo that's already on the Topia profile */}
       {confirmPhotoOpen && (
-        <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => setConfirmPhotoOpen(false)}>
+        <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={(e) => { e.stopPropagation(); setConfirmPhotoOpen(false); }}>
           <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
             <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Update your TOPIA photo?</h4>
             <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
@@ -682,6 +704,26 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               </button>
               <button onClick={() => { setPhotoUnlocked(true); setConfirmPhotoOpen(false); setTimeout(() => fileRef.current?.click(), 0); }} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
                 Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm before abandoning the form mid-way (steps 1–2) */}
+      {confirmExit && (
+        <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={(e) => { e.stopPropagation(); setConfirmExit(false); }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+            <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Leave without finishing?</h4>
+            <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
+              Your RSVP isn&rsquo;t saved yet. If you leave now, the details you entered won&rsquo;t be kept.
+            </p>
+            <div className="flex items-center gap-2.5">
+              <button onClick={() => setConfirmExit(false)} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80" style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                Keep going
+              </button>
+              <button onClick={() => { setConfirmExit(false); onClose(); }} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                Leave
               </button>
             </div>
           </div>
