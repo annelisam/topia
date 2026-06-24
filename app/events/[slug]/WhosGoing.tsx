@@ -150,7 +150,7 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
                 </div>
                 {g.roleTags.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {g.roleTags.map((t) => (
+                    {g.roleTags.slice(0, 3).map((t) => (
                       <span
                         key={t}
                         className="px-2 py-0.5 rounded-full border font-mono text-[9px] uppercase tracking-wider"
