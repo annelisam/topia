@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, users, events, eventRsvps, eventHosts, eventQuestions, notifications } from '@/lib/db';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, sql } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
 import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert, formatEventSchedule } from '@/lib/notify/email';
@@ -39,6 +39,26 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
     }
     return found.id;
   }
+
+  // No row for this privyId. If a prior record already owns this (verified)
+  // email — e.g. the user deleted their Privy account and logged back in with a
+  // fresh privyId — adopt that record by relinking the new privyId, rather than
+  // failing on the unique email constraint.
+  const email = hint.email?.trim();
+  if (email) {
+    const [byEmail] = await db
+      .select({ id: users.id, name: users.name, phone: users.phone })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+    if (byEmail) {
+      const patch: { privyId: string; name?: string; phone?: string; updatedAt: Date } = { privyId, updatedAt: new Date() };
+      if (hint.name?.trim() && !byEmail.name) patch.name = hint.name.trim();
+      if (hint.phone?.trim() && !byEmail.phone) patch.phone = hint.phone.trim();
+      try { await db.update(users).set(patch).where(eq(users.id, byEmail.id)); } catch {}
+      return byEmail.id;
+    }
+  }
+
   try {
     const [created] = await db
       .insert(users)
@@ -46,9 +66,14 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
       .returning({ id: users.id });
     return created.id;
   } catch {
-    // Unique race (email/phone/privyId) — re-select.
+    // Unique race (email/phone/privyId) — re-select by privyId, then by email.
     const [again] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
-    return again?.id ?? null;
+    if (again) return again.id;
+    if (email) {
+      const [byEmail] = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+      if (byEmail) return byEmail.id;
+    }
+    return null;
   }
 }
 
