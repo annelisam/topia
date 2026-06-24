@@ -61,27 +61,27 @@ export default function TopiaCardModal({ open, onClose, ...card }: Props) {
       <div className="flex flex-col items-center gap-5" onClick={(e) => e.stopPropagation()}>
         <TopiaCard {...card} />
 
-        {/* Minimal save action — icon button */}
+        {/* Minimal save action — outline button, icon + label */}
         <button
           onClick={save}
           disabled={saving}
           aria-label={saved ? 'Saved' : 'Save image'}
-          title={saved ? 'Saved' : 'Save image'}
-          className="w-11 h-11 flex items-center justify-center rounded-full border border-bone/20 text-bone/70 hover:text-lime hover:border-lime/60 transition-colors cursor-pointer bg-transparent disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-bone/20 text-bone/70 hover:text-lime hover:border-lime/60 transition-colors cursor-pointer bg-transparent disabled:opacity-50 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[2px] font-bold"
         >
           {saving ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="animate-spin">
               <path d="M21 12a9 9 0 1 1-6.2-8.5" />
             </svg>
           ) : saved ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a3e635" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3e635" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 13l4 4L19 7" />
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3v12" /><path d="M8 11l4 4 4-4" /><path d="M5 21h14" />
             </svg>
           )}
+          <span>{saving ? 'saving' : saved ? 'saved' : 'save'}</span>
         </button>
       </div>
     </div>
