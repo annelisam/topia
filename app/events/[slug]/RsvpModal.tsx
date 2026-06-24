@@ -100,6 +100,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [existingUsername, setExistingUsername] = useState(false);
   const [existingPhoto, setExistingPhoto] = useState(false);
 
+  // Two-step flow: 1 = your details, 2 = questions from the host + consent.
+  const [step, setStep] = useState<1 | 2>(1);
+
   async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -199,17 +202,28 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     return !!(v && String(v).trim());
   };
 
-  const submit = async () => {
+  // Step 1 → 2: validate the "your details" fields, then advance.
+  const goToStep2 = () => {
+    setError('');
     if (!contactName.trim()) { setError('Please add your name'); return; }
     if (!username.trim()) { setError('Pick a username to claim your TOPIA profile'); return; }
     if (availability === 'invalid') { setError('Username must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
     if (availability === 'taken') { setError('That username is taken — try another'); return; }
     if (availability === 'checking') { setError('Hang on — still checking that username'); return; }
-    // Email must be verified through Privy — no free-typed addresses.
     if (!verifiedEmail) { setError('Please verify your email to register'); return; }
-    // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
     if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); return; }
+    setStep(2);
+  };
+
+  const submit = async () => {
+    if (!contactName.trim()) { setError('Please add your name'); setStep(1); return; }
+    if (!username.trim() || availability !== 'available') { setError('Pick a valid username'); setStep(1); return; }
+    // Email must be verified through Privy — no free-typed addresses.
+    if (!verifiedEmail) { setError('Please verify your email to register'); setStep(1); return; }
+    // Phone is optional, but if provided it must look like a real number.
+    const digits = phoneNumber.replace(/\D/g, '');
+    if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); setStep(1); return; }
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
@@ -319,13 +333,23 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>Loading…</p>
         ) : (
           <>
+            {/* Step progress — two-part form (your details · host questions) */}
+            <div className="flex items-center gap-1.5 mb-3">
+              {[1, 2].map((n) => (
+                <span key={n} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: n <= step ? 'var(--accent)' : 'var(--border-color)' }} />
+              ))}
+            </div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
+              Step {step} of 2 · {step === 1 ? 'Your details' : (questions.length ? 'Questions from the host' : 'Confirm')}
+            </p>
             <p className="font-mono text-[13px] opacity-60 mb-4" style={{ color: 'var(--foreground)' }}>
-              {approvalRequired
-                ? `Request to join ${eventName}. The host will review your request.`
-                : questions.length === 0 ? `Confirm your spot for ${eventName}.` : `Register for ${eventName}.`}
+              {step === 1
+                ? (approvalRequired ? `Request to join ${eventName}.` : `Register for ${eventName}.`)
+                : (questions.length ? "Last bit — a couple things from the host, then you're in." : 'Review and confirm your spot.')}
             </p>
 
-            {/* Standard contact fields — name auto-filled, email + optional phone */}
+            {/* STEP 1 · your details — photo, name, username, email, phone */}
+            {step === 1 && (
             <div className="space-y-4 mb-5">
               {/* Profile photo — left-aligned like every other field: label, the
                   framed avatar, then an add/change link. Locked when the profile
@@ -476,6 +500,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 )}
               </div>
 
+            </div>
+            )}
+
+            {/* STEP 2 · questions from the host + consent */}
+            {step === 2 && (
+            <div className="space-y-4 mb-5">
               {questions.map((q) => (
                 <div key={q.id}>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -484,35 +514,57 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   {renderField(q)}
                 </div>
               ))}
-            </div>
 
-            {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
-            <label className="flex items-start gap-2.5 mb-4 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 shrink-0"
-                style={{ accentColor: 'var(--foreground)' }}
-              />
-              <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                By registering, I agree to create a Topia profile and to Topia&rsquo;s{' '}
-                <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Terms</a>{' '}
-                and{' '}
-                <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Privacy Policy</a>, and consent to receive event updates from Topia and the host.
-              </span>
-            </label>
+              {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
+              <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 shrink-0"
+                  style={{ accentColor: 'var(--foreground)' }}
+                />
+                <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                  By registering, I agree to create a Topia profile and to Topia&rsquo;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Terms</a>{' '}
+                  and{' '}
+                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Privacy Policy</a>, and consent to receive event updates from Topia and the host.
+                </span>
+              </label>
+            </div>
+            )}
 
             {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
-            <button
-              onClick={submit}
-              disabled={submitting || !verifiedEmail || !consent || availability !== 'available'}
-              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-            >
-              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : availability !== 'available' ? 'Pick a username to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
-            </button>
+            {/* Footer — Continue (step 1) · Back + submit (step 2) */}
+            {step === 1 ? (
+              <button
+                onClick={goToStep2}
+                disabled={!contactName.trim() || availability !== 'available' || !verifiedEmail}
+                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              >
+                {!contactName.trim() ? 'Add your name to continue' : availability !== 'available' ? 'Pick a username to continue' : !verifiedEmail ? 'Verify email to continue' : 'Continue →'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => { setError(''); setStep(1); }}
+                  className="px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80"
+                  style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={submit}
+                  disabled={submitting || !consent}
+                  className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                >
+                  {submitting ? 'Submitting…' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
