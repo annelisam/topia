@@ -1,10 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { SocialIcon } from '../../components/SocialIcons';
 import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
+import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/usernameAvailability';
+import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
+import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+import TopiaLoader from '../../components/TopiaLoader';
+
+// Resize an image to max 256×256 → base64 JPEG (GIFs uploaded raw to keep motion).
+function resizeImage(file: File): Promise<string> {
+  if (isGif(file)) return uploadToBlob(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 256;
+      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 interface Question {
   id: string;
@@ -25,11 +50,17 @@ interface Props {
   name?: string | null;
   inviteToken?: string | null;
   approvalRequired?: boolean;
+  ticketLink?: string | null;
   onClose: () => void;
-  onDone: (status: string, alreadyRegistered?: boolean) => void;
+  // Called on a successful submit — parent updates event state, modal stays open
+  // on the success step (step 3).
+  onRegistered: (status: string, alreadyRegistered?: boolean) => void;
+  // Called when the user taps "Done" on the success step — parent closes the
+  // form and (for "going") opens the card celebration.
+  onDone: (status: string) => void;
 }
 
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] rounded-lg outline-none';
+const inputCls = 'w-full border px-4 py-3 font-mono text-[13px] rounded-xl outline-none transition focus:border-[var(--foreground)]';
 
 // Curated country dialing codes for the phone field.
 const COUNTRY_CODES = ['+1', '+44', '+61', '+33', '+49', '+34', '+39', '+81', '+91', '+52', '+55', '+86', '+27', '+234', '+971', '+972'];
@@ -45,7 +76,7 @@ function splitPhone(full: string | null | undefined): { code: string; rest: stri
 // Registration modal: after a visitor verifies with Privy, they confirm their
 // contact details (name auto-filled, email + optional phone) and answer the
 // host's custom questions, then submit.
-export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, onClose, onDone }: Props) {
+export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, ticketLink, onClose, onRegistered, onDone }: Props) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +92,58 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [contactEmail, setContactEmail] = useState(email ?? '');
   const [phoneCode, setPhoneCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
+
+  // Profile claim: a username (required) + an optional photo.
+  const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const availability = useUsernameAvailability(username, privyId);
+  const previewColor = avatarColor(username || contactName || privyId);
+
+  // What the profile already has — those fields are managed in profile settings,
+  // not the RSVP form, so we lock them here.
+  const [existingName, setExistingName] = useState(false);
+  const [existingUsername, setExistingUsername] = useState(false);
+  const [existingPhoto, setExistingPhoto] = useState(false);
+  // True once the profile prefill fetch settles — gates the branded loader so
+  // existing data shows up populated instead of popping in.
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  // Changing an existing real photo updates the profile everywhere, so we ask
+  // first. `photoUnlocked` flips once they confirm.
+  const [photoUnlocked, setPhotoUnlocked] = useState(false);
+  const [confirmPhotoOpen, setConfirmPhotoOpen] = useState(false);
+
+  // Three-step flow: 1 = basic info, 2 = complete Topia passport, 3 = success
+  // (get tickets · share · done).
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [resultStatus, setResultStatus] = useState<string>('going');
+  const [copied, setCopied] = useState(false);
+  const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}` : '';
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(eventUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const shareToX = () => {
+    const text = `I'm going to ${eventName}!`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(eventUrl)}`, '_blank');
+  };
+  const shareViaEmail = () => {
+    const subject = `Join me at ${eventName}`;
+    const body = `I just RSVP'd to ${eventName}.\n\nCheck it out: ${eventUrl}`;
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true); setError('');
+    try { setAvatarUrl(await resizeImage(file)); }
+    catch { setError("Couldn't process that image — try another."); }
+    finally { setUploadingAvatar(false); }
+  }
 
   // Privy-verified contact methods are locked (can't be edited); the others
   // can be verified in-place via Privy, like the profile "connect" rows.
@@ -86,6 +169,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       .catch(() => setQuestions([]));
   }, [slug]);
 
+  // Lock background scroll while the modal is open (esp. mobile). The modal body
+  // scrolls internally; the page behind stays put.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Prefill name / email / phone from the signed-in user's profile.
   useEffect(() => {
     fetch(`/api/auth/profile?privyId=${encodeURIComponent(privyId)}`)
@@ -95,14 +186,29 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         if (!u) return;
         setContactName((prev) => prev || u.name || '');
         setContactEmail((prev) => prev || u.email || '');
+        setUsername((prev) => prev || u.username || '');
+        if (isRealPhoto(u.avatarUrl)) setAvatarUrl((prev) => prev || u.avatarUrl);
+        // Lock fields the profile already has — change them in profile settings.
+        if (u.name) setExistingName(true);
+        if (u.username) setExistingUsername(true);
+        if (isRealPhoto(u.avatarUrl)) setExistingPhoto(true);
         const { code, rest } = splitPhone(u.phone);
         if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
         if (u.roleTags) {
           setProfileRoleSlugs(String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setProfileLoaded(true));
   }, [privyId]);
+
+  // Open the file picker — but if they're replacing a photo that's already on
+  // their Topia profile, confirm first (it changes everywhere).
+  const onPhotoClick = () => {
+    if (uploadingAvatar) return;
+    if (existingPhoto && !photoUnlocked) { setConfirmPhotoOpen(true); return; }
+    fileRef.current?.click();
+  };
 
   // Carry the user's saved craft into any "What do you do?" question — but only
   // seed empties, so we never stomp an answer the guest is actively editing.
@@ -138,17 +244,30 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     return !!(v && String(v).trim());
   };
 
-  const submit = async () => {
+  // Step 1 → 2: validate the basic-info fields + consent, then advance.
+  const goToStep2 = () => {
+    setError('');
     if (!contactName.trim()) { setError('Please add your name'); return; }
-    // Email must be verified through Privy — no free-typed addresses.
     if (!verifiedEmail) { setError('Please verify your email to register'); return; }
-    // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
     if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); return; }
+    if (!consent) { setError('Please agree to continue'); return; }
+    setStep(2);
+  };
+
+  const submit = async () => {
+    if (!contactName.trim() || !verifiedEmail || !consent) { setError('Please complete the first step'); setStep(1); return; }
+    if (!username.trim()) { setError('Pick a handle to claim your TOPIA passport'); return; }
+    if (availability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
+    if (availability === 'taken') { setError('That handle is taken — try another'); return; }
+    if (availability === 'checking') { setError('Hang on — still checking that handle'); return; }
+    // Phone is optional, but if provided it must look like a real number.
+    const digits = phoneNumber.replace(/\D/g, '');
+    if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); setStep(1); return; }
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
-    if (!consent) { setError('Please agree to create a Topia profile to continue'); return; }
+    if (!consent) { setError('Please agree to create a TOPIA profile to continue'); return; }
     const phone = digits.length ? `${phoneCode}${digits}` : null;
     setSubmitting(true);
     setError('');
@@ -159,11 +278,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       const res = await fetch('/api/events/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, answers, email: verifiedEmail, name: contactName.trim(), phone, inviteToken, accessToken }),
+        body: JSON.stringify({ privyId, eventId, answers, email: verifiedEmail, name: contactName.trim(), phone, username: username.trim(), avatarUrl: avatarUrl || undefined, inviteToken, accessToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
-      onDone(data.status ?? 'going', data.alreadyRegistered === true);
+      const status = data.status ?? 'going';
+      setResultStatus(status);
+      onRegistered(status, data.alreadyRegistered === true);
+      setStep(3); // advance to the success step (tickets · share · done)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register');
     } finally {
@@ -211,14 +333,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       case 'instagram':
       case 'twitter':
         return (
-          <div className="flex items-center gap-2 border px-3 rounded-lg" style={fieldStyle}>
+          <div className="flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]" style={fieldStyle}>
             <SocialIcon type={q.type} size={15} />
             <span className="opacity-40 font-mono text-[13px]">@</span>
             <input
               type="text" inputMode="text" autoCapitalize="off" autoCorrect="off"
               value={(v as string) ?? ''}
               onChange={(e) => set(q.id, e.target.value.replace(/^@+/, '').trim())}
-              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2"
+              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3"
               style={{ color: 'var(--foreground)' }}
               placeholder="handle"
             />
@@ -241,32 +363,51 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-      <div className="w-full max-w-md rounded-2xl p-6 border max-h-[85vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 border max-h-[88vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-start justify-between mb-4">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
-            Register · {eventName}
+            {step === 3 ? eventName : `Register · ${eventName}`}
           </p>
           <button onClick={onClose} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
         </div>
 
-        {questions === null ? (
-          <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>Loading…</p>
+        {(questions === null || !profileLoaded) ? (
+          <TopiaLoader label="Loading your details…" />
         ) : (
           <>
-            <p className="font-mono text-[13px] opacity-60 mb-4" style={{ color: 'var(--foreground)' }}>
-              {approvalRequired
-                ? `Request to join ${eventName}. The host will review your request.`
-                : questions.length === 0 ? `Confirm your spot for ${eventName}.` : `Register for ${eventName}.`}
+            {/* Step progress — basic info · complete passport · you're in */}
+            <div className="flex items-center gap-1.5 mb-3">
+              {[1, 2, 3].map((n) => (
+                <span key={n} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: n <= step ? 'var(--accent)' : 'var(--border-color)' }} />
+              ))}
+            </div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
+              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Complete TOPIA passport' : "You're in"}
             </p>
+            {step < 3 && (
+              <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
+                {step === 1
+                  ? (approvalRequired ? "Let's get you on the list — the host reviews requests before confirming." : "Let's get you on the list.")
+                  : 'Build your passport on TOPIA.'}
+              </p>
+            )}
 
-            {/* Standard contact fields — name auto-filled, email + optional phone */}
-            <div className="space-y-4 mb-5">
+            {/* STEP 1 · basic info — name, email, phone, consent */}
+            {step === 1 && (
+            <div className="space-y-5 mb-6">
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Name<span style={{ color: '#FF5C34' }}> *</span>
+                  {existingName && <LockHint text="Your name is set on your TOPIA profile. To change it, edit your profile in settings." />}
                 </label>
-                <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} style={fieldStyle} placeholder="Your name" />
+                <input
+                  type="text" value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  readOnly={existingName} disabled={existingName}
+                  className={`${inputCls}${existingName ? ' cursor-not-allowed opacity-80' : ''}`}
+                  style={fieldStyle} placeholder="Your name"
+                />
               </div>
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -280,7 +421,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     <button
                       type="button"
                       onClick={() => linkEmail()}
-                      className="w-full px-3 py-2 font-mono text-[13px] rounded-lg cursor-pointer border text-left flex items-center justify-between gap-2"
+                      className="w-full px-4 py-3 font-mono text-[13px] rounded-xl cursor-pointer border text-left flex items-center justify-between gap-2 transition hover:border-[var(--foreground)]"
                       style={fieldStyle}
                     >
                       <span className="opacity-50">Verify your email…</span>
@@ -302,7 +443,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 ) : (
                   <>
                     <div className="flex gap-2">
-                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-2 py-2 font-mono text-[13px] rounded-lg outline-none cursor-pointer shrink-0" style={fieldStyle}>
+                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-3 py-3 font-mono text-[13px] rounded-xl outline-none cursor-pointer shrink-0" style={fieldStyle}>
                         {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                       <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
@@ -314,7 +455,111 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 )}
               </div>
 
-              {questions.map((q) => (
+              {/* Consent: continuing creates a Topia profile + lets us contact them */}
+              <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 shrink-0"
+                  style={{ accentColor: 'var(--foreground)' }}
+                />
+                <span className="font-mono text-[11px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                  By continuing, I agree to TOPIA&rsquo;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Terms</a>{' '}
+                  and{' '}
+                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Privacy Policy</a>, to creating a TOPIA profile, and to receiving event updates from TOPIA and the host.
+                </span>
+              </label>
+            </div>
+            )}
+
+            {/* STEP 2 · complete Topia passport — photo, handle, what you do, socials */}
+            {step === 2 && (
+            <div className="space-y-5 mb-6">
+              {/* Photo + handle, the passport identity, up top */}
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Profile photo
+                </label>
+                <div className="relative inline-block ml-2 mt-1">
+                  <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -top-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <button
+                    type="button"
+                    onClick={onPhotoClick}
+                    disabled={uploadingAvatar}
+                    className="relative w-20 h-20 rounded-full overflow-hidden border-2 group block cursor-pointer"
+                    style={{ borderColor: 'var(--border-color)' }}
+                    aria-label={avatarUrl ? 'Change profile photo' : 'Upload profile photo'}
+                  >
+                    {avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
+                        {avatarInitial(contactName || username)}
+                      </span>
+                    )}
+                    <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                      {uploadingAvatar ? (
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">…</span>
+                      ) : (
+                        <>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                          </svg>
+                          <span className="font-mono text-[8px] uppercase tracking-wider text-white">{avatarUrl ? 'change' : 'add'}</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
+                <div className="mt-2.5">
+                  <button type="button" onClick={onPhotoClick} disabled={uploadingAvatar} className="font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100 disabled:opacity-40" style={{ color: 'var(--foreground)' }}>
+                    {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Add photo'}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Handle<span style={{ color: '#FF5C34' }}> *</span>
+                  {existingUsername && <LockHint text="Your handle is set on your TOPIA profile. To change it, edit your profile in settings." />}
+                </label>
+                <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle}>
+                  <span className="opacity-40 font-mono text-[13px]">@</span>
+                  <input
+                    type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    value={username}
+                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                    readOnly={existingUsername} disabled={existingUsername}
+                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3${existingUsername ? ' cursor-not-allowed' : ''}`}
+                    style={{ color: 'var(--foreground)' }}
+                    placeholder="yourhandle"
+                  />
+                  {username && !existingUsername && (
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-wider shrink-0"
+                      style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
+                    >
+                      {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
+                    </span>
+                  )}
+                </div>
+                {!existingUsername && (
+                  <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+                    Claim your TOPIA handle — you can change it anytime.
+                  </p>
+                )}
+              </div>
+
+              {/* What you do + any other host questions (socials handled below) */}
+              {questions.filter((q) => q.type !== 'instagram' && q.type !== 'twitter').map((q) => (
                 <div key={q.id}>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                     {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
@@ -322,36 +567,156 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   {renderField(q)}
                 </div>
               ))}
+
+              {/* Socials — Instagram + Twitter side by side */}
+              {(() => {
+                const socials = questions.filter((q) => q.type === 'instagram' || q.type === 'twitter');
+                if (socials.length === 0) return null;
+                return (
+                  <div>
+                    <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                      What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {socials.map((q) => <div key={q.id}>{renderField(q)}</div>)}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
+            )}
 
-            {/* Consent: RSVPing creates a Topia profile + lets us contact them */}
-            <label className="flex items-start gap-2.5 mb-4 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 shrink-0"
-                style={{ accentColor: 'var(--foreground)' }}
-              />
-              <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                By registering, I agree to create a Topia profile and allow Topia and the event host to contact me about this event.
-              </span>
-            </label>
+            {/* STEP 3 · success — get tickets · share · done */}
+            {step === 3 && (
+            <div>
+              {resultStatus === 'going' ? (
+                <>
+                  <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>You&apos;re going!</h3>
+                  <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>You&apos;re on the list for {eventName}.</p>
 
-            {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+                  {ticketLink && (
+                    <div className="mb-3 rounded-xl border p-4 text-left" style={{ borderColor: 'var(--border-color)' }}>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40 mb-1.5" style={{ color: 'var(--foreground)' }}>One more thing</p>
+                      <p className="font-mono text-[12px] leading-snug opacity-70 mb-3.5" style={{ color: 'var(--foreground)' }}>This event needs a ticket too. Grab one now, or come back and get it from the event page anytime.</p>
+                      <a href={ticketLink.startsWith('http') ? ticketLink : `https://${ticketLink}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[13px] uppercase tracking-widest rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Get Tickets →</a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>Request sent</h3>
+                  <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>The host will review your request for {eventName} — we&apos;ll email you the moment it&apos;s confirmed.</p>
+                </>
+              )}
 
-            <button
-              onClick={submit}
-              disabled={submitting || !verifiedEmail || !consent}
-              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-            >
-              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
-            </button>
+              <button
+                onClick={() => onDone(resultStatus)}
+                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer font-bold transition hover:opacity-90"
+                style={ticketLink && resultStatus === 'going'
+                  ? { backgroundColor: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border-color)' }
+                  : { backgroundColor: 'var(--foreground)', color: 'var(--background)', border: 'none' }}
+              >
+                Done
+              </button>
+
+              {/* Share — minimal, last */}
+              <div className="mt-5 pt-4 border-t flex items-center justify-center gap-4" style={{ borderColor: 'var(--border-color)' }}>
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40" style={{ color: 'var(--foreground)' }}>Share</span>
+                <button onClick={copyLink} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>{copied ? 'Copied!' : 'Copy link'}</button>
+                <button onClick={shareToX} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>X</button>
+                <button onClick={shareViaEmail} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Email</button>
+              </div>
+            </div>
+            )}
+
+            {step < 3 && (
+              <>
+                {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+
+                {/* Footer — Continue (step 1) · Back + Complete RSVP (step 2) */}
+                {step === 1 ? (
+                  <button
+                    onClick={goToStep2}
+                    disabled={!contactName.trim() || !verifiedEmail || !consent}
+                    className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                  >
+                    {!contactName.trim() ? 'Add your name to continue' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : 'Continue →'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => { setError(''); setStep(1); }}
+                      className="px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80"
+                      style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={submit}
+                      disabled={submitting || availability !== 'available'}
+                      className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                    >
+                      {submitting ? 'Submitting…' : availability !== 'available' ? 'Pick a handle to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>
+
+      {/* Confirm before replacing a photo that's already on the Topia profile */}
+      {confirmPhotoOpen && (
+        <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => setConfirmPhotoOpen(false)}>
+          <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+            <h4 className="font-mono text-[14px] font-bold uppercase mb-2" style={{ color: 'var(--foreground)' }}>Update your TOPIA photo?</h4>
+            <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
+              This changes your profile photo everywhere on TOPIA. You can always update it later in settings.
+            </p>
+            <div className="flex items-center gap-2.5">
+              <button onClick={() => setConfirmPhotoOpen(false)} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80" style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                Cancel
+              </button>
+              <button onClick={() => { setPhotoUnlocked(true); setConfirmPhotoOpen(false); setTimeout(() => fileRef.current?.click(), 0); }} className="flex-1 px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// A small "?" hint that explains why a field is locked — on hover or tap.
+function LockHint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex normal-case tracking-normal">
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full border text-[9px] font-bold leading-none cursor-help bg-transparent"
+        style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', opacity: 0.55 }}
+        aria-label="Why is this locked?"
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute left-0 bottom-full mb-2 w-52 rounded-lg border p-2.5 font-mono text-[10px] leading-snug z-40 text-left"
+          style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', color: 'var(--foreground)', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.6)' }}
+        >
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -398,6 +763,16 @@ function RoleTagPicker({ options, value, onChange }: { options: string[]; value:
           placeholder={`Search or add… (${value.length}/${ROLES_MAX})`}
           className={inputCls} style={fieldStyle}
         />
+      )}
+      {/* Empty state: a few quick-add suggestions. Typing filters / lets you create. */}
+      {!atMax && q.length === 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {options.filter((o) => !value.includes(o)).slice(0, 8).map((o) => (
+            <button key={o} type="button" onClick={() => add(o)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'transparent' }}>
+              + {o}
+            </button>
+          ))}
+        </div>
       )}
       {!atMax && q.length > 0 && (filtered.length > 0 || canCreate) && (
         <div className="flex flex-wrap gap-1.5 mt-2">
