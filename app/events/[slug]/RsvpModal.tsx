@@ -496,7 +496,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 style={{ accentColor: 'var(--foreground)' }}
               />
               <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                By registering, I agree to create a Topia profile and allow Topia and the event host to contact me about this event.
+                By registering, I agree to create a Topia profile and to Topia&rsquo;s{' '}
+                <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Terms</a>{' '}
+                and{' '}
+                <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Privacy Policy</a>, and consent to receive event updates from Topia and the host.
               </span>
             </label>
 
