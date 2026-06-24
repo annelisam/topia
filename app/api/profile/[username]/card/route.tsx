@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 import { users, worldMembers, worlds } from '@/lib/db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { PATH_CONFIG, resolvePath } from '@/app/components/profile/pathConfig';
-import { ensureShortLink } from '@/lib/shortlinkStore';
 
 export const runtime = 'nodejs';
 
@@ -38,10 +37,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
     .limit(1);
   const hasOwnedWorlds = owned.length > 0;
 
-  // The user's short profile link (topia.vision/s/<code>), shown on the card.
-  const code = await ensureShortLink({ path: `/profile/${u.username}`, kind: 'profile', createdBy: u.id });
-  const shortHost = new URL(origin).host;
-  const shortLink = code ? `${shortHost}/s/${code}` : shortHost;
+  // The user's vanity short link, shown on the card. Hardcoded brand host so the
+  // card always reads topia.vision regardless of which deployment renders it.
+  const shortLink = `topia.vision/@${u.username}`;
 
   const [bold, regular, zalando] = await Promise.all([
     fetch(`${origin}/fonts/GTZirkon-Bold.otf`).then((r) => r.arrayBuffer()),
@@ -113,9 +111,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
             <svg width={72} height={72 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
           </div>
 
-          {/* tilted card (Satori is 2D-only — rotate+skew fakes the 3D lean) */}
+          {/* tilted card (Satori is 2D-only — rotate+skew fakes the 3D lean) with a
+              matching tilted cast shadow behind it for depth */}
           <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            {Card(720, { transform: 'rotate(-4deg) skewY(-2.5deg)', boxShadow: `0 50px 90px -20px rgba(0,0,0,0.85), 0 0 70px -10px ${accent}55` }, 'TOPIA.VISION')}
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <div style={{ position: 'absolute', top: 48, left: -14, width: 720, height: 900, borderRadius: 33, transform: 'rotate(-4deg) skewY(-2.5deg)', background: 'rgba(0,0,0,0.5)', boxShadow: '0 70px 130px 30px rgba(0,0,0,0.6)' }} />
+              {Card(720, { transform: 'rotate(-4deg) skewY(-2.5deg)', boxShadow: `0 0 70px -8px ${accent}66` }, 'TOPIA.VISION')}
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 150 }}>
