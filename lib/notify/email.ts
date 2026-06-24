@@ -7,7 +7,8 @@
 // Variables use triple-brace syntax in the template, e.g. {{{EVENT_NAME}}}.
 //
 //   event-invite          → EVENT_NAME, EVENT_URL, INVITER_NAME
-//   event-rsvp-confirmed   → EVENT_NAME, EVENT_URL, GUEST_NAME   (instant RSVP)
+//   event-rsvp-confirmed   → EVENT_NAME, EVENT_URL, GUEST_NAME, EVENT_WHEN, EVENT_WHERE   (instant RSVP, profile complete)
+//   event-rsvp-confirmed-setup → + PROFILE_URL   (instant RSVP, no handle yet — nudge to finish profile)
 //   event-rsvp-requested   → EVENT_NAME, EVENT_URL, GUEST_NAME   (approval on)
 //   event-rsvp-approved    → EVENT_NAME, EVENT_URL, GUEST_NAME
 //   event-rsvp-declined    → EVENT_NAME, EVENT_URL, GUEST_NAME
@@ -22,6 +23,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 export const EVENT_TEMPLATES = {
   invite:        process.env.RESEND_TPL_EVENT_INVITE        || 'event-invite',
   rsvpConfirmed: process.env.RESEND_TPL_RSVP_CONFIRMED      || 'event-rsvp-confirmed',
+  rsvpConfirmedSetup: process.env.RESEND_TPL_RSVP_CONFIRMED_SETUP || 'event-rsvp-confirmed-setup',
   rsvpRequested: process.env.RESEND_TPL_RSVP_REQUESTED      || 'event-rsvp-requested',
   rsvpApproved:  process.env.RESEND_TPL_RSVP_APPROVED       || 'event-rsvp-approved',
   rsvpDeclined:  process.env.RESEND_TPL_RSVP_DECLINED       || 'event-rsvp-declined',
@@ -106,21 +108,47 @@ export function formatEventSchedule(ev: EventScheduleFields): { when: string; wh
 // (Invites send via sendTemplateEmail directly from lib/notify/invites.ts so
 //  they can pass their tokenized accept URL as EVENT_URL.)
 
-// Guest confirmation right after they register (instant vs approval-pending).
-export function sendRsvpConfirmation(opts: { to: string; eventName: string; origin: string; slug: string; guestName?: string | null; approvalRequired: boolean }) {
+// Guest confirmation right after they register. Three shapes:
+//   • approval on        → "request received"            (rsvpRequested)
+//   • confirmed, profile complete  → standard confirmation (rsvpConfirmed)
+//   • confirmed, no handle yet     → confirmation + nudge to finish their
+//                                    profile               (rsvpConfirmedSetup)
+export function sendRsvpConfirmation(opts: {
+  to: string; eventName: string; origin: string; slug: string;
+  guestName?: string | null; approvalRequired: boolean;
+  profileComplete?: boolean; eventWhen?: string | null; eventWhere?: string | null;
+}) {
+  const templateId = opts.approvalRequired
+    ? EVENT_TEMPLATES.rsvpRequested
+    : opts.profileComplete
+      ? EVENT_TEMPLATES.rsvpConfirmed
+      : EVENT_TEMPLATES.rsvpConfirmedSetup;
   return sendTemplateEmail({
     to: opts.to,
-    templateId: opts.approvalRequired ? EVENT_TEMPLATES.rsvpRequested : EVENT_TEMPLATES.rsvpConfirmed,
-    variables: { EVENT_NAME: opts.eventName, EVENT_URL: eventUrl(opts.origin, opts.slug), GUEST_NAME: opts.guestName || 'there' },
+    templateId,
+    variables: {
+      EVENT_NAME: opts.eventName,
+      EVENT_URL: eventUrl(opts.origin, opts.slug),
+      GUEST_NAME: opts.guestName || 'there',
+      EVENT_WHEN: opts.eventWhen || 'Date to be announced',
+      EVENT_WHERE: opts.eventWhere || 'Location to be announced',
+      PROFILE_URL: `${opts.origin}/onboarding`,
+    },
   });
 }
 
 // Host approves or declines a pending request.
-export function sendRsvpDecision(opts: { to: string; eventName: string; origin: string; slug: string; guestName?: string | null; approved: boolean }) {
+export function sendRsvpDecision(opts: { to: string; eventName: string; origin: string; slug: string; guestName?: string | null; approved: boolean; eventWhen?: string | null; eventWhere?: string | null }) {
   return sendTemplateEmail({
     to: opts.to,
     templateId: opts.approved ? EVENT_TEMPLATES.rsvpApproved : EVENT_TEMPLATES.rsvpDeclined,
-    variables: { EVENT_NAME: opts.eventName, EVENT_URL: eventUrl(opts.origin, opts.slug), GUEST_NAME: opts.guestName || 'there' },
+    variables: {
+      EVENT_NAME: opts.eventName,
+      EVENT_URL: eventUrl(opts.origin, opts.slug),
+      GUEST_NAME: opts.guestName || 'there',
+      EVENT_WHEN: opts.eventWhen || 'Date to be announced',
+      EVENT_WHERE: opts.eventWhere || 'Location to be announced',
+    },
   });
 }
 
@@ -135,7 +163,7 @@ export function sendCompleteProfile(opts: { to: string; userName?: string | null
 }
 
 // Host alert when someone RSVPs / requests to join.
-export function sendHostRsvpAlert(opts: { to: string; eventName: string; origin: string; slug: string; guestName?: string | null; pending: boolean }) {
+export function sendHostRsvpAlert(opts: { to: string; eventName: string; origin: string; slug: string; guestName?: string | null; pending: boolean; eventWhen?: string | null; eventWhere?: string | null }) {
   return sendTemplateEmail({
     to: opts.to,
     templateId: EVENT_TEMPLATES.hostAlert,
@@ -144,6 +172,8 @@ export function sendHostRsvpAlert(opts: { to: string; eventName: string; origin:
       MANAGE_URL: `${opts.origin}/events/${opts.slug}/manage`,
       GUEST_NAME: opts.guestName || 'Someone',
       STATUS: opts.pending ? 'request' : 'rsvp',
+      EVENT_WHEN: opts.eventWhen || 'Date to be announced',
+      EVENT_WHERE: opts.eventWhere || 'Location to be announced',
     },
   });
 }
