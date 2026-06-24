@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq } from 'drizzle-orm';
 import { db, users, events, eventRsvps, eventHosts, notifications } from '@/lib/db';
-import { isEmailConfigured, sendRsvpDecision } from '@/lib/notify/email';
+import { isEmailConfigured, sendRsvpDecision, formatEventSchedule } from '@/lib/notify/email';
 
 // POST /api/events/rsvp/decision — host approves or declines a pending RSVP.
 // Body: { privyId, eventId, guestUserId, decision: 'approve' | 'decline' }
@@ -49,7 +49,17 @@ export async function POST(request: NextRequest) {
       .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, guestUserId)));
 
     // Notify the guest of the decision.
-    const [event] = await db.select({ eventName: events.eventName, slug: events.slug }).from(events).where(eq(events.id, eventId));
+    const [event] = await db.select({
+      eventName: events.eventName,
+      slug: events.slug,
+      date: events.date,
+      dateIso: events.dateIso,
+      startTime: events.startTime,
+      endTime: events.endTime,
+      timezone: events.timezone,
+      city: events.city,
+      address: events.address,
+    }).from(events).where(eq(events.id, eventId));
     if (event) {
       await db.insert(notifications).values({
         recipientId: guestUserId,
@@ -63,7 +73,8 @@ export async function POST(request: NextRequest) {
         try {
           const [guest] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, guestUserId));
           if (guest?.email) {
-            await sendRsvpDecision({ to: guest.email, eventName: event.eventName, origin: request.nextUrl.origin, slug: event.slug, guestName: guest.name, approved: decision === 'approve' });
+            const { when: eventWhen, where: eventWhere } = formatEventSchedule(event);
+            await sendRsvpDecision({ to: guest.email, eventName: event.eventName, origin: request.nextUrl.origin, slug: event.slug, guestName: guest.name, approved: decision === 'approve', eventWhen, eventWhere });
           }
         } catch (e) { console.error('rsvp decision email:', e); }
       }

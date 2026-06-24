@@ -3,7 +3,7 @@ import { db, users, events, eventRsvps, eventHosts, eventQuestions, notification
 import { eq, and, count } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
-import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert } from '@/lib/notify/email';
+import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert, formatEventSchedule } from '@/lib/notify/email';
 import { roleLabelToSlug } from '@/lib/profile/roleTags';
 
 type AnswerMap = Record<string, string | string[] | boolean>;
@@ -94,6 +94,13 @@ export async function POST(request: NextRequest) {
         rsvpCapacity: events.rsvpCapacity,
         rsvpApprovalRequired: events.rsvpApprovalRequired,
         rsvpClosed: events.rsvpClosed,
+        date: events.date,
+        dateIso: events.dateIso,
+        startTime: events.startTime,
+        endTime: events.endTime,
+        timezone: events.timezone,
+        city: events.city,
+        address: events.address,
       })
       .from(events)
       .where(eq(events.id, eventId));
@@ -172,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     // If this registration came from an invite, mark it accepted (by token, or
     // by the user's verified email/phone).
-    const [u] = await db.select({ email: users.email, phone: users.phone }).from(users).where(eq(users.id, userId));
+    const [u] = await db.select({ email: users.email, phone: users.phone, name: users.name, username: users.username }).from(users).where(eq(users.id, userId));
     await markInviteAccepted({ eventId, userId, token: inviteToken, email: u?.email ?? email ?? null, phone: u?.phone ?? null });
 
     // Notify hosts — distinguish a confirmed RSVP from an approval request.
@@ -191,10 +198,23 @@ export async function POST(request: NextRequest) {
     // Transactional emails — best-effort, dormant until RESEND_API_KEY is set.
     if (isEmailConfigured()) {
       const origin = request.nextUrl.origin;
-      // Guest: confirmation (instant) or "request received" (approval on).
-      if (email) {
+      const { when: eventWhen, where: eventWhere } = formatEventSchedule(event);
+      // Guest: confirmation (instant) or "request received" (approval on). The
+      // confirmed variant nudges profile setup when the guest has no handle yet.
+      const guestEmail = email || u?.email;
+      if (guestEmail) {
         try {
-          await sendRsvpConfirmation({ to: email, eventName: event.eventName, origin, slug: event.slug, guestName: name, approvalRequired: status === 'pending' });
+          await sendRsvpConfirmation({
+            to: guestEmail,
+            eventName: event.eventName,
+            origin,
+            slug: event.slug,
+            guestName: name || u?.name,
+            approvalRequired: status === 'pending',
+            profileComplete: !!u?.username,
+            eventWhen,
+            eventWhere,
+          });
         } catch (e) { console.error('rsvp confirmation email:', e); }
       }
       // Hosts: alert (skip the actor when a host RSVPs their own event).
@@ -207,7 +227,7 @@ export async function POST(request: NextRequest) {
         await Promise.allSettled(
           hostRows
             .filter((h) => h.email && h.userId !== userId)
-            .map((h) => sendHostRsvpAlert({ to: h.email!, eventName: event.eventName, origin, slug: event.slug, guestName: name, pending: status === 'pending' })),
+            .map((h) => sendHostRsvpAlert({ to: h.email!, eventName: event.eventName, origin, slug: event.slug, guestName: name, pending: status === 'pending', eventWhen, eventWhere })),
         );
       } catch (e) { console.error('host rsvp alert email:', e); }
     }
