@@ -59,6 +59,23 @@ function secondaryNudge() {
           </tr>`;
 }
 
+// A light explainer card placed after the CTA (e.g. what the passport is).
+function infoBlock(label, body) {
+  return `
+          <tr>
+            <td style="padding:22px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(136,136,136,0.25);border-radius:12px;">
+                <tr>
+                  <td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="padding-bottom:8px;">${hl(label)}</div>
+                    <div style="font-size:14px;line-height:1.5;color:#888888;">${body}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+}
+
 function fallbackLink(urlVar) {
   return `
           <tr>
@@ -70,7 +87,7 @@ function fallbackLink(urlVar) {
 }
 
 // c = { title, preheader, lede, intro, headline, note, whenWhere, primary:{label,url},
-//       secondary:bool, fallbackUrl }
+//       secondary:bool, info:{label,body}, fallbackUrl }
 function shell(c) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -113,7 +130,7 @@ function shell(c) {
             <td style="padding:10px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
               ${c.note}
             </td>
-          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
+          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
 
           <tr>
             <td style="padding:28px 32px 0 32px;">
@@ -188,14 +205,9 @@ const T = {
     headline: '{{{EVENT_NAME}}}', whenWhere: true,
     primary: { label: 'Manage event &rarr;', url: 'MANAGE_URL' }, fallbackUrl: 'MANAGE_URL',
   },
-  'complete-your-profile': {
-    title: 'Claim your Topia passport', preheader: 'Claim your TOPIA passport &rarr;',
-    lede: 'Welcome',
-    intro: 'Hey <strong style="color:inherit;">{{{USER_NAME}}}</strong> —',
-    headline: 'Claim your passport',
-    note: 'Just pick a username and add a profile photo to claim your TOPIA passport — your identity across the network. It takes a minute, and you can change it anytime.',
-    whenWhere: false, primary: { label: 'Claim your passport &rarr;', url: 'PROFILE_URL' }, fallbackUrl: 'PROFILE_URL',
-  },
+  // NOTE: complete-your-profile is intentionally NOT generated here — it's
+  // hand-authored in the email editor. Edit emails/complete-your-profile.html
+  // and the COMPLETE_PROFILE_HTML literal in lib/notify/emailTemplates.ts.
 };
 
 mkdirSync(new URL('../emails/', import.meta.url), { recursive: true });
