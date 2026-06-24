@@ -107,8 +107,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
           <img src={TEXTURE} alt="" width={1080} height={1920} style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, opacity: 0.55 }} />
           <div style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, display: 'flex', background: `radial-gradient(circle at 50% 42%, ${accent}26 0%, rgba(10,10,10,0) 55%)` }} />
 
-          <div style={{ display: 'flex', marginTop: 150 }}>
-            <svg width={72} height={72 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
+          <div style={{ display: 'flex', marginTop: 150, fontFamily: 'Zalando Expanded', fontWeight: 900, fontSize: 56, letterSpacing: 4 }}>
+            <span style={{ color: '#f5f0e8' }}>TOPIA</span>
+            <span style={{ color: accent }}>.</span>
           </div>
 
           {/* card centered, upright, with a soft cast shadow + accent glow */}
