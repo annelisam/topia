@@ -111,12 +111,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
             <svg width={72} height={72 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
           </div>
 
-          {/* tilted card (Satori is 2D-only — rotate+skew fakes the 3D lean) with a
-              matching tilted cast shadow behind it for depth */}
+          {/* card centered, upright, with a soft cast shadow + accent glow */}
           <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', display: 'flex' }}>
-              <div style={{ position: 'absolute', top: 48, left: -14, width: 720, height: 900, borderRadius: 33, transform: 'rotate(-4deg) skewY(-2.5deg)', background: 'rgba(0,0,0,0.5)', boxShadow: '0 70px 130px 30px rgba(0,0,0,0.6)' }} />
-              {Card(720, { transform: 'rotate(-4deg) skewY(-2.5deg)', boxShadow: `0 0 70px -8px ${accent}66` }, 'TOPIA.VISION')}
+              <div style={{ position: 'absolute', top: 40, left: 0, width: 720, height: 900, borderRadius: 33, background: 'rgba(0,0,0,0.5)', boxShadow: '0 70px 130px 30px rgba(0,0,0,0.6)' }} />
+              {Card(720, { boxShadow: `0 0 70px -8px ${accent}66` }, 'TOPIA.VISION')}
             </div>
           </div>
 
@@ -170,13 +169,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
     );
   }
 
-  // ── Default: 1080×1350 portrait card on textured bg ──
+  // ── Default: 1080×1350 portrait card, transparent background, glowing border ──
   return new ImageResponse(
     (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: '#0a0a0a', fontFamily: 'GT Zirkon' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={TEXTURE} alt="" width={1080} height={1350} style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, opacity: 0.5 }} />
-        {Card(984)}
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'GT Zirkon' }}>
+        {Card(984, { boxShadow: `0 0 90px -10px ${accent}66` })}
       </div>
     ),
     { width: 1080, height: 1350, fonts },
