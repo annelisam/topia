@@ -107,6 +107,9 @@
   --muted: rgba(26, 26, 26, 0.5);
   --accent-bg: #1a1a1a;
   --accent-fg: #f5f0e8;
+  /* Accent as foreground ink: lime is illegible on the light page bg, so use a
+     deep lime here. Keep --accent (#e4fe52) for fills paired with dark text. */
+  --accent-ink: #4f6b00;
   --gradient-hero: linear-gradient(to bottom, transparent 50%, #f5f0e8 100%);
 }
 
@@ -126,6 +129,8 @@
   --muted: rgba(232, 228, 220, 0.5);
   --accent-bg: #e8e4dc;
   --accent-fg: #111111;
+  /* On the dark page bg, lime reads fine as foreground. */
+  --accent-ink: #e4fe52;
   --gradient-hero: linear-gradient(to bottom, transparent 50%, #111111 100%);
 
   --color-warm-beige: #111111;
