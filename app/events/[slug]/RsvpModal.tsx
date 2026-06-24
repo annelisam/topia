@@ -94,6 +94,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const availability = useUsernameAvailability(username, privyId);
   const previewColor = avatarColor(username || contactName || privyId);
 
+  // What the profile already has — those fields are managed in profile settings,
+  // not the RSVP form, so we lock them here.
+  const [existingName, setExistingName] = useState(false);
+  const [existingUsername, setExistingUsername] = useState(false);
+  const [existingPhoto, setExistingPhoto] = useState(false);
+
   async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -138,6 +144,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         setContactEmail((prev) => prev || u.email || '');
         setUsername((prev) => prev || u.username || '');
         if (isRealPhoto(u.avatarUrl)) setAvatarUrl((prev) => prev || u.avatarUrl);
+        // Lock fields the profile already has — change them in profile settings.
+        if (u.name) setExistingName(true);
+        if (u.username) setExistingUsername(true);
+        if (isRealPhoto(u.avatarUrl)) setExistingPhoto(true);
         const { code, rest } = splitPhone(u.phone);
         if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
         if (u.roleTags) {
@@ -309,53 +319,81 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
             {/* Standard contact fields — name auto-filled, email + optional phone */}
             <div className="space-y-4 mb-5">
-              {/* Profile photo (optional) — tap to upload; otherwise a colored fallback */}
+              {/* Profile photo — framed with passport-style corner brackets. Locked
+                  when the profile already has one; otherwise tap to upload (the
+                  colored fallback shows until they do). */}
               <div className="flex flex-col items-center gap-2 pb-1">
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="relative w-20 h-20 rounded-full overflow-hidden border-2 cursor-pointer group"
-                  style={{ borderColor: 'var(--border-color)' }}
-                  aria-label="Upload profile photo"
-                >
-                  {avatarUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
-                      {avatarInitial(contactName || username)}
-                    </span>
-                  )}
-                  <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.45)' }}>
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add'}</span>
-                  </span>
-                </button>
+                <div className="relative">
+                  <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -top-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <span className="absolute -bottom-2 -right-2 w-3.5 h-3.5 z-20"><span className="absolute bottom-0 right-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute bottom-0 right-0 h-full w-px bg-[var(--foreground)]/25" /></span>
+                  <button
+                    type="button"
+                    onClick={() => { if (!existingPhoto) fileRef.current?.click(); }}
+                    disabled={existingPhoto || uploadingAvatar}
+                    title={existingPhoto ? 'Update your photo in your profile settings' : undefined}
+                    className={`relative w-20 h-20 rounded-full overflow-hidden border-2 group ${existingPhoto ? 'cursor-default' : 'cursor-pointer'}`}
+                    style={{ borderColor: 'var(--border-color)' }}
+                    aria-label={existingPhoto ? 'Profile photo' : 'Upload profile photo'}
+                  >
+                    {avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
+                        {avatarInitial(contactName || username)}
+                      </span>
+                    )}
+                    {!existingPhoto && (
+                      <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add photo'}</span>
+                      </span>
+                    )}
+                  </button>
+                </div>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-50" style={{ color: 'var(--foreground)' }}>Profile photo (optional)</span>
+                {existingPhoto ? (
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-40" style={{ color: 'var(--foreground)' }} title="Update your photo in your profile settings">Photo · manage in profile</span>
+                ) : avatarUrl ? (
+                  <button type="button" onClick={() => fileRef.current?.click()} className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-50 underline bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }}>Change photo</button>
+                ) : (
+                  <button type="button" onClick={() => fileRef.current?.click()} className="font-mono text-[10px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer" style={{ color: 'var(--accent-ink)' }}>Add a profile photo →</button>
+                )}
               </div>
 
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Name<span style={{ color: '#FF5C34' }}> *</span>
+                  {existingName && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
                 </label>
-                <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} style={fieldStyle} placeholder="Your name" />
+                <input
+                  type="text" value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  readOnly={existingName} disabled={existingName}
+                  title={existingName ? 'Update your name in your profile settings' : undefined}
+                  className={`${inputCls}${existingName ? ' cursor-not-allowed opacity-80' : ''}`}
+                  style={fieldStyle} placeholder="Your name"
+                />
               </div>
 
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Username<span style={{ color: '#FF5C34' }}> *</span>
+                  {existingUsername && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
                 </label>
-                <div className="flex items-center gap-2 border px-3 rounded-lg" style={fieldStyle}>
+                <div className={`flex items-center gap-2 border px-3 rounded-lg${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle} title={existingUsername ? 'Update your username in your profile settings' : undefined}>
                   <span className="opacity-40 font-mono text-[13px]">@</span>
                   <input
                     type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
                     value={username}
                     onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
-                    className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2"
+                    readOnly={existingUsername} disabled={existingUsername}
+                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2${existingUsername ? ' cursor-not-allowed' : ''}`}
                     style={{ color: 'var(--foreground)' }}
                     placeholder="yourhandle"
                   />
-                  {username && (
+                  {username && !existingUsername && (
                     <span
                       className="font-mono text-[10px] uppercase tracking-wider shrink-0"
                       style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
@@ -365,7 +403,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   )}
                 </div>
                 <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
-                  Claim your TOPIA handle — you can change it anytime.
+                  {existingUsername ? 'Update your username in your profile settings.' : 'Claim your TOPIA handle — you can change it anytime.'}
                 </p>
               </div>
               <div>
