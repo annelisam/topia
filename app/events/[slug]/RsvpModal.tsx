@@ -388,8 +388,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             {step < 3 && (
               <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
                 {step === 1
-                  ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free TOPIA profile.')
-                  : 'Your passport, your way — handle, photo, and what you create.'}
+                  ? (approvalRequired ? "Let's get you on the list — the host reviews requests before confirming." : "Let's get you on the list.")
+                  : 'Build your passport on TOPIA.'}
               </p>
             )}
 
