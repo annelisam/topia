@@ -299,6 +299,7 @@ function OnboardingWizard() {
           username={state.data.username}
           avatarUrl={state.data.avatarUrl}
           roleTags={state.data.roleTags}
+          path={state.data.path}
         />
       )}
     </div>

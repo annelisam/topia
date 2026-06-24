@@ -8,6 +8,7 @@ import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import ShareButton from '../../components/ShareButton';
+import TopiaCardModal from '../../components/profile/TopiaCardModal';
 import { SocialIcon } from '../../components/SocialIcons';
 import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
@@ -74,6 +75,7 @@ export default function PublicProfilePage() {
   const [attendedEvents, setAttendedEvents] = useState<HostedEvent[]>([]);
   const [stamps, setStamps] = useState<Stamp[]>([]);
   const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]['id']>('identity');
+  const [cardOpen, setCardOpen] = useState(false);
 
   useEffect(() => {
     if (!username || !ready) return;
@@ -431,11 +433,19 @@ export default function PublicProfilePage() {
                           )}
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5">
+                          <button
+                            onClick={() => setCardOpen(true)}
+                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                          >
+                            Card
+                          </button>
                           <ShareButton
                             kind="profile"
                             title={profile.name || username}
                             text={`${profile.name || username} on TOPIA`}
                             iconSize={11}
+                            storyImageUrl={`/api/profile/${username}/card`}
+                            storyFilename={`${username}-topia-card.png`}
                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           />
                           {isOwnProfile && (
@@ -530,6 +540,18 @@ export default function PublicProfilePage() {
           </div>
         </section>
       </PageShell>
+
+      {profile && (
+        <TopiaCardModal
+          open={cardOpen}
+          onClose={() => setCardOpen(false)}
+          name={profile.name || username}
+          username={username}
+          avatarUrl={profile.avatarUrl}
+          roleTags={roleTags}
+          path={path}
+        />
+      )}
     </div>
   );
 }
