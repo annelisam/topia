@@ -23,6 +23,7 @@ export interface UserProfile {
   email: string | null;
   role: string | null;
   roleTags: string | null;
+  path: string | null;
   toolSlugs: string | null;
   socialWebsite: string | null;
   socialTwitter: string | null;

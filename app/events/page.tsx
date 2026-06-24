@@ -630,7 +630,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
   return (
     <div className="bg-[var(--background)] border-b border-[var(--border-color)] p-4">
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent)]">◉ FEATURED</span>
+        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent-ink)]">◉ FEATURED</span>
         <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/30">next up</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -753,7 +753,7 @@ function FeaturedRowCompact({
     <div className="bg-[var(--background)] border-b border-[var(--border-color)] px-4 py-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent)]">◉ FEATURED</span>
+          <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent-ink)]">◉ FEATURED</span>
           <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/30">next up</span>
         </div>
         {!few && (

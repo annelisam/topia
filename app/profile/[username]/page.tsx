@@ -11,7 +11,7 @@ import ShareButton from '../../components/ShareButton';
 import { SocialIcon } from '../../components/SocialIcons';
 import { CheckIcon } from '../../components/ui/Icons';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
-import IdentityLayer from '../../components/profile/IdentityLayer';
+import IdentityLayer, { type Stamp } from '../../components/profile/IdentityLayer';
 import EventsLayer from '../../components/profile/EventsLayer';
 import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
@@ -72,6 +72,7 @@ export default function PublicProfilePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hostedEvents, setHostedEvents] = useState<HostedEvent[]>([]);
   const [attendedEvents, setAttendedEvents] = useState<HostedEvent[]>([]);
+  const [stamps, setStamps] = useState<Stamp[]>([]);
   const [activeSection, setActiveSection] = useState<typeof SECTIONS[number]['id']>('identity');
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function PublicProfilePage() {
         setFollowingCount(data.followingCount ?? 0);
         setIsFollowing(data.isFollowing ?? false);
         setIsOwnProfile(data.isOwnProfile ?? false);
+        setStamps(data.stamps ?? []);
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
@@ -186,34 +188,10 @@ export default function PublicProfilePage() {
     status: w.role === 'owner' ? 'LIVE' : w.role === 'world_builder' ? 'ACTIVE' : 'COLLAB',
   })), [sortedWorlds]);
 
-  // Visa stamps derived from worlds + events
-  const stamps = useMemo(() => {
-    const fromWorlds = sortedWorlds.slice(0, 4).map((w, i) => ({
-      type: (i % 3 === 0 ? 'ENTRY' : i % 3 === 1 ? 'EXIT' : 'TRANSIT') as 'ENTRY' | 'EXIT' | 'TRANSIT',
-      world: w.worldTitle.toUpperCase().slice(0, 14),
-      date: memberSince || '—',
-      color: STAMP_COLORS[i % STAMP_COLORS.length],
-      weight: 1 - i * 0.15,
-    }));
-    // Hosted + attended (RSVP'd) events both earn a stamp — dedupe by id so a
-    // host who also RSVP'd their own event isn't double-stamped.
-    const seen = new Set<string>();
-    const eventSources = [...hostedEvents, ...attendedEvents].filter((e) => {
-      if (seen.has(e.id)) return false;
-      seen.add(e.id);
-      return true;
-    });
-    const fromEvents = eventSources.slice(0, 6 - fromWorlds.length).map((e, i) => ({
-      type: 'ENTRY' as const,
-      world: e.eventName.toUpperCase().slice(0, 14),
-      date: e.date ? new Date(e.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '.') : (memberSince || '—'),
-      color: STAMP_COLORS[(fromWorlds.length + i) % STAMP_COLORS.length],
-      weight: 0.7 - i * 0.1,
-    }));
-    return [...fromWorlds, ...fromEvents].slice(0, 6);
-  }, [sortedWorlds, hostedEvents, attendedEvents, memberSince]);
+  // Visa stamps come from the profile API (computeProfileStamps) — earned
+  // milestones across events, worlds, and community.
 
-  // Events count = hosted + attended (RSVP'd), deduped — matches the passport stamps.
+  // Events count = hosted + attended (RSVP'd), deduped.
   const eventCount = useMemo(
     () => new Set([...hostedEvents, ...attendedEvents].map((e) => e.id)).size,
     [hostedEvents, attendedEvents],
@@ -242,12 +220,12 @@ export default function PublicProfilePage() {
 
   if (!loading && (notFound || fetchError)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-obsidian">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[var(--page-bg)]">
         <PageShell><div /></PageShell>
-        <p className="font-mono text-[15px] uppercase tracking-tight text-bone">
+        <p className="font-mono text-[15px] uppercase tracking-tight text-ink">
           {fetchError ? 'Could not load profile — please try again.' : 'Profile not found.'}
         </p>
-        <Link href="/" className="font-mono text-[15px] uppercase tracking-tight border-b hover:opacity-70 transition text-bone border-bone/20">
+        <Link href="/" className="font-mono text-[15px] uppercase tracking-tight border-b hover:opacity-70 transition text-ink border-ink/20">
           ← Back to TOPIA
         </Link>
       </div>
@@ -257,29 +235,29 @@ export default function PublicProfilePage() {
   function renderSection() {
     switch (activeSection) {
       case 'events':    return <EventsLayer config={config} hosted={hostedEvents} attended={attendedEvents} />;
-      case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} />;
+      case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} isOwnProfile={isOwnProfile} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} />;
       case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
-      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} />;
+      default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} editable={isOwnProfile} storageKey={username} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
     }
   }
 
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-[var(--page-bg)]">
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
       <PageShell>
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {profile && (
-              <div className="grid grid-cols-1 gap-[3px] border border-bone/[0.08] rounded-lg overflow-hidden">
+              <div className="grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
                 {/* ═══ ROW 1 — UNIFIED ID CARD ═══ */}
-                <div className="bg-obsidian relative overflow-hidden">
+                <div className="bg-[var(--page-bg)] relative overflow-hidden">
                   {/* Path-colored accent strip */}
                   <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
                     <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
-                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40 relative z-10`}>topia://identity</span>
-                    <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-30 relative z-10`}>TOPIA-ID-{profile.id.slice(0, 4).toUpperCase()}</span>
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-70 relative z-10`}>topia://identity</span>
+                    <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>TOPIA-ID-{profile.id.slice(0, 4).toUpperCase()}</span>
                   </div>
 
                   {/* Photo + Fields */}
@@ -301,105 +279,103 @@ export default function PublicProfilePage() {
                     <div className="flex items-center justify-center py-6 px-4 md:p-5 relative z-10 md:w-[28%] shrink-0">
                       <div className="flex flex-col items-center">
                         <div className="relative mb-2">
-                          <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-bone/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-bone/15" /></div>
-                          <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-bone/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-bone/15" /></div>
-                          <div className="absolute -bottom-2 -left-2 w-4 h-4 z-30"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-bone/15" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-bone/15" /></div>
-                          <div className="absolute -bottom-2 -right-2 w-4 h-4 z-30"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-bone/15" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-bone/15" /></div>
-                          <div className="w-28 h-28 md:w-36 md:h-36 rounded-full flex items-center justify-center border border-dashed border-bone/10">
-                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full relative overflow-hidden border-2 border-bone/20">
+                          <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/15" /></div>
+                          <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/15" /></div>
+                          <div className="absolute -bottom-2 -left-2 w-4 h-4 z-30"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/15" /></div>
+                          <div className="absolute -bottom-2 -right-2 w-4 h-4 z-30"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/15" /></div>
+                          <div className="w-28 h-28 md:w-36 md:h-36 rounded-full flex items-center justify-center border border-dashed border-ink/10">
+                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full relative overflow-hidden border-2 border-ink/20">
                               {profile.avatarUrl ? (
                                 <img src={profile.avatarUrl} alt={profile.name ?? username} className="w-full h-full object-cover relative z-10" />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-bone/5">
-                                  <span className="font-basement text-3xl text-bone/20">{(profile.name || username)[0]?.toUpperCase()}</span>
+                                <div className="w-full h-full flex items-center justify-center bg-ink/5">
+                                  <span className="font-basement text-3xl text-ink/20">{(profile.name || username)[0]?.toUpperCase()}</span>
                                 </div>
                               )}
                               <div className="absolute inset-0 pointer-events-none z-20" style={{ opacity: 0.12, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.4) 1px, rgba(0,0,0,0.4) 2px)', backgroundSize: '100% 2px' }} />
                             </div>
                           </div>
                         </div>
-                        <span className="font-mono text-[11px] text-bone/40 mt-1">@{username}</span>
+                        <span className="font-mono text-[11px] text-ink/40 mt-1">@{username}</span>
                         <span className={`font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1.5`}>{config.label}</span>
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/10 mt-2">P1</span>
+                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/10 mt-2">P1</span>
                       </div>
                     </div>
 
                     {/* Identity fields */}
                     <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
-                      <div className="py-1 border-b border-bone/[0.04]">
-                        <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">full name</span>
+                      <div className="py-1 border-b border-ink/[0.04]">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">full name</span>
                         <div className="flex items-baseline gap-2 mt-0.5">
-                          <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-bone">{profile.name || username}</h1>
+                          <h1 className="font-basement font-black text-[clamp(18px,2.2vw,28px)] leading-[0.9] uppercase text-ink">{profile.name || username}</h1>
                           {profile.pronouns && (
-                            <span className="font-mono text-[10px] lowercase tracking-wider text-bone/40">
+                            <span className="font-mono text-[10px] lowercase tracking-wider text-ink/40">
                               ({profile.pronouns})
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="py-1 border-b border-bone/[0.04] flex items-center justify-between">
+                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">handle</span>
-                          <span className="font-mono text-[13px] text-bone/60 mt-0.5 block">@{username}</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">handle</span>
+                          <span className="font-mono text-[13px] text-ink/60 mt-0.5 block">@{username}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">path</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">path</span>
                           <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{config.label}</span>
                         </div>
                       </div>
-                      <div className="py-1 border-b border-bone/[0.04] flex items-center justify-between">
+                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">issued</span>
-                          <span className="font-mono text-[11px] text-bone/40 mt-0.5 block">{memberSince || '—'}</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">issued</span>
+                          <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">{memberSince || '—'}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">status</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">status</span>
                           <div className="flex items-center gap-1.5 mt-0.5 justify-end">
                             <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
-                            <span className="font-mono text-[11px] text-bone/50">VALID</span>
+                            <span className="font-mono text-[11px] text-ink/50">VALID</span>
                           </div>
                         </div>
                       </div>
-                      <div className="py-1 border-b border-bone/[0.04] grid grid-cols-2 gap-x-6">
+                      <div className="py-1 border-b border-ink/[0.04] grid grid-cols-2 gap-x-6">
                         <div>
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">location</span>
-                          <span className="font-mono text-[11px] text-bone/40 mt-0.5 block">—</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">location</span>
+                          <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">—</span>
                         </div>
                         {profile.bio && (
                           <div>
-                            <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block">declaration</span>
-                            <span className="font-zirkon text-[11px] text-bone/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{profile.bio}&rdquo;</span>
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">declaration</span>
+                            <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{profile.bio}&rdquo;</span>
                           </div>
                         )}
                       </div>
                       <div className="py-1 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/25 block mb-1.5">links</span>
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">links</span>
                           {socialLinks.length > 0 ? (
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
                               {socialLinks.map((link) => {
                                 if (link.verified) {
-                                  // Verified: pill with icon + ✓ + @handle, in path color
+                                  // Verified: filled path-color pill with icon + @handle + ✓.
+                                  // Filled (not outline) so it stays legible on light AND dark —
+                                  // path-color text would vanish on the light bg.
                                   return (
                                     <a
                                       key={link.type}
                                       href={link.url!}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border transition-all hover:bg-bone/[0.04] no-underline"
-                                      style={{ borderColor: `${config.hex}40`, color: config.hex }}
+                                      className={`group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm no-underline ${config.bg} ${config.textOn} hover:opacity-90 transition-opacity`}
                                       title={`${link.label} · verified`}
                                     >
                                       <SocialIcon type={link.type} size={12} />
                                       {link.handle && (
-                                        <span
-                                          className="font-mono tracking-[1px]"
-                                          style={{ fontSize: 10, color: config.hex }}
-                                        >
+                                        <span className="font-mono tracking-[1px]" style={{ fontSize: 10 }}>
                                           @{link.handle}
                                         </span>
                                       )}
-                                      <span style={{ color: config.hex }} aria-label="verified">
+                                      <span aria-label="verified">
                                         <CheckIcon size={9} strokeWidth={1.8} />
                                       </span>
                                     </a>
@@ -412,7 +388,7 @@ export default function PublicProfilePage() {
                                     href={link.url!}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-bone/30 hover:text-bone/60 transition-colors"
+                                    className="text-ink/50 hover:text-ink/60 transition-colors"
                                     title={link.label}
                                   >
                                     <SocialIcon type={link.type} size={16} />
@@ -429,7 +405,7 @@ export default function PublicProfilePage() {
                                     href={cl.url.startsWith('http') ? cl.url : `https://${cl.url}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="font-mono text-[10px] uppercase tracking-[1px] text-bone/50 hover:text-bone hover:border-bone/40 border border-bone/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
+                                    className="font-mono text-[10px] uppercase tracking-[1px] text-ink/50 hover:text-ink hover:border-ink/40 border border-ink/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
                                     title={cl.label}
                                   >
                                     {cl.label}
@@ -444,14 +420,14 @@ export default function PublicProfilePage() {
                                   href={cl.url.startsWith('http') ? cl.url : `https://${cl.url}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="font-mono text-[10px] uppercase tracking-[1px] text-bone/50 hover:text-bone hover:border-bone/40 border border-bone/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
+                                  className="font-mono text-[10px] uppercase tracking-[1px] text-ink/50 hover:text-ink hover:border-ink/40 border border-ink/15 px-2 py-0.5 rounded-sm transition-colors no-underline"
                                 >
                                   {cl.label}
                                 </a>
                               ))}
                             </div>
                           ) : (
-                            <span className="font-mono text-[11px] text-bone/20">—</span>
+                            <span className="font-mono text-[11px] text-ink/20">—</span>
                           )}
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5">
@@ -460,10 +436,10 @@ export default function PublicProfilePage() {
                             title={profile.name || username}
                             text={`${profile.name || username} on TOPIA`}
                             iconSize={11}
-                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-bone/30 hover:text-bone/60 transition-colors border border-bone/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           />
                           {isOwnProfile && (
-                            <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-bone/30 hover:text-bone/60 transition-colors border border-bone/[0.08] rounded-sm px-2 py-0.5 no-underline">
+                            <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
                               Edit
                             </Link>
                           )}
@@ -484,7 +460,7 @@ export default function PublicProfilePage() {
                 </div>
 
                 {/* ═══ ROW 2 — STATS BAR ═══ */}
-                <div className="bg-obsidian border-t border-b border-bone/[0.04] px-4 py-3 flex items-center justify-between">
+                <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-0">
                     {[
                       { label: 'Worlds', value: String(stats.worlds) },
@@ -492,33 +468,33 @@ export default function PublicProfilePage() {
                       { label: 'Collabs', value: String(stats.collabs) },
                       { label: 'Followers', value: String(stats.followers) },
                     ].map((stat, i, arr) => (
-                      <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-bone/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/20">{stat.label}</span>
-                        <span className="font-mono text-[15px] md:text-[15px] text-bone font-bold leading-none mt-0.5">{stat.value}</span>
+                      <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
+                        <span className="font-mono text-[9px] font-semibold uppercase tracking-[2px] text-ink/20">{stat.label}</span>
+                        <span className="font-mono text-[15px] md:text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
                       </div>
                     ))}
                   </div>
                   <div className="hidden md:flex items-center gap-3">
                     <div className="w-32 h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${config.hex}30, ${config.hex}60, ${config.hex}30, transparent)` }} />
-                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/15">topia://stats</span>
+                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/15">topia://stats</span>
                   </div>
                 </div>
 
                 {/* ═══ ROW 3 — SECTION TAB NAV ═══ */}
-                <div className="bg-obsidian border-b border-bone/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                   {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
                     return (
                       <button
                         key={s.id}
                         onClick={() => setActiveSection(s.id)}
-                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-bone/30 hover:text-bone/50 bg-transparent'}`}
+                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/50 bg-transparent'}`}
                       >
                         {s.label}
                       </button>
                     );
                   })}
-                  <span className="font-mono text-[9px] text-bone/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
                 {/* ═══ ROW 4 — ACTIVE SECTION CONTENT ═══ */}
@@ -527,25 +503,25 @@ export default function PublicProfilePage() {
                     to min-height lets content flow naturally; the layers
                     that need internal scrolling already declare their own
                     overflow-y-auto. */}
-                <div className="bg-obsidian min-h-[260px] md:min-h-[420px]">
+                <div className={`bg-[var(--page-bg)] ${activeSection === 'identity' ? 'min-h-[250px] md:min-h-[290px]' : activeSection === 'worlds' ? 'min-h-[250px] md:min-h-[300px]' : 'min-h-[260px] md:min-h-[420px]'}`}>
                   {renderSection()}
                 </div>
 
                 {/* ═══ ROW 5 — MRZ STRIP ═══ */}
-                <div className="bg-obsidian px-4 py-3 flex items-center justify-between border-t border-bone/[0.04]">
+                <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04]">
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-end gap-0 h-4">
                       {bars.map((b, i) => (
-                        <div key={i} className={b.type === 'bar' ? 'bg-bone/10' : ''} style={{ width: `${b.w}px`, height: b.type === 'bar' ? `${12 + (b.w * 2)}px` : '0px', marginRight: b.type === 'gap' ? `${b.w}px` : '0px' }} />
+                        <div key={i} className={b.type === 'bar' ? 'bg-ink/10' : ''} style={{ width: `${b.w}px`, height: b.type === 'bar' ? `${12 + (b.w * 2)}px` : '0px', marginRight: b.type === 'gap' ? `${b.w}px` : '0px' }} />
                       ))}
                     </div>
-                    <span className="font-mono text-[9px] tracking-[2px] text-bone/15 uppercase truncate block">{mrzLine1}</span>
-                    <span className="font-mono text-[9px] tracking-[2px] text-bone/10 uppercase truncate block">{mrzLine2}</span>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block">{mrzLine1}</span>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block">{mrzLine2}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-4">
-                    <span className="font-mono text-[9px] text-bone/10 hidden md:block">{profile.id.slice(0, 6)}···{profile.id.slice(-4)}</span>
+                    <span className="font-mono text-[9px] text-ink/10 hidden md:block">{profile.id.slice(0, 6)}···{profile.id.slice(-4)}</span>
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <span className="font-mono text-[8px] text-bone/10 uppercase">P1</span>
+                    <span className="font-mono text-[8px] text-ink/10 uppercase">P1</span>
                   </div>
                 </div>
 

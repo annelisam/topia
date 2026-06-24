@@ -37,7 +37,7 @@ export default function StepShell({
   const bar = '█'.repeat(filled) + '░'.repeat(empty);
 
   return (
-    <div className={`relative min-h-screen bg-obsidian text-bone overflow-hidden ${className}`}>
+    <div className={`relative min-h-screen bg-[var(--page-bg)] text-ink overflow-hidden ${className}`}>
       {/* Always-on backdrop textures */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none z-0"
@@ -66,18 +66,18 @@ export default function StepShell({
           {onBack ? (
             <button
               onClick={onBack}
-              className="font-mono text-[11px] uppercase tracking-[2px] text-bone/30 hover:text-bone/70 transition-colors bg-transparent border-none cursor-pointer"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 hover:text-ink/70 transition-colors bg-transparent border-none cursor-pointer"
             >
               ← back
             </button>
           ) : (
-            <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/15">topia://onboarding</span>
+            <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/15">topia://onboarding</span>
           )}
         </div>
         {!hideProgress && (
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] tracking-[2px] text-bone/30 hidden md:inline" style={{ color: accentHex }}>{bar}</span>
-            <span className="font-mono text-[11px] uppercase tracking-[2px] text-bone/40">
+            <span className="font-mono text-[10px] tracking-[2px] text-ink/30 hidden md:inline" style={{ color: accentHex }}>{bar}</span>
+            <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">
               {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
             </span>
           </div>
@@ -89,7 +89,7 @@ export default function StepShell({
         <div className="w-full max-w-2xl">
           {kicker && (
             <div
-              className="font-mono text-[10px] md:text-[12px] uppercase tracking-[3px] text-bone/30 mb-3"
+              className="font-mono text-[10px] md:text-[12px] uppercase tracking-[3px] text-ink/30 mb-3"
               style={animate ? { opacity: 0, animation: 'fadeUp 0.6s ease forwards' } : undefined}
             >
               {kicker}
@@ -97,7 +97,7 @@ export default function StepShell({
           )}
           {heading && (
             <h1
-              className="font-basement font-black text-[clamp(28px,5vw,56px)] uppercase leading-[0.95] text-bone mb-8"
+              className="font-basement font-black text-[clamp(28px,5vw,56px)] uppercase leading-[0.95] text-ink mb-8"
               style={animate ? { opacity: 0, animation: 'fadeUp 0.7s ease 0.1s forwards' } : undefined}
             >
               <GlitchType text={heading} speed={28} />
@@ -110,7 +110,7 @@ export default function StepShell({
           </div>
           {hint && (
             <div
-              className="mt-10 font-mono text-[11px] uppercase tracking-[2px] text-bone/25"
+              className="mt-10 font-mono text-[11px] uppercase tracking-[2px] text-ink/25"
               style={animate ? { opacity: 0, animation: 'fadeUp 0.7s ease 0.7s forwards' } : undefined}
             >
               {hint}

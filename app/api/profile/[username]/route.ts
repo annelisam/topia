@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, tools, worldMembers, worlds, follows } from '@/lib/db/schema';
 import { eq, and, inArray, count } from 'drizzle-orm';
+import { computeProfileStamps } from '@/lib/profile/stamps';
 
 export async function GET(
   request: NextRequest,
@@ -70,7 +71,8 @@ export async function GET(
       })
       .from(worldMembers)
       .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
-      .where(eq(worldMembers.userId, user.id));
+      // Unpublished worlds never surface on a public profile.
+      .where(and(eq(worldMembers.userId, user.id), eq(worlds.published, true)));
 
     const followerCountPromise = db
       .select({ value: count() })
@@ -102,10 +104,23 @@ export async function GET(
       viewerFollowPromise,
     ]);
 
+    // Passport stamps — earned milestones across events, worlds, community.
+    const stamps = await computeProfileStamps({
+      userId: user.id,
+      createdAt: user.createdAt,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      roleTags: user.roleTags,
+      path: user.path,
+      ownerName: user.username ? `@${user.username}` : (user.name || 'They'),
+      worldMemberships,
+    });
+
     return NextResponse.json({
       user,
       tools: resolvedTools,
       worldMemberships,
+      stamps,
       followerCount: followerResult?.value ?? 0,
       followingCount: followingResult?.value ?? 0,
       isFollowing: viewerStatus.isFollowing,

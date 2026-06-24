@@ -62,7 +62,7 @@ export default function WorldDashboardLayout({
 
   /* Fetch world, tools, user profile */
   useEffect(() => {
-    const worldP = fetch(`/api/worlds?slug=${slug}`)
+    const worldP = fetch(`/api/worlds?slug=${slug}${ready && authenticated && user?.id ? `&manage=1&privyId=${encodeURIComponent(user.id)}` : ''}`)
       .then(r => r.json())
       .then(data => {
         if (data.worlds?.length > 0) {

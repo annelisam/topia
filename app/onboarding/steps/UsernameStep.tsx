@@ -28,11 +28,11 @@ export default function UsernameStep({ step, total, config, privyId, initialValu
   }, []);
 
   const statusLabel: Record<typeof availability, { text: ReactNode; color: string }> = {
-    idle:      { text: '',                                                                                                       color: 'text-bone/30' },
-    checking:  { text: 'checking…',                                                                                              color: 'text-bone/40' },
+    idle:      { text: '',                                                                                                       color: 'text-ink/30' },
+    checking:  { text: 'checking…',                                                                                              color: 'text-ink/40' },
     available: { text: (<span className="inline-flex items-center gap-1.5"><CheckIcon size={10} /> available</span>),            color: 'text-green' },
     taken:     { text: '✗ taken',                                                                                                color: 'text-pink' },
-    invalid:   { text: '3–30 chars · a–z 0–9 _',                                                                                 color: 'text-bone/40' },
+    invalid:   { text: '3–30 chars · a–z 0–9 _',                                                                                 color: 'text-ink/40' },
   };
 
   function submit() {
@@ -54,8 +54,8 @@ export default function UsernameStep({ step, total, config, privyId, initialValu
       hint="press enter ↵ to continue"
       onBack={onBack}
     >
-      <div className="flex items-baseline gap-1 border-b-2 border-bone/20 focus-within:border-bone/60 transition-colors">
-        <span className="font-basement font-black text-[clamp(28px,5vw,44px)] text-bone/30">@</span>
+      <div className="flex items-baseline gap-1 border-b-2 border-ink/20 focus-within:border-ink/60 transition-colors">
+        <span className="font-basement font-black text-[clamp(28px,5vw,44px)] text-ink/30">@</span>
         <input
           ref={inputRef}
           type="text"
@@ -63,7 +63,7 @@ export default function UsernameStep({ step, total, config, privyId, initialValu
           onChange={(e) => { setValue(sanitizeUsername(e.target.value)); if (error) setError(''); }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           placeholder="yourname"
-          className="flex-1 bg-transparent font-basement font-black text-[clamp(28px,5vw,44px)] lowercase text-bone placeholder:text-bone/15 px-1 py-3 outline-none border-none"
+          className="flex-1 bg-transparent font-basement font-black text-[clamp(28px,5vw,44px)] lowercase text-ink placeholder:text-ink/15 px-1 py-3 outline-none border-none"
           autoComplete="off"
           spellCheck={false}
         />
@@ -77,7 +77,7 @@ export default function UsernameStep({ step, total, config, privyId, initialValu
       <div className="mt-6">
         <button
           onClick={submit}
-          className="font-mono text-[12px] uppercase tracking-[2px] text-bone/70 hover:text-bone transition-colors bg-transparent border border-bone/30 hover:border-bone/70 px-4 py-2 cursor-pointer"
+          className="font-mono text-[12px] uppercase tracking-[2px] text-ink/70 hover:text-ink transition-colors bg-transparent border border-ink/30 hover:border-ink/70 px-4 py-2 cursor-pointer"
         >
           continue →
         </button>

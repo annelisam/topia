@@ -63,24 +63,24 @@ export default function PathStep({ step, total, config, initialValue, onBack, on
               className={`group text-left p-5 border transition-all cursor-pointer bg-transparent ${
                 isSelected
                   ? `${cfg.bg} ${cfg.textOn} border-transparent`
-                  : 'border-bone/15 text-bone hover:border-bone/40 hover:bg-bone/[0.03]'
+                  : 'border-ink/15 text-ink hover:border-ink/40 hover:bg-ink/[0.03]'
               } ${isAnimating ? 'scale-[1.02]' : ''}`}
               style={{
                 transitionDuration: '300ms',
               }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className={`font-basement font-black text-[28px] leading-none ${isSelected ? cfg.textOn : 'text-bone/40'}`}>
+                <span className={`font-basement font-black text-[28px] leading-none ${isSelected ? cfg.textOn : 'text-ink/40'}`}>
                   {opt.icon}
                 </span>
-                <span className={`font-mono text-[10px] uppercase tracking-[2px] ${isSelected ? `${cfg.textOn} opacity-60` : 'text-bone/25'}`}>
+                <span className={`font-mono text-[10px] uppercase tracking-[2px] ${isSelected ? `${cfg.textOn} opacity-60` : 'text-ink/25'}`}>
                   {cfg.label}
                 </span>
               </div>
-              <div className={`font-basement font-black text-[clamp(18px,1.8vw,22px)] uppercase leading-[0.95] mb-2 ${isSelected ? cfg.textOn : 'text-bone'}`}>
+              <div className={`font-basement font-black text-[clamp(18px,1.8vw,22px)] uppercase leading-[0.95] mb-2 ${isSelected ? cfg.textOn : 'text-ink'}`}>
                 {opt.tagline}
               </div>
-              <p className={`font-mono text-[11px] leading-relaxed ${isSelected ? `${cfg.textOn} opacity-75` : 'text-bone/40'}`}>
+              <p className={`font-mono text-[11px] leading-relaxed ${isSelected ? `${cfg.textOn} opacity-75` : 'text-ink/40'}`}>
                 {opt.blurb}
               </p>
             </button>

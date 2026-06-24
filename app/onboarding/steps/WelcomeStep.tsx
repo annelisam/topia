@@ -68,7 +68,7 @@ export default function WelcomeStep({ onAdvance, name }: Props) {
               </div>
               <button
                 onClick={onAdvance}
-                className="font-basement font-black text-[clamp(20px,3vw,32px)] uppercase text-obsidian border-2 border-obsidian px-5 py-2.5 hover:bg-obsidian hover:text-bone transition-colors cursor-pointer bg-transparent shrink-0"
+                className="font-basement font-black text-[clamp(20px,3vw,32px)] uppercase text-obsidian border-2 border-obsidian px-5 py-2.5 hover:bg-[var(--page-bg)] hover:text-ink transition-colors cursor-pointer bg-transparent shrink-0"
               >
                 begin →
               </button>

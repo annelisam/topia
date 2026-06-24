@@ -4,6 +4,7 @@ import { eq, and, count } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
 import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert } from '@/lib/notify/email';
+import { roleLabelToSlug } from '@/lib/profile/roleTags';
 
 type AnswerMap = Record<string, string | string[] | boolean>;
 
@@ -148,6 +149,26 @@ export async function POST(request: NextRequest) {
       .insert(eventRsvps)
       .values({ eventId, userId, status, responses: responses.length ? responses : null })
       .returning();
+
+    // Carry the "What do you do?" (roles) answer back to the user's profile, so
+    // the registration question and the profile stay in sync. Merge (union) —
+    // never shrink the profile's existing craft tags.
+    try {
+      const incoming: string[] = [];
+      for (const q of questions) {
+        if (q.type !== 'roles') continue;
+        const ans = a[q.id];
+        if (Array.isArray(ans)) incoming.push(...ans.map((l) => roleLabelToSlug(String(l))));
+      }
+      if (incoming.length) {
+        const [prof] = await db.select({ roleTags: users.roleTags }).from(users).where(eq(users.id, userId));
+        const existing = (prof?.roleTags ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+        const merged = [...new Set([...existing, ...incoming])];
+        if (merged.length && merged.join(',') !== existing.join(',')) {
+          await db.update(users).set({ roleTags: merged.join(','), updatedAt: new Date() }).where(eq(users.id, userId));
+        }
+      }
+    } catch (e) { console.error('rsvp roles → profile sync:', e); }
 
     // If this registration came from an invite, mark it accepted (by token, or
     // by the user's verified email/phone).

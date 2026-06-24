@@ -3,29 +3,7 @@
 import { useEffect, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
-
-const ROLE_TAGS = [
-  { slug: 'music', label: 'Music' },
-  { slug: 'dj', label: 'DJ' },
-  { slug: 'visual-artist', label: 'Visual Artist' },
-  { slug: 'filmmaker', label: 'Filmmaker' },
-  { slug: 'photographer', label: 'Photographer' },
-  { slug: 'writer', label: 'Writer' },
-  { slug: 'poet', label: 'Poet' },
-  { slug: 'dancer', label: 'Dancer' },
-  { slug: 'performer', label: 'Performer' },
-  { slug: 'producer', label: 'Producer' },
-  { slug: 'designer', label: 'Designer' },
-  { slug: 'illustrator', label: 'Illustrator' },
-  { slug: 'game-designer', label: 'Game Designer' },
-  { slug: 'architect', label: 'Architect' },
-  { slug: 'technologist', label: 'Technologist' },
-  { slug: 'curator', label: 'Curator' },
-  { slug: 'educator', label: 'Educator' },
-  { slug: 'community-builder', label: 'Community Builder' },
-  { slug: 'entrepreneur', label: 'Entrepreneur' },
-  { slug: 'researcher', label: 'Researcher' },
-];
+import { ROLE_TAGS } from '../../../lib/profile/roleTags';
 
 interface Props {
   step: number;
@@ -79,7 +57,7 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
       hint={`${selected.length} selected · press enter ↵`}
       onBack={onBack}
     >
-      <p className="font-mono text-[11px] text-bone/40 mb-5 max-w-md">pick everything that fits — be generous. you can fine-tune anytime.</p>
+      <p className="font-mono text-[11px] text-ink/40 mb-5 max-w-md">pick everything that fits — be generous. you can fine-tune anytime.</p>
       <div className="flex flex-wrap gap-2">
         {ROLE_TAGS.map(({ slug, label }) => {
           const on = selected.includes(slug);
@@ -88,7 +66,7 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
               key={slug}
               onClick={() => toggle(slug)}
               className={`font-mono text-[12px] uppercase tracking-[1px] px-3 py-1.5 transition-all cursor-pointer border ${
-                on ? `${accentTextOn} border-transparent` : 'text-bone/60 border-bone/15 hover:border-bone/40 bg-transparent'
+                on ? `${accentTextOn} border-transparent` : 'text-ink/60 border-ink/15 hover:border-ink/40 bg-transparent'
               }`}
               style={on ? { backgroundColor: accent } : undefined}
             >
@@ -103,7 +81,7 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
       <div className="mt-6">
         <button
           onClick={submit}
-          className="font-mono text-[12px] uppercase tracking-[2px] text-bone/70 hover:text-bone transition-colors bg-transparent border border-bone/30 hover:border-bone/70 px-4 py-2 cursor-pointer"
+          className="font-mono text-[12px] uppercase tracking-[2px] text-ink/70 hover:text-ink transition-colors bg-transparent border border-ink/30 hover:border-ink/70 px-4 py-2 cursor-pointer"
         >
           continue →
         </button>

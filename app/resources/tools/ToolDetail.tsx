@@ -90,7 +90,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
   }
 
   return (
-    <div className={`bg-obsidian text-bone ${fullPage ? '' : 'rounded-lg border border-bone/[0.08] overflow-hidden'}`}>
+    <div className={`bg-[var(--page-bg)] text-ink ${fullPage ? '' : 'rounded-lg border border-ink/[0.08] overflow-hidden'}`}>
       {/* Top accent strip */}
       <div className="bg-lime px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/60">topia://tools</span>
@@ -118,20 +118,20 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
       </div>
 
       {/* Header: favicon + name + categories + save */}
-      <div className="px-5 md:px-7 py-5 md:py-6 border-b border-bone/[0.06] flex items-start gap-4 md:gap-5">
-        <div className="shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-md border border-bone/15 overflow-hidden flex items-center justify-center bg-bone/[0.04]">
+      <div className="px-5 md:px-7 py-5 md:py-6 border-b border-ink/[0.06] flex items-start gap-4 md:gap-5">
+        <div className="shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-md border border-ink/15 overflow-hidden flex items-center justify-center bg-ink/[0.04]">
           {favicon ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={favicon} alt="" className="w-full h-full object-contain" />
           ) : (
-            <span className="font-basement text-2xl text-bone/30">{tool.name[0]?.toUpperCase()}</span>
+            <span className="font-basement text-2xl text-ink/30">{tool.name[0]?.toUpperCase()}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-basement font-black text-[clamp(22px,3vw,32px)] uppercase leading-[0.95] text-bone">{tool.name}</h1>
+          <h1 className="font-basement font-black text-[clamp(22px,3vw,32px)] uppercase leading-[0.95] text-ink">{tool.name}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {tool.pricing && (
-              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-bone/15 text-bone/60 rounded-sm">
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-ink/15 text-ink/60 rounded-sm">
                 {tool.pricing}
               </span>
             )}
@@ -153,8 +153,8 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                 disabled={usePending}
                 className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
                   using
-                    ? 'bg-bone text-obsidian border-bone'
-                    : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
+                    ? 'bg-ink text-[var(--page-bg)] border-ink'
+                    : 'bg-transparent border-ink/30 text-ink/70 hover:border-ink/70 hover:text-ink'
                 }`}
                 title={using ? "I use this — click to remove from my profile" : 'Add to my toolkit (shows on my profile)'}
               >
@@ -166,7 +166,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                 className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
                   saved
                     ? 'bg-lime border-lime text-obsidian'
-                    : 'bg-transparent border-bone/30 text-bone/70 hover:border-bone/70 hover:text-bone'
+                    : 'bg-transparent border-ink/30 text-ink/70 hover:border-ink/70 hover:text-ink'
                 }`}
                 title={saved ? 'Saved — click to remove' : 'Save to your dashboard'}
               >
@@ -181,11 +181,11 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
       <div className={`px-5 md:px-7 py-5 md:py-6 grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6 ${fullPage ? '' : 'max-h-[60vh] overflow-y-auto'}`}>
         {/* Left: description + visit */}
         <div className="md:col-span-2 min-w-0">
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">about</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-2">about</span>
           {tool.description ? (
-            <p className="font-zirkon text-[14px] text-bone/80 leading-relaxed">{tool.description}</p>
+            <p className="font-zirkon text-[14px] text-ink/80 leading-relaxed">{tool.description}</p>
           ) : (
-            <p className="font-mono text-[11px] uppercase tracking-wider text-bone/25">no description yet</p>
+            <p className="font-mono text-[11px] uppercase tracking-wider text-ink/25">no description yet</p>
           )}
 
           {tool.url && (
@@ -204,24 +204,24 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
 
         {/* Right: stats */}
         <div className="min-w-0">
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-2">usage</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-2">usage</span>
           <div className="grid grid-cols-2 gap-3">
-            <div className="border border-bone/10 rounded-sm p-3">
-              <div className="font-mono text-[22px] text-bone leading-none font-bold">{users.length}</div>
-              <div className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mt-1">creators</div>
+            <div className="border border-ink/10 rounded-sm p-3">
+              <div className="font-mono text-[22px] text-ink leading-none font-bold">{users.length}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mt-1">creators</div>
             </div>
-            <div className="border border-bone/10 rounded-sm p-3">
-              <div className="font-mono text-[22px] text-bone leading-none font-bold">{worlds.length}</div>
-              <div className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 mt-1">worlds</div>
+            <div className="border border-ink/10 rounded-sm p-3">
+              <div className="font-mono text-[22px] text-ink leading-none font-bold">{worlds.length}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mt-1">worlds</div>
             </div>
           </div>
         </div>
 
         {/* Users */}
         <div className="md:col-span-3">
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-3">creators using {tool.name}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-3">creators using {tool.name}</span>
           {users.length === 0 ? (
-            <p className="font-mono text-[11px] uppercase tracking-wider text-bone/25">no one yet — be the first</p>
+            <p className="font-mono text-[11px] uppercase tracking-wider text-ink/25">no one yet — be the first</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {users.slice(0, 24).map((u) => (
@@ -229,22 +229,22 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                   <Link
                     key={u.id}
                     href={`/profile/${u.username}`}
-                    className="flex items-center gap-2 border border-bone/10 hover:border-bone/40 px-2.5 py-1.5 rounded-sm transition no-underline"
+                    className="flex items-center gap-2 border border-ink/10 hover:border-ink/40 px-2.5 py-1.5 rounded-sm transition no-underline"
                   >
-                    <span className="w-6 h-6 rounded-full overflow-hidden bg-bone/5 shrink-0 flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-full overflow-hidden bg-ink/5 shrink-0 flex items-center justify-center">
                       {u.avatarUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="font-basement text-[10px] text-bone/50">{(u.name || u.username || '?')[0]?.toUpperCase()}</span>
+                        <span className="font-basement text-[10px] text-ink/50">{(u.name || u.username || '?')[0]?.toUpperCase()}</span>
                       )}
                     </span>
-                    <span className="font-mono text-[11px] text-bone/70">@{u.username}</span>
+                    <span className="font-mono text-[11px] text-ink/70">@{u.username}</span>
                   </Link>
                 ) : null
               ))}
               {users.length > 24 && (
-                <span className="font-mono text-[11px] uppercase tracking-wider text-bone/30 self-center">+{users.length - 24} more</span>
+                <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30 self-center">+{users.length - 24} more</span>
               )}
             </div>
           )}
@@ -252,26 +252,26 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
 
         {/* Worlds */}
         <div className="md:col-span-3">
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-3">worlds using {tool.name}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-3">worlds using {tool.name}</span>
           {worlds.length === 0 ? (
-            <p className="font-mono text-[11px] uppercase tracking-wider text-bone/25">no worlds use this tool yet</p>
+            <p className="font-mono text-[11px] uppercase tracking-wider text-ink/25">no worlds use this tool yet</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {worlds.slice(0, 9).map((w) => (
                 <Link
                   key={w.id}
                   href={`/worlds/${w.slug}`}
-                  className="flex items-center gap-3 border border-bone/10 hover:border-bone/40 px-3 py-2 rounded-sm transition no-underline"
+                  className="flex items-center gap-3 border border-ink/10 hover:border-ink/40 px-3 py-2 rounded-sm transition no-underline"
                 >
                   {w.imageUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={w.imageUrl} alt="" className="w-10 h-10 rounded-sm object-cover shrink-0" />
                   ) : (
-                    <span className="w-10 h-10 rounded-sm bg-bone/[0.04] shrink-0" />
+                    <span className="w-10 h-10 rounded-sm bg-ink/[0.04] shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{w.title}</div>
-                    {w.category && <div className="font-mono text-[10px] text-bone/30 truncate">{w.category}</div>}
+                    <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{w.title}</div>
+                    {w.category && <div className="font-mono text-[10px] text-ink/30 truncate">{w.category}</div>}
                   </div>
                 </Link>
               ))}
@@ -293,7 +293,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
         {/* Related tools (co-occurrence) */}
         {related.length > 0 && (
           <div className="md:col-span-3">
-            <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30 block mb-3">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-3">
               creators using {tool.name} also use
             </span>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -303,19 +303,19 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                   <Link
                     key={r.slug}
                     href={`/resources/tools/${r.slug}`}
-                    className="flex items-center gap-3 border border-bone/10 hover:border-lime/40 px-3 py-2 rounded-sm transition no-underline"
+                    className="flex items-center gap-3 border border-ink/10 hover:border-lime/40 px-3 py-2 rounded-sm transition no-underline"
                   >
-                    <span className="w-8 h-8 shrink-0 rounded-sm border border-bone/10 bg-bone/[0.04] overflow-hidden flex items-center justify-center">
+                    <span className="w-8 h-8 shrink-0 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center">
                       {rFavicon ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={rFavicon} alt="" className="w-full h-full object-contain" />
                       ) : (
-                        <span className="font-basement text-sm text-bone/30">{r.name[0]?.toUpperCase()}</span>
+                        <span className="font-basement text-sm text-ink/30">{r.name[0]?.toUpperCase()}</span>
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{r.name}</div>
-                      <div className="font-mono text-[10px] text-bone/30 truncate">{r.score} shared creator{r.score !== 1 ? 's' : ''}</div>
+                      <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{r.name}</div>
+                      <div className="font-mono text-[10px] text-ink/30 truncate">{r.score} shared creator{r.score !== 1 ? 's' : ''}</div>
                     </div>
                   </Link>
                 );

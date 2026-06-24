@@ -45,28 +45,28 @@ export default function PendingInvitationsWidget() {
   }
 
   return (
-    <div className="border border-pink/30 rounded-lg overflow-hidden mb-6 bg-obsidian">
+    <div className="border border-pink/30 rounded-lg overflow-hidden mb-6 bg-[var(--page-bg)]">
       <div className="bg-pink/10 border-b border-pink/30 px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-pink/90 flex items-center gap-2">
           ✉ pending invitations
           <span className="bg-pink text-obsidian font-bold px-1.5 py-0.5 rounded-sm text-[10px]">{total}</span>
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/30">act soon</span>
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">act soon</span>
       </div>
       <div className="p-3 space-y-2">
         {worldInvites.map((inv) => (
-          <div key={inv.id} className="flex items-center gap-3 border border-bone/10 rounded-sm p-3">
+          <div key={inv.id} className="flex items-center gap-3 border border-ink/10 rounded-sm p-3">
             {inv.worldImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={inv.worldImageUrl} alt="" className="w-9 h-9 rounded-sm object-cover shrink-0" />
             ) : (
-              <div className="w-9 h-9 rounded-sm bg-bone/10 flex items-center justify-center shrink-0">
-                <span className="font-basement text-sm text-bone/40">{inv.worldTitle[0]?.toUpperCase()}</span>
+              <div className="w-9 h-9 rounded-sm bg-ink/10 flex items-center justify-center shrink-0">
+                <span className="font-basement text-sm text-ink/40">{inv.worldTitle[0]?.toUpperCase()}</span>
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{inv.worldTitle}</div>
-              <div className="font-mono text-[10px] text-bone/40 truncate">
+              <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{inv.worldTitle}</div>
+              <div className="font-mono text-[10px] text-ink/40 truncate">
                 {inv.inviterName || `@${inv.inviterUsername || 'someone'}`} · {inv.role === 'world_builder' ? 'Builder' : 'Collab'}
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function PendingInvitationsWidget() {
               <button
                 onClick={() => respondWorld(inv.id, 'decline')}
                 disabled={busy === inv.id}
-                className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border border-bone/20 px-2.5 py-1.5 rounded-sm cursor-pointer transition disabled:opacity-50"
+                className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border border-ink/20 px-2.5 py-1.5 rounded-sm cursor-pointer transition disabled:opacity-50"
               >
                 Decline
               </button>
@@ -89,18 +89,18 @@ export default function PendingInvitationsWidget() {
           </div>
         ))}
         {eventInvites.map((inv) => (
-          <div key={inv.id} className="flex items-center gap-3 border border-bone/10 rounded-sm p-3">
+          <div key={inv.id} className="flex items-center gap-3 border border-ink/10 rounded-sm p-3">
             {inv.eventImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={inv.eventImageUrl} alt="" className="w-9 h-9 rounded-sm object-cover shrink-0" />
             ) : (
-              <div className="w-9 h-9 rounded-sm bg-bone/10 flex items-center justify-center shrink-0">
-                <span className="font-basement text-sm text-bone/40">{inv.eventName[0]?.toUpperCase()}</span>
+              <div className="w-9 h-9 rounded-sm bg-ink/10 flex items-center justify-center shrink-0">
+                <span className="font-basement text-sm text-ink/40">{inv.eventName[0]?.toUpperCase()}</span>
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="font-mono text-[12px] uppercase font-bold text-bone truncate">{inv.eventName}</div>
-              <div className="font-mono text-[10px] text-bone/40 truncate">
+              <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{inv.eventName}</div>
+              <div className="font-mono text-[10px] text-ink/40 truncate">
                 Co-host invite from {inv.inviterName || `@${inv.inviterUsername || 'someone'}`}
                 {inv.eventDate ? ` · ${inv.eventDate}` : ''}
               </div>
@@ -108,14 +108,14 @@ export default function PendingInvitationsWidget() {
             <div className="flex items-center gap-1 shrink-0">
               <Link
                 href={`/events/${inv.eventSlug}`}
-                className="font-mono text-[10px] uppercase tracking-[2px] text-bone/60 hover:text-bone border border-bone/20 px-2.5 py-1.5 rounded-sm transition no-underline"
+                className="font-mono text-[10px] uppercase tracking-[2px] text-ink/60 hover:text-ink border border-ink/20 px-2.5 py-1.5 rounded-sm transition no-underline"
               >
                 View
               </Link>
               <button
                 onClick={() => dismissEvent(inv.id)}
                 disabled={busy === inv.id}
-                className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40 hover:text-bone bg-transparent border border-bone/20 px-2.5 py-1.5 rounded-sm cursor-pointer transition disabled:opacity-50"
+                className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 hover:text-ink bg-transparent border border-ink/20 px-2.5 py-1.5 rounded-sm cursor-pointer transition disabled:opacity-50"
               >
                 Dismiss
               </button>

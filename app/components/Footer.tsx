@@ -61,21 +61,16 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Compact bottom line — copyright, legal, tagline */}
-        <div className="mt-5 pt-4 border-t border-bone/[0.06] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-            <span className="font-mono text-[11px] uppercase tracking-wider opacity-30">
-              &copy; {new Date().getFullYear()} TOPIA VISION HOLDINGS LLC
-            </span>
-            <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-wider">
-              <Link href="/legal/terms" className="text-bone/40 hover:text-lime transition-colors no-underline">Terms</Link>
-              <Link href="/legal/privacy" className="text-bone/40 hover:text-lime transition-colors no-underline">Privacy</Link>
-              <Link href="/legal/cookies" className="text-bone/40 hover:text-lime transition-colors no-underline">Cookie Policy</Link>
-            </nav>
-          </div>
-          <span className="font-mono text-[11px] uppercase tracking-wider opacity-30">
-            Culture first. Systems second. Ownership always.
+        {/* Bottom bar */}
+        <div className="mt-8 pt-6 border-t border-bone/[0.06] flex flex-col md:flex-row justify-between items-center gap-4">
+          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
+            &copy; {new Date().getFullYear()} TOPIA. All rights reserved.
           </span>
+          <div className="flex items-center gap-5 flex-wrap justify-center">
+            <FooterLink href="/legal/terms">Terms</FooterLink>
+            <FooterLink href="/legal/privacy">Privacy</FooterLink>
+            <FooterLink href="/legal/cookies">Cookies</FooterLink>
+          </div>
         </div>
       </div>
     </footer>

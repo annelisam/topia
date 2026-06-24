@@ -54,26 +54,26 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
   for (const ev of attended) { if (!seen.has(ev.id)) { seen.add(ev.id); rows.push({ ev, role: 'GOING' }); } }
 
   const roleBadge = (role: 'HOST' | 'GOING') =>
-    `font-mono text-[8px] uppercase tracking-wider rounded-sm px-1.5 py-0.5 shrink-0 border ${role === 'HOST' ? 'text-lime border-lime/30' : 'text-bone/40 border-bone/[0.12]'}`;
+    `font-mono text-[8px] uppercase tracking-wider rounded-sm px-1.5 py-0.5 shrink-0 border ${role === 'HOST' ? 'text-lime border-lime/30' : 'text-ink/40 border-ink/[0.12]'}`;
 
   return (
-    <div className="bg-obsidian flex flex-col h-full">
+    <div className="bg-[var(--page-bg)] flex flex-col h-full">
       <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
         <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Events</span>
         <div className="flex items-center gap-2.5">
           <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-30`}>{rows.length} events</span>
           {/* Gallery / list toggle — gallery first */}
-          <div className={`flex items-center border ${config.textOn === 'text-obsidian' ? 'border-obsidian/20' : 'border-bone/20'} rounded-sm overflow-hidden`}>
+          <div className={`flex items-center border ${config.textOn === 'text-obsidian' ? 'border-obsidian/20' : 'border-ink/20'} rounded-sm overflow-hidden`}>
             <button
               onClick={() => setView('grid')}
-              className={`p-1 transition cursor-pointer ${view === 'grid' ? config.textOn === 'text-obsidian' ? 'bg-obsidian text-bone' : 'bg-bone text-obsidian' : `${config.textOn} opacity-50 hover:opacity-100`}`}
+              className={`p-1 transition cursor-pointer ${view === 'grid' ? config.textOn === 'text-obsidian' ? 'bg-[var(--page-bg)] text-ink' : 'bg-ink text-[var(--page-bg)]' : `${config.textOn} opacity-50 hover:opacity-100`}`}
               title="Gallery view" aria-label="Gallery view"
             >
               <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="5" height="5" rx="0.5" /><rect x="8" y="1" width="5" height="5" rx="0.5" /><rect x="1" y="8" width="5" height="5" rx="0.5" /><rect x="8" y="8" width="5" height="5" rx="0.5" /></svg>
             </button>
             <button
               onClick={() => setView('list')}
-              className={`p-1 transition cursor-pointer border-l ${config.textOn === 'text-obsidian' ? 'border-obsidian/20' : 'border-bone/20'} ${view === 'list' ? config.textOn === 'text-obsidian' ? 'bg-obsidian text-bone' : 'bg-bone text-obsidian' : `${config.textOn} opacity-50 hover:opacity-100`}`}
+              className={`p-1 transition cursor-pointer border-l ${config.textOn === 'text-obsidian' ? 'border-obsidian/20' : 'border-ink/20'} ${view === 'list' ? config.textOn === 'text-obsidian' ? 'bg-[var(--page-bg)] text-ink' : 'bg-ink text-[var(--page-bg)]' : `${config.textOn} opacity-50 hover:opacity-100`}`}
               title="List view" aria-label="List view"
             >
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="2" y1="3.5" x2="12" y2="3.5" /><line x1="2" y1="7" x2="12" y2="7" /><line x1="2" y1="10.5" x2="12" y2="10.5" /></svg>
@@ -85,31 +85,31 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
         {rows.length === 0 ? (
           <div className="flex items-center justify-center py-12">
-            <span className="font-mono text-[11px] text-bone/20 uppercase tracking-wider">No events yet</span>
+            <span className="font-mono text-[11px] text-ink/20 uppercase tracking-wider">No events yet</span>
           </div>
         ) : view === 'grid' ? (
-          /* Gallery — small 3-up cards so plenty of events fit */
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2.5">
+          /* Gallery — wide cards that fill the panel height and scroll sideways */
+          <div className="flex gap-3 overflow-x-auto overflow-y-hidden p-3 h-full" style={{ scrollbarWidth: 'thin' }}>
             {rows.map(({ ev, role }) => {
               const chip = dayChip(ev.date);
               return (
-                <Link key={ev.id} href={`/events/${ev.slug}`} className="group block rounded-md overflow-hidden border border-bone/[0.08] bg-obsidian no-underline hover:border-bone/20 transition-colors">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-bone/[0.05]">
+                <Link key={ev.id} href={`/events/${ev.slug}`} className="group flex flex-col w-[min(320px,80vw)] shrink-0 h-full rounded-lg overflow-hidden border border-ink/[0.08] bg-[var(--page-bg)] no-underline hover:border-ink/20 transition-colors">
+                  <div className="relative flex-1 min-h-0 overflow-hidden bg-ink/[0.05]">
                     {ev.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={ev.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     ) : (
-                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[16px] uppercase text-bone/10">TOPIA</span>
+                      <span className="absolute inset-0 flex items-center justify-center font-basement font-black text-[28px] uppercase text-ink/10">TOPIA</span>
                     )}
-                    <div className="absolute top-1.5 left-1.5 bg-obsidian/80 backdrop-blur-sm border border-bone/20 rounded-sm px-1 py-0.5 text-center min-w-[26px]">
-                      <div className="font-basement font-black text-[11px] leading-none text-bone">{chip.day}</div>
-                      <div className="font-mono text-[6px] uppercase tracking-[1px] text-bone/60">{chip.mon}</div>
+                    <div className="absolute top-2 left-2 bg-[var(--page-bg)]/80 backdrop-blur-sm border border-ink/20 rounded-sm px-1.5 py-0.5 text-center min-w-[30px]">
+                      <div className="font-basement font-black text-[14px] leading-none text-ink">{chip.day}</div>
+                      <div className="font-mono text-[7px] uppercase tracking-[1px] text-ink/60">{chip.mon}</div>
                     </div>
                   </div>
-                  <div className="p-2">
-                    <h3 className="font-mono text-[10px] font-bold uppercase text-bone leading-tight line-clamp-2">{ev.eventName}</h3>
-                    <div className="flex items-center justify-between gap-1 mt-1">
-                      <span className="font-mono text-[8px] text-bone/40 truncate">{ev.city || fmtDate(ev.date)}</span>
+                  <div className="p-3 shrink-0">
+                    <h3 className="font-mono text-[clamp(12px,2.6vw,15px)] font-bold uppercase text-ink leading-tight line-clamp-2">{ev.eventName}</h3>
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <span className="font-mono text-[10px] text-ink/40 truncate">{ev.city || fmtDate(ev.date)}</span>
                       <span className={`${roleBadge(role)} shrink-0`}>{role}</span>
                     </div>
                   </div>
@@ -120,18 +120,18 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
         ) : (
           /* List */
           rows.map(({ ev, role }, i) => (
-            <Link key={ev.id} href={`/events/${ev.slug}`} className="flex items-center gap-3 px-4 py-3 border-b border-bone/[0.04] hover:bg-bone/[0.02] transition-colors no-underline" style={{ minHeight: '56px' }}>
-              <div className="w-[40px] h-[40px] shrink-0 rounded-sm overflow-hidden bg-bone/[0.05] flex items-center justify-center">
+            <Link key={ev.id} href={`/events/${ev.slug}`} className="flex items-center gap-3 px-4 py-3 border-b border-ink/[0.04] hover:bg-ink/[0.02] transition-colors no-underline" style={{ minHeight: '56px' }}>
+              <div className="w-[40px] h-[40px] shrink-0 rounded-sm overflow-hidden bg-ink/[0.05] flex items-center justify-center">
                 {ev.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={ev.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-mono text-[9px] text-bone/20">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="font-mono text-[9px] text-ink/20">{String(i + 1).padStart(2, '0')}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <span className="font-mono text-[12px] uppercase font-bold text-bone block truncate">{ev.eventName}</span>
-                <span className="font-mono text-[9px] text-bone/30">{[fmtDate(ev.date), ev.city].filter(Boolean).join(' · ')}</span>
+                <span className="font-mono text-[12px] uppercase font-bold text-ink block truncate">{ev.eventName}</span>
+                <span className="font-mono text-[9px] text-ink/30">{[fmtDate(ev.date), ev.city].filter(Boolean).join(' · ')}</span>
               </div>
               <span className={roleBadge(role)}>{role}</span>
             </Link>
