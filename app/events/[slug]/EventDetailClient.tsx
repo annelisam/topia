@@ -551,8 +551,8 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Who's going — Luma-style avatar stack + guest list */}
-            <WhosGoing eventId={event.id} goingCount={event.rsvpCount} />
+            {/* Who's going — Luma-style avatar stack + guest list (gated to RSVPs) */}
+            <WhosGoing eventId={event.id} goingCount={event.rsvpCount} canView={event.isHost || event.userRsvped} />
           </div>
 
           {/* RIGHT — details */}
