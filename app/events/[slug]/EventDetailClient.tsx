@@ -342,8 +342,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     }
   };
 
-  const handleRsvpDone = (status: string, alreadyRegistered = false) => {
-    setRsvpFormOpen(false);
+  // Submit succeeded — update event state but keep the form open on its success
+  // step (step 3: get tickets · share · done).
+  const handleRsvpRegistered = (status: string, alreadyRegistered = false) => {
     try { sessionStorage.removeItem(INVITE_KEY); } catch {}
     setInviteToken(null);
     if (!event) return;
@@ -354,6 +355,12 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       // Don't re-count an RSVP that already existed (idempotent re-submit).
       rsvpCount: !alreadyRegistered && status === 'going' ? event.rsvpCount + 1 : event.rsvpCount,
     });
+  };
+
+  // "Done" tapped on the success step — close the form and, for confirmed
+  // "going", reveal the card celebration.
+  const handleRsvpFinish = (status: string) => {
+    setRsvpFormOpen(false);
     if (status === 'going') setShowRsvpModal(true);
     else setPendingNotice(true);
   };
@@ -879,19 +886,17 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           email={privyEmail}
           inviteToken={inviteToken}
           approvalRequired={!!event.rsvpApprovalRequired}
+          ticketLink={event.link}
           onClose={() => setRsvpFormOpen(false)}
-          onDone={handleRsvpDone}
+          onRegistered={handleRsvpRegistered}
+          onDone={handleRsvpFinish}
         />
       )}
 
-      {/* RSVP Confirmation Modal (confirmed "going") */}
+      {/* Card celebration — shown after "Done" on the success step (going only) */}
       {showRsvpModal && event && (
         <RsvpConfirmationModal
           eventName={event.eventName}
-          date={event.date}
-          city={event.city}
-          slug={event.slug}
-          ticketLink={event.link}
           onClose={() => setShowRsvpModal(false)}
         />
       )}

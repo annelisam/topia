@@ -49,8 +49,14 @@ interface Props {
   name?: string | null;
   inviteToken?: string | null;
   approvalRequired?: boolean;
+  ticketLink?: string | null;
   onClose: () => void;
-  onDone: (status: string, alreadyRegistered?: boolean) => void;
+  // Called on a successful submit — parent updates event state, modal stays open
+  // on the success step (step 3).
+  onRegistered: (status: string, alreadyRegistered?: boolean) => void;
+  // Called when the user taps "Done" on the success step — parent closes the
+  // form and (for "going") opens the card celebration.
+  onDone: (status: string) => void;
 }
 
 const inputCls = 'w-full border px-4 py-3 font-mono text-[13px] rounded-xl outline-none transition focus:border-[var(--foreground)]';
@@ -69,7 +75,7 @@ function splitPhone(full: string | null | undefined): { code: string; rest: stri
 // Registration modal: after a visitor verifies with Privy, they confirm their
 // contact details (name auto-filled, email + optional phone) and answer the
 // host's custom questions, then submit.
-export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, onClose, onDone }: Props) {
+export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, ticketLink, onClose, onRegistered, onDone }: Props) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -100,8 +106,27 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [existingUsername, setExistingUsername] = useState(false);
   const [existingPhoto, setExistingPhoto] = useState(false);
 
-  // Two-step flow: 1 = your details, 2 = questions from the host + consent.
-  const [step, setStep] = useState<1 | 2>(1);
+  // Three-step flow: 1 = basic info, 2 = add details + confirm, 3 = success
+  // (get tickets · share · done).
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [resultStatus, setResultStatus] = useState<string>('going');
+  const [copied, setCopied] = useState(false);
+  const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}` : '';
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(eventUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const shareToX = () => {
+    const text = `I'm going to ${eventName}!`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(eventUrl)}`, '_blank');
+  };
+  const shareViaEmail = () => {
+    const subject = `Join me at ${eventName}`;
+    const body = `I just RSVP'd to ${eventName}.\n\nCheck it out: ${eventUrl}`;
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
 
   async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -242,7 +267,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
-      onDone(data.status ?? 'going', data.alreadyRegistered === true);
+      const status = data.status ?? 'going';
+      setResultStatus(status);
+      onRegistered(status, data.alreadyRegistered === true);
+      setStep(3); // advance to the success step (tickets · share · done)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register');
     } finally {
@@ -321,10 +349,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
   return (
     <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-      <div className="w-full max-w-md rounded-2xl p-6 sm:p-7 border max-h-[85vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 border max-h-[88vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-start justify-between mb-4">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
-            Register · {eventName}
+            {step === 3 ? eventName : `Register · ${eventName}`}
           </p>
           <button onClick={onClose} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
         </div>
@@ -333,20 +361,22 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           <p className="font-mono text-[13px] opacity-50" style={{ color: 'var(--foreground)' }}>Loading…</p>
         ) : (
           <>
-            {/* Step progress — two-part form (your details · host questions) */}
+            {/* Step progress — basic info · add details · you're in */}
             <div className="flex items-center gap-1.5 mb-3">
-              {[1, 2].map((n) => (
+              {[1, 2, 3].map((n) => (
                 <span key={n} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: n <= step ? 'var(--accent)' : 'var(--border-color)' }} />
               ))}
             </div>
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
-              Step {step} of 2 · {step === 1 ? 'Your details' : (questions.length ? 'Questions from the host' : 'Confirm')}
+              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Add details' : "You're in"}
             </p>
-            <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
-              {step === 1
-                ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free Topia profile.')
-                : (questions.length ? "Last bit — a couple things from the host, then you're in." : 'Review and confirm your spot.')}
-            </p>
+            {step < 3 && (
+              <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
+                {step === 1
+                  ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free Topia profile.')
+                  : (questions.length ? "Last bit — a couple things from the host, then you're in." : 'Review and confirm your spot.')}
+              </p>
+            )}
 
             {/* STEP 1 · your details — photo, name, username, email, phone */}
             {step === 1 && (
@@ -534,36 +564,83 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             </div>
             )}
 
-            {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+            {/* STEP 3 · success — get tickets · share · done */}
+            {step === 3 && (
+            <div>
+              {resultStatus === 'going' ? (
+                <>
+                  <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>You&apos;re going!</h3>
+                  <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>{eventName}</p>
 
-            {/* Footer — Continue (step 1) · Back + submit (step 2) */}
-            {step === 1 ? (
+                  {ticketLink && (
+                    <div className="mb-3 rounded-xl border p-4 text-left" style={{ borderColor: 'var(--border-color)' }}>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40 mb-1.5" style={{ color: 'var(--foreground)' }}>Almost there</p>
+                      <p className="font-mono text-[12px] leading-snug opacity-70 mb-3.5" style={{ color: 'var(--foreground)' }}>This event is ticketed — your spot isn&apos;t locked until you grab a ticket.</p>
+                      <a href={ticketLink.startsWith('http') ? ticketLink : `https://${ticketLink}`} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center px-4 py-3 font-mono text-[13px] uppercase tracking-widest rounded-lg cursor-pointer text-center font-bold no-underline transition hover:opacity-90" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Get Tickets →</a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>Request sent</h3>
+                  <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>The host will review your request for {eventName} — we&apos;ll email you the moment it&apos;s confirmed.</p>
+                </>
+              )}
+
               <button
-                onClick={goToStep2}
-                disabled={!contactName.trim() || availability !== 'available' || !verifiedEmail}
-                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                onClick={() => onDone(resultStatus)}
+                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer font-bold transition hover:opacity-90"
+                style={ticketLink && resultStatus === 'going'
+                  ? { backgroundColor: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border-color)' }
+                  : { backgroundColor: 'var(--foreground)', color: 'var(--background)', border: 'none' }}
               >
-                {!contactName.trim() ? 'Add your name to continue' : availability !== 'available' ? 'Pick a username to continue' : !verifiedEmail ? 'Verify email to continue' : 'Continue →'}
+                Done
               </button>
-            ) : (
-              <div className="flex items-center gap-2.5">
-                <button
-                  onClick={() => { setError(''); setStep(1); }}
-                  className="px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80"
-                  style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-                >
-                  ← Back
-                </button>
-                <button
-                  onClick={submit}
-                  disabled={submitting || !consent}
-                  className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-                >
-                  {submitting ? 'Submitting…' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
-                </button>
+
+              {/* Share — minimal, last */}
+              <div className="mt-5 pt-4 border-t flex items-center justify-center gap-4" style={{ borderColor: 'var(--border-color)' }}>
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40" style={{ color: 'var(--foreground)' }}>Share</span>
+                <button onClick={copyLink} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>{copied ? 'Copied!' : 'Copy link'}</button>
+                <button onClick={shareToX} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>X</button>
+                <button onClick={shareViaEmail} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Email</button>
               </div>
+            </div>
+            )}
+
+            {step < 3 && (
+              <>
+                {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+
+                {/* Footer — Continue (step 1) · Back + Confirm RSVP (step 2) */}
+                {step === 1 ? (
+                  <button
+                    onClick={goToStep2}
+                    disabled={!contactName.trim() || availability !== 'available' || !verifiedEmail}
+                    className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                  >
+                    {!contactName.trim() ? 'Add your name to continue' : availability !== 'available' ? 'Pick a username to continue' : !verifiedEmail ? 'Verify email to continue' : 'Continue →'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => { setError(''); setStep(1); }}
+                      className="px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80"
+                      style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={submit}
+                      disabled={submitting || !consent}
+                      className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                    >
+                      {submitting ? 'Submitting…' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Confirm RSVP'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
