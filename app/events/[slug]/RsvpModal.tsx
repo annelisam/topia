@@ -53,7 +53,7 @@ interface Props {
   onDone: (status: string, alreadyRegistered?: boolean) => void;
 }
 
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] rounded-lg outline-none';
+const inputCls = 'w-full border px-4 py-3 font-mono text-[13px] rounded-xl outline-none transition focus:border-[var(--foreground)]';
 
 // Curated country dialing codes for the phone field.
 const COUNTRY_CODES = ['+1', '+44', '+61', '+33', '+49', '+34', '+39', '+81', '+91', '+52', '+55', '+86', '+27', '+234', '+971', '+972'];
@@ -290,14 +290,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       case 'instagram':
       case 'twitter':
         return (
-          <div className="flex items-center gap-2 border px-3 rounded-lg" style={fieldStyle}>
+          <div className="flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]" style={fieldStyle}>
             <SocialIcon type={q.type} size={15} />
             <span className="opacity-40 font-mono text-[13px]">@</span>
             <input
               type="text" inputMode="text" autoCapitalize="off" autoCorrect="off"
               value={(v as string) ?? ''}
               onChange={(e) => set(q.id, e.target.value.replace(/^@+/, '').trim())}
-              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2"
+              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3"
               style={{ color: 'var(--foreground)' }}
               placeholder="handle"
             />
@@ -320,8 +320,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-      <div className="w-full max-w-md rounded-2xl p-6 border max-h-[85vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
+    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="w-full max-w-md rounded-2xl p-6 sm:p-7 border max-h-[85vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-start justify-between mb-4">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
             Register · {eventName}
@@ -342,15 +342,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
               Step {step} of 2 · {step === 1 ? 'Your details' : (questions.length ? 'Questions from the host' : 'Confirm')}
             </p>
-            <p className="font-mono text-[13px] opacity-60 mb-4" style={{ color: 'var(--foreground)' }}>
+            <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
               {step === 1
-                ? (approvalRequired ? `Request to join ${eventName}.` : `Register for ${eventName}.`)
+                ? (approvalRequired ? 'Tell us who you are — the host reviews requests before confirming.' : 'Tell us who you are — this creates your free Topia profile.')
                 : (questions.length ? "Last bit — a couple things from the host, then you're in." : 'Review and confirm your spot.')}
             </p>
 
             {/* STEP 1 · your details — photo, name, username, email, phone */}
             {step === 1 && (
-            <div className="space-y-4 mb-5">
+            <div className="space-y-5 mb-6">
               {/* Profile photo — left-aligned like every other field: label, the
                   framed avatar, then an add/change link. Locked when the profile
                   already has a photo (manage it in profile settings). */}
@@ -430,14 +430,14 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   Username<span style={{ color: '#FF5C34' }}> *</span>
                   {existingUsername && <span className="normal-case tracking-normal opacity-70">· manage in profile</span>}
                 </label>
-                <div className={`flex items-center gap-2 border px-3 rounded-lg${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle} title={existingUsername ? 'Update your username in your profile settings' : undefined}>
+                <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle} title={existingUsername ? 'Update your username in your profile settings' : undefined}>
                   <span className="opacity-40 font-mono text-[13px]">@</span>
                   <input
                     type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
                     value={username}
                     onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
                     readOnly={existingUsername} disabled={existingUsername}
-                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2${existingUsername ? ' cursor-not-allowed' : ''}`}
+                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3${existingUsername ? ' cursor-not-allowed' : ''}`}
                     style={{ color: 'var(--foreground)' }}
                     placeholder="yourhandle"
                   />
@@ -466,7 +466,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     <button
                       type="button"
                       onClick={() => linkEmail()}
-                      className="w-full px-3 py-2 font-mono text-[13px] rounded-lg cursor-pointer border text-left flex items-center justify-between gap-2"
+                      className="w-full px-4 py-3 font-mono text-[13px] rounded-xl cursor-pointer border text-left flex items-center justify-between gap-2 transition hover:border-[var(--foreground)]"
                       style={fieldStyle}
                     >
                       <span className="opacity-50">Verify your email…</span>
@@ -488,7 +488,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 ) : (
                   <>
                     <div className="flex gap-2">
-                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-2 py-2 font-mono text-[13px] rounded-lg outline-none cursor-pointer shrink-0" style={fieldStyle}>
+                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-3 py-3 font-mono text-[13px] rounded-xl outline-none cursor-pointer shrink-0" style={fieldStyle}>
                         {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                       <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
@@ -505,7 +505,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
             {/* STEP 2 · questions from the host + consent */}
             {step === 2 && (
-            <div className="space-y-4 mb-5">
+            <div className="space-y-5 mb-6">
               {questions.map((q) => (
                 <div key={q.id}>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>

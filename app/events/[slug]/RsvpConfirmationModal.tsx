@@ -87,7 +87,7 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, tic
       `}</style>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-sm rounded-2xl border p-8 text-center max-h-[88vh] overflow-y-auto"
+        className="relative w-full max-w-sm rounded-2xl border p-6 text-center max-h-[88vh] overflow-y-auto"
         style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -97,14 +97,16 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, tic
             <h2 className="font-mono text-[18px] font-bold uppercase mb-1" style={{ color: 'var(--foreground)', animation: 'headline-in 0.4s ease both' }}>
               You&apos;re going!
             </h2>
-            <p className="font-mono text-[12px] opacity-50 mb-5" style={{ color: 'var(--foreground)' }}>
+            <p className="font-mono text-[12px] opacity-50 mb-6" style={{ color: 'var(--foreground)' }}>
               {eventName}{(date || city) ? ` · ${[date, city].filter(Boolean).join(' · ')}` : ''}
             </p>
 
-            {/* Profile card + the event stamp landing on it */}
-            <div className="relative mx-auto mb-6 flex justify-center" style={{ width: 280 }}>
-              <div style={{ animation: 'card-rise 0.6s cubic-bezier(0.2,0.8,0.3,1) both', transformOrigin: 'center' }}>
-                <div style={{ transform: 'scale(0.92)', transformOrigin: 'top center' }}>
+            {/* Profile card + the event stamp landing on it. The card is scaled
+                down; the wrapper takes the *scaled* dimensions so there's no dead
+                space below it (300×375 card → scale .68 → 204×255). */}
+            <div className="relative mx-auto" style={{ width: 204, height: 255, marginBottom: 26 }}>
+              <div style={{ animation: 'card-rise 0.6s cubic-bezier(0.2,0.8,0.3,1) both' }}>
+                <div style={{ transform: 'scale(0.68)', transformOrigin: 'top left' }}>
                   <TopiaCard
                     name={profile?.name || ''}
                     username={profile?.username || ''}
@@ -114,11 +116,11 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, tic
                   />
                 </div>
               </div>
-              {/* stamp — lands on the card after it rises in */}
+              {/* stamp — lands on the card's top-right corner after it rises in */}
               <svg
-                viewBox="0 0 100 100" width={92} height={92}
+                viewBox="0 0 100 100" width={76} height={76}
                 className="absolute z-20 pointer-events-none"
-                style={{ top: -10, right: -2, animation: 'stamp-in 0.55s cubic-bezier(0.2,0.8,0.3,1) 0.55s both' }}
+                style={{ top: -14, right: -14, animation: 'stamp-in 0.55s cubic-bezier(0.2,0.8,0.3,1) 0.55s both' }}
               >
                 <defs>
                   <path id="rsvpArcTop" d="M 50,50 m -36,0 a 36,36 0 1,1 72,0" />
@@ -137,14 +139,15 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, tic
               </svg>
             </div>
 
-            {/* PRIMARY · tickets — mandatory for ticketed events */}
+            {/* PRIMARY · tickets — mandatory, but a calm container so the single
+                lime button is the only loud element on the screen. */}
             {ticketLink && (
-              <div className="mb-5 rounded-xl border p-4" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--surface-hover)' }}>
-                <p className="font-mono text-[12px] font-bold mb-1" style={{ color: 'var(--foreground)' }}>
-                  One more step — this event is ticketed.
+              <div className="mb-3 rounded-xl border p-4 text-left" style={{ borderColor: 'var(--border-color)' }}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40 mb-1.5" style={{ color: 'var(--foreground)' }}>
+                  Almost there
                 </p>
-                <p className="font-mono text-[11px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>
-                  Your RSVP isn&apos;t complete until you grab your ticket.
+                <p className="font-mono text-[12px] leading-snug opacity-70 mb-3.5" style={{ color: 'var(--foreground)' }}>
+                  This event is ticketed — your spot isn&apos;t locked until you grab a ticket.
                 </p>
                 <a
                   href={ticketLink.startsWith('http') ? ticketLink : `https://${ticketLink}`}
@@ -158,35 +161,39 @@ export default function RsvpConfirmationModal({ eventName, date, city, slug, tic
               </div>
             )}
 
-            {/* SECONDARY · optional profile-completion nudge */}
-            {justCertified ? (
-              <p className="font-mono text-[11px] uppercase tracking-widest mb-4" style={{ color: 'var(--accent-ink)' }}>
-                + Certified stamp earned ✓
-              </p>
-            ) : showNudge ? (
-              <button
-                onClick={() => setBeat('profile')}
-                className="font-mono text-[11px] uppercase tracking-widest underline opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none mb-4 block mx-auto"
-                style={{ color: 'var(--foreground)' }}
-              >
-                Finish your passport ({doneCount}/{total}) →
-              </button>
-            ) : null}
-
+            {/* Done — primary when nothing else is, a quiet ghost when tickets
+                is the real call to action. */}
             <button
               onClick={onClose}
-              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer font-bold transition hover:opacity-90"
+              style={ticketLink
+                ? { backgroundColor: 'transparent', color: 'var(--foreground)', border: '1px solid var(--border-color)' }
+                : { backgroundColor: 'var(--foreground)', color: 'var(--background)', border: 'none' }}
             >
               Done
             </button>
 
-            {/* Share — minimal, last */}
-            <div className="mt-5 pt-4 border-t flex items-center justify-center gap-4" style={{ borderColor: 'var(--border-color)' }}>
-              <span className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40" style={{ color: 'var(--foreground)' }}>Share</span>
-              <button onClick={copyLink} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>{copied ? 'Copied!' : 'Copy link'}</button>
-              <button onClick={shareToX} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>X</button>
-              <button onClick={shareViaEmail} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Email</button>
+            {/* QUIET ZONE · passport nudge + share, the last thing on the modal */}
+            <div className="mt-5 pt-4 border-t flex flex-col items-center gap-3.5" style={{ borderColor: 'var(--border-color)' }}>
+              {justCertified ? (
+                <p className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--accent-ink)' }}>
+                  + Certified stamp earned ✓
+                </p>
+              ) : showNudge ? (
+                <button
+                  onClick={() => setBeat('profile')}
+                  className="font-mono text-[11px] uppercase tracking-widest underline opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  Finish your passport ({doneCount}/{total}) →
+                </button>
+              ) : null}
+              <div className="flex items-center justify-center gap-4">
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] opacity-40" style={{ color: 'var(--foreground)' }}>Share</span>
+                <button onClick={copyLink} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>{copied ? 'Copied!' : 'Copy link'}</button>
+                <button onClick={shareToX} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>X</button>
+                <button onClick={shareViaEmail} className="font-mono text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Email</button>
+              </div>
             </div>
           </>
         )}
