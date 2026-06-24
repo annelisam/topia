@@ -207,7 +207,7 @@ function InvitesPanel({ eventId, privyId }: { eventId: string; privyId: string }
             {note && <span className="font-mono text-[11px] opacity-70" style={{ color: 'var(--foreground)' }}>{note}</span>}
           </div>
           <p className="font-mono text-[11px] opacity-40 mt-2" style={{ color: 'var(--foreground)' }}>
-            Invites auto-send once a Resend (email) or Twilio (SMS) key is configured. Until then, copy each link and share it.
+            Email invites are sent automatically. For SMS or to share another way, copy each link below and send it yourself.
           </p>
 
           {pending.length > 0 && (
