@@ -745,6 +745,10 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
 function FeaturedRowCompact({
   events, authenticated, onOpen, onToggleRsvp, onToggleSave,
 }: Omit<FeaturedRowProps, 'compact'>) {
+  // With only a card or two, the horizontal-scroll rail leaves a big empty band
+  // and a "scroll →" hint that does nothing. Lay those out as comfortably-sized
+  // cards instead, and only show the scroll affordance once the rail can scroll.
+  const few = events.length <= 2;
   return (
     <div className="bg-[var(--background)] border-b border-[var(--border-color)] px-4 py-3">
       <div className="flex items-center justify-between mb-2">
@@ -752,9 +756,14 @@ function FeaturedRowCompact({
           <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent-ink)]">◉ FEATURED</span>
           <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/30">next up</span>
         </div>
-        <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/20 hidden sm:inline">scroll →</span>
+        {!few && (
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/20 hidden sm:inline">scroll →</span>
+        )}
       </div>
-      <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1" style={{ scrollbarWidth: 'thin' }}>
+      <div
+        className={few ? 'flex gap-2 pb-1' : 'flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1'}
+        style={few ? undefined : { scrollbarWidth: 'thin' }}
+      >
         {events.map((ev, i) => {
           const chip = formatDayChip(ev.dateIso);
           return (
@@ -764,7 +773,7 @@ function FeaturedRowCompact({
               tabIndex={0}
               onClick={() => onOpen(ev.slug)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(ev.slug); } }}
-              className="group relative overflow-hidden rounded-md border border-[var(--border-color)] hover:border-[var(--accent)]/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent snap-start shrink-0 w-[200px] focus:outline-none focus:ring-2 focus:ring-lime/40"
+              className={`group relative overflow-hidden rounded-md border border-[var(--border-color)] hover:border-[var(--accent)]/50 transition-all duration-300 text-left cursor-pointer p-0 bg-transparent shrink-0 focus:outline-none focus:ring-2 focus:ring-lime/40 ${few ? 'w-[clamp(240px,30vw,340px)]' : 'snap-start w-[200px]'}`}
               style={{ opacity: 0, animation: `fadeUp 0.4s ease-out ${i * 50}ms forwards` }}
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-[var(--surface-hover)]">

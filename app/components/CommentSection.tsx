@@ -223,7 +223,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
               <span className="font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold leading-none">Host</span>
             )}
             {kind === 'tool' && c.rating != null && !isReply && (
-              <span className="flex items-center gap-0.5 text-lime">
+              <span className="flex items-center gap-0.5 text-[var(--accent-ink)]">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <StarIcon key={n} size={9} filled={n <= (c.rating ?? 0)} className={n <= (c.rating ?? 0) ? 'text-lime' : 'text-ink/15'} />
                 ))}
@@ -306,7 +306,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={replyMedia.url} alt="upload" className="rounded-sm border border-ink/15 max-w-[150px]" />
                   )}
-                  <button onClick={() => setReplyMedia(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-obsidian border border-bone/20 text-bone text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
+                  <button onClick={() => setReplyMedia(null)} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#1a1a1a] border border-white/20 text-white text-[10px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
                 </div>
               )}
               <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-ink/[0.05]">
@@ -420,7 +420,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={media.url} alt="upload" className="rounded-sm border border-ink/15 max-w-[180px]" />
               )}
-              <button onClick={() => setMedia(null)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-obsidian border border-bone/20 text-bone text-[12px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
+              <button onClick={() => setMedia(null)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#1a1a1a] border border-white/20 text-white text-[12px] cursor-pointer leading-none flex items-center justify-center" aria-label="Remove media">×</button>
             </div>
           )}
 
