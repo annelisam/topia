@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PATH_CONFIG, resolvePath, type UserPath } from './pathConfig';
 
 export interface TopiaCardProps {
@@ -22,10 +22,11 @@ const LOGO_PATH = 'M248.244 0L249.567 0.534218C253.772 5.33588 268.237 51.6617 2
 // shareable card image at /api/profile/<username>/card.
 export default function TopiaCard({ name, username, avatarUrl, roleTags = [], path, issued }: TopiaCardProps) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [active, setActive] = useState(false);
-  const [motionOn, setMotionOn] = useState(false);
   const [needsMotionPermission, setNeedsMotionPermission] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const target = useRef({ x: 0, y: 0 }); // latest tilt target (cursor / gyro)
+  const cur = useRef({ x: 0, y: 0 });    // eased value, mirrored into `tilt`
+  const motionOn = useRef(false);
 
   const resolved = resolvePath(typeof path === 'string' ? path : null, roleTags, false);
   const cfg = PATH_CONFIG[resolved];
@@ -33,6 +34,38 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
   const onAccent = resolved === 'worldbuilder' ? '#0a0a0a' : '#f5f0e8';
   const initial = (name || username || '?')[0]?.toUpperCase() ?? '?';
   const year = issued ?? new Date().getFullYear();
+
+  // Ease the rendered tilt toward the latest target every frame. Decouples the
+  // noisy gyro / high-rate cursor input from rendering, so motion stays smooth
+  // (no jitter) and only re-renders while actually moving.
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const t = target.current, c = cur.current;
+      const nx = c.x + (t.x - c.x) * 0.12;
+      const ny = c.y + (t.y - c.y) * 0.12;
+      if (Math.abs(nx - c.x) > 0.015 || Math.abs(ny - c.y) > 0.015) {
+        cur.current = { x: nx, y: ny };
+        setTilt({ x: nx, y: ny });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const onOrient = useCallback((e: DeviceOrientationEvent) => {
+    const gamma = e.gamma ?? 0; // left/right [-90,90]
+    const beta = e.beta ?? 0;   // front/back [-180,180]
+    const clamp = (v: number) => Math.max(-MAX_TILT, Math.min(MAX_TILT, v));
+    target.current = { y: clamp(gamma * 0.5), x: clamp((45 - beta) * 0.45) };
+  }, []);
+
+  const enableMotion = useCallback(() => {
+    window.addEventListener('deviceorientation', onOrient, true);
+    motionOn.current = true;
+    setNeedsMotionPermission(false);
+  }, [onOrient]);
 
   // iOS 13+ gates DeviceOrientation behind a permission prompt.
   useEffect(() => {
@@ -42,22 +75,8 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
     } else if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
       enableMotion();
     }
-    return () => window.removeEventListener('deviceorientation', onOrient);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function onOrient(e: DeviceOrientationEvent) {
-    const gamma = e.gamma ?? 0; // left/right [-90,90]
-    const beta = e.beta ?? 0;   // front/back [-180,180]
-    const clamp = (v: number) => Math.max(-MAX_TILT, Math.min(MAX_TILT, v));
-    setTilt({ y: clamp(gamma * 0.5), x: clamp((45 - beta) * 0.4) });
-  }
-
-  function enableMotion() {
-    window.addEventListener('deviceorientation', onOrient, true);
-    setMotionOn(true);
-    setNeedsMotionPermission(false);
-  }
+    return () => window.removeEventListener('deviceorientation', onOrient, true);
+  }, [enableMotion, onOrient]);
 
   async function requestMotion() {
     const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
@@ -73,8 +92,12 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
     const r = el.getBoundingClientRect();
     const px = (clientX - r.left) / r.width - 0.5;
     const py = (clientY - r.top) / r.height - 0.5;
-    setTilt({ y: px * MAX_TILT * 2, x: -py * MAX_TILT * 2 });
-    setActive(true);
+    target.current = { y: px * MAX_TILT * 2, x: -py * MAX_TILT * 2 };
+  }
+
+  // Ease back to flat when the pointer leaves (gyro mode keeps following).
+  function recenter() {
+    if (!motionOn.current) target.current = { x: 0, y: 0 };
   }
 
   const sheenX = 50 + (tilt.y / MAX_TILT) * 40;
@@ -86,14 +109,15 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
       <div
         ref={ref}
         onMouseMove={(e) => onMove(e.clientX, e.clientY)}
-        onMouseLeave={() => { if (!motionOn) { setTilt({ x: 0, y: 0 }); setActive(false); } }}
+        onMouseLeave={recenter}
         onTouchMove={(e) => { const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY); }}
-        onTouchEnd={() => { if (!motionOn) { setTilt({ x: 0, y: 0 }); setActive(false); } }}
+        onTouchEnd={recenter}
         className="relative w-[300px] max-w-full aspect-[4/5] rounded-2xl overflow-hidden"
         style={{
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
           transformStyle: 'preserve-3d',
-          transition: active || motionOn ? 'transform 80ms ease-out' : 'transform 500ms ease-out',
+          // Stops the page/background from scrolling while dragging on the card.
+          touchAction: 'none',
           background: '#0f0f0f',
           border: `1px solid ${accent}55`,
           boxShadow: `0 30px 60px -20px rgba(0,0,0,0.7), 0 0 40px -12px ${accent}66`,
