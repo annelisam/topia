@@ -101,8 +101,8 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border max-h-[82vh] flex flex-col overflow-hidden"
-        style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', boxShadow: '0 24px 60px -16px rgba(0,0,0,0.7)' }}
+        className="w-full max-w-lg rounded-2xl border max-h-[82vh] flex flex-col overflow-hidden"
+        style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', boxShadow: '0 24px 70px -16px rgba(0,0,0,0.75)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
@@ -114,27 +114,34 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
             Only guests who claimed a TOPIA handle are shown.
           </p>
         </div>
-        <div className="overflow-y-auto p-2.5">
-          {guests.map((g) => (
-            <a
-              key={g.username}
-              href={`/profile/${g.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline transition hover:bg-[var(--surface-hover)]"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
-              <div className="min-w-0">
-                <div className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
-                {g.roleTags.length > 0 && (
-                  <div className="font-mono text-[10px] uppercase tracking-wider opacity-45 truncate mt-0.5" style={{ color: 'var(--foreground)' }}>
-                    {g.roleTags.slice(0, 3).map((t) => t.replace(/-/g, ' ')).join(' · ')}
+        <div className="overflow-y-auto p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {guests.map((g) => (
+              <a
+                key={g.username}
+                href={`/profile/${g.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 p-3 rounded-xl border no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
+                style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
+                  {/* tags ↔ "View profile" swap on hover (no layout shift) */}
+                  <div className="relative h-3.5 mt-0.5">
+                    <div className="absolute inset-0 font-mono text-[10px] uppercase tracking-wider opacity-45 truncate transition-opacity group-hover:opacity-0" style={{ color: 'var(--foreground)' }}>
+                      {g.roleTags.length > 0 ? g.roleTags.slice(0, 3).map((t) => t.replace(/-/g, ' ')).join(' · ') : 'On the list'}
+                    </div>
+                    <div className="absolute inset-0 font-mono text-[10px] uppercase tracking-wider truncate opacity-0 transition-opacity group-hover:opacity-100" style={{ color: 'var(--accent-ink)' }}>
+                      View profile ↗
+                    </div>
                   </div>
-                )}
-              </div>
-            </a>
-          ))}
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </div>
