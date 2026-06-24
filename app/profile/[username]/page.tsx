@@ -444,8 +444,8 @@ export default function PublicProfilePage() {
                             title={profile.name || username}
                             text={`${profile.name || username} on TOPIA`}
                             iconSize={11}
-                            storyImageUrl={`/api/profile/${username}/card`}
-                            storyFilename={`${username}-topia-card.png`}
+                            storyImageUrl={`/api/profile/${username}/card?format=story`}
+                            storyFilename={`${username}-topia-story.png`}
                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           />
                           {isOwnProfile && (
