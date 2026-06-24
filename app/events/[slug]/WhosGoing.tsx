@@ -2,27 +2,34 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePrivy } from '@privy-io/react-auth';
+import FollowButton from '../../components/FollowButton';
 
 interface Guest {
+  userId: string;
   username: string;
   avatarUrl: string;
   roleTags: string[];
+  isFollowing: boolean;
+  isSelf: boolean;
 }
 
 // "Who's Going" — a Luma-style avatar stack that opens a guest list. The list
-// reveals photo + handle + tags (no names), each row opening that profile in a
-// new tab. Only viewers who RSVP'd (or the host) can see it; everyone else gets
-// a blurred teaser nudging them to RSVP.
+// reveals photo + handle + tags (no names) with a Follow button, each opening
+// that profile in a new tab. Only viewers who RSVP'd (or the host) can see it;
+// everyone else gets a blurred teaser nudging them to RSVP.
 export default function WhosGoing({ eventId, goingCount, canView }: { eventId: string; goingCount: number; canView: boolean }) {
+  const { user } = usePrivy();
   const [guests, setGuests] = useState<Guest[] | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/events/guests?eventId=${eventId}`)
+    const q = user?.id ? `&viewerPrivyId=${encodeURIComponent(user.id)}` : '';
+    fetch(`/api/events/guests?eventId=${eventId}${q}`)
       .then((r) => r.json())
       .then((d) => setGuests(d.guests ?? []))
       .catch(() => setGuests([]));
-  }, [eventId]);
+  }, [eventId, user?.id]);
 
   // Lock background scroll while the guest list is open.
   useEffect(() => {
@@ -101,7 +108,7 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border max-h-[82vh] flex flex-col overflow-hidden"
+        className="w-full max-w-md rounded-2xl border max-h-[82vh] flex flex-col overflow-hidden"
         style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', boxShadow: '0 24px 70px -16px rgba(0,0,0,0.75)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -115,25 +122,31 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
           </p>
         </div>
         <div className="overflow-y-auto p-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-2.5">
             {guests.map((g) => (
-              <a
+              <div
                 key={g.username}
-                href={`/profile/${g.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col gap-2.5 p-4 rounded-xl border no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="flex flex-col gap-2.5 p-4 rounded-xl border transition hover:shadow-md"
                 style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface-hover)' }}
               >
                 <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
-                  </div>
-                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--accent-ink)' }}>
-                    View ↗
-                  </span>
+                  <a
+                    href={`/profile/${g.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-3 min-w-0 flex-1 no-underline"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={g.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-mono text-[13px] font-bold truncate group-hover:underline" style={{ color: 'var(--foreground)' }}>@{g.username}</div>
+                    </div>
+                  </a>
+                  {!g.isSelf && (
+                    <div className="shrink-0">
+                      <FollowButton targetUserId={g.userId} initialIsFollowing={g.isFollowing} />
+                    </div>
+                  )}
                 </div>
                 {g.roleTags.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
@@ -150,7 +163,7 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
                 ) : (
                   <span className="font-mono text-[10px] uppercase tracking-wider opacity-40" style={{ color: 'var(--foreground)' }}>On the list</span>
                 )}
-              </a>
+              </div>
             ))}
           </div>
         </div>
