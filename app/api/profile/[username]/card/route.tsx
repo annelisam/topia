@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { users, worldMembers, worlds } from '@/lib/db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { PATH_CONFIG, resolvePath } from '@/app/components/profile/pathConfig';
+import { avatarColor, avatarTextColor, isRealPhoto } from '@/lib/avatar';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const roleLine = roleTags.slice(0, 4).map((r) => r.replace(/-/g, ' ')).join('   ·   ').toUpperCase();
   const initial = (u.name || u.username || '?')[0]?.toUpperCase() ?? '?';
   const displayName = (u.name || u.username || 'Unnamed').toUpperCase();
+  // Satori can't render SVG-data-uri avatars, so for a generated/no fallback we
+  // draw a native colored-initial circle instead of an <img>.
+  const realPhoto = isRealPhoto(u.avatarUrl);
+  const fbColor = avatarColor(u.username || u.name || initial);
+  const fbText = avatarTextColor(fbColor);
   const cardBg = `radial-gradient(circle at 50% 16%, ${accent}26 0%, rgba(13,13,13,0) 60%), linear-gradient(160deg, #181818 0%, #0c0c0c 62%, #0a0a0a 100%)`;
 
   // Self-contained card sized by width — reused across formats.
@@ -70,12 +76,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
           <span style={{ color: 'rgba(245,240,232,0.4)', fontSize: w * 0.024, letterSpacing: 4 }}>TOPIA://IDENTITY</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
-          <div style={{ display: 'flex', width: av, height: av, borderRadius: av, border: `${w * 0.006}px solid ${accent}`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#161616' }}>
-            {u.avatarUrl ? (
+          <div style={{ display: 'flex', width: av, height: av, borderRadius: av, border: `${w * 0.006}px solid ${accent}`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: realPhoto ? '#161616' : fbColor }}>
+            {realPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={u.avatarUrl} alt="" width={av} height={av} style={{ width: av, height: av, objectFit: 'cover' }} />
+              <img src={u.avatarUrl!} alt="" width={av} height={av} style={{ width: av, height: av, objectFit: 'cover' }} />
             ) : (
-              <span style={{ color: 'rgba(245,240,232,0.5)', fontSize: av * 0.42, fontWeight: 700 }}>{initial}</span>
+              <span style={{ color: fbText, fontSize: av * 0.42, fontWeight: 700 }}>{initial}</span>
             )}
           </div>
           <div style={{ display: 'flex', color: '#f5f0e8', fontFamily: 'Zalando Expanded', fontSize: w * 0.082, fontWeight: 900, marginTop: w * 0.05, textAlign: 'center', lineHeight: 1.0 }}>{displayName}</div>
@@ -144,12 +150,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
               <span style={{ color: 'rgba(245,240,232,0.4)', fontSize: 22, letterSpacing: 5 }}>TOPIA://IDENTITY</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ display: 'flex', width: av, height: av, borderRadius: av, border: `6px solid ${accent}`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#161616' }}>
-                {u.avatarUrl ? (
+              <div style={{ display: 'flex', width: av, height: av, borderRadius: av, border: `6px solid ${accent}`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: realPhoto ? '#161616' : fbColor }}>
+                {realPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.avatarUrl} alt="" width={av} height={av} style={{ width: av, height: av, objectFit: 'cover' }} />
+                  <img src={u.avatarUrl!} alt="" width={av} height={av} style={{ width: av, height: av, objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ color: 'rgba(245,240,232,0.5)', fontSize: av * 0.42, fontWeight: 700 }}>{initial}</span>
+                  <span style={{ color: fbText, fontSize: av * 0.42, fontWeight: 700 }}>{initial}</span>
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 56 }}>

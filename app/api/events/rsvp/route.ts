@@ -5,6 +5,7 @@ import { markInviteAccepted } from '@/lib/events/invites';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
 import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert, formatEventSchedule } from '@/lib/notify/email';
 import { roleLabelToSlug } from '@/lib/profile/roleTags';
+import { fallbackAvatarDataUrl } from '@/lib/avatar';
 
 type AnswerMap = Record<string, string | string[] | boolean>;
 
@@ -80,8 +81,8 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
 // POST /api/events/rsvp — register for an event (with custom-question answers)
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, eventId, answers, email, name, phone, inviteToken, accessToken } = await request.json() as {
-      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; phone?: string; inviteToken?: string; accessToken?: string;
+    const { privyId, eventId, answers, email, name, phone, username, avatarUrl, inviteToken, accessToken } = await request.json() as {
+      privyId?: string; eventId?: string; answers?: AnswerMap; email?: string; name?: string; phone?: string; username?: string; avatarUrl?: string; inviteToken?: string; accessToken?: string;
     };
 
     if (!privyId || !eventId) {
@@ -134,6 +135,31 @@ export async function POST(request: NextRequest) {
 
     const userId = await resolveOrCreateUser(privyId, { email, name, phone });
     if (!userId) return NextResponse.json({ error: 'Could not resolve user' }, { status: 500 });
+
+    // Claim the TOPIA profile: set the chosen username (validated + unique) and
+    // the avatar. With no photo we store a generated colored-initial fallback so
+    // the profile/card always have one.
+    const handle = username?.trim().toLowerCase();
+    if (handle) {
+      if (!/^[a-z0-9_]{3,30}$/.test(handle)) {
+        return NextResponse.json({ error: 'Username must be 3–30 chars: letters, numbers, underscores' }, { status: 400 });
+      }
+      const [clash] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(sql`lower(${users.username}) = ${handle}`, sql`${users.id} <> ${userId}`))
+        .limit(1);
+      if (clash) return NextResponse.json({ error: 'That username is taken' }, { status: 409 });
+      await db.update(users).set({ username: handle, updatedAt: new Date() }).where(eq(users.id, userId));
+    }
+    {
+      const [u0] = await db.select({ avatarUrl: users.avatarUrl, name: users.name }).from(users).where(eq(users.id, userId));
+      if (avatarUrl?.trim()) {
+        await db.update(users).set({ avatarUrl: avatarUrl.trim(), updatedAt: new Date() }).where(eq(users.id, userId));
+      } else if (!u0?.avatarUrl) {
+        await db.update(users).set({ avatarUrl: fallbackAvatarDataUrl(name || u0?.name, privyId), updatedAt: new Date() }).where(eq(users.id, userId));
+      }
+    }
 
     // Already registered? Respond idempotently — re-submitting (e.g. when a
     // login race re-opens the form) just confirms the existing RSVP instead of

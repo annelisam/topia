@@ -1,10 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { SocialIcon } from '../../components/SocialIcons';
 import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
+import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/usernameAvailability';
+import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
+import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+
+// Resize an image to max 256×256 → base64 JPEG (GIFs uploaded raw to keep motion).
+function resizeImage(file: File): Promise<string> {
+  if (isGif(file)) return uploadToBlob(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 256;
+      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 interface Question {
   id: string;
@@ -62,6 +86,23 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [phoneCode, setPhoneCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
 
+  // Profile claim: a username (required) + an optional photo.
+  const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const availability = useUsernameAvailability(username, privyId);
+  const previewColor = avatarColor(username || contactName || privyId);
+
+  async function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true); setError('');
+    try { setAvatarUrl(await resizeImage(file)); }
+    catch { setError("Couldn't process that image — try another."); }
+    finally { setUploadingAvatar(false); }
+  }
+
   // Privy-verified contact methods are locked (can't be edited); the others
   // can be verified in-place via Privy, like the profile "connect" rows.
   const { user, linkEmail, linkPhone, getAccessToken } = usePrivy();
@@ -95,6 +136,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         if (!u) return;
         setContactName((prev) => prev || u.name || '');
         setContactEmail((prev) => prev || u.email || '');
+        setUsername((prev) => prev || u.username || '');
+        if (isRealPhoto(u.avatarUrl)) setAvatarUrl((prev) => prev || u.avatarUrl);
         const { code, rest } = splitPhone(u.phone);
         if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
         if (u.roleTags) {
@@ -140,6 +183,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
   const submit = async () => {
     if (!contactName.trim()) { setError('Please add your name'); return; }
+    if (!username.trim()) { setError('Pick a username to claim your TOPIA profile'); return; }
+    if (availability === 'invalid') { setError('Username must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
+    if (availability === 'taken') { setError('That username is taken — try another'); return; }
+    if (availability === 'checking') { setError('Hang on — still checking that username'); return; }
     // Email must be verified through Privy — no free-typed addresses.
     if (!verifiedEmail) { setError('Please verify your email to register'); return; }
     // Phone is optional, but if provided it must look like a real number.
@@ -159,7 +206,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       const res = await fetch('/api/events/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, answers, email: verifiedEmail, name: contactName.trim(), phone, inviteToken, accessToken }),
+        body: JSON.stringify({ privyId, eventId, answers, email: verifiedEmail, name: contactName.trim(), phone, username: username.trim(), avatarUrl: avatarUrl || undefined, inviteToken, accessToken }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to register');
@@ -262,11 +309,64 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
             {/* Standard contact fields — name auto-filled, email + optional phone */}
             <div className="space-y-4 mb-5">
+              {/* Profile photo (optional) — tap to upload; otherwise a colored fallback */}
+              <div className="flex flex-col items-center gap-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="relative w-20 h-20 rounded-full overflow-hidden border-2 cursor-pointer group"
+                  style={{ borderColor: 'var(--border-color)' }}
+                  aria-label="Upload profile photo"
+                >
+                  {avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="w-full h-full flex items-center justify-center font-basement font-black text-[30px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
+                      {avatarInitial(contactName || username)}
+                    </span>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(0,0,0,0.45)' }}>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-white">{uploadingAvatar ? '…' : avatarUrl ? 'change' : 'add'}</span>
+                  </span>
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-50" style={{ color: 'var(--foreground)' }}>Profile photo (optional)</span>
+              </div>
+
               <div>
                 <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                   Name<span style={{ color: '#FF5C34' }}> *</span>
                 </label>
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} style={fieldStyle} placeholder="Your name" />
+              </div>
+
+              <div>
+                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Username<span style={{ color: '#FF5C34' }}> *</span>
+                </label>
+                <div className="flex items-center gap-2 border px-3 rounded-lg" style={fieldStyle}>
+                  <span className="opacity-40 font-mono text-[13px]">@</span>
+                  <input
+                    type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    value={username}
+                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                    className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-2"
+                    style={{ color: 'var(--foreground)' }}
+                    placeholder="yourhandle"
+                  />
+                  {username && (
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-wider shrink-0"
+                      style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
+                    >
+                      {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+                  Claim your TOPIA handle — you can change it anytime.
+                </p>
               </div>
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -342,11 +442,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
             <button
               onClick={submit}
-              disabled={submitting || !verifiedEmail || !consent}
+              disabled={submitting || !verifiedEmail || !consent || availability !== 'available'}
               className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
             >
-              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+              {submitting ? 'Submitting…' : !verifiedEmail ? 'Verify email to continue' : availability !== 'available' ? 'Pick a username to continue' : !consent ? 'Agree to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
             </button>
           </>
         )}
@@ -398,6 +498,16 @@ function RoleTagPicker({ options, value, onChange }: { options: string[]; value:
           placeholder={`Search or add… (${value.length}/${ROLES_MAX})`}
           className={inputCls} style={fieldStyle}
         />
+      )}
+      {/* Empty state: a few quick-add suggestions. Typing filters / lets you create. */}
+      {!atMax && q.length === 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {options.filter((o) => !value.includes(o)).slice(0, 8).map((o) => (
+            <button key={o} type="button" onClick={() => add(o)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'transparent' }}>
+              + {o}
+            </button>
+          ))}
+        </div>
       )}
       {!atMax && q.length > 0 && (filtered.length > 0 || canCreate) && (
         <div className="flex flex-wrap gap-1.5 mt-2">
