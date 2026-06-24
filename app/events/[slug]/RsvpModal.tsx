@@ -464,11 +464,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   className="mt-0.5 shrink-0"
                   style={{ accentColor: 'var(--foreground)' }}
                 />
-                <span className="font-mono text-[12px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                  By continuing, I agree to create a Topia profile and to Topia&rsquo;s{' '}
-                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Terms</a>{' '}
+                <span className="font-mono text-[11px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                  By continuing, I agree to TOPIA&rsquo;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Terms</a>{' '}
                   and{' '}
-                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent-ink)' }}>Privacy Policy</a>, and consent to receive event updates from Topia and the host.
+                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Privacy Policy</a>, to creating a TOPIA profile, and to receiving event updates from TOPIA and the host.
                 </span>
               </label>
             </div>
