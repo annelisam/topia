@@ -106,7 +106,7 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         <div className="relative h-full flex flex-col p-5" style={{ transform: 'translateZ(40px)' }}>
           <div className="flex items-center justify-between">
             <svg width="34" height="22" viewBox="0 0 468 309" fill="none" aria-label="Topia">
-              <path d={LOGO_PATH} fill="#e4fe52" />
+              <path d={LOGO_PATH} fill={accent} />
             </svg>
             <span className="font-mono text-[8px] tracking-[2px] uppercase text-bone/40">identity</span>
           </div>

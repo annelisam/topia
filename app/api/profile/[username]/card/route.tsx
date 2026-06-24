@@ -1,8 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
-import { sql } from 'drizzle-orm';
+import { users, worldMembers, worlds } from '@/lib/db/schema';
+import { sql, eq, and } from 'drizzle-orm';
 import { PATH_CONFIG, resolvePath } from '@/app/components/profile/pathConfig';
+import { ensureShortLink } from '@/lib/shortlinkStore';
 
 export const runtime = 'nodejs';
 
@@ -21,11 +22,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const format = new URL(req.url).searchParams.get('format'); // 'og' (link preview) | 'story' (IG story)
 
   const [u] = await db
-    .select({ name: users.name, username: users.username, avatarUrl: users.avatarUrl, roleTags: users.roleTags, path: users.path, createdAt: users.createdAt })
+    .select({ id: users.id, name: users.name, username: users.username, avatarUrl: users.avatarUrl, roleTags: users.roleTags, path: users.path, createdAt: users.createdAt })
     .from(users)
     .where(sql`lower(${users.username}) = ${username.toLowerCase()}`)
     .limit(1);
   if (!u) return new Response('Not found', { status: 404 });
+
+  // Worldbuilder when the user builds a published world (matches the profile
+  // page) — the explicit path column alone misses this.
+  const owned = await db
+    .select({ id: worldMembers.id })
+    .from(worldMembers)
+    .innerJoin(worlds, eq(worldMembers.worldId, worlds.id))
+    .where(and(eq(worldMembers.userId, u.id), eq(worldMembers.role, 'world_builder'), eq(worlds.published, true)))
+    .limit(1);
+  const hasOwnedWorlds = owned.length > 0;
+
+  // The user's short profile link (topia.vision/s/<code>), shown on the card.
+  const code = await ensureShortLink({ path: `/profile/${u.username}`, kind: 'profile', createdBy: u.id });
+  const shortHost = new URL(origin).host;
+  const shortLink = code ? `${shortHost}/s/${code}` : shortHost;
 
   const [bold, regular, zalando] = await Promise.all([
     fetch(`${origin}/fonts/GTZirkon-Bold.otf`).then((r) => r.arrayBuffer()),
@@ -34,7 +50,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   ]);
 
   const roleTags = (u.roleTags ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  const path = resolvePath(u.path, roleTags, false);
+  const path = resolvePath(u.path, roleTags, hasOwnedWorlds);
   const cfg = PATH_CONFIG[path];
   const accent = cfg.hex;
   const onAccent = path === 'worldbuilder' ? '#0a0a0a' : '#f5f0e8';
@@ -45,14 +61,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const cardBg = `radial-gradient(circle at 50% 16%, ${accent}26 0%, rgba(13,13,13,0) 60%), linear-gradient(160deg, #181818 0%, #0c0c0c 62%, #0a0a0a 100%)`;
 
   // Self-contained card sized by width — reused across formats.
-  const Card = (w: number, extraStyle: React.CSSProperties = {}) => {
+  const Card = (w: number, extraStyle: React.CSSProperties = {}, footerRight: string = shortLink) => {
     const h = w * 1.25;
     const pad = w * 0.062;
     const av = w * 0.3;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', width: w, height: h, borderRadius: w * 0.045, border: `${Math.max(2, w * 0.0022)}px solid ${accent}66`, background: cardBg, padding: pad, position: 'relative', ...extraStyle }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <svg width={w * 0.075} height={w * 0.075 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill="#e4fe52" /></svg>
+          <svg width={w * 0.075} height={w * 0.075 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
           <span style={{ color: 'rgba(245,240,232,0.4)', fontSize: w * 0.024, letterSpacing: 4 }}>TOPIA://IDENTITY</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
@@ -71,7 +87,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', color: 'rgba(245,240,232,0.4)', fontSize: w * 0.024, letterSpacing: 3 }}>
           <span style={{ display: 'flex' }}>ISSUED {issued}</span>
-          <span style={{ display: 'flex' }}>TOPIA.VISION</span>
+          <span style={{ display: 'flex', letterSpacing: 1 }}>{footerRight}</span>
         </div>
         <div style={{ position: 'absolute', bottom: 0, left: '12%', width: '76%', height: w * 0.006, display: 'flex', backgroundColor: accent, borderRadius: 6 }} />
       </div>
@@ -94,17 +110,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
           <div style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1920, display: 'flex', background: `radial-gradient(circle at 50% 42%, ${accent}26 0%, rgba(10,10,10,0) 55%)` }} />
 
           <div style={{ display: 'flex', marginTop: 150 }}>
-            <svg width={72} height={72 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill="#e4fe52" /></svg>
+            <svg width={72} height={72 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
           </div>
 
           {/* tilted card (Satori is 2D-only — rotate+skew fakes the 3D lean) */}
           <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            {Card(720, { transform: 'rotate(-4deg) skewY(-2.5deg)', boxShadow: `0 50px 90px -20px rgba(0,0,0,0.85), 0 0 70px -10px ${accent}55` })}
+            {Card(720, { transform: 'rotate(-4deg) skewY(-2.5deg)', boxShadow: `0 50px 90px -20px rgba(0,0,0,0.85), 0 0 70px -10px ${accent}55` }, 'TOPIA.VISION')}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 150 }}>
-            <span style={{ color: '#f5f0e8', fontSize: 40, fontWeight: 700, letterSpacing: 2 }}>@{u.username}</span>
-            <span style={{ color: 'rgba(245,240,232,0.45)', fontSize: 26, letterSpacing: 4, marginTop: 10 }}>FIND ME ON TOPIA.VISION</span>
+            <span style={{ color: '#f5f0e8', fontSize: 38, fontWeight: 700, letterSpacing: 1 }}>{shortLink}</span>
+            <span style={{ color: 'rgba(245,240,232,0.45)', fontSize: 26, letterSpacing: 4, marginTop: 12 }}>FIND ME ON TOPIA</span>
           </div>
         </div>
       ),
@@ -122,7 +138,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
           <img src={TEXTURE} alt="" width={1200} height={630} style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, opacity: 0.5 }} />
           <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', borderRadius: 36, border: `2px solid ${accent}66`, background: cardBg, padding: 56, justifyContent: 'space-between', position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <svg width={64} height={64 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill="#e4fe52" /></svg>
+              <svg width={64} height={64 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={accent} /></svg>
               <span style={{ color: 'rgba(245,240,232,0.4)', fontSize: 22, letterSpacing: 5 }}>TOPIA://IDENTITY</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -143,7 +159,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', color: 'rgba(245,240,232,0.4)', fontSize: 20, letterSpacing: 3 }}>
               <span style={{ display: 'flex' }}>ISSUED {issued}</span>
-              <span style={{ display: 'flex' }}>TOPIA.VISION</span>
+              <span style={{ display: 'flex', letterSpacing: 1 }}>{shortLink}</span>
             </div>
           </div>
         </div>
