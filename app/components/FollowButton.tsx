@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 
 interface FollowButtonProps {
@@ -13,6 +13,11 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
   const { authenticated, user } = usePrivy();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [busy, setBusy] = useState(false);
+
+  // Re-sync when the resolved follow state arrives (e.g. the guest list
+  // refetches once the viewer is known), so a button mounted with a stale
+  // value updates instead of being stuck on "Follow".
+  useEffect(() => { setIsFollowing(initialIsFollowing); }, [initialIsFollowing]);
 
   if (!authenticated) return null;
 

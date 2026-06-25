@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePrivy } from '@privy-io/react-auth';
 import FollowButton from '../../components/FollowButton';
+import TopiaLoader from '../../components/TopiaLoader';
 
 interface Guest {
   userId: string;
@@ -19,17 +20,24 @@ interface Guest {
 // that profile in a new tab. Only viewers who RSVP'd (or the host) can see it;
 // everyone else gets a blurred teaser nudging them to RSVP.
 export default function WhosGoing({ eventId, goingCount, canView }: { eventId: string; goingCount: number; canView: boolean }) {
-  const { user } = usePrivy();
+  const { ready, user } = usePrivy();
   const [guests, setGuests] = useState<Guest[] | null>(null);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // Wait for Privy to resolve the viewer before fetching — otherwise the list
+    // loads without viewerPrivyId and everyone shows "Follow" even when already
+    // followed (and the buttons would lock in that stale state).
+    if (!ready) return;
+    setLoading(true);
     const q = user?.id ? `&viewerPrivyId=${encodeURIComponent(user.id)}` : '';
     fetch(`/api/events/guests?eventId=${eventId}${q}`)
       .then((r) => r.json())
       .then((d) => setGuests(d.guests ?? []))
-      .catch(() => setGuests([]));
-  }, [eventId, user?.id]);
+      .catch(() => setGuests([]))
+      .finally(() => setLoading(false));
+  }, [eventId, ready, user?.id]);
 
   // Lock background scroll while the guest list is open.
   useEffect(() => {
@@ -93,14 +101,14 @@ export default function WhosGoing({ eventId, goingCount, canView }: { eventId: s
       )}
 
       {open && canView && createPortal(
-        <GuestsModal guests={shown} onClose={() => setOpen(false)} />,
+        <GuestsModal guests={shown} loading={loading} onClose={() => setOpen(false)} />,
         document.body,
       )}
     </div>
   );
 }
 
-function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void }) {
+function GuestsModal({ guests, loading, onClose }: { guests: Guest[]; loading: boolean; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-[3000] flex items-center justify-center p-4 backdrop-blur-sm"
@@ -122,6 +130,9 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
           </p>
         </div>
         <div className="overflow-y-auto p-3">
+          {loading ? (
+            <div className="py-12"><TopiaLoader label="Loading guests…" /></div>
+          ) : (
           <div className="flex flex-col gap-2.5">
             {guests.map((g) => (
               <div
@@ -166,6 +177,7 @@ function GuestsModal({ guests, onClose }: { guests: Guest[]; onClose: () => void
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
     </div>
