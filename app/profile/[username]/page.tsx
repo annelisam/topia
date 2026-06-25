@@ -251,7 +251,7 @@ export default function PublicProfilePage() {
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {profile && (
-              <div className="grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
                 {/* ═══ ROW 1 — UNIFIED ID CARD ═══ */}
                 <div className="bg-[var(--page-bg)] relative overflow-hidden">

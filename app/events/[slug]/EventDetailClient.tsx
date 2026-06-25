@@ -482,7 +482,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
         storyFilename={`${slug}-story.png`}
       />
 
-      <div className="pt-6 md:pt-24 pb-16">
+      <div className="relative z-10 pt-6 md:pt-24 pb-16">
         {/* Luma-style two-column layout — sticky cover on the left, all the
             event details + registration card on the right. */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
