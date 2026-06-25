@@ -107,7 +107,7 @@ export default function SentientText() {
           style={{
             left: `${w.x}%`,
             top: `${w.y}%`,
-            opacity: w.phase === 'fading' ? 0 : 0.15,
+            opacity: w.phase === 'fading' ? 0 : 0.09,
             color: 'var(--sentient-color, #1a1a1a)',
             transition: 'opacity 1.8s ease-out',
           }}
