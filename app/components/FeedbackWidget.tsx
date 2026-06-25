@@ -70,8 +70,8 @@ export default function FeedbackWidget() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex flex-col items-center gap-1.5 px-1.5 py-3.5 rounded-l-xl backdrop-blur-xl border-t border-l border-b cursor-pointer transition-[opacity,padding] duration-200 hover:pr-2 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--nav-border)', color: 'var(--page-text)' }}
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex flex-col items-center gap-1.5 px-1.5 py-3.5 rounded-l-xl border-t border-l border-b cursor-pointer transition-[opacity,padding] duration-200 hover:pr-2 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <polyline points="15 18 9 12 15 6" />
@@ -98,7 +98,7 @@ export default function FeedbackWidget() {
               <span className="font-mono text-[9px] font-bold uppercase tracking-[1.5px] px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>Beta</span>
             </div>
             <p className="font-mono text-[11px] opacity-50 mt-1 leading-snug" style={{ color: 'var(--foreground)' }}>
-              Found a bug or have an idea? Tell us — it goes straight to the team.
+              Topia is in beta and still growing — spotted a bug or have an idea? Tell us, it goes straight to the team.
             </p>
           </div>
           <button onClick={close} className="font-mono text-[18px] leading-none opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
