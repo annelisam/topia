@@ -113,16 +113,32 @@ interface UserRow {
   socialLinkedin: string | null;
   socialSubstack: string | null;
   published: boolean;
+  createdAt?: string;
   feedbackRef?: string; // opaque ref shown on feedback issues (server-computed)
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
-type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links' | 'emails';
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links' | 'emails' | 'newsletter';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+// Build a CSV from a header + rows and trigger a client-side download. Every
+// cell is quote-escaped so commas/quotes/newlines in the data stay intact.
+function downloadCsv(filename: string, header: string[], rows: (string | number | null | undefined)[][]) {
+  const csv = [header, ...rows]
+    .map((row) => row.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -1125,11 +1141,24 @@ function UsersTab() {
     setForm(p => ({ ...p, roleTags: next.join(',') || '' }));
   };
 
+  const exportCsv = () => {
+    const header = ['Name', 'Username', 'Email', 'Role', 'Published', 'Role Tags', 'Worlds', 'Joined'];
+    const rows = filtered.map((u) => [
+      u.name, u.username, u.email, u.role || 'user', u.published ? 'yes' : 'no',
+      u.roleTags, u.worldMemberships.map((w) => w.worldTitle).join('; '),
+      u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : '',
+    ]);
+    downloadCsv('topia-users.csv', header, rows);
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} users</span>
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, @handle, email, or feedback ref…" className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-72" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <span className="font-mono text-[13px] shrink-0" style={{ color: '#1a1a1a' }}>{items.length} users</span>
+        <div className="flex items-center gap-2">
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, @handle, email, or feedback ref…" className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-72" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
+          <button onClick={exportCsv} className="px-3 py-1 font-mono text-[12px] uppercase border border-[#1a1a1a] hover:bg-[#1a1a1a]/5 whitespace-nowrap" style={{ color: '#1a1a1a' }}>Export CSV</button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -1438,6 +1467,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'projects', label: 'PROJECTS' },
   { id: 'links', label: 'LINKS' },
   { id: 'emails', label: 'EMAILS' },
+  { id: 'newsletter', label: 'NEWSLETTER' },
 ];
 
 export default function AdminDashboard() {
@@ -1496,7 +1526,132 @@ export default function AdminDashboard() {
         {tab === 'projects' && <SimplePublishTab type="world-projects" noun="projects" />}
         {tab === 'links' && <LinksTab />}
         {tab === 'emails' && <EmailsTab />}
+        {tab === 'newsletter' && <NewsletterTab />}
       </main>
+    </div>
+  );
+}
+
+// ─── Newsletter Tab — captured sign-ups, attributed to profiles by email ──────
+interface NewsletterRow {
+  id: string;
+  email: string;
+  name: string | null;
+  source: string | null;
+  roles: string | null;
+  createdAt: string;
+  userId: string | null;    // attributed profile (live email match), null if none
+  username: string | null;
+  userName: string | null;
+}
+
+function NewsletterTab() {
+  const [items, setItems] = useState<NewsletterRow[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch('/api/admin/newsletter');
+    const data = await res.json();
+    setItems(data.signups || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const remove = async (id: string) => {
+    const res = await fetch('/api/admin/newsletter', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    if (res.ok) { setDeleteConfirm(null); load(); }
+  };
+
+  const filtered = items.filter((s) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (s.email.toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q)
+      || (s.username || '').toLowerCase().includes(q) || (s.source || '').toLowerCase().includes(q));
+  });
+
+  const attributed = items.filter((s) => s.userId).length;
+
+  const exportCsv = () => {
+    const header = ['Date', 'Name', 'Email', 'Source', 'Roles', 'Attributed Profile', 'Profile URL'];
+    const rows = filtered.map((s) => [
+      new Date(s.createdAt).toISOString().slice(0, 10),
+      s.name, s.email, s.source, s.roles,
+      s.username ? `@${s.username}` : '',
+      s.username ? `https://topia.vision/profile/${s.username}` : '',
+    ]);
+    downloadCsv('topia-newsletter-signups.csv', header, rows);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <span className="font-mono text-[13px] shrink-0" style={{ color: '#1a1a1a' }}>
+          {items.length} sign-ups · {attributed} with a profile
+        </span>
+        <div className="flex items-center gap-2">
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email, name, @handle, source…" className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-72" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
+          <button onClick={exportCsv} disabled={items.length === 0} className="px-3 py-1 font-mono text-[12px] uppercase border border-[#1a1a1a] hover:bg-[#1a1a1a]/5 disabled:opacity-40 whitespace-nowrap" style={{ color: '#1a1a1a' }}>Export CSV</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="font-mono text-[13px] opacity-60" style={{ color: '#1a1a1a' }}>Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="font-mono text-[13px] opacity-60" style={{ color: '#1a1a1a' }}>No sign-ups yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse font-mono text-[13px]" style={{ color: '#1a1a1a' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+                <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Date</th>
+                <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Name</th>
+                <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Email</th>
+                <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Source</th>
+                <th className="text-left px-3 py-2 font-bold uppercase text-[12px]">Profile</th>
+                <th className="px-3 py-2 text-[12px]"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => (
+                <tr key={s.id} style={{ backgroundColor: i % 2 === 0 ? '#f5f0e8' : '#ebe6de', borderBottom: '1px solid #1a1a1a' }}>
+                  <td className="px-3 py-2 whitespace-nowrap opacity-70">{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                  <td className="px-3 py-2 font-bold">{s.name || '—'}</td>
+                  <td className="px-3 py-2">{s.email}</td>
+                  <td className="px-3 py-2">
+                    {s.source ? (
+                      <span className="font-mono text-[11px] px-2 py-0.5 border" style={{ backgroundColor: '#e5e5e5', color: '#1a1a1a', borderColor: '#1a1a1a' }}>{s.source}</span>
+                    ) : <span className="opacity-40">—</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {s.username ? (
+                      <a href={`/profile/${s.username}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] px-2 py-0.5 border inline-block hover:opacity-80" style={{ backgroundColor: '#00FF88', color: '#1a1a1a', borderColor: '#1a1a1a' }} title={s.userName || ''}>
+                        @{s.username}
+                      </a>
+                    ) : (
+                      <span className="font-mono text-[11px] opacity-40">no profile</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {deleteConfirm === s.id ? (
+                      <>
+                        <button onClick={() => remove(s.id)} className="font-mono text-[12px] underline" style={{ color: '#FF5C34' }}>CONFIRM</button>
+                        {' '}
+                        <button onClick={() => setDeleteConfirm(null)} className="font-mono text-[12px] underline hover:opacity-60">NO</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeleteConfirm(s.id)} className="font-mono text-[12px] underline hover:opacity-60" style={{ color: '#FF5C34' }}>DEL</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
