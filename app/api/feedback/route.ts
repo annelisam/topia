@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
+import { feedbackRef } from '@/lib/feedbackId';
 
 // In-app feedback → GitHub issue. Logged-in only. Each issue is tagged so the
 // team can distinguish user-submitted feedback: a 'user-feedback' label, a
@@ -39,14 +40,15 @@ export async function POST(request: NextRequest) {
     }
     const did = verification.configured && verification.ok ? verification.did : privyId;
 
-    // Resolve the canonical user id (not email/handle) so issues stay free of
-    // PII. Admins map the id back to a person via the admin users search.
+    // Resolve the canonical user id, then derive an opaque feedback ref from it
+    // — issues never carry email, handle, or the raw database id. Admins map the
+    // ref back to a person via the admin users search.
     const [u] = await db
       .select({ id: users.id })
       .from(users)
       .where(eq(users.privyId, did))
       .limit(1);
-    const userId = u?.id ?? did;
+    const userId = feedbackRef(u?.id ?? did);
 
     const cat = CATEGORIES[category ?? 'other'] ?? CATEGORIES.other;
     const firstLine = message.trim().split('\n')[0].slice(0, 80);
@@ -92,8 +94,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Couldn’t submit feedback right now — please try again later.' }, { status: 502 });
     }
 
-    const issue = await res.json();
-    return NextResponse.json({ ok: true, url: issue.html_url, number: issue.number });
+    await res.json().catch(() => null);
+    // Deliberately don't return the issue URL/number — submitters shouldn't see
+    // (or reach) our GitHub.
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Feedback POST error:', error);
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });

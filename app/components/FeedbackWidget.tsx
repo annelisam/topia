@@ -18,7 +18,7 @@ export default function FeedbackWidget() {
   const [category, setCategory] = useState('bug');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ url: string } | null>(null);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
   // Lock background scroll while the drawer is open.
@@ -31,8 +31,8 @@ export default function FeedbackWidget() {
 
   if (!ready || !authenticated) return null; // feedback is for signed-in users
 
-  const reset = () => { setMessage(''); setError(''); setDone(null); setCategory('bug'); };
-  const close = () => { setOpen(false); };
+  const reset = () => { setMessage(''); setError(''); setDone(false); setCategory('bug'); };
+  const close = () => { setOpen(false); setTimeout(reset, 300); };
 
   const submit = async () => {
     if (!message.trim()) { setError('Please add a description.'); return; }
@@ -52,9 +52,9 @@ export default function FeedbackWidget() {
           viewport: typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : '',
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to submit feedback.');
-      setDone({ url: data.url });
+      setDone(true);
       setMessage('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to submit feedback.');
@@ -65,18 +65,18 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Edge handle — slim backdrop-blur pull tab (mirrors the mobile nav
-          handle). Hidden while the drawer is open. */}
+      {/* Edge handle — tucks itself almost fully off the right edge, leaving a
+          small nub that expands on hover/focus so it barely intrudes. */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex flex-col items-center gap-1.5 px-1.5 py-3.5 rounded-l-xl border-t border-l border-b cursor-pointer transition-[opacity,padding] duration-200 hover:pr-2 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center gap-1.5 py-2.5 pl-2 pr-3 rounded-l-xl border-t border-l border-b cursor-pointer transition-[transform,opacity] duration-300 ease-out ${open ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-[calc(100%-1.5rem)] opacity-80 hover:translate-x-0 hover:opacity-100 focus-visible:translate-x-0 focus-visible:opacity-100'}`}
         style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        <span className="font-mono text-[10px] uppercase tracking-[1.5px]" style={{ writingMode: 'vertical-rl' }}>Feedback</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] whitespace-nowrap">Feedback</span>
       </button>
 
       {/* Backdrop */}
@@ -106,19 +106,21 @@ export default function FeedbackWidget() {
 
         <div className="flex-1 overflow-y-auto p-6">
           {done ? (
-            <div className="text-center py-6">
-              <div className="font-basement text-[22px] font-black uppercase leading-none mb-2" style={{ color: 'var(--foreground)' }}>Thank you!</div>
-              <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>
-                Your feedback was logged. We read every one.
+            <div className="text-center py-8">
+              <div className="font-basement text-[22px] font-black uppercase leading-none mb-3" style={{ color: 'var(--foreground)' }}>Thank you!</div>
+              <p className="font-mono text-[12px] opacity-60 mb-7 leading-snug" style={{ color: 'var(--foreground)' }}>
+                We&rsquo;ve got it — the team reads every note and we&rsquo;ll reach out if we need anything more.
               </p>
-              <a href={done.url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] uppercase tracking-widest underline opacity-60 hover:opacity-100 transition" style={{ color: 'var(--foreground)' }}>
-                View issue ↗
-              </a>
-              <div className="mt-6">
-                <button onClick={reset} className="font-mono text-[12px] uppercase tracking-widest underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100" style={{ color: 'var(--accent-ink)' }}>
-                  Send another
-                </button>
-              </div>
+              <button
+                onClick={close}
+                className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold transition hover:opacity-90"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              >
+                Done
+              </button>
+              <button onClick={reset} className="mt-4 font-mono text-[11px] uppercase tracking-widest underline bg-transparent border-none cursor-pointer opacity-50 hover:opacity-100" style={{ color: 'var(--foreground)' }}>
+                Send another
+              </button>
             </div>
           ) : (
             <>
