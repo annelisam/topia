@@ -157,7 +157,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   <div className="flex flex-col md:flex-row relative">
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.03] select-none" draggable={false} />
+                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.012] select-none" draggable={false} />
                     </div>
 
                     {/* World image — compact on mobile, larger photo slot on desktop */}
