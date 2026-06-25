@@ -228,6 +228,38 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) { console.error('rsvp roles → profile sync:', e); }
 
+    // Carry the Instagram / X handles the guest entered into their profile — but
+    // only fill a field that's empty. Never overwrite an existing (and possibly
+    // OAuth-verified) handle.
+    try {
+      const social: { instagram?: string; twitter?: string } = {};
+      for (const q of questions) {
+        if (q.type !== 'instagram' && q.type !== 'twitter') continue;
+        const raw = a[q.id];
+        if (typeof raw !== 'string' || !raw.trim()) continue;
+        // Normalise "@handle", "handle", or a pasted profile URL → bare handle.
+        let handle = raw.trim();
+        if (handle.includes('/')) handle = handle.split('/').filter(Boolean).pop() ?? handle;
+        handle = handle.replace(/^@/, '').replace(/[^A-Za-z0-9._-].*$/, '');
+        if (!handle) continue;
+        if (q.type === 'instagram') social.instagram = `https://instagram.com/${handle}`;
+        else social.twitter = `https://x.com/${handle}`;
+      }
+      if (social.instagram || social.twitter) {
+        const [prof] = await db
+          .select({ socialInstagram: users.socialInstagram, socialTwitter: users.socialTwitter })
+          .from(users)
+          .where(eq(users.id, userId));
+        const patch: Record<string, unknown> = {};
+        if (social.instagram && !prof?.socialInstagram?.trim()) patch.socialInstagram = social.instagram;
+        if (social.twitter && !prof?.socialTwitter?.trim()) patch.socialTwitter = social.twitter;
+        if (Object.keys(patch).length) {
+          patch.updatedAt = new Date();
+          await db.update(users).set(patch).where(eq(users.id, userId));
+        }
+      }
+    } catch (e) { console.error('rsvp socials → profile sync:', e); }
+
     // If this registration came from an invite, mark it accepted (by token, or
     // by the user's verified email/phone).
     const [u] = await db.select({ email: users.email, phone: users.phone, name: users.name, username: users.username }).from(users).where(eq(users.id, userId));
