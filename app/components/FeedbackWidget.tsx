@@ -70,7 +70,7 @@ export default function FeedbackWidget() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center justify-center gap-1 py-3 pl-2 pr-2.5 min-w-[44px] min-h-[44px] rounded-l-xl border-t border-l border-b cursor-pointer will-change-transform transition-[transform,opacity] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100 md:translate-x-[calc(100%-1.4rem)] md:opacity-80 md:hover:translate-x-0 md:hover:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100'}`}
+        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center gap-1 py-3 pl-1.5 pr-2 rounded-l-xl border-t border-l border-b cursor-pointer will-change-transform transition-[transform,opacity] duration-300 ease-out ${open ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-[calc(100%-1.4rem)] opacity-80 hover:translate-x-0 hover:opacity-100 focus-visible:translate-x-0 focus-visible:opacity-100'}`}
         style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
