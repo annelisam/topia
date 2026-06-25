@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
+import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 
@@ -542,54 +543,78 @@ export default function HomePreview() {
 
         <div id="explore" className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
 
-          {/* ── TOPIA TV ── */}
+          {/* ── DISCOVER PROFILES (carousel) ── */}
           <section className="mb-16">
-            <SectionHead label="now playing" title="Topia TV" href="/tv" linkText="Open TV →" />
-            {episodes.length === 0 ? (
-              <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading channel…</div>
+            <div className="flex items-end justify-between mb-5">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-[3px] opacity-40 block mb-1" style={txt}>the community</span>
+                <h2 className="font-basement font-black text-[clamp(26px,4vw,44px)] leading-[0.9] uppercase" style={txt}>Discover</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {[-1, 1].map((dir) => (
+                  <button
+                    key={dir}
+                    onClick={() => scrollCarousel(dir)}
+                    aria-label={dir < 0 ? 'Scroll left' : 'Scroll right'}
+                    className="w-9 h-9 rounded-full border flex items-center justify-center font-mono text-[14px] hover:bg-[var(--surface-hover)] transition cursor-pointer"
+                    style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                  >
+                    {dir < 0 ? '←' : '→'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {profiles.length === 0 && viewerComplete !== false ? (
+              <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
-                {featuredEp && <HomeTVPlayer episode={featuredEp} />}
-                {/* Guide panel — mirrors the TV page (now playing / up next) */}
-                <div className="relative rounded-xl overflow-hidden border bg-obsidian flex flex-col min-h-[260px]" style={{ borderColor: 'var(--border-color)' }}>
-                  {/* CRT scanline texture */}
-                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-[1]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(245,240,232,1) 3px, rgba(245,240,232,1) 4px)' }} />
-                  <div className="relative z-[2] flex items-center justify-between px-3 py-2.5 border-b border-bone/[0.08]">
-                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40">Topia TV // Guide</span>
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" /><span className="font-mono text-[9px] uppercase tracking-[2px] text-lime">Live</span></span>
-                  </div>
+              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none', overflowAnchor: 'none' }}>
+                {/* Nudge the viewer to finish their own profile */}
+                {viewerComplete === false && (
+                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
+                    <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
+                    <span className="font-basement font-black text-[16px] uppercase leading-tight" style={txt}>Complete your profile</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
+                  </Link>
+                )}
 
-                  {/* Now playing */}
-                  {featuredEp && (
-                    <div className="relative z-[2] flex items-stretch border-b border-bone/[0.08] bg-bone/[0.05]">
-                      <div className={`w-1 shrink-0 ${CAT_DOT[featuredEp.category] ?? 'bg-lime'}`} />
-                      <div className="px-3 py-2.5 min-w-0 flex-1">
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-lime block mb-1">▸ Now playing</span>
-                        <span className="font-mono text-[12px] font-bold uppercase text-bone block truncate">{featuredEp.title}</span>
-                        <span className="font-mono text-[9px] text-bone/40 uppercase tracking-wider">{[featuredEp.category, featuredEp.guestName].filter(Boolean).join(' · ')}</span>
+                {profiles.map((p) => {
+                  const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
+                  const initial = (p.name || p.username || '?')[0]?.toUpperCase();
+                  return (
+                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[310px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
+                      <div className="aspect-[4/3] overflow-hidden bg-obsidian relative">
+                        {p.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.avatarUrl} alt={p.name ?? ''} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[48px] text-bone/20">{initial}</div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
+                        {/* One badge: membership-accurate World Builder, else the path badge */}
+                        {p.isWorldBuilder ? (
+                          <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} bg-lime text-obsidian`}>World Builder</span>
+                        ) : (
+                          <PathBadge path={p.path} />
+                        )}
+                        {isNewProfile(p.createdAt) && (
+                          <span className={`absolute top-2.5 right-2.5 ${BADGE_BASE} bg-pink text-obsidian`}>New</span>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Up next */}
-                  <div className="relative z-[2] px-3 pt-2.5 pb-1">
-                    <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30">Up next</span>
-                  </div>
-                  <div className="relative z-[2] flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                    {moreEps.map((ep, i) => (
-                      <Link key={ep.id} href="/tv" className="group flex items-stretch border-b border-bone/[0.04] hover:bg-bone/[0.03] transition-colors no-underline">
-                        <div className={`w-1 shrink-0 ${CAT_DOT[ep.category] ?? 'bg-lime'} opacity-40 group-hover:opacity-100 transition-opacity`} />
-                        <div className="w-10 shrink-0 flex items-center justify-center border-r border-bone/[0.04]">
-                          <span className="font-basement font-black text-[13px] text-bone/25 group-hover:text-bone/60 transition-colors">{String(i + 2).padStart(3, '0')}</span>
-                        </div>
-                        <div className="flex-1 px-3 py-2.5 min-w-0">
-                          <span className="font-mono text-[11px] font-bold uppercase text-bone block truncate">{ep.title}</span>
-                          <span className="font-mono text-[9px] text-bone/30 uppercase tracking-wider">{ep.category}</span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+                      <div className="p-3">
+                        <h3 className="font-basement font-black text-[16px] uppercase text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
+                        <span className="font-mono text-[10px] text-bone/40 block truncate">@{p.username}</span>
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {tags.map((t) => (
+                              <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm whitespace-nowrap">{t.replace(/-/g, ' ')}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -690,81 +715,60 @@ export default function HomePreview() {
             )}
           </section>
 
-          {/* ── DISCOVER PROFILES (carousel) ── */}
-          <section className="mb-12">
-            <div className="flex items-end justify-between mb-5">
-              <div>
-                <span className="font-mono text-[11px] uppercase tracking-[3px] opacity-40 block mb-1" style={txt}>the community</span>
-                <h2 className="font-basement font-black text-[clamp(26px,4vw,44px)] leading-[0.9] uppercase" style={txt}>Discover</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {[-1, 1].map((dir) => (
-                  <button
-                    key={dir}
-                    onClick={() => scrollCarousel(dir)}
-                    aria-label={dir < 0 ? 'Scroll left' : 'Scroll right'}
-                    className="w-9 h-9 rounded-full border flex items-center justify-center font-mono text-[14px] hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                    style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
-                  >
-                    {dir < 0 ? '←' : '→'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {profiles.length === 0 && viewerComplete !== false ? (
-              <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
+          {/* ── TOPIA TV ── */}
+          <section className="mb-16">
+            <SectionHead label="now playing" title="Topia TV" href="/tv" linkText="Open TV →" />
+            {episodes.length === 0 ? (
+              <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading channel…</div>
             ) : (
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none', overflowAnchor: 'none' }}>
-                {/* Nudge the viewer to finish their own profile */}
-                {viewerComplete === false && (
-                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
-                    <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
-                    <span className="font-basement font-black text-[16px] uppercase leading-tight" style={txt}>Complete your profile</span>
-                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
-                  </Link>
-                )}
+              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
+                {featuredEp && <HomeTVPlayer episode={featuredEp} />}
+                {/* Guide panel — mirrors the TV page (now playing / up next) */}
+                <div className="relative rounded-xl overflow-hidden border bg-obsidian flex flex-col min-h-[260px]" style={{ borderColor: 'var(--border-color)' }}>
+                  {/* CRT scanline texture */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-[1]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(245,240,232,1) 3px, rgba(245,240,232,1) 4px)' }} />
+                  <div className="relative z-[2] flex items-center justify-between px-3 py-2.5 border-b border-bone/[0.08]">
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-bone/40">Topia TV // Guide</span>
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" /><span className="font-mono text-[9px] uppercase tracking-[2px] text-lime">Live</span></span>
+                  </div>
 
-                {profiles.map((p) => {
-                  const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
-                  const initial = (p.name || p.username || '?')[0]?.toUpperCase();
-                  return (
-                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[310px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="aspect-[4/3] overflow-hidden bg-obsidian relative">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.avatarUrl} alt={p.name ?? ''} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[48px] text-bone/20">{initial}</div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
-                        {/* One badge: membership-accurate World Builder, else the path badge */}
-                        {p.isWorldBuilder ? (
-                          <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} bg-lime text-obsidian`}>World Builder</span>
-                        ) : (
-                          <PathBadge path={p.path} />
-                        )}
-                        {isNewProfile(p.createdAt) && (
-                          <span className={`absolute top-2.5 right-2.5 ${BADGE_BASE} bg-pink text-obsidian`}>New</span>
-                        )}
+                  {/* Now playing */}
+                  {featuredEp && (
+                    <div className="relative z-[2] flex items-stretch border-b border-bone/[0.08] bg-bone/[0.05]">
+                      <div className={`w-1 shrink-0 ${CAT_DOT[featuredEp.category] ?? 'bg-lime'}`} />
+                      <div className="px-3 py-2.5 min-w-0 flex-1">
+                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-lime block mb-1">▸ Now playing</span>
+                        <span className="font-mono text-[12px] font-bold uppercase text-bone block truncate">{featuredEp.title}</span>
+                        <span className="font-mono text-[9px] text-bone/40 uppercase tracking-wider">{[featuredEp.category, featuredEp.guestName].filter(Boolean).join(' · ')}</span>
                       </div>
-                      <div className="p-3">
-                        <h3 className="font-basement font-black text-[16px] uppercase text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
-                        <span className="font-mono text-[10px] text-bone/40 block truncate">@{p.username}</span>
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {tags.map((t) => (
-                              <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm whitespace-nowrap">{t.replace(/-/g, ' ')}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
+                    </div>
+                  )}
+
+                  {/* Up next */}
+                  <div className="relative z-[2] px-3 pt-2.5 pb-1">
+                    <span className="font-mono text-[8px] uppercase tracking-[2px] text-bone/30">Up next</span>
+                  </div>
+                  <div className="relative z-[2] flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                    {moreEps.map((ep, i) => (
+                      <Link key={ep.id} href="/tv" className="group flex items-stretch border-b border-bone/[0.04] hover:bg-bone/[0.03] transition-colors no-underline">
+                        <div className={`w-1 shrink-0 ${CAT_DOT[ep.category] ?? 'bg-lime'} opacity-40 group-hover:opacity-100 transition-opacity`} />
+                        <div className="w-10 shrink-0 flex items-center justify-center border-r border-bone/[0.04]">
+                          <span className="font-basement font-black text-[13px] text-bone/25 group-hover:text-bone/60 transition-colors">{String(i + 2).padStart(3, '0')}</span>
+                        </div>
+                        <div className="flex-1 px-3 py-2.5 min-w-0">
+                          <span className="font-mono text-[11px] font-bold uppercase text-bone block truncate">{ep.title}</span>
+                          <span className="font-mono text-[9px] text-bone/30 uppercase tracking-wider">{ep.category}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </section>
+
+          {/* ── NEWSLETTER SIGN-UP ── */}
+          <NewsletterSignup />
 
         </div>
       </div>

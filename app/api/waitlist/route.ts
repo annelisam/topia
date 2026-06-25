@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, roles } = await req.json();
+    const { name, email, roles, source } = await req.json();
 
-    if (!name || !email) {
+    if (!email) {
       return NextResponse.json(
-        { error: 'Name and email are required' },
+        { error: 'Email is required' },
         { status: 400 }
       );
     }
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     //   }),
     // });
 
-    console.log('[waitlist] New signup:', { name, email, roles });
+    console.log('[waitlist] New signup:', { name, email, roles, source });
 
     return NextResponse.json({ success: true });
   } catch {
