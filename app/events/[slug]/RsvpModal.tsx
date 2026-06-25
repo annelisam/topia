@@ -385,9 +385,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   return (
-    <div className="fixed inset-0 z-[2100] flex items-stretch justify-center sm:items-center sm:p-4 backdrop-blur-sm overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
-      <div className="w-full sm:max-w-lg h-[100dvh] sm:h-auto sm:max-h-[88vh] rounded-none sm:rounded-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8 border-0 sm:border overflow-x-hidden overflow-y-auto overscroll-contain" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between mb-4">
+    <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 backdrop-blur-sm overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
+      <div className="w-full sm:max-w-lg min-h-[55dvh] max-h-[92dvh] sm:min-h-0 sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl border-0 sm:border flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+        {/* drag handle (mobile bottom-sheet affordance) */}
+        <div className="sm:hidden mx-auto mt-2.5 h-1 w-10 rounded-full shrink-0" style={{ backgroundColor: 'var(--foreground)', opacity: 0.2 }} />
+        <div className="flex items-start justify-between px-6 pt-3 sm:pt-7 pb-3 shrink-0">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
             {step === 3 ? eventName : `Register · ${eventName}`}
           </p>
@@ -395,9 +397,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         </div>
 
         {(questions === null || !profileLoaded) ? (
-          <TopiaLoader label="Loading your details…" />
+          <div className="flex-1 grid place-items-center pb-10"><TopiaLoader label="Loading your details…" /></div>
         ) : (
           <>
+            {/* Scrollable body — keeps the footer button pinned (Partiful-style) */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pt-1 pb-6">
             {/* Step progress — basic info · complete passport · you're in */}
             <div className="flex items-center gap-1.5 mb-3">
               {[1, 2, 3].map((n) => (
@@ -650,9 +654,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
               </div>
             </div>
             )}
+            </div>
 
             {step < 3 && (
-              <>
+              <div className="shrink-0 px-6 py-4 border-t pb-[max(1rem,env(safe-area-inset-bottom))]" style={{ borderColor: 'var(--border-color)' }}>
                 {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
                 {/* Footer — Continue (step 1) · Back + Complete RSVP (step 2) */}
@@ -684,7 +689,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     </button>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </>
         )}
