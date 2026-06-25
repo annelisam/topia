@@ -503,3 +503,19 @@ export const shortLinks = pgTable('short_links', {
   clicks: integer('clicks').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// Newsletter / waitlist sign-ups captured from the marketing site (home page
+// dispatch widget, /waitlist). Deduped by email. `userId` attributes a signup
+// to a profile when the email matches an existing user — set best-effort at
+// signup time; the admin view also re-matches live by email so profiles created
+// after the signup still attribute.
+export const newsletterSignups = pgTable('newsletter_signups', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull().unique(),             // lowercased on write
+  name: text('name'),                                  // first name (or full name from /waitlist)
+  source: text('source'),                              // 'home-newsletter' | 'waitlist' | null
+  roles: text('roles'),                                // CSV of roles when supplied (/waitlist)
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
