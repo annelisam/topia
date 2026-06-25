@@ -65,15 +65,16 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Edge handle — tucks almost fully off the right edge to a small chevron
-          nub, expanding on hover/focus to reveal the sideways "FEEDBACK". */}
+      {/* Edge handle — a chevron nub on the right edge that expands on hover.
+          When the drawer is open it rides to the drawer's left edge and the
+          chevron flips to point back (close), like the mobile menu handle. */}
       <button
-        onClick={() => setOpen(true)}
-        aria-label="Send feedback"
-        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center gap-1 py-3 pl-1.5 pr-2 rounded-l-xl border-t border-l border-b cursor-pointer will-change-transform transition-transform duration-300 ease-out ${open ? 'translate-x-full pointer-events-none' : 'translate-x-[calc(100%-1.4rem)] hover:translate-x-0 focus-visible:translate-x-0'}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? 'Close feedback' : 'Send feedback'}
+        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1970] flex items-center gap-1 py-3 pl-1.5 pr-2 rounded-l-xl border-t border-l border-b cursor-pointer will-change-transform transition-transform duration-300 ease-out ${open ? 'translate-x-[-85vw] sm:translate-x-[-380px]' : 'translate-x-[calc(100%-1.4rem)] hover:translate-x-0 focus-visible:translate-x-0'}`}
         style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
       >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 transition-transform duration-300" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>
           <polyline points="15 18 9 12 15 6" />
         </svg>
         <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px]" style={{ writingMode: 'vertical-rl' }}>Feedback</span>
@@ -87,7 +88,7 @@ export default function FeedbackWidget() {
 
       {/* Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-full w-[380px] max-w-[90vw] z-[1960] border-l flex flex-col transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-[85vw] sm:w-[380px] z-[1960] border-l flex flex-col transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)', boxShadow: '-24px 0 60px -24px rgba(0,0,0,0.6)' }}
         aria-hidden={!open}
       >
