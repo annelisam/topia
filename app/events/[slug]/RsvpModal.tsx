@@ -386,7 +386,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
 
   return (
     <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 backdrop-blur-sm overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
-      <div className="w-full sm:max-w-lg min-h-[55dvh] max-h-[92dvh] sm:min-h-0 sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl border-0 sm:border flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full sm:max-w-lg h-[90dvh] sm:h-auto sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl border-0 sm:border flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
         {/* drag handle (mobile bottom-sheet affordance) */}
         <div className="sm:hidden mx-auto mt-2.5 h-1 w-10 rounded-full shrink-0" style={{ backgroundColor: 'var(--foreground)', opacity: 0.2 }} />
         <div className="flex items-start justify-between px-6 pt-3 sm:pt-7 pb-3 shrink-0">
