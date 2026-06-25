@@ -264,7 +264,7 @@ export default function PublicProfilePage() {
 
                   {/* Photo + Fields */}
                   <div className="flex flex-col md:flex-row relative">
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.025]" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.01]" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
                       {Array.from({ length: 12 }, (_, i) => {
                         const r = 80 + i * 15;
                         return (<g key={i}>
@@ -274,7 +274,7 @@ export default function PublicProfilePage() {
                       })}
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.03] select-none" draggable={false} />
+                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.012] select-none" draggable={false} />
                     </div>
 
                     {/* Photo */}

@@ -364,7 +364,7 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
 
       {/* Right — Visa stamps (organic scatter, scrolls sideways) */}
       <div className={`${showEndorsed ? 'border-l border-ink/[0.04]' : ''} bg-[var(--page-bg)] p-4 relative overflow-hidden`}>
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.02]" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.008]" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice">
           {Array.from({ length: 8 }, (_, i) => (
             <ellipse key={i} cx="150" cy="200" rx={60 + i * 20} ry={40 + i * 15} fill="none" stroke="#f5f0e8" strokeWidth="0.4" transform={`rotate(${i * 12} 150 200)`} />
           ))}
