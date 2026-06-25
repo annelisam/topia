@@ -6,6 +6,7 @@ import {
 } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { isAdminRequest } from '@/lib/adminAuth';
+import { feedbackRef } from '@/lib/feedbackId';
 
 // GET – all users with their world memberships
 export async function GET(request: Request) {
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
 
     const result = allUsers.map((u) => ({
       ...u,
+      feedbackRef: feedbackRef(u.id), // opaque ref shown on feedback issues
       worldMemberships: membershipMap[u.id] || [],
     }));
 

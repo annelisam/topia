@@ -71,7 +71,7 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
         <button
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? 'Hide menu' : 'Show menu'}
-          className="pointer-events-auto flex items-center gap-1.5 px-5 py-1.5 rounded-t-xl backdrop-blur-xl cursor-pointer border-t border-l border-r"
+          className="pointer-events-auto flex items-center justify-center gap-1.5 px-5 py-2 min-h-[44px] rounded-t-xl backdrop-blur-xl cursor-pointer border-t border-l border-r"
           style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--nav-border)', color: 'var(--page-text)' }}
         >
           <svg

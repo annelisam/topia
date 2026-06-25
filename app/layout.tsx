@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
 import CookieConsent from "./components/CookieConsent";
+import FeedbackWidget from "./components/FeedbackWidget";
 
 export const metadata: Metadata = {
   title: "TOPIA - Culture Before Tech",
@@ -51,6 +52,7 @@ export default function RootLayout({
 
         <PrivyProviderWrapper>
           {children}
+          <FeedbackWidget />
         </PrivyProviderWrapper>
         <CookieConsent />
       </body>
