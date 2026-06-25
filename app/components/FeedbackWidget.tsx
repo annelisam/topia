@@ -65,14 +65,18 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Edge tab — hidden while the drawer is open */}
+      {/* Edge handle — slim backdrop-blur pull tab (mirrors the mobile nav
+          handle). Hidden while the drawer is open. */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[1900] font-mono text-[11px] font-bold uppercase tracking-[2px] px-2.5 py-3 rounded-l-lg border border-r-0 cursor-pointer transition-[opacity,transform] hover:px-3 ${open ? 'opacity-0 pointer-events-none translate-x-full' : 'opacity-100'}`}
-        style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'var(--accent)', writingMode: 'vertical-rl' }}
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex flex-col items-center gap-1.5 px-1.5 py-3.5 rounded-l-xl backdrop-blur-xl border-t border-l border-b cursor-pointer transition-[opacity,padding] duration-200 hover:pr-2 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--nav-border)', color: 'var(--page-text)' }}
       >
-        Feedback
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span className="font-mono text-[10px] uppercase tracking-[1.5px]" style={{ writingMode: 'vertical-rl' }}>Feedback</span>
       </button>
 
       {/* Backdrop */}
