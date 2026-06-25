@@ -65,18 +65,18 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Edge handle — tucks itself almost fully off the right edge, leaving a
-          small nub that expands on hover/focus so it barely intrudes. */}
+      {/* Edge handle — tucks almost fully off the right edge to a small chevron
+          nub, expanding on hover/focus to reveal the sideways "FEEDBACK". */}
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center gap-1.5 py-2.5 pl-2 pr-3 rounded-l-xl border-t border-l border-b cursor-pointer transition-[transform,opacity] duration-300 ease-out ${open ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-[calc(100%-1.5rem)] opacity-80 hover:translate-x-0 hover:opacity-100 focus-visible:translate-x-0 focus-visible:opacity-100'}`}
+        className={`group fixed right-0 top-1/2 -translate-y-1/2 z-[1900] flex items-center gap-1 py-3 pl-1.5 pr-2 rounded-l-xl border-t border-l border-b cursor-pointer transition-[transform,opacity] duration-300 ease-out ${open ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-[calc(100%-1.4rem)] opacity-80 hover:translate-x-0 hover:opacity-100 focus-visible:translate-x-0 focus-visible:opacity-100'}`}
         style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] whitespace-nowrap">Feedback</span>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[1.5px]" style={{ writingMode: 'vertical-rl' }}>Feedback</span>
       </button>
 
       {/* Backdrop */}
