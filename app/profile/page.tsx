@@ -13,29 +13,9 @@ import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
 import HandleChangeModal from './_components/HandleChangeModal';
 import { isGif, uploadToBlob } from '../../lib/uploadImage';
-
-const ROLE_TAGS = [
-  { slug: 'music',             label: 'Music' },
-  { slug: 'dj',                label: 'DJ' },
-  { slug: 'visual-artist',     label: 'Visual Artist' },
-  { slug: 'filmmaker',         label: 'Filmmaker' },
-  { slug: 'photographer',      label: 'Photographer' },
-  { slug: 'writer',            label: 'Writer' },
-  { slug: 'poet',              label: 'Poet' },
-  { slug: 'dancer',            label: 'Dancer' },
-  { slug: 'performer',         label: 'Performer' },
-  { slug: 'producer',          label: 'Producer' },
-  { slug: 'designer',          label: 'Designer' },
-  { slug: 'illustrator',       label: 'Illustrator' },
-  { slug: 'game-designer',     label: 'Game Designer' },
-  { slug: 'architect',         label: 'Architect' },
-  { slug: 'technologist',      label: 'Technologist' },
-  { slug: 'curator',           label: 'Curator' },
-  { slug: 'educator',          label: 'Educator' },
-  { slug: 'community-builder', label: 'Community Builder' },
-  { slug: 'entrepreneur',      label: 'Entrepreneur' },
-  { slug: 'researcher',        label: 'Researcher' },
-];
+import RoleTagPicker from '../components/RoleTagPicker';
+import { ROLE_TAGS as EVENT_ROLE_TAGS, ROLES_MAX } from '../../lib/events/questions';
+import { roleLabelToSlug, roleSlugToLabel } from '../../lib/profile/roleTags';
 
 interface Tool { id: string; name: string; slug: string; category: string | null; }
 
@@ -245,7 +225,6 @@ export default function ProfilePage() {
   const googleAccount = linkedAccounts.find((a) => a.type === 'google_oauth') as { type: 'google_oauth'; subject: string; email?: string }              | undefined;
   const walletAccount = linkedAccounts.find((a) => a.type === 'wallet')       as { type: 'wallet';       address: string }                              | undefined;
 
-  const toggleRole = (slug: string) => setSelectedRoles((p) => p.includes(slug) ? p.filter((r) => r !== slug) : [...p, slug]);
   const toggleTool = (slug: string) => setSelectedTools((p) => p.includes(slug) ? p.filter((t) => t !== slug) : [...p, slug]);
 
   const filteredTools = allTools.filter((t) => {
@@ -508,25 +487,12 @@ export default function ProfilePage() {
           </Section>
 
           {/* ─── 3. ROLES ─── */}
-          <Section label="Roles" sub="what you do — pick any">
-            <div className="flex flex-wrap gap-1.5">
-              {ROLE_TAGS.map(({ slug, label }) => {
-                const on = selectedRoles.includes(slug);
-                return (
-                  <button
-                    key={slug}
-                    onClick={() => toggleRole(slug)}
-                    className={`font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border transition cursor-pointer ${
-                      on
-                        ? 'bg-lime text-obsidian border-lime'
-                        : 'bg-transparent text-ink/60 border-ink/15 hover:text-ink hover:border-ink/40'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+          <Section label="Roles" sub={`what you do — search or add, up to ${ROLES_MAX}`}>
+            <RoleTagPicker
+              options={EVENT_ROLE_TAGS}
+              value={selectedRoles.map(roleSlugToLabel)}
+              onChange={(labels) => setSelectedRoles(labels.map(roleLabelToSlug))}
+            />
           </Section>
 
           {/* ─── 4. TOOLS ─── */}
@@ -632,6 +598,22 @@ export default function ProfilePage() {
               <div>
                 <span className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mb-2">Links</span>
                 <div className="space-y-2.5">
+                  {/* Instagram — handle only, no OAuth needed. Stored as a full URL. */}
+                  <div className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
+                    <span className="text-ink/40 shrink-0 w-4 flex items-center justify-center"><SocialIcon type="instagram" /></span>
+                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 w-20 shrink-0">Instagram</span>
+                    <span className="font-mono text-[12px] text-ink/30 shrink-0">@</span>
+                    <input
+                      type="text"
+                      value={socialInstagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/\/+$/, '')}
+                      onChange={(e) => {
+                        const h = e.target.value.replace(/^@/, '').replace(/\s+/g, '').trim();
+                        setSocialInstagram(h ? `https://instagram.com/${h}` : '');
+                      }}
+                      placeholder="yourhandle"
+                      className="flex-1 bg-transparent border-none outline-none font-mono text-[12px] text-ink placeholder:text-ink/20"
+                    />
+                  </div>
                   {[
                     { key: 'website',    label: 'Website',    value: socialWebsite,    set: setSocialWebsite,    placeholder: 'https://yoursite.com',          icon: <SocialIcon type="website" /> },
                     { key: 'soundcloud', label: 'SoundCloud', value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle', icon: <SocialIcon type="soundcloud" /> },

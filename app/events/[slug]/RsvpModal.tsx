@@ -9,6 +9,7 @@ import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/user
 import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
 import { isGif, uploadToBlob } from '../../../lib/uploadImage';
 import TopiaLoader from '../../components/TopiaLoader';
+import RoleTagPicker from '../../components/RoleTagPicker';
 
 // Resize an image to max 256×256 → base64 JPEG (GIFs uploaded raw to keep motion).
 function resizeImage(file: File): Promise<string> {
@@ -771,70 +772,3 @@ const fieldStyle: React.CSSProperties = {
   backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)',
 };
 
-// Searchable role/tag picker — pick up to ROLES_MAX from a suggestion list,
-// or create your own.
-function RoleTagPicker({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
-  const [search, setSearch] = useState('');
-  const atMax = value.length >= ROLES_MAX;
-  const q = search.trim();
-  const ql = q.toLowerCase();
-  const filtered = options.filter((o) => o.toLowerCase().includes(ql) && !value.includes(o)).slice(0, 10);
-  const exactExists = [...options, ...value].some((o) => o.toLowerCase() === ql);
-  const canCreate = q.length > 0 && !exactExists && !atMax;
-
-  const add = (tag: string) => {
-    if (value.includes(tag) || value.length >= ROLES_MAX) return;
-    onChange([...value, tag]);
-    setSearch('');
-  };
-  const remove = (tag: string) => onChange(value.filter((t) => t !== tag));
-
-  return (
-    <div>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {value.map((t) => (
-            <button key={t} type="button" onClick={() => remove(t)} className="inline-flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border-none" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
-              {t} <span className="opacity-60">×</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {atMax ? (
-        <p className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>Max {ROLES_MAX} selected — remove one to change.</p>
-      ) : (
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) { e.preventDefault(); add(q); } }}
-          placeholder={`Search or add… (${value.length}/${ROLES_MAX})`}
-          className={inputCls} style={fieldStyle}
-        />
-      )}
-      {/* Empty state: a few quick-add suggestions. Typing filters / lets you create. */}
-      {!atMax && q.length === 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {options.filter((o) => !value.includes(o)).slice(0, 8).map((o) => (
-            <button key={o} type="button" onClick={() => add(o)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'transparent' }}>
-              + {o}
-            </button>
-          ))}
-        </div>
-      )}
-      {!atMax && q.length > 0 && (filtered.length > 0 || canCreate) && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {filtered.map((o) => (
-            <button key={o} type="button" onClick={() => add(o)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', backgroundColor: 'transparent' }}>
-              {o}
-            </button>
-          ))}
-          {canCreate && (
-            <button type="button" onClick={() => add(q)} className="font-mono text-[12px] uppercase tracking-[1px] px-2.5 py-1 rounded-md cursor-pointer border border-dashed hover:opacity-70" style={{ borderColor: 'var(--accent)', color: 'var(--accent)', backgroundColor: 'transparent' }}>
-              + Create “{q}”
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}

@@ -10,7 +10,8 @@ import FollowButton from '../../components/FollowButton';
 import ShareButton from '../../components/ShareButton';
 import TopiaCardModal from '../../components/profile/TopiaCardModal';
 import { SocialIcon } from '../../components/SocialIcons';
-import { CheckIcon } from '../../components/ui/Icons';
+import { roleSlugToLabel } from '../../../lib/profile/roleTags';
+import FollowListModal from '../../components/profile/FollowListModal';
 import { PATH_CONFIG, resolvePath } from '../../components/profile/pathConfig';
 import IdentityLayer, { type Stamp } from '../../components/profile/IdentityLayer';
 import EventsLayer from '../../components/profile/EventsLayer';
@@ -68,6 +69,7 @@ export default function PublicProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [followModal, setFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [fetchError, setFetchError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -201,8 +203,8 @@ export default function PublicProfilePage() {
   const stats = {
     worlds: sortedWorlds.length,
     events: eventCount,
-    collabs: sortedWorlds.filter((w) => w.role === 'collab').length,
     followers: followerCount,
+    following: followingCount,
   };
 
   const sectionLabel = path === 'worldbuilder' ? 'ENDORSED WORLDS'
@@ -341,9 +343,22 @@ export default function PublicProfilePage() {
                         </div>
                       </div>
                       <div className="py-1 border-b border-ink/[0.04] grid grid-cols-2 gap-x-6">
-                        <div>
-                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">location</span>
-                          <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">—</span>
+                        <div className="min-w-0">
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">what you do</span>
+                          {roleTags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {roleTags.slice(0, 3).map((slug) => (
+                                <span
+                                  key={slug}
+                                  className="font-mono text-[9px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm border border-ink/15 text-ink/55 leading-none"
+                                >
+                                  {roleSlugToLabel(slug)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">—</span>
+                          )}
                         </div>
                         {profile.bio && (
                           <div>
@@ -359,31 +374,24 @@ export default function PublicProfilePage() {
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
                               {socialLinks.map((link) => {
                                 if (link.verified) {
-                                  // Verified: filled path-color pill with icon + @handle + ✓.
-                                  // Filled (not outline) so it stays legible on light AND dark —
-                                  // path-color text would vanish on the light bg.
+                                  // Verified: lime icon only (no handle). The lime tint itself
+                                  // signals the account is verified. --accent-ink stays legible
+                                  // on both light and dark.
                                   return (
                                     <a
                                       key={link.type}
                                       href={link.url!}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className={`group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm no-underline ${config.bg} ${config.textOn} hover:opacity-90 transition-opacity`}
+                                      className="hover:opacity-70 transition-opacity"
+                                      style={{ color: 'var(--accent-ink)' }}
                                       title={`${link.label} · verified`}
                                     >
-                                      <SocialIcon type={link.type} size={12} />
-                                      {link.handle && (
-                                        <span className="font-mono tracking-[1px]" style={{ fontSize: 10 }}>
-                                          @{link.handle}
-                                        </span>
-                                      )}
-                                      <span aria-label="verified">
-                                        <CheckIcon size={9} strokeWidth={1.8} />
-                                      </span>
+                                      <SocialIcon type={link.type} size={16} />
                                     </a>
                                   );
                                 }
-                                // Unverified pasted URL — just the icon
+                                // Unverified pasted URL / RSVP handle — muted icon
                                 return (
                                   <a
                                     key={link.type}
@@ -473,16 +481,31 @@ export default function PublicProfilePage() {
                 <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-0">
                     {[
-                      { label: 'Worlds', value: String(stats.worlds) },
-                      { label: 'Events', value: String(stats.events) },
-                      { label: 'Collabs', value: String(stats.collabs) },
-                      { label: 'Followers', value: String(stats.followers) },
-                    ].map((stat, i, arr) => (
-                      <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
-                        <span className="font-mono text-[9px] font-semibold uppercase tracking-[2px] text-ink/20">{stat.label}</span>
-                        <span className="font-mono text-[15px] md:text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
-                      </div>
-                    ))}
+                      { label: 'Worlds', value: String(stats.worlds), tab: null },
+                      { label: 'Events', value: String(stats.events), tab: null },
+                      { label: 'Followers', value: String(stats.followers), tab: 'followers' as const },
+                      { label: 'Following', value: String(stats.following), tab: 'following' as const },
+                    ].map((stat, i, arr) => {
+                      const cls = `flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`;
+                      const inner = (
+                        <>
+                          <span className="font-mono text-[9px] font-semibold uppercase tracking-[2px] text-ink/20">{stat.label}</span>
+                          <span className="font-mono text-[15px] md:text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
+                        </>
+                      );
+                      return stat.tab ? (
+                        <button
+                          key={stat.label}
+                          type="button"
+                          onClick={() => setFollowModal(stat.tab)}
+                          className={`${cls} text-left items-start hover:opacity-70 transition-opacity cursor-pointer`}
+                        >
+                          {inner}
+                        </button>
+                      ) : (
+                        <div key={stat.label} className={cls}>{inner}</div>
+                      );
+                    })}
                   </div>
                   <div className="hidden md:flex items-center gap-3">
                     <div className="w-32 h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${config.hex}30, ${config.hex}60, ${config.hex}30, transparent)` }} />
@@ -550,6 +573,16 @@ export default function PublicProfilePage() {
           avatarUrl={profile.avatarUrl}
           roleTags={roleTags}
           path={path}
+        />
+      )}
+
+      {profile && followModal && (
+        <FollowListModal
+          userId={profile.id}
+          initialTab={followModal}
+          followerCount={followerCount}
+          followingCount={followingCount}
+          onClose={() => setFollowModal(null)}
         />
       )}
     </div>

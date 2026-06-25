@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
-import { ROLE_TAGS } from '../../../lib/profile/roleTags';
+import { roleLabelToSlug, roleSlugToLabel } from '../../../lib/profile/roleTags';
+import { ROLE_TAGS as EVENT_ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
+import RoleTagPicker from '../../components/RoleTagPicker';
 
 interface Props {
   step: number;
@@ -25,11 +27,6 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialValue.join(',')]);
 
-  function toggle(slug: string) {
-    setSelected((prev) => prev.includes(slug) ? prev.filter((r) => r !== slug) : [...prev, slug]);
-    if (error) setError('');
-  }
-
   function submit() {
     if (selected.length === 0) { setError('pick at least one — these power your discovery.'); return; }
     onAdvance(selected);
@@ -44,9 +41,6 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
-  const accent = config?.hex ?? '#e4fe52';
-  const accentTextOn = config?.textOn ?? 'text-obsidian';
-
   return (
     <StepShell
       step={step}
@@ -54,27 +48,15 @@ export default function RoleTagsStep({ step, total, config, initialValue, onBack
       config={config}
       kicker={`${String(step).padStart(2, '0')} · what do you do`}
       heading="Tag your craft."
-      hint={`${selected.length} selected · press enter ↵`}
+      hint={`${selected.length}/${ROLES_MAX} selected · press enter ↵`}
       onBack={onBack}
     >
-      <p className="font-mono text-[11px] text-ink/40 mb-5 max-w-md">pick everything that fits — be generous. you can fine-tune anytime.</p>
-      <div className="flex flex-wrap gap-2">
-        {ROLE_TAGS.map(({ slug, label }) => {
-          const on = selected.includes(slug);
-          return (
-            <button
-              key={slug}
-              onClick={() => toggle(slug)}
-              className={`font-mono text-[12px] uppercase tracking-[1px] px-3 py-1.5 transition-all cursor-pointer border ${
-                on ? `${accentTextOn} border-transparent` : 'text-ink/60 border-ink/15 hover:border-ink/40 bg-transparent'
-              }`}
-              style={on ? { backgroundColor: accent } : undefined}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <p className="font-mono text-[11px] text-ink/40 mb-5 max-w-md">search for what fits, or add your own — up to {ROLES_MAX}. you can fine-tune anytime.</p>
+      <RoleTagPicker
+        options={EVENT_ROLE_TAGS}
+        value={selected.map(roleSlugToLabel)}
+        onChange={(labels) => { setSelected(labels.map(roleLabelToSlug)); if (error) setError(''); }}
+      />
       {error && (
         <div className="mt-4 font-mono text-[11px] uppercase tracking-[2px] text-pink/80">{error}</div>
       )}
