@@ -1111,7 +1111,9 @@ function UsersTab() {
   const filtered = items.filter(u => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return (u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+    // Match the user id too, so a feedback issue's User ID can be pasted here
+    // to track down who submitted it.
+    return (u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q));
   });
 
   const selectedRoles = (form.roleTags || '').split(',').map(r => r.trim()).filter(Boolean);
@@ -1126,7 +1128,7 @@ function UsersTab() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <span className="font-mono text-[13px]" style={{ color: '#1a1a1a' }}>{items.length} users</span>
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-48" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, @handle, email, or user ID…" className="border border-[#1a1a1a] px-3 py-1 font-mono text-[12px] outline-none w-72" style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a' }} />
       </div>
 
       <div className="overflow-x-auto">
@@ -1211,6 +1213,11 @@ function UsersTab() {
       </div>
 
       <Modal open={modal.open} onClose={() => setModal({ open: false, item: null })} title="Edit User">
+        {form.id && (
+          <Field label="User ID">
+            <div className="font-mono text-[11px] px-3 py-2 border break-all select-all" style={{ backgroundColor: '#ebe6de', borderColor: '#1a1a1a', color: '#1a1a1a' }} title="The user ID shown on feedback issues — paste it into search to find someone.">{form.id}</div>
+          </Field>
+        )}
         <Field label="Name"><TextInput value={form.name || ''} onChange={(v) => setForm(p => ({ ...p, name: v }))} /></Field>
         <Field label="Username"><TextInput value={form.username || ''} onChange={(v) => setForm(p => ({ ...p, username: v.toLowerCase().replace(/[^a-z0-9_]/g, '') }))} /></Field>
         <Field label="Email"><TextInput value={form.email || ''} onChange={(v) => setForm(p => ({ ...p, email: v }))} /></Field>
@@ -1523,7 +1530,7 @@ function EmailsTab() {
   const filteredUsers = users.filter(u => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return [u.name, u.username, u.email].some(v => (v || '').toLowerCase().includes(q));
+    return [u.name, u.username, u.email, u.id].some(v => (v || '').toLowerCase().includes(q));
   });
 
   const toggle = (id: string) => {

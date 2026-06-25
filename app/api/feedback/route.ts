@@ -39,14 +39,16 @@ export async function POST(request: NextRequest) {
     }
     const did = verification.configured && verification.ok ? verification.did : privyId;
 
+    // Resolve the canonical user id (not email/handle) so issues stay free of
+    // PII. Admins map the id back to a person via the admin users search.
     const [u] = await db
-      .select({ name: users.name, username: users.username, email: users.email })
+      .select({ id: users.id })
       .from(users)
       .where(eq(users.privyId, did))
       .limit(1);
+    const userId = u?.id ?? did;
 
     const cat = CATEGORIES[category ?? 'other'] ?? CATEGORIES.other;
-    const handle = u?.username ? `@${u.username}` : (u?.name || 'unknown user');
     const firstLine = message.trim().split('\n')[0].slice(0, 80);
     const title = `${cat.prefix} ${firstLine}`;
 
@@ -54,14 +56,13 @@ export async function POST(request: NextRequest) {
       message.trim(),
       '',
       '---',
-      `**From:** ${handle}${u?.email ? ` · ${u.email}` : ''}`,
+      `**User:** \`${userId}\``,
       `**Category:** ${category ?? 'other'}`,
       url ? `**Page:** \`${url}\`` : '',
       viewport ? `**Viewport:** ${viewport}` : '',
       userAgent ? `**Browser:** ${userAgent}` : '',
-      `**User ID:** \`${did}\``,
       '',
-      '_Submitted via the in-app feedback widget._',
+      '_Submitted via the in-app feedback widget · look up the user ID in admin._',
     ].filter(Boolean).join('\n');
 
     const [owner, repo] = REPO.split('/');
