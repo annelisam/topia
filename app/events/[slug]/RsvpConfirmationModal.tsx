@@ -46,7 +46,7 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
       `}</style>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-sm rounded-2xl border p-6 text-center max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-sm rounded-2xl border p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center max-h-[90dvh] overflow-x-hidden overflow-y-auto overscroll-contain"
         style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -72,6 +72,7 @@ export default function RsvpConfirmationModal({ eventName, onClose }: RsvpConfir
               avatarUrl={profile?.avatarUrl}
               roleTags={roleTagsArr}
               path={profile?.path}
+              showMotionPrompt={false}
             />
           </div>
           <svg

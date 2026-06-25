@@ -356,15 +356,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       case 'twitter':
         return (
           <div className="flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]" style={fieldStyle}>
-            <SocialIcon type={q.type} size={15} />
-            <span className="opacity-40 font-mono text-[13px]">@</span>
+            <span className="shrink-0 inline-flex"><SocialIcon type={q.type} size={15} /></span>
+            <span className="shrink-0 opacity-40 font-mono text-[13px]">@</span>
             <input
               type="text" inputMode="text" autoCapitalize="off" autoCorrect="off"
               value={(v as string) ?? ''}
               onChange={(e) => set(q.id, e.target.value.replace(/^@+/, '').trim())}
-              className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3"
+              className="min-w-0 flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3"
               style={{ color: 'var(--foreground)' }}
-              placeholder="handle"
+              placeholder={q.type === 'instagram' ? 'your IG handle' : 'your Twitter/X handle'}
             />
           </div>
         );
@@ -385,8 +385,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   };
 
   return (
-    <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
-      <div className="w-full max-w-lg rounded-2xl p-6 sm:p-8 border max-h-[88vh] overflow-y-auto" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[2100] flex items-stretch justify-center sm:items-center sm:p-4 backdrop-blur-sm overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
+      <div className="w-full sm:max-w-lg h-[100dvh] sm:h-auto sm:max-h-[88vh] rounded-none sm:rounded-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8 border-0 sm:border overflow-x-hidden overflow-y-auto overscroll-contain" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
             {step === 3 ? eventName : `Register · ${eventName}`}
@@ -599,7 +599,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                       What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {socials.map((q) => <div key={q.id}>{renderField(q)}</div>)}
                     </div>
                   </div>

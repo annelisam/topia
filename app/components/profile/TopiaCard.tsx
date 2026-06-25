@@ -10,6 +10,9 @@ export interface TopiaCardProps {
   roleTags?: string[];
   path?: UserPath | string | null;
   issued?: number;
+  // Hide the "tilt with motion →" permission prompt (e.g. inside a modal where
+  // it crowds the layout).
+  showMotionPrompt?: boolean;
 }
 
 const MAX_TILT = 16; // degrees
@@ -20,7 +23,7 @@ const LOGO_PATH = 'M248.244 0L249.567 0.534218C253.772 5.33588 268.237 51.6617 2
 // A holographic, motion-reactive "Topia card". Tilts toward the cursor on
 // desktop and toward device orientation on mobile (hand movement). Mirrors the
 // shareable card image at /api/profile/<username>/card.
-export default function TopiaCard({ name, username, avatarUrl, roleTags = [], path, issued }: TopiaCardProps) {
+export default function TopiaCard({ name, username, avatarUrl, roleTags = [], path, issued, showMotionPrompt = true }: TopiaCardProps) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [needsMotionPermission, setNeedsMotionPermission] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -178,7 +181,7 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         />
       </div>
 
-      {needsMotionPermission && (
+      {showMotionPrompt && needsMotionPermission && (
         <button onClick={requestMotion} className="mt-3 mx-auto block font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone underline bg-transparent border-none cursor-pointer">
           tilt with motion →
         </button>
