@@ -216,6 +216,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* iOS Safari auto-zooms (and distorts the layout) when an input with text
+   smaller than 16px gets focus. Force >=16px on mobile to stop the zoom while
+   keeping the visual size unchanged on desktop. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Grid panels are always dark */
 .bg-obsidian {
   background-color: #1a1a1a;
