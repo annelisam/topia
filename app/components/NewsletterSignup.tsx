@@ -119,16 +119,22 @@ export default function NewsletterSignup() {
 
 // Themed input: a mono uppercase label sits inside the field, the border lights
 // lime on focus — mirrors the field styling used across the app.
+//   - `type` is always set explicitly (a bare <input> dodges the app's global
+//     input rules, which is why the two carets looked mismatched).
+//   - the autofill:* utilities neutralise Chrome's autofill restyle (yellow
+//     fill + altered text/caret rendering) so both fields stay identical.
 function Field({
   label,
+  type = 'text',
   ...props
 }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="flex-1 flex items-center gap-2.5 bg-bone/[0.05] border border-bone/12 rounded-lg px-3.5 py-2.5 transition-colors focus-within:border-lime focus-within:bg-bone/[0.07]">
       <span className="font-mono text-[9px] uppercase tracking-[2px] text-bone/35 shrink-0">{label}</span>
       <input
+        type={type}
         {...props}
-        className="flex-1 min-w-0 bg-transparent border-none outline-none font-mono text-[13px] text-bone placeholder:text-bone/20"
+        className="flex-1 min-w-0 bg-transparent border-none outline-none font-mono text-[13px] leading-[1.5] text-bone placeholder:text-bone/20 caret-bone autofill:[-webkit-text-fill-color:#f5f0e8] autofill:shadow-[inset_0_0_0_1000px_#232220] autofill:[transition:background-color_9999s]"
       />
     </label>
   );
