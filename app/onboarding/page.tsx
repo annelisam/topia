@@ -11,6 +11,7 @@ import AvatarStep from './steps/AvatarStep';
 import RoleTagsStep from './steps/RoleTagsStep';
 import BioSocialsStep from './steps/BioSocialsStep';
 import DoneStep from './steps/DoneStep';
+import { isRealPhoto } from '../../lib/avatar';
 
 /* ── Wizard state ─────────────────────────────────────────────── */
 
@@ -95,7 +96,9 @@ const TOTAL_STEPS = STEPS.length - 1; // welcome + done are bookends; "progress"
 function firstIncompleteStep(data: Partial<WizardData>): number {
   if (!data.name) return 1;
   if (!data.username) return 2;
-  if (!data.avatarUrl) return 3;
+  // An auto-generated fallback avatar (SVG data URL) doesn't count — route them
+  // to the avatar step to upload a real photo.
+  if (!isRealPhoto(data.avatarUrl)) return 3;
   if (!data.roleTags || data.roleTags.length === 0) return 4; // roles
   // bio + socials are optional — jump to done
   return STEPS.length - 1;

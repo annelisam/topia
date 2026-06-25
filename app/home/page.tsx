@@ -7,6 +7,7 @@ import PageShell from '../components/PageShell';
 import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
+import { isRealPhoto } from '../../lib/avatar';
 
 interface Episode {
   id: string;
@@ -456,7 +457,9 @@ export default function HomePreview() {
       .then((r) => r.json())
       .then((d) => {
         const u = d.user;
-        setViewerComplete(!!(u && u.avatarUrl && u.name && u.username && u.roleTags));
+        // Require a real uploaded photo — an auto-generated fallback avatar
+        // still counts as an incomplete profile (prompts onboarding).
+        setViewerComplete(!!(u && isRealPhoto(u.avatarUrl) && u.name && u.username && u.roleTags));
       })
       .catch(() => {});
   }, [user?.id]);

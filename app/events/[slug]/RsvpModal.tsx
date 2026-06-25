@@ -94,9 +94,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [phoneCode, setPhoneCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  // Profile claim: a username (required) + an optional photo.
+  // Profile claim: a username (required) + a photo. The photo is a required
+  // *choice*: upload a real one, or explicitly opt for the generated avatar.
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [photoChoice, setPhotoChoice] = useState<'upload' | 'generate' | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const availability = useUsernameAvailability(username, privyId);
@@ -144,9 +146,18 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAvatar(true); setError('');
-    try { setAvatarUrl(await resizeImage(file)); }
+    try { setAvatarUrl(await resizeImage(file)); setPhotoChoice('upload'); }
     catch { setError("Couldn't process that image — try another."); }
     finally { setUploadingAvatar(false); }
+  }
+
+  // Explicitly opt for the auto-generated avatar (the colored initial). Clears
+  // any uploaded image so the server generates the fallback on submit. Only
+  // offered when there's no existing real photo on the profile.
+  function useGeneratedAvatar() {
+    setAvatarUrl('');
+    setPhotoChoice('generate');
+    setError('');
   }
 
   // Privy-verified contact methods are locked (can't be edited); the others
@@ -191,7 +202,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         setContactName((prev) => prev || u.name || '');
         setContactEmail((prev) => prev || u.email || '');
         setUsername((prev) => prev || u.username || '');
-        if (isRealPhoto(u.avatarUrl)) setAvatarUrl((prev) => prev || u.avatarUrl);
+        if (isRealPhoto(u.avatarUrl)) { setAvatarUrl((prev) => prev || u.avatarUrl); setPhotoChoice((prev) => prev ?? 'upload'); }
         // Lock fields the profile already has — change them in profile settings.
         if (u.name) setExistingName(true);
         if (u.username) setExistingUsername(true);
@@ -284,6 +295,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     if (availability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
     if (availability === 'taken') { setError('That handle is taken — try another'); return; }
     if (availability === 'checking') { setError('Hang on — still checking that handle'); return; }
+    if (!photoChoice) { setError('Add a profile photo, or choose the generated avatar'); return; }
     // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
     if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); setStep(1); return; }
@@ -506,8 +518,8 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             <div className="space-y-5 mb-6">
               {/* Photo + handle, the passport identity, up top */}
               <div>
-                <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                  Profile photo
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                  Profile photo<span style={{ color: '#FF5C34' }}> *</span>
                 </label>
                 <div className="relative inline-block ml-2 mt-1">
                   <span className="absolute -top-2 -left-2 w-3.5 h-3.5 z-20"><span className="absolute top-0 left-0 w-full h-px bg-[var(--foreground)]/25" /><span className="absolute top-0 left-0 h-full w-px bg-[var(--foreground)]/25" /></span>
@@ -519,7 +531,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     onClick={onPhotoClick}
                     disabled={uploadingAvatar}
                     className="relative w-20 h-20 rounded-full overflow-hidden border-2 group block cursor-pointer"
-                    style={{ borderColor: 'var(--border-color)' }}
+                    style={{ borderColor: photoChoice ? 'var(--accent)' : 'var(--border-color)' }}
                     aria-label={avatarUrl ? 'Change profile photo' : 'Upload profile photo'}
                   >
                     {avatarUrl ? (
@@ -546,10 +558,38 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   </button>
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
-                <div className="mt-2.5">
-                  <button type="button" onClick={onPhotoClick} disabled={uploadingAvatar} className="font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer opacity-70 hover:opacity-100 disabled:opacity-40" style={{ color: 'var(--foreground)' }}>
-                    {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Add photo'}
-                  </button>
+                <div className="mt-2.5 flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onPhotoClick}
+                      disabled={uploadingAvatar}
+                      className="font-mono text-[11px] uppercase tracking-[0.12em] px-3 py-1.5 rounded-full border transition cursor-pointer disabled:opacity-40"
+                      style={photoChoice === 'upload'
+                        ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'var(--accent)' }
+                        : { color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                    >
+                      {uploadingAvatar ? 'Uploading…' : photoChoice === 'upload' ? (existingPhoto ? '✓ Change photo' : '✓ Photo added') : 'Upload photo'}
+                    </button>
+                    {!existingPhoto && (
+                      <button
+                        type="button"
+                        onClick={useGeneratedAvatar}
+                        disabled={uploadingAvatar}
+                        className="font-mono text-[11px] uppercase tracking-[0.12em] px-3 py-1.5 rounded-full border transition cursor-pointer disabled:opacity-40"
+                        style={photoChoice === 'generate'
+                          ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'var(--accent)' }
+                          : { color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                      >
+                        {photoChoice === 'generate' ? '✓ Using generated' : 'Use generated'}
+                      </button>
+                    )}
+                  </div>
+                  {photoChoice === null && (
+                    <span className="font-mono text-[10px] tracking-[0.08em] opacity-50" style={{ color: 'var(--foreground)' }}>
+                      Upload a photo or use the generated avatar to continue.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -682,11 +722,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     </button>
                     <button
                       onClick={submit}
-                      disabled={submitting || availability !== 'available'}
+                      disabled={submitting || availability !== 'available' || !photoChoice}
                       className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                     >
-                      {submitting ? 'Submitting…' : availability !== 'available' ? 'Pick a handle to continue' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+                      {submitting ? 'Submitting…' : availability !== 'available' ? 'Pick a handle to continue' : !photoChoice ? 'Choose a profile photo' : approvalRequired ? 'Send request' : 'Complete RSVP'}
                     </button>
                   </div>
                 )}

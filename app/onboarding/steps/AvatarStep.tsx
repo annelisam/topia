@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import StepShell from '../StepShell';
 import { PathConfig } from '../../components/profile/pathConfig';
 import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+import { isRealPhoto } from '../../../lib/avatar';
 
 interface Props {
   step: number;
@@ -40,7 +41,9 @@ function resizeImage(file: File): Promise<string> {
 }
 
 export default function AvatarStep({ step, total, config, initialValue, fallbackName, onBack, onAdvance }: Props) {
-  const [avatarUrl, setAvatarUrl] = useState(initialValue);
+  // Only a real uploaded photo pre-fills — an auto-generated SVG fallback is
+  // treated as "no photo yet" so the user is prompted to upload a real one.
+  const [avatarUrl, setAvatarUrl] = useState(isRealPhoto(initialValue) ? initialValue : '');
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 

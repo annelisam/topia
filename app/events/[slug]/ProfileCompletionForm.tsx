@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { ROLE_TAGS } from '../../../lib/profile/roleTags';
 import { PATH_CONFIG, UserPath } from '../../components/profile/pathConfig';
 import { sanitizeUsername, useUsernameAvailability } from '../../onboarding/usernameAvailability';
+import { isRealPhoto } from '../../../lib/avatar';
 import type { UserProfile } from '../../hooks/useUserProfile';
 
 // Resize an uploaded image to max 256×256 and return a base64 data URL.
@@ -50,7 +51,8 @@ interface Props {
  */
 export default function ProfileCompletionForm({ privyId, profile, onComplete, onSkip }: Props) {
   const needsHandle = !profile.username;
-  const needsAvatar = !profile.avatarUrl;
+  // An auto-generated fallback avatar still counts as missing — prompt a real upload.
+  const needsAvatar = !isRealPhoto(profile.avatarUrl);
   const needsPath = !profile.path;
   const needsRoles = !(profile.roleTags && profile.roleTags.trim());
   const needsBio = !(profile.bio && profile.bio.trim());
