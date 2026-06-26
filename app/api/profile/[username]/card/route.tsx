@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { db } from '@/lib/db';
-import { users, worldMembers, worlds } from '@/lib/db/schema';
+import { users, worldMembers, worlds, events } from '@/lib/db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { PATH_CONFIG, resolvePath } from '@/app/components/profile/pathConfig';
 import { avatarColor, avatarTextColor, isRealPhoto } from '@/lib/avatar';
@@ -20,11 +20,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   const { username } = await params;
   const origin = new URL(req.url).origin;
   const format = new URL(req.url).searchParams.get('format'); // 'og' (link preview) | 'story' (IG story)
+  const stampSlug = new URL(req.url).searchParams.get('stamp'); // event slug → bake an event stamp onto the card
 
+  // Resolve by username, falling back to the user id — lets transactional emails
+  // (e.g. "complete your passport") render a card before a handle is even set.
   const [u] = await db
     .select({ id: users.id, name: users.name, username: users.username, avatarUrl: users.avatarUrl, roleTags: users.roleTags, path: users.path, createdAt: users.createdAt })
     .from(users)
-    .where(sql`lower(${users.username}) = ${username.toLowerCase()}`)
+    .where(sql`lower(${users.username}) = ${username.toLowerCase()} OR ${users.id}::text = ${username}`)
     .limit(1);
   if (!u) return new Response('Not found', { status: 404 });
 
@@ -40,7 +43,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
 
   // The user's vanity short link, shown on the card. Hardcoded brand host so the
   // card always reads topia.vision regardless of which deployment renders it.
-  const shortLink = `topia.vision/@${u.username}`;
+  const shortLink = u.username ? `topia.vision/@${u.username}` : 'topia.vision';
+
+  // Optional event stamp ("stamped" onto the card after an RSVP). Mirrors the
+  // lime TOPIA-emblem seal from the profile's stamp strip.
+  let stamp: { label: string; date: string } | null = null;
+  if (stampSlug) {
+    const [ev] = await db
+      .select({ eventName: events.eventName, dateIso: events.dateIso, date: events.date })
+      .from(events)
+      .where(eq(events.slug, stampSlug))
+      .limit(1);
+    if (ev) {
+      const d = ev.dateIso ? new Date(`${ev.dateIso}T00:00:00Z`) : ev.date ? new Date(ev.date) : null;
+      const when = d && !Number.isNaN(d.getTime())
+        ? `${d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()} '${String(d.getUTCFullYear()).slice(2)}`
+        : 'TOPIA';
+      // Keep the lead phrase (before any ":" / dash) so the seal label stays short.
+      const lead = (ev.eventName || 'TOPIA').split(/[:–—-]/)[0].trim() || 'TOPIA';
+      stamp = { label: lead.toUpperCase().slice(0, 14), date: when };
+    }
+  }
 
   const [bold, regular, zalando] = await Promise.all([
     fetch(`${origin}/fonts/GTZirkon-Bold.otf`).then((r) => r.arrayBuffer()),
@@ -85,7 +108,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
             )}
           </div>
           <div style={{ display: 'flex', color: '#f5f0e8', fontFamily: 'Zalando Expanded', fontSize: w * 0.082, fontWeight: 900, marginTop: w * 0.05, textAlign: 'center', lineHeight: 1.0 }}>{displayName}</div>
-          <div style={{ display: 'flex', color: 'rgba(245,240,232,0.55)', fontSize: w * 0.036, marginTop: 8 }}>@{u.username}</div>
+          {u.username ? <div style={{ display: 'flex', color: 'rgba(245,240,232,0.55)', fontSize: w * 0.036, marginTop: 8 }}>@{u.username}</div> : null}
           <div style={{ display: 'flex', marginTop: w * 0.04, backgroundColor: accent, color: onAccent, fontSize: w * 0.028, fontWeight: 700, letterSpacing: 5, padding: `${w * 0.012}px ${w * 0.026}px`, borderRadius: 8 }}>{cfg.label}</div>
           {roleLine ? <div style={{ display: 'flex', color: 'rgba(245,240,232,0.45)', fontSize: w * 0.025, letterSpacing: 2, marginTop: w * 0.04, textAlign: 'center' }}>{roleLine}</div> : null}
         </div>
@@ -97,6 +120,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
       </div>
     );
   };
+
+  // Lime TOPIA-emblem event seal, rotated and overlapping the card's lower-right
+  // corner. Straight text (Satori has no <textPath>), but mirrors the profile seal.
+  const STAMP_LIME = '#e4fe52';
+  const StampSeal = (S: number) => (
+    <div style={{ position: 'absolute', right: -S * 0.22, bottom: -S * 0.18, width: S, height: S, transform: 'rotate(-12deg)', display: 'flex' }}>
+      <div style={{ width: S, height: S, borderRadius: S, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(9,11,8,0.94)', border: `${S * 0.03}px solid ${STAMP_LIME}`, boxShadow: `0 ${S * 0.05}px ${S * 0.1}px rgba(0,0,0,0.55)`, padding: `${S * 0.14}px ${S * 0.11}px` }}>
+        <div style={{ display: 'flex', color: STAMP_LIME, fontSize: S * 0.092, fontWeight: 700, letterSpacing: 1.5, textAlign: 'center', lineHeight: 1 }}>{stamp!.label}</div>
+        <svg width={S * 0.44} height={S * 0.44 * (309 / 468)} viewBox="0 0 468 309" fill="none"><path d={LOGO_PATH} fill={STAMP_LIME} /></svg>
+        <div style={{ display: 'flex', color: STAMP_LIME, opacity: 0.85, fontSize: S * 0.066, letterSpacing: 3 }}>{`TOPIA · ${stamp!.date}`}</div>
+      </div>
+      <div style={{ position: 'absolute', top: S * 0.055, left: S * 0.055, width: S * 0.89, height: S * 0.89, borderRadius: S, border: `${S * 0.009}px solid ${STAMP_LIME}`, opacity: 0.55, display: 'flex' }} />
+    </div>
+  );
 
   const fonts = [
     { name: 'GT Zirkon', data: bold, weight: 700 as const, style: 'normal' as const },
@@ -177,6 +214,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ username
   }
 
   // ── Default: 1080×1350 portrait card, transparent background, glowing border ──
+  // With ?stamp, shrink the card to leave room for the seal overlapping its corner.
+  if (stamp) {
+    const cw = 780;
+    return new ImageResponse(
+      (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'GT Zirkon' }}>
+          <div style={{ position: 'relative', display: 'flex' }}>
+            {Card(cw, { boxShadow: `0 0 90px -10px ${accent}66` })}
+            {StampSeal(cw * 0.5)}
+          </div>
+        </div>
+      ),
+      { width: 1080, height: 1350, fonts },
+    );
+  }
   return new ImageResponse(
     (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'GT Zirkon' }}>

@@ -82,6 +82,25 @@ function fallbackLink(urlVar: string): string {
           </tr>`;
 }
 
+// The user's passport with the event seal stamped on — shown after the event
+// details on an RSVP confirmation. CARD_URL points at the stamped card image.
+function stampCardBlock(): string {
+  return `
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(136,136,136,0.25);border-radius:12px;">
+                <tr>
+                  <td align="center" style="padding:22px 20px 26px 20px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="padding-bottom:10px;">${hl('New stamp earned')}</div>
+                    <div style="font-size:13px;line-height:1.5;color:#888888;padding-bottom:18px;">This RSVP just stamped your passport.</div>
+                    <img src="{{{CARD_URL}}}" width="240" alt="Your Topia passport" style="display:block;margin:0 auto;width:240px;max-width:100%;height:auto;border:0;">
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+}
+
 interface ShellConfig {
   title: string;
   preheader: string;
@@ -90,6 +109,7 @@ interface ShellConfig {
   headline: string;
   note?: string;
   whenWhere?: boolean;
+  card?: boolean;
   primary: { label: string; url: string };
   secondary?: boolean;
   info?: { label: string; body: string };
@@ -136,7 +156,7 @@ function shell(c: ShellConfig): string {
             <td style="padding:10px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
               ${c.note}
             </td>
-          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
+          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${c.card ? stampCardBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
           <tr>
             <td style="padding:28px 32px 0 32px;">
               <div style="height:1px;background:rgba(136,136,136,0.25);line-height:1px;font-size:1px;">&nbsp;</div>
@@ -174,265 +194,147 @@ interface TemplateDef extends Omit<EmailTemplate, 'html'> {
   html?: string;
 }
 
-// complete-your-profile is hand-authored (built in the email editor), so it
-// overrides the shell. Keep this byte-identical to emails/complete-your-profile.html.
-const COMPLETE_PROFILE_HTML = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html dir="ltr" lang="en">
-  <head>
-    <meta content="width=device-width" name="viewport" />
-    <link
-      rel="preload"
-      as="image"
-      href="https://topia.vision/brand/email-logo.png" />
-    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
-    <meta name="x-apple-disable-message-reformatting" />
-    <meta
-      content="telephone=no,address=no,email=no,date=no,url=no"
-      name="format-detection" />
-  </head>
-  <body style="background-color:#ffffff">
-    <!--$--><!--html--><!--head--><!--body-->
-    <table
-      border="0"
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      role="presentation"
-      align="center">
-      <tbody>
-        <tr>
-          <td style="background-color:#ffffff">
-            <table
-              align="left"
-              width="100%"
-              border="0"
-              cellpadding="0"
-              cellspacing="0"
-              role="presentation"
-              style="max-width:600px;align:left;width:100%;color:#000000;background-color:#ffffff;border-radius:0px;border-color:#000000">
-              <tbody>
-                <tr style="width:100%">
-                  <td
-                    style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px">
-                    <div
-                      style="margin:0;padding:0;display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px">
-                      <p style="margin:0;padding:0">
-                        Claim your TOPIA passport → ‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌‌
-                      </p>
-                    </div>
-                    <table
-                      width="100%"
-                      border="0"
-                      cellpadding="0"
-                      cellspacing="0"
-                      role="presentation"
-                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
-                      <tbody>
-                        <tr style="margin:0;padding:0">
-                          <td
-                            align="center"
-                            data-id="__react-email-column"
-                            style="margin:0;padding:32px 16px">
-                            <table
-                              width="480"
-                              border="0"
-                              cellpadding="0"
-                              cellspacing="0"
-                              role="presentation"
-                              style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0;max-width:480px;width:100%;border-style:solid;border-width:1px;border-color:rgba(136,136,136,0.25);border-radius:16px">
-                              <tbody>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:28px 32px 0 32px">
-                                    <img
-                                      alt="Topia"
-                                      height="48"
-                                      src="https://topia.vision/brand/email-logo.png"
-                                      style="display:block;outline:none;border:0;text-decoration:none;max-width:100%;width:48px;height:auto;border-radius:12px"
-                                      width="48" />
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:22px 32px 0 32px">
-                                    <p style="margin:0;padding:0">
-                                      <span style="color:#000000"
-                                        ><strong
-                                          ><span
-                                            style="text-transform:uppercase"
-                                            >Welcome TO TOPIA</span
-                                          ></strong
-                                        ></span
-                                      >
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:14px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#888888">
-                                    <p style="margin:0;padding:0">
-                                      Hey <strong>{{{USER_NAME}}}</strong>
-                                      <!-- -->👋
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:6px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-size:28px;line-height:1.1;text-transform:uppercase">
-                                    <p style="margin:0;padding:0">
-                                      Claim your passport
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:10px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888">
-                                    <p style="margin:0;padding:0">
-                                      Add your details to complete your TOPIA
-                                      passport. It only takes a minute, and you
-                                      can update it anytime.
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:28px 32px 0 32px">
-                                    <table
-                                      border="0"
-                                      cellpadding="0"
-                                      cellspacing="0"
-                                      role="presentation"
-                                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0">
-                                      <tbody>
-                                        <tr style="margin:0;padding:0">
-                                          <td
-                                            align="center"
-                                            data-id="__react-email-column"
-                                            style="margin:0;padding:0;border-radius:8px">
-                                            <p style="margin:0;padding:0">
-                                              <a
-                                                href="{{{PROFILE_URL}}}"
-                                                rel="noopener noreferrer nofollow"
-                                                style="color:#000000;text-decoration-line:none;text-decoration:none;display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:14px;letter-spacing:1px;text-transform:uppercase;border-radius:8px"
-                                                target="_blank"
-                                                >Claim your passport →</a
-                                              >
-                                            </p>
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:22px 32px 0 32px">
-                                    <table
-                                      width="100%"
-                                      border="0"
-                                      cellpadding="0"
-                                      cellspacing="0"
-                                      role="presentation"
-                                      style="margin-top:0;margin-right:0;margin-bottom:0;margin-left:0;padding-top:0;padding-right:0;padding-bottom:0;padding-left:0;border-style:solid;border-width:1px;border-color:rgba(136,136,136,0.25);border-radius:12px">
-                                      <tbody>
-                                        <tr style="margin:0;padding:0">
-                                          <td
-                                            data-id="__react-email-column"
-                                            style="margin:0;padding:18px 20px;font-family:Arial,Helvetica,sans-serif">
-                                            <div
-                                              style="margin:0;padding:0;padding-bottom:8px">
-                                              <p style="margin:0;padding:0">
-                                                <span style="color:#888888"
-                                                  ><strong
-                                                    ><span
-                                                      style="text-transform:uppercase"
-                                                      >What is a
-                                                      &#x27;passport&#x27; on
-                                                      topia?</span
-                                                    ></strong
-                                                  ></span
-                                                >
-                                              </p>
-                                            </div>
-                                            <div
-                                              style="margin:0;padding:0;font-size:14px;line-height:1.5;color:#888888">
-                                              <p style="margin:0;padding:0">
-                                                Your TOPIA passport is your
-                                                identity across the network.
-                                                It’s where people discover who
-                                                you are, what you create, and
-                                                the stamps you’ve collected
-                                                along the way.
-                                              </p>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:18px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#888888">
-                                    <p style="margin:0;padding:0">
-                                      Or paste this link into your browser:<br /><a
-                                        href="{{{PROFILE_URL}}}"
-                                        rel="noopener noreferrer nofollow"
-                                        style="color:inherit;text-decoration-line:none;text-decoration:underline;word-break:break-all"
-                                        target="_blank"
-                                        ><u>{{{PROFILE_URL}}}</u></a
-                                      >
-                                    </p>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:28px 32px 0 32px">
-                                    <div
-                                      style="margin:0;padding:0;height:1px;background:rgba(136,136,136,0.25);line-height:1px;font-size:1px">
-                                      <p style="margin:0;padding:0"> </p>
-                                    </div>
-                                  </td>
-                                </tr>
-                                <tr style="margin:0;padding:0">
-                                  <td
-                                    data-id="__react-email-column"
-                                    style="margin:0;padding:16px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888">
-                                    <p style="margin:0;padding:0">
-                                      Culture first. Systems second. Ownership
-                                      always.<br />©<!-- -->
-                                      TOPIA VISION HOLDINGS LLC
-                                    </p>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <p style="margin:0;padding:0"><br /></p>
+// A self-contained, dynamic passport-card image for the given username/id. The
+// route at /api/profile/<handle>/card renders the live card (avatar, path,
+// roles, issue year) — embedding it keeps these emails in sync with the profile.
+function cardImage(width: number): string {
+  return `
+          <tr>
+            <td align="center" style="padding:22px 32px 0 32px;">
+              <img src="{{{CARD_URL}}}" width="${width}" alt="{{{USER_NAME}}}'s Topia passport" style="display:block;width:${width}px;max-width:100%;height:auto;border:0;border-radius:14px;">
+            </td>
+          </tr>`;
+}
+
+// complete-your-profile is hand-authored (it embeds the live passport card and
+// bypasses the shell). Keep this byte-identical to emails/complete-your-profile.html.
+const COMPLETE_PROFILE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Finish your TOPIA passport</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">
+    Here's your passport so far — finish it &rarr;
+    &#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;border:1px solid rgba(136,136,136,0.25);border-radius:16px;">
+          <tr>
+            <td style="padding:28px 32px 0 32px;">
+              <img src="${LOGO}" width="48" height="48" alt="Topia" style="display:block;width:48px;height:48px;border:0;border-radius:12px;">
+            </td>
+          </tr>
+          <tr><td style="padding:22px 32px 0 32px;">${hl('Your passport so far', true)}</td></tr>
+          <tr>
+            <td style="padding:14px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#888888;">
+              Hey <strong style="color:#000000;">{{{USER_NAME}}}</strong> &#128075;
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-size:28px;line-height:1.1;text-transform:uppercase;">
+              Finish your passport
+            </td>
+          </tr>${cardImage(240)}
+          <tr>
+            <td style="padding:18px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
+              This is your passport so far. Add a profile photo and pick your path to make it official — it only takes a minute, and you can change it anytime.
+            </td>
+          </tr>${primaryButton('Complete your passport &rarr;', 'PROFILE_URL')}${infoBlock("What is a 'passport' on topia?", "Your TOPIA passport is your identity across the network. It's where people discover who you are, what you create, and the stamps you've collected along the way.")}${fallbackLink('PROFILE_URL')}
+          <tr>
+            <td style="padding:28px 32px 0 32px;">
+              <div style="height:1px;background:rgba(136,136,136,0.25);line-height:1px;font-size:1px;">&nbsp;</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;">
+              Culture first. Systems second. Ownership always.<br>
+              &copy; TOPIA VISION HOLDINGS LLC
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+// passport-complete celebrates a finished profile and nudges sharing. Embeds the
+// live card + share links. Keep byte-identical to emails/passport-complete.html.
+const PASSPORT_COMPLETE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Your TOPIA passport is live</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">
+    Your passport is live — share it &rarr;
+    &#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;&#8204;
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;border:1px solid rgba(136,136,136,0.25);border-radius:16px;">
+          <tr>
+            <td style="padding:28px 32px 0 32px;">
+              <img src="${LOGO}" width="48" height="48" alt="Topia" style="display:block;width:48px;height:48px;border:0;border-radius:12px;">
+            </td>
+          </tr>
+          <tr><td style="padding:22px 32px 0 32px;">${hl('Passport complete', true)}</td></tr>
+          <tr>
+            <td style="padding:14px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#888888;">
+              Nice work, <strong style="color:#000000;">{{{USER_NAME}}}</strong> &#10022;
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-size:28px;line-height:1.1;text-transform:uppercase;">
+              You're on the map
+            </td>
+          </tr>${cardImage(260)}
+          <tr>
+            <td style="padding:18px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
+              Your passport is live. Share it with friends so they can find you across Topia — drop it in your bio, your group chat, or your IG story.
+            </td>
+          </tr>${primaryButton('View &amp; share your passport &rarr;', 'SHARE_URL')}
+          <tr>
+            <td style="padding:22px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(136,136,136,0.25);border-radius:12px;">
+                <tr>
+                  <td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="padding-bottom:8px;">${hl('Your link')}</div>
+                    <div style="font-size:16px;line-height:1.4;color:#000000;font-weight:bold;padding-bottom:14px;">topia.vision/@{{{USERNAME}}}</div>
+                    <a href="{{{STORY_URL}}}" target="_blank" style="display:inline-block;padding:11px 22px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:inherit;text-decoration:none;border:1px solid rgba(136,136,136,0.45);border-radius:8px;">Save for your IG story &rarr;</a>
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <!--/$-->
-  </body>
+              </table>
+            </td>
+          </tr>${fallbackLink('SHARE_URL')}
+          <tr>
+            <td style="padding:28px 32px 0 32px;">
+              <div style="height:1px;background:rgba(136,136,136,0.25);line-height:1px;font-size:1px;">&nbsp;</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#888888;">
+              Culture first. Systems second. Ownership always.<br>
+              &copy; TOPIA VISION HOLDINGS LLC
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>`;
 
 const DEFS: TemplateDef[] = [
@@ -445,14 +347,14 @@ const DEFS: TemplateDef[] = [
   {
     id: 'event-rsvp-confirmed', label: 'RSVP confirmed', scope: 'event',
     subject: "You're confirmed for {{{EVENT_NAME}}}",
-    variables: ['GUEST_NAME', 'EVENT_NAME', 'EVENT_URL', 'EVENT_WHEN', 'EVENT_WHERE'],
-    shell: { title: "You're going", preheader: "You're on the list. See you there &rarr;", lede: "You're going", intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for", headline: '{{{EVENT_NAME}}}', whenWhere: true, primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, fallbackUrl: 'EVENT_URL' },
+    variables: ['GUEST_NAME', 'EVENT_NAME', 'EVENT_URL', 'EVENT_WHEN', 'EVENT_WHERE', 'CARD_URL'],
+    shell: { title: "You're going", preheader: "You're on the list. See you there &rarr;", lede: "You're going", intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for", headline: '{{{EVENT_NAME}}}', whenWhere: true, card: true, primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, fallbackUrl: 'EVENT_URL' },
   },
   {
     id: 'event-rsvp-confirmed-setup', label: 'RSVP confirmed + profile setup', scope: 'event',
     subject: "You're confirmed for {{{EVENT_NAME}}}",
-    variables: ['GUEST_NAME', 'EVENT_NAME', 'EVENT_URL', 'EVENT_WHEN', 'EVENT_WHERE', 'PROFILE_URL'],
-    shell: { title: "You're going", preheader: "You're in — now claim your Topia profile &rarr;", lede: "You're going", intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for", headline: '{{{EVENT_NAME}}}', whenWhere: true, primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, secondary: true, fallbackUrl: 'EVENT_URL' },
+    variables: ['GUEST_NAME', 'EVENT_NAME', 'EVENT_URL', 'EVENT_WHEN', 'EVENT_WHERE', 'PROFILE_URL', 'CARD_URL'],
+    shell: { title: "You're going", preheader: "You're in — now claim your Topia profile &rarr;", lede: "You're going", intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for", headline: '{{{EVENT_NAME}}}', whenWhere: true, card: true, primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, secondary: true, fallbackUrl: 'EVENT_URL' },
   },
   {
     id: 'event-rsvp-requested', label: 'RSVP request received', scope: 'event',
@@ -480,9 +382,15 @@ const DEFS: TemplateDef[] = [
   },
   {
     id: 'complete-your-profile', label: 'Complete your profile', scope: 'profile',
-    subject: 'Claim your TOPIA passport',
-    variables: ['USER_NAME', 'PROFILE_URL'],
+    subject: 'Finish your TOPIA passport',
+    variables: ['USER_NAME', 'PROFILE_URL', 'CARD_URL'],
     html: COMPLETE_PROFILE_HTML,
+  },
+  {
+    id: 'passport-complete', label: 'Passport complete + share', scope: 'profile',
+    subject: 'Your TOPIA passport is live',
+    variables: ['USER_NAME', 'USERNAME', 'CARD_URL', 'SHARE_URL', 'STORY_URL'],
+    html: PASSPORT_COMPLETE_HTML,
   },
 ];
 

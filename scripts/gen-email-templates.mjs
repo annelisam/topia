@@ -86,6 +86,24 @@ function fallbackLink(urlVar) {
           </tr>`;
 }
 
+// The user's passport with the event seal stamped on (RSVP confirmation).
+function stampCardBlock() {
+  return `
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid rgba(136,136,136,0.25);border-radius:12px;">
+                <tr>
+                  <td align="center" style="padding:22px 20px 26px 20px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="padding-bottom:10px;">${hl('New stamp earned')}</div>
+                    <div style="font-size:13px;line-height:1.5;color:#888888;padding-bottom:18px;">This RSVP just stamped your passport.</div>
+                    <img src="{{{CARD_URL}}}" width="240" alt="Your Topia passport" style="display:block;margin:0 auto;width:240px;max-width:100%;height:auto;border:0;">
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+}
+
 // c = { title, preheader, lede, intro, headline, note, whenWhere, primary:{label,url},
 //       secondary:bool, info:{label,body}, fallbackUrl }
 function shell(c) {
@@ -130,7 +148,7 @@ function shell(c) {
             <td style="padding:10px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#888888;">
               ${c.note}
             </td>
-          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
+          </tr>` : ''}${c.whenWhere ? whenWhereBlock() : ''}${c.card ? stampCardBlock() : ''}${primaryButton(c.primary.label, c.primary.url)}${c.secondary ? secondaryNudge() : ''}${c.info ? infoBlock(c.info.label, c.info.body) : ''}${c.fallbackUrl ? fallbackLink(c.fallbackUrl) : ''}
 
           <tr>
             <td style="padding:28px 32px 0 32px;">
@@ -165,14 +183,14 @@ const T = {
     title: "You're going", preheader: "You're on the list. See you there &rarr;",
     lede: "You're going",
     intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for",
-    headline: '{{{EVENT_NAME}}}', whenWhere: true,
+    headline: '{{{EVENT_NAME}}}', whenWhere: true, card: true,
     primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, fallbackUrl: 'EVENT_URL',
   },
   'event-rsvp-confirmed-setup': {
     title: "You're going", preheader: "You're in — now claim your Topia profile &rarr;",
     lede: "You're going",
     intro: "<strong style=\"color:inherit;\">{{{GUEST_NAME}}}</strong>, you're confirmed for",
-    headline: '{{{EVENT_NAME}}}', whenWhere: true,
+    headline: '{{{EVENT_NAME}}}', whenWhere: true, card: true,
     primary: { label: 'View event &rarr;', url: 'EVENT_URL' }, secondary: true, fallbackUrl: 'EVENT_URL',
   },
   'event-rsvp-requested': {
@@ -205,9 +223,10 @@ const T = {
     headline: '{{{EVENT_NAME}}}', whenWhere: true,
     primary: { label: 'Manage event &rarr;', url: 'MANAGE_URL' }, fallbackUrl: 'MANAGE_URL',
   },
-  // NOTE: complete-your-profile is intentionally NOT generated here — it's
-  // hand-authored in the email editor. Edit emails/complete-your-profile.html
-  // and the COMPLETE_PROFILE_HTML literal in lib/notify/emailTemplates.ts.
+  // NOTE: complete-your-profile and passport-complete are intentionally NOT
+  // generated here — they embed the live passport-card image and bypass the
+  // shell. They're authored as literals in lib/notify/emailTemplates.ts; run
+  // `tsx` against getTemplate(id).html to refresh emails/<id>.html.
 };
 
 mkdirSync(new URL('../emails/', import.meta.url), { recursive: true });

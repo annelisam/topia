@@ -29,7 +29,15 @@ export const EVENT_TEMPLATES = {
   rsvpDeclined:  process.env.RESEND_TPL_RSVP_DECLINED       || 'event-rsvp-declined',
   hostAlert:     process.env.RESEND_TPL_HOST_RSVP_ALERT     || 'event-host-rsvp-alert',
   completeProfile: process.env.RESEND_TPL_COMPLETE_PROFILE  || 'complete-your-profile',
+  passportComplete: process.env.RESEND_TPL_PASSPORT_COMPLETE || 'passport-complete',
 } as const;
+
+// The live passport-card image for a user. Accepts a username or, before one is
+// set, the user id — the card route resolves either. Brand host is the rendering
+// origin so the image loads on whatever deployment sent the mail.
+function cardUrl(origin: string, handle: string): string {
+  return `${origin}/api/profile/${encodeURIComponent(handle)}/card`;
+}
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
@@ -136,12 +144,16 @@ export function sendRsvpConfirmation(opts: {
   to: string; eventName: string; origin: string; slug: string;
   guestName?: string | null; approvalRequired: boolean;
   profileComplete?: boolean; eventWhen?: string | null; eventWhere?: string | null;
+  username?: string | null; userId?: string | null;
 }) {
   const templateId = opts.approvalRequired
     ? EVENT_TEMPLATES.rsvpRequested
     : opts.profileComplete
       ? EVENT_TEMPLATES.rsvpConfirmed
       : EVENT_TEMPLATES.rsvpConfirmedSetup;
+  // The confirmed variants show the passport with the event seal stamped on it
+  // (keyed by username, else user id). The "request received" variant has no card.
+  const handle = opts.username || opts.userId || '';
   return sendTemplateEmail({
     to: opts.to,
     templateId,
@@ -152,6 +164,7 @@ export function sendRsvpConfirmation(opts: {
       EVENT_WHEN: opts.eventWhen || 'Date to be announced',
       EVENT_WHERE: opts.eventWhere || 'Location to be announced',
       PROFILE_URL: `${opts.origin}/onboarding`,
+      CARD_URL: handle ? `${cardUrl(opts.origin, handle)}?stamp=${encodeURIComponent(opts.slug)}` : '',
     },
   });
 }
@@ -173,11 +186,34 @@ export function sendRsvpDecision(opts: { to: string; eventName: string; origin: 
 
 // Account: nudge a brand-new user to finish their profile / onboarding.
 // Fires once at signup; only send when the new account has an email on file.
-export function sendCompleteProfile(opts: { to: string; userName?: string | null; origin: string }) {
+// Embeds the user's passport-so-far card (keyed by username, else user id).
+export function sendCompleteProfile(opts: { to: string; userName?: string | null; origin: string; username?: string | null; userId?: string | null }) {
+  const handle = opts.username || opts.userId || '';
   return sendTemplateEmail({
     to: opts.to,
     templateId: EVENT_TEMPLATES.completeProfile,
-    variables: { USER_NAME: opts.userName || 'there', PROFILE_URL: `${opts.origin}/onboarding` },
+    variables: {
+      USER_NAME: opts.userName || 'there',
+      PROFILE_URL: `${opts.origin}/onboarding`,
+      CARD_URL: handle ? cardUrl(opts.origin, handle) : '',
+    },
+  });
+}
+
+// Account: celebrate a finished profile and prompt the user to share their
+// passport. Requires a username (the public profile + card both key off it).
+export function sendPassportComplete(opts: { to: string; userName?: string | null; username: string; origin: string }) {
+  const card = cardUrl(opts.origin, opts.username);
+  return sendTemplateEmail({
+    to: opts.to,
+    templateId: EVENT_TEMPLATES.passportComplete,
+    variables: {
+      USER_NAME: opts.userName || 'there',
+      USERNAME: opts.username,
+      CARD_URL: card,
+      SHARE_URL: `${opts.origin}/@${opts.username}`,
+      STORY_URL: `${card}?format=story`,
+    },
   });
 }
 
