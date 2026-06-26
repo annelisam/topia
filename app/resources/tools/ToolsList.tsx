@@ -168,6 +168,12 @@ export default function ToolsList() {
                 <div className="flex flex-col items-start md:items-end gap-1">
                   <span className="font-mono text-[12px] text-obsidian/80 leading-snug">software, hardware, platforms.</span>
                   <span className="font-mono text-[12px] text-obsidian/60 leading-snug">what creators use to build worlds.</span>
+                  <button
+                    onClick={() => setSubmitOpen(true)}
+                    className="submit-tool-btn mt-2 self-start md:self-end font-mono text-[11px] font-bold uppercase tracking-[2px] text-obsidian border border-obsidian/30 hover:bg-obsidian hover:text-lime px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
+                  >
+                    + submit a tool
+                  </button>
                 </div>
               </div>
             </div>
@@ -437,15 +443,9 @@ export default function ToolsList() {
               )}
             </div>
 
-            {/* ─── ROW 5: Footer / submit CTA ─── */}
+            {/* ─── ROW 5: Footer ─── */}
             <div className="bg-[var(--page-bg)] border-t border-ink/[0.04] px-4 py-3 flex items-center justify-between">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/20">topia://tools</span>
-              <button
-                onClick={() => setSubmitOpen(true)}
-                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 hover:text-lime transition bg-transparent border-none cursor-pointer"
-              >
-                + submit a tool
-              </button>
             </div>
           </div>
         </div>

@@ -501,6 +501,20 @@ body[data-accent] ::-webkit-scrollbar-thumb {
   color: var(--accent);
 }
 
+/* ── Tools "submit a tool" header button ─────────────────────
+   Obsidian outline on the lime bar in light mode; a solid white button
+   with bold obsidian text on the dark theme (white text on lime is too
+   low-contrast to read). */
+[data-theme="dark"] .submit-tool-btn {
+  background: #ffffff;
+  color: var(--obsidian);
+  border-color: #ffffff;
+}
+[data-theme="dark"] .submit-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--obsidian);
+}
+
 /* ── Hero cycling tagline ────────────────────────────────────
    Light mode: lime highlight with black text (reads on the bone bg).
    Dark mode: plain lime text on the obsidian bg (the original look). */
