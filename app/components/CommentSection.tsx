@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
-import GiphyPicker, { type PickedGif } from './GiphyPicker';
+import dynamic from 'next/dynamic';
+import { type PickedGif } from './GiphyPicker';
 import { StarIcon } from './ui/Icons';
 import ReactionBar, { type ReactionSummary } from './ReactionBar';
+
+// Giphy SDK loads on demand (only when the picker opens).
+const GiphyPicker = dynamic(() => import('./GiphyPicker'), { ssr: false });
 
 export interface CommentItem {
   id: string;

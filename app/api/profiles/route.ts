@@ -3,6 +3,10 @@ import { db } from '@/lib/db';
 import { users, worldMembers } from '@/lib/db/schema';
 import { and, eq, isNotNull, ne, desc, inArray } from 'drizzle-orm';
 
+// Public, viewer-independent list → let the CDN serve repeat hits. Short fresh
+// window + a longer stale-while-revalidate keeps it snappy without going stale.
+const LIST_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+
 // GET /api/profiles — public list of discoverable profiles (anyone who has
 // claimed a username). Powers the "Discover" carousel on the homepage.
 //   ?limit=24        (max 48)
@@ -48,7 +52,7 @@ export async function GET(request: NextRequest) {
     const builderSet = new Set(builderRows.map((b) => b.userId));
 
     const profiles = rows.map((r) => ({ ...r, isWorldBuilder: builderSet.has(r.id) }));
-    return NextResponse.json({ profiles });
+    return NextResponse.json({ profiles }, { headers: { 'Cache-Control': LIST_CACHE } });
   } catch (error) {
     console.error('GET profiles error:', error);
     return NextResponse.json({ error: 'Failed to load profiles' }, { status: 500 });

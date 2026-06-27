@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import dynamic from 'next/dynamic';
 import { PathConfig } from './pathConfig';
-import GiphyPicker, { type PickedGif } from '../GiphyPicker';
+import { type PickedGif } from '../GiphyPicker';
 import DrawingCanvas from '../DrawingCanvas';
 import ReactionBar, { type ReactionSummary } from '../ReactionBar';
+
+// Giphy SDK loads on demand (only when the picker opens).
+const GiphyPicker = dynamic(() => import('../GiphyPicker'), { ssr: false });
 
 interface GuestbookEntry {
   id: string;

@@ -68,7 +68,8 @@ export async function GET(request: Request) {
     const worldIds = results.map(w => w.id);
     let members: { worldId: string; userId: string; role: string; userName: string | null; userUsername: string | null; userAvatarUrl: string | null }[] = [];
     if (worldIds.length > 0) {
-      const memberResults = await db
+      // Only the returned worlds' members — not the whole table (indexed on world_id).
+      members = await db
         .select({
           worldId: worldMembers.worldId,
           userId: worldMembers.userId,
@@ -78,9 +79,8 @@ export async function GET(request: Request) {
           userAvatarUrl: users.avatarUrl,
         })
         .from(worldMembers)
-        .innerJoin(users, eq(worldMembers.userId, users.id));
-
-      members = memberResults.filter(m => worldIds.includes(m.worldId));
+        .innerJoin(users, eq(worldMembers.userId, users.id))
+        .where(inArray(worldMembers.worldId, worldIds));
     }
 
     // Group members by worldId
@@ -93,7 +93,8 @@ export async function GET(request: Request) {
     // Fetch pending invitations for all returned worlds
     let pendingInvites: { worldId: string; inviteeId: string; role: string; inviteeName: string | null; inviteeUsername: string | null; invitationId: string }[] = [];
     if (worldIds.length > 0) {
-      const inviteResults = await db
+      // Only pending invites for the returned worlds (indexed on world_id).
+      pendingInvites = await db
         .select({
           worldId: worldInvitations.worldId,
           inviteeId: worldInvitations.inviteeId,
@@ -104,9 +105,7 @@ export async function GET(request: Request) {
         })
         .from(worldInvitations)
         .innerJoin(users, eq(worldInvitations.inviteeId, users.id))
-        .where(eq(worldInvitations.status, 'pending'));
-
-      pendingInvites = inviteResults.filter(i => worldIds.includes(i.worldId));
+        .where(and(eq(worldInvitations.status, 'pending'), inArray(worldInvitations.worldId, worldIds)));
     }
 
     // Group pending invites by worldId

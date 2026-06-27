@@ -104,15 +104,15 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    fetch(`/api/events?hostUserId=${profile.id}`)
-      .then(r => r.json())
-      .then(data => setHostedEvents(data.events || []))
-      .catch(console.error);
-    // Events this user RSVP'd to (going) — each earns a passport stamp.
-    fetch(`/api/events?attendeeUserId=${profile.id}`)
-      .then(r => r.json())
-      .then(data => setAttendedEvents(data.events || []))
-      .catch(console.error);
+    // Hosted + attended ('going' → passport stamps) load together so they land
+    // in a single render rather than flashing in one after the other.
+    Promise.all([
+      fetch(`/api/events?hostUserId=${profile.id}`).then(r => r.json()).catch(() => ({ events: [] })),
+      fetch(`/api/events?attendeeUserId=${profile.id}`).then(r => r.json()).catch(() => ({ events: [] })),
+    ]).then(([hosted, attended]) => {
+      setHostedEvents(hosted.events || []);
+      setAttendedEvents(attended.events || []);
+    });
   }, [profile?.id]);
 
   const sortedWorlds = useMemo(() => {

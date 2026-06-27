@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import LoadingBar from '../../components/LoadingBar';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '../../components/Skeleton';
 import { faviconUrl } from './favicon';
 import { fuzzyMatch } from './fuzzy';
-import ToolModal from './ToolModal';
-import SubmitToolModal from './SubmitToolModal';
+
+// Both modals only render on click — keep them out of the tools-page bundle.
+const ToolModal = dynamic(() => import('./ToolModal'), { ssr: false });
+const SubmitToolModal = dynamic(() => import('./SubmitToolModal'), { ssr: false });
 
 interface ToolUser {
   username: string | null;
@@ -292,8 +295,17 @@ export default function ToolsList() {
             {/* ─── ROW 4: Grid ─── */}
             <div className="bg-[var(--page-bg)] p-4 md:p-6 min-h-[400px]">
               {loading && initialLoad ? (
-                <div className="text-center py-16">
-                  <LoadingBar text="LOADING TOOLS" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy="true">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="border border-ink/10 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Skeleton className="h-10 w-10 rounded-md" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                      <Skeleton className="h-3 w-full mb-2" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  ))}
                 </div>
               ) : tools.length === 0 && !loading ? (
                 <div className="text-center py-16">

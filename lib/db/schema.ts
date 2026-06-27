@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index } from 'drizzle-orm/pg-core';
 
 // Users table - auth via Privy (email, phone, Google, Coinbase wallet)
 export const users = pgTable('users', {
@@ -55,7 +55,10 @@ export const worldMembers = pgTable('world_members', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   role: text('role').notNull(), // 'world_builder' | 'collaborator'
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('world_members_world_id_idx').on(t.worldId),
+  index('world_members_user_id_idx').on(t.userId),
+]);
 
 // Worlds - artist-created spaces/projects
 export const worlds = pgTable('worlds', {
@@ -174,7 +177,10 @@ export const follows = pgTable('follows', {
   followerId: uuid('follower_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   followingId: uuid('following_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('follows_follower_id_idx').on(t.followerId),
+  index('follows_following_id_idx').on(t.followingId),
+]);
 
 // Notifications - in-app notifications (e.g. follow events)
 export const notifications = pgTable('notifications', {
@@ -185,7 +191,10 @@ export const notifications = pgTable('notifications', {
   metadata: jsonb('metadata'), // e.g. { worldId, worldTitle, worldSlug, role }
   read: boolean('read').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Bell badge + list query: recipient's notifications, newest first.
+  index('notifications_recipient_id_created_at_idx').on(t.recipientId, t.createdAt),
+]);
 
 // World invitations - pending invites for world membership
 export const worldInvitations = pgTable('world_invitations', {
@@ -197,7 +206,10 @@ export const worldInvitations = pgTable('world_invitations', {
   status: text('status').default('pending').notNull(), // 'pending' | 'accepted' | 'declined'
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('world_invitations_world_id_idx').on(t.worldId),
+  index('world_invitations_invitee_id_idx').on(t.inviteeId),
+]);
 
 // Event hosts - links users to events with roles
 export const eventHosts = pgTable('event_hosts', {
@@ -210,7 +222,10 @@ export const eventHosts = pgTable('event_hosts', {
   manager: boolean('manager').notNull().default(true),          // false = host shown but no /manage access
   showOnEventPage: boolean('show_on_event_page').notNull().default(true), // public "Hosted by" visibility
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_hosts_event_id_idx').on(t.eventId),
+  index('event_hosts_user_id_idx').on(t.userId),
+]);
 
 // Event co-host invitations
 export const eventHostInvitations = pgTable('event_host_invitations', {
@@ -235,7 +250,10 @@ export const eventRsvps = pgTable('event_rsvps', {
   // even if the host later edits/removes questions.
   responses: jsonb('responses'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_rsvps_event_id_idx').on(t.eventId),
+  index('event_rsvps_user_id_idx').on(t.userId),
+]);
 
 // Guest invitations by email / phone (Luma-style). A host invites people who
 // may not be on the platform yet; each invite carries a unique token used in a
@@ -271,7 +289,9 @@ export const eventQuestions = pgTable('event_questions', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_questions_event_id_idx').on(t.eventId),
+]);
 
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
@@ -305,7 +325,9 @@ export const worldProjects = pgTable('world_projects', {
   published: boolean('published').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('world_projects_world_id_idx').on(t.worldId),
+]);
 
 /* ────────────────────────────────────────────────────────────────────
  * Guestbook entries — drawings, text messages, gifs left on a user's
@@ -326,7 +348,10 @@ export const guestbookEntries = pgTable('guestbook_entries', {
   // limited: text-only, no further nesting. Null for top-level entries.
   parentId: uuid('parent_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Profile guestbook render: a profile's entries, newest first.
+  index('guestbook_entries_profile_user_id_created_at_idx').on(t.profileUserId, t.createdAt),
+]);
 
 /* Tool comments + optional 1–5 rating. Only users who have the tool in
  * their kit (users.tool_slugs contains tool.slug) can post — enforced at
@@ -339,7 +364,9 @@ export const toolComments = pgTable('tool_comments', {
   rating: integer('rating'),                    // nullable 1..5; replies don't carry ratings
   parentId: uuid('parent_id'),                  // top-level when null
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('tool_comments_tool_id_idx').on(t.toolId),
+]);
 
 /* Event comments + optional gif. Only users who RSVP'd or have the event
  * slug in savedEventSlugs (interested) can post — enforced at the API.
@@ -353,7 +380,9 @@ export const eventComments = pgTable('event_comments', {
   giphyId: text('giphy_id'),
   parentId: uuid('parent_id'),                  // top-level when null
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_comments_event_id_idx').on(t.eventId),
+]);
 
 /* Event photo album — hosts upload images/clips that render in a gallery
  * on the event page. Public to read; only hosts add/remove (enforced at
@@ -367,7 +396,9 @@ export const eventGalleryPhotos = pgTable('event_gallery_photos', {
   uploadedBy: uuid('uploaded_by').references(() => users.id),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_gallery_photos_event_id_idx').on(t.eventId),
+]);
 
 /* ────────────────────────────────────────────────────────────────────
  * Polymorphic emoji reactions on guestbook entries + comments.
@@ -389,7 +420,10 @@ export const reactions = pgTable('reactions', {
   userId:     uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   emoji:      text('emoji').notNull(),         // unicode character, e.g. '❤️', '🔥'
   createdAt:  timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Aggregating reactions for a target at read time.
+  index('reactions_target_idx').on(t.targetType, t.targetId),
+]);
 
 /* ────────────────────────────────────────────────────────────────────
  * Topia TV episodes — videos that play on /tv. Stored as URLs pointing
@@ -447,7 +481,9 @@ export const eventTicketTypes = pgTable('event_ticket_types', {
   sortOrder: integer('sort_order').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (t) => [
+  index('event_ticket_types_event_id_idx').on(t.eventId),
+]);
 
 // A purchase. One row per checkout attempt; tickets are issued only once
 // status flips to 'paid'. Pricing is snapshotted at purchase time so later
@@ -546,7 +582,12 @@ export const conversationMembers = pgTable('conversation_members', {
   status: text('status').notNull().default('accepted'), // 'accepted' (Primary) | 'pending' (Requests)
   lastReadAt: timestamp('last_read_at'),                 // null = never opened; drives unread counts
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Inbox: "my conversations" (polled). Also the unread-badge count.
+  index('conversation_members_user_id_idx').on(t.userId),
+  // Loading the members of a conversation (the "other" person).
+  index('conversation_members_conversation_id_idx').on(t.conversationId),
+]);
 
 export const messages = pgTable('messages', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -556,4 +597,7 @@ export const messages = pgTable('messages', {
   imageUrl: text('image_url'),                           // uploaded image OR gif URL
   giphyId: text('giphy_id'),                             // Giphy attribution when the image is a gif
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => [
+  // Thread load (polled every few seconds): a conversation's messages in order.
+  index('messages_conversation_id_created_at_idx').on(t.conversationId, t.createdAt),
+]);
