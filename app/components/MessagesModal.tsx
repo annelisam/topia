@@ -47,11 +47,12 @@ export default function MessagesModal({
   return (
     <>
       {/* Full-screen backdrop. Under overlays-content `inset-0` is always the
-          full screen (the keyboard floats over it), so it never shrinks and the
-          page can't peek through — even on the first-open lag frame. Tap to close. */}
+          full screen (the keyboard floats over it), so it never shrinks. Kept
+          near-opaque so the page never bleeds through the sliver above the
+          mobile sheet — behind the modal reads as solid dark. Tap to close. */}
       <div
-        className={`fixed inset-0 z-[2099] backdrop-blur-sm transition-opacity duration-300 ${shown ? 'opacity-100' : 'opacity-0'}`}
-        style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+        className={`fixed inset-0 z-[2099] backdrop-blur-md transition-opacity duration-300 ${shown ? 'opacity-100' : 'opacity-0'}`}
+        style={{ backgroundColor: 'rgba(0,0,0,0.95)' }}
         onClick={requestClose}
       />
       {/* Positioning layer — clamped to the visible viewport on mobile
