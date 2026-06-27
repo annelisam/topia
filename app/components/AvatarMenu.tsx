@@ -67,7 +67,7 @@ export default function AvatarMenu() {
       {/* Avatar trigger */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 hover:opacity-80 transition cursor-pointer"
+        className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 hover:opacity-80 transition cursor-pointer"
         style={{ borderColor: 'var(--foreground)' }}
         aria-label="User menu"
       >
