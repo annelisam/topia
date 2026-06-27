@@ -219,10 +219,10 @@ export default function Thread({ conversationId, privyId, onBack, onActivity }: 
         </div>
       ) : (
         <div className="border-t border-ink/[0.08] px-3 py-2.5 shrink-0 flex items-end gap-2">
-          <button onClick={() => fileRef.current?.click()} disabled={uploading || sending} aria-label="Add photo" className="text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer p-1.5 disabled:opacity-40">
+          <button onClick={() => fileRef.current?.click()} disabled={uploading || sending} aria-label="Add photo" className="shrink-0 h-9 w-9 flex items-center justify-center text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer disabled:opacity-40">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
           </button>
-          <button onClick={() => setGifOpen(true)} disabled={sending} aria-label="Add GIF" className="text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer px-1.5 py-1 font-mono text-[11px] font-bold border border-ink/20 rounded-sm disabled:opacity-40">GIF</button>
+          <button onClick={() => setGifOpen(true)} disabled={sending} aria-label="Add GIF" className="shrink-0 h-9 px-2.5 flex items-center justify-center text-ink/50 hover:text-ink bg-transparent cursor-pointer font-mono text-[11px] font-bold border border-ink/20 rounded-sm disabled:opacity-40">GIF</button>
           <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
           <textarea
             value={text}
@@ -230,9 +230,9 @@ export default function Thread({ conversationId, privyId, onBack, onActivity }: 
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } }}
             placeholder={uploading ? 'uploading…' : 'message…'}
             rows={1}
-            className="flex-1 resize-none bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-2 rounded-2xl outline-none max-h-28"
+            className="flex-1 resize-none bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-2 rounded-2xl outline-none min-h-9 max-h-28 leading-snug"
           />
-          <button onClick={sendText} disabled={!text.trim() || sending} className="font-mono text-[11px] uppercase tracking-[1px] font-bold text-obsidian bg-lime disabled:opacity-30 px-4 py-2 rounded-2xl border-none cursor-pointer transition">Send</button>
+          <button onClick={sendText} disabled={!text.trim() || sending} className="shrink-0 h-9 font-mono text-[11px] uppercase tracking-[1px] font-bold text-obsidian bg-lime disabled:opacity-30 px-4 rounded-2xl border-none cursor-pointer transition">Send</button>
         </div>
       )}
 

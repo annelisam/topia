@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import Thread, { Avatar } from './Thread';
 
@@ -15,6 +14,7 @@ interface InboxItem {
   unreadCount: number;
 }
 interface Inbox { primary: InboxItem[]; requests: InboxItem[]; requestCount: number; unreadTotal: number; }
+interface SearchUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; mutual: boolean; }
 
 const POLL_MS = 10000;
 
@@ -30,15 +30,20 @@ function timeAgo(dateStr: string) {
 
 interface MessagesClientProps {
   initialConversationId?: string | null;
-  onClose?: () => void;     // renders a close button (modal)
-  fullViewHref?: string;    // renders an expand link (modal → full page)
+  // Reports the open conversation up (e.g. so a wrapping modal can build its
+  // "expand to full page" link). The chrome (title/expand/close) lives in the
+  // wrapper, not here.
+  onSelect?: (conversationId: string | null) => void;
 }
 
-export default function MessagesClient({ initialConversationId = null, onClose, fullViewHref }: MessagesClientProps) {
+export default function MessagesClient({ initialConversationId = null, onSelect }: MessagesClientProps) {
   const { authenticated, user, ready } = usePrivy();
   const [inbox, setInbox] = useState<Inbox>({ primary: [], requests: [], requestCount: 0, unreadTotal: 0 });
   const [tab, setTab] = useState<'primary' | 'requests'>('primary');
   const [selected, setSelected] = useState<string | null>(initialConversationId);
+  const [composing, setComposing] = useState(false);
+
+  useEffect(() => { onSelect?.(selected); }, [selected, onSelect]);
 
   const fetchInbox = useCallback(() => {
     if (!authenticated || !user) return;
@@ -58,6 +63,16 @@ export default function MessagesClient({ initialConversationId = null, onClose, 
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis); };
   }, [fetchInbox]);
+
+  const startChat = useCallback(async (targetUserId: string) => {
+    if (!user) return;
+    const res = await fetch('/api/messages/conversations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId: user.id, targetUserId }),
+    });
+    const data = await res.json();
+    if (res.ok && data.conversationId) { setComposing(false); setSelected(data.conversationId); fetchInbox(); }
+  }, [user, fetchInbox]);
 
   if (ready && !authenticated) {
     return (
@@ -98,41 +113,40 @@ export default function MessagesClient({ initialConversationId = null, onClose, 
     <div className="flex-1 min-h-0 flex">
       {/* List pane */}
       <div className={`w-full md:w-[340px] md:shrink-0 border-r border-ink/[0.08] flex flex-col min-h-0 ${selected ? 'hidden md:flex' : 'flex'}`}>
-        <div className="px-4 pt-4 pb-2 shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="font-basement font-black text-[22px] uppercase text-ink leading-none">Messages</h1>
-            {(fullViewHref || onClose) && (
-              <div className="flex items-center gap-1 -mr-1">
-                {fullViewHref && (
-                  <Link href={selected ? `${fullViewHref}?c=${selected}` : fullViewHref} onClick={onClose} aria-label="Open full view" className="text-ink/45 hover:text-ink p-1.5 no-underline">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
-                  </Link>
-                )}
-                {onClose && (
-                  <button onClick={onClose} aria-label="Close" className="text-ink/45 hover:text-ink p-1.5 bg-transparent border-none cursor-pointer">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  </button>
-                )}
+        <div className="px-3 pt-3 pb-2 shrink-0">
+          {composing ? (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setComposing(false)} aria-label="Back" className="text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer p-1 -ml-1">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              </button>
+              <span className="font-mono text-[12px] uppercase tracking-[1px] text-ink/70">New message</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setTab('primary')}
+                  className={`font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer transition ${tab === 'primary' ? 'bg-lime text-obsidian font-bold' : 'text-ink/45 hover:text-ink/80 bg-transparent'}`}
+                >
+                  Primary{inbox.unreadTotal > 0 ? ` (${inbox.unreadTotal})` : ''}
+                </button>
+                <button
+                  onClick={() => setTab('requests')}
+                  className={`font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer transition ${tab === 'requests' ? 'bg-lime text-obsidian font-bold' : 'text-ink/45 hover:text-ink/80 bg-transparent'}`}
+                >
+                  Requests{inbox.requestCount > 0 ? ` (${inbox.requestCount})` : ''}
+                </button>
               </div>
-            )}
-          </div>
-          <div className="flex gap-1 mt-3">
-            <button
-              onClick={() => setTab('primary')}
-              className={`font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer transition ${tab === 'primary' ? 'bg-lime text-obsidian font-bold' : 'text-ink/45 hover:text-ink/80 bg-transparent'}`}
-            >
-              Primary{inbox.unreadTotal > 0 ? ` (${inbox.unreadTotal})` : ''}
-            </button>
-            <button
-              onClick={() => setTab('requests')}
-              className={`font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer transition ${tab === 'requests' ? 'bg-lime text-obsidian font-bold' : 'text-ink/45 hover:text-ink/80 bg-transparent'}`}
-            >
-              Requests{inbox.requestCount > 0 ? ` (${inbox.requestCount})` : ''}
-            </button>
-          </div>
+              <button onClick={() => setComposing(true)} aria-label="New message" title="New message" className="text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer p-1.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {list.length === 0 ? (
+          {composing ? (
+            <ComposeSearch privyId={user?.id ?? ''} onPick={startChat} />
+          ) : list.length === 0 ? (
             <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center mt-10 px-4">
               {tab === 'primary' ? 'no conversations yet' : 'no requests'}
             </p>
@@ -158,6 +172,61 @@ export default function MessagesClient({ initialConversationId = null, onClose, 
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Handle/name search to start a new chat. Non-mutual picks become a request.
+function ComposeSearch({ privyId, onPick }: { privyId: string; onPick: (userId: string) => void }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<SearchUser[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults([]); setLoading(false); return; }
+    setLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/messages/search?privyId=${encodeURIComponent(privyId)}&q=${encodeURIComponent(q.trim())}`)
+        .then((r) => r.json())
+        .then((d) => setResults(d.users ?? []))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q, privyId]);
+
+  return (
+    <div className="flex flex-col">
+      <div className="px-3 pb-2 pt-1">
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="search a handle or name…"
+          className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-2 rounded-sm outline-none transition-colors"
+        />
+        <p className="font-mono text-[10px] leading-snug text-ink/35 mt-2">
+          If you don&apos;t follow each other, your message is sent as a <span className="text-ink/55">request</span>.
+        </p>
+      </div>
+      {q.trim().length < 2 ? null : loading && results.length === 0 ? (
+        <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center mt-8">searching…</p>
+      ) : results.length === 0 ? (
+        <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center mt-8">no people found</p>
+      ) : (
+        results.map((u) => (
+          <button key={u.id} onClick={() => onPick(u.id)} className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-ink/[0.03] cursor-pointer transition-colors">
+            <Avatar user={u} size={36} />
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-[13px] text-ink truncate">{u.name || u.username}</div>
+              {u.username && <div className="font-mono text-[11px] text-ink/40 truncate">@{u.username}</div>}
+            </div>
+            <span className={`font-mono text-[9px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm shrink-0 ${u.mutual ? 'bg-lime/20 text-lime' : 'border border-ink/15 text-ink/40'}`}>
+              {u.mutual ? 'Connection' : 'Request'}
+            </span>
+          </button>
+        ))
+      )}
     </div>
   );
 }

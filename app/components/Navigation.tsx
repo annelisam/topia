@@ -31,7 +31,7 @@ export default function Navigation() {
       <TopNav onOpenMessages={() => openMessages()} />
       <MobileTabBar onMenuToggle={() => setMenuOpen(true)} onOpenMessages={() => openMessages()} />
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-      <MessagesModal key={openKey} open={msgOpen} initialConversationId={initialConv} onClose={() => setMsgOpen(false)} />
+      {msgOpen && <MessagesModal key={openKey} initialConversationId={initialConv} onClose={() => setMsgOpen(false)} />}
     </>
   );
 }
