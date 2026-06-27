@@ -12,20 +12,21 @@ interface Message {
   giphyId: string | null;
   createdAt: string;
 }
-interface OtherUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; }
+export interface OtherUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; }
 
 interface Props {
   conversationId: string;
   privyId: string;
+  initialOther?: OtherUser | null; // from the inbox row → instant header, no fetch wait
   onBack?: () => void;       // mobile: return to the list
   onActivity?: () => void;   // bump the inbox (counts, ordering)
 }
 
 const POLL_MS = 4000;
 
-export default function Thread({ conversationId, privyId, onBack, onActivity }: Props) {
+export default function Thread({ conversationId, privyId, initialOther = null, onBack, onActivity }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [other, setOther] = useState<OtherUser | null>(null);
+  const [other, setOther] = useState<OtherUser | null>(initialOther);
   const [status, setStatus] = useState<'accepted' | 'pending'>('accepted');
   const [meId, setMeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +62,7 @@ export default function Thread({ conversationId, privyId, onBack, onActivity }: 
         const msgs: Message[] = data.messages ?? [];
         seenIds.current = new Set(msgs.map((m) => m.id));
         setMessages(msgs);
-        setOther(data.other ?? null);
+        setOther(data.other ?? initialOther);
         setStatus(data.status ?? 'accepted');
         setMeId(data.meId ?? null);
         lastAtRef.current = msgs.length ? msgs[msgs.length - 1].createdAt : null;
@@ -165,25 +166,30 @@ export default function Thread({ conversationId, privyId, onBack, onActivity }: 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-ink/[0.08] shrink-0">
+      <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-ink/[0.08] shrink-0">
         {onBack && (
-          <button onClick={onBack} className="md:hidden text-ink/60 hover:text-ink bg-transparent border-none cursor-pointer -ml-1" aria-label="Back">
+          <button onClick={onBack} className="md:hidden text-ink/60 hover:text-ink bg-transparent border-none cursor-pointer shrink-0" aria-label="Back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
         )}
-        <Avatar user={other} size={32} />
-        <div className="min-w-0">
-          <div className="font-mono text-[13px] text-ink truncate">{name}</div>
-          {other?.username && (
-            <Link href={`/profile/${other.username}`} className="font-mono text-[10px] text-ink/40 hover:text-ink/70 no-underline">@{other.username}</Link>
-          )}
+        <Avatar user={other} size={36} />
+        <div className="min-w-0 flex-1">
+          <div className="font-mono text-[13px] text-ink truncate leading-tight">{name}</div>
+          {other?.username && <div className="font-mono text-[11px] text-ink/40 truncate leading-tight mt-0.5">@{other.username}</div>}
         </div>
+        {other?.username && (
+          <Link href={`/profile/${other.username}`} className="shrink-0 font-mono text-[10px] uppercase tracking-[1px] text-lime border border-lime/40 hover:bg-lime hover:text-obsidian rounded-sm px-2.5 py-1 no-underline transition">
+            View profile
+          </Link>
+        )}
       </div>
 
       {/* Messages */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-2">
         {loading ? (
-          <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center my-auto">loading…</p>
+          // Header already shows from the inbox row — keep the body blank (no
+          // flashing "loading…") so switching feels instant.
+          <div className="my-auto" />
         ) : messages.length === 0 ? (
           <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center my-auto">say hi 👋</p>
         ) : (

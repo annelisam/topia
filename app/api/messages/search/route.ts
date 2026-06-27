@@ -9,7 +9,8 @@ import { userIdFromPrivy } from '@/lib/messages';
 // warn that a non-mutual message will arrive as a request.
 export async function GET(request: NextRequest) {
   const privyId = request.nextUrl.searchParams.get('privyId');
-  const q = (request.nextUrl.searchParams.get('q') || '').trim();
+  // People type "@handle" — strip the leading @ so the LIKE matches the stored username.
+  const q = (request.nextUrl.searchParams.get('q') || '').trim().replace(/^@+/, '');
   const me = await userIdFromPrivy(privyId);
   if (!me || q.length < 2) return NextResponse.json({ users: [] });
 

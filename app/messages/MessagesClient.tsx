@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import Thread, { Avatar } from './Thread';
+import Thread, { Avatar, type OtherUser } from './Thread';
 
 interface InboxItem {
   conversationId: string;
   status: 'accepted' | 'pending';
-  other: { id: string; name: string | null; username: string | null; avatarUrl: string | null };
+  other: OtherUser;
   preview: string;
   fromMe: boolean;
   lastMessageAt: string;
@@ -30,20 +30,15 @@ function timeAgo(dateStr: string) {
 
 interface MessagesClientProps {
   initialConversationId?: string | null;
-  // Reports the open conversation up (e.g. so a wrapping modal can build its
-  // "expand to full page" link). The chrome (title/expand/close) lives in the
-  // wrapper, not here.
-  onSelect?: (conversationId: string | null) => void;
 }
 
-export default function MessagesClient({ initialConversationId = null, onSelect }: MessagesClientProps) {
+export default function MessagesClient({ initialConversationId = null }: MessagesClientProps) {
   const { authenticated, user, ready } = usePrivy();
   const [inbox, setInbox] = useState<Inbox>({ primary: [], requests: [], requestCount: 0, unreadTotal: 0 });
   const [tab, setTab] = useState<'primary' | 'requests'>('primary');
   const [selected, setSelected] = useState<string | null>(initialConversationId);
+  const [selectedOther, setSelectedOther] = useState<OtherUser | null>(null);
   const [composing, setComposing] = useState(false);
-
-  useEffect(() => { onSelect?.(selected); }, [selected, onSelect]);
 
   const fetchInbox = useCallback(() => {
     if (!authenticated || !user) return;
@@ -64,15 +59,20 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis); };
   }, [fetchInbox]);
 
-  const startChat = useCallback(async (targetUserId: string) => {
+  const open = useCallback((conversationId: string, other: OtherUser | null) => {
+    setSelectedOther(other);
+    setSelected(conversationId);
+  }, []);
+
+  const startChat = useCallback(async (u: SearchUser) => {
     if (!user) return;
     const res = await fetch('/api/messages/conversations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ privyId: user.id, targetUserId }),
+      body: JSON.stringify({ privyId: user.id, targetUserId: u.id }),
     });
     const data = await res.json();
-    if (res.ok && data.conversationId) { setComposing(false); setSelected(data.conversationId); fetchInbox(); }
-  }, [user, fetchInbox]);
+    if (res.ok && data.conversationId) { setComposing(false); open(data.conversationId, { id: u.id, name: u.name, username: u.username, avatarUrl: u.avatarUrl }); fetchInbox(); }
+  }, [user, fetchInbox, open]);
 
   if (ready && !authenticated) {
     return (
@@ -89,7 +89,7 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
     const unread = item.unreadCount > 0;
     return (
       <button
-        onClick={() => setSelected(item.conversationId)}
+        onClick={() => open(item.conversationId, item.other)}
         className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b border-ink/[0.05] cursor-pointer transition-colors ${selected === item.conversationId ? 'bg-ink/[0.06]' : 'hover:bg-ink/[0.03]'}`}
       >
         <Avatar user={item.other} size={44} />
@@ -112,7 +112,7 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
   return (
     <div className="flex-1 min-h-0 flex">
       {/* List pane */}
-      <div className={`w-full md:w-[340px] md:shrink-0 border-r border-ink/[0.08] flex flex-col min-h-0 ${selected ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-[360px] md:shrink-0 border-r border-ink/[0.08] flex flex-col min-h-0 ${selected ? 'hidden md:flex' : 'flex'}`}>
         <div className="px-3 pt-3 pb-2 shrink-0">
           {composing ? (
             <div className="flex items-center gap-2">
@@ -137,8 +137,8 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
                   Requests{inbox.requestCount > 0 ? ` (${inbox.requestCount})` : ''}
                 </button>
               </div>
-              <button onClick={() => setComposing(true)} aria-label="New message" title="New message" className="text-ink/50 hover:text-ink bg-transparent border-none cursor-pointer p-1.5">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              <button onClick={() => setComposing(true)} aria-label="New message" title="New message" className="flex items-center justify-center w-8 h-8 rounded-full border border-ink/40 text-ink hover:bg-lime hover:text-obsidian hover:border-lime bg-transparent cursor-pointer transition">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
               </button>
             </div>
           )}
@@ -163,6 +163,7 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
             key={selected}
             conversationId={selected}
             privyId={user.id}
+            initialOther={selectedOther}
             onBack={() => setSelected(null)}
             onActivity={fetchInbox}
           />
@@ -177,23 +178,25 @@ export default function MessagesClient({ initialConversationId = null, onSelect 
 }
 
 // Handle/name search to start a new chat. Non-mutual picks become a request.
-function ComposeSearch({ privyId, onPick }: { privyId: string; onPick: (userId: string) => void }) {
+function ComposeSearch({ privyId, onPick }: { privyId: string; onPick: (user: SearchUser) => void }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const term = q.trim().replace(/^@+/, ''); // people type "@handle"
+
   useEffect(() => {
-    if (q.trim().length < 2) { setResults([]); setLoading(false); return; }
+    if (term.length < 2) { setResults([]); setLoading(false); return; }
     setLoading(true);
     const t = setTimeout(() => {
-      fetch(`/api/messages/search?privyId=${encodeURIComponent(privyId)}&q=${encodeURIComponent(q.trim())}`)
+      fetch(`/api/messages/search?privyId=${encodeURIComponent(privyId)}&q=${encodeURIComponent(term)}`)
         .then((r) => r.json())
         .then((d) => setResults(d.users ?? []))
         .catch(() => {})
         .finally(() => setLoading(false));
-    }, 250);
+    }, 200);
     return () => clearTimeout(t);
-  }, [q, privyId]);
+  }, [term, privyId]);
 
   return (
     <div className="flex flex-col">
@@ -209,17 +212,17 @@ function ComposeSearch({ privyId, onPick }: { privyId: string; onPick: (userId: 
           If you don&apos;t follow each other, your message is sent as a <span className="text-ink/55">request</span>.
         </p>
       </div>
-      {q.trim().length < 2 ? null : loading && results.length === 0 ? (
+      {term.length < 2 ? null : loading && results.length === 0 ? (
         <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center mt-8">searching…</p>
       ) : results.length === 0 ? (
         <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center mt-8">no people found</p>
       ) : (
         results.map((u) => (
-          <button key={u.id} onClick={() => onPick(u.id)} className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-ink/[0.03] cursor-pointer transition-colors">
-            <Avatar user={u} size={36} />
+          <button key={u.id} onClick={() => onPick(u)} className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-ink/[0.03] cursor-pointer transition-colors">
+            <Avatar user={u} size={38} />
             <div className="flex-1 min-w-0">
-              <div className="font-mono text-[13px] text-ink truncate">{u.name || u.username}</div>
-              {u.username && <div className="font-mono text-[11px] text-ink/40 truncate">@{u.username}</div>}
+              <div className="font-mono text-[13px] text-ink truncate leading-tight">{u.name || u.username}</div>
+              {u.username && <div className="font-mono text-[11px] text-ink/40 truncate leading-tight mt-0.5">@{u.username}</div>}
             </div>
             <span className={`font-mono text-[9px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm shrink-0 ${u.mutual ? 'bg-lime/20 text-lime' : 'border border-ink/15 text-ink/40'}`}>
               {u.mutual ? 'Connection' : 'Request'}
