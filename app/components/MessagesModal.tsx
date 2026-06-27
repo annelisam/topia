@@ -1,21 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import MessagesClient from '../messages/MessagesClient';
-import { useKeyboardViewport } from '../hooks/useKeyboardViewport';
 
 // Global Messages popup — mounted only while open (by Navigation). Desktop: a
 // roomy centered card that fades in. Mobile: a bottom sheet that slides up
-// (mirrors RsvpModal) and slides back down on close.
+// (mirrors RsvpModal) and slides back down on close. The keyboard is handled by
+// `interactive-widget=resizes-content` (set in the root viewport), which shrinks
+// the viewport so dvh-sized sheets sit above the keyboard with no JS.
 export default function MessagesModal({
   initialConversationId, onClose,
 }: { initialConversationId?: string | null; onClose: () => void }) {
   const [shown, setShown] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  // Keep the sheet above the on-screen keyboard on mobile (the composer is
-  // bottom-anchored). No-op on desktop.
-  useKeyboardViewport(overlayRef);
 
   // Animate in on mount + lock body scroll. Double rAF guarantees the browser
   // paints the off-screen (translate-y-full) state before we flip to
@@ -41,10 +37,10 @@ export default function MessagesModal({
   }, [requestClose]);
 
   return (
-    <div ref={overlayRef} className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 overflow-hidden" onClick={requestClose}>
+    <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 overflow-hidden" onClick={requestClose}>
       <div className={`absolute inset-0 backdrop-blur-sm transition-opacity duration-300 ${shown ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
       <div
-        className={`relative w-full sm:max-w-[1000px] h-[88dvh] max-h-full sm:h-[80vh] sm:max-h-[820px] rounded-t-3xl sm:rounded-2xl border-0 sm:border border-ink/[0.12] flex flex-col overflow-hidden bg-[var(--page-bg)] text-ink shadow-[0_24px_80px_-12px_rgba(0,0,0,0.75)] transition-[translate,opacity] duration-300 ease-out opacity-100 ${shown ? 'translate-y-0 sm:opacity-100' : 'translate-y-full sm:translate-y-2 sm:opacity-0'}`}
+        className={`relative w-full sm:max-w-[1000px] h-[88dvh] sm:h-[80vh] sm:max-h-[820px] rounded-t-3xl sm:rounded-2xl border-0 sm:border border-ink/[0.12] flex flex-col overflow-hidden bg-[var(--page-bg)] text-ink shadow-[0_24px_80px_-12px_rgba(0,0,0,0.75)] transition-[translate,opacity] duration-300 ease-out opacity-100 ${shown ? 'translate-y-0 sm:opacity-100' : 'translate-y-full sm:translate-y-2 sm:opacity-0'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar */}
