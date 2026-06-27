@@ -30,3 +30,35 @@ export async function uploadToBlob(file: File): Promise<string> {
   if (!data?.url) throw new Error('Upload succeeded but no URL was returned');
   return data.url as string;
 }
+
+/**
+ * Avatar pipeline: resize a non-GIF image to max 256×256 and upload it to Blob,
+ * returning the public URL (GIFs are uploaded raw to keep animation). Avatars
+ * used to be stored as inline base64 data URLs, which bloated every people-list
+ * API response and the DB; Blob URLs are browser-cacheable and tiny to store.
+ * Browser-only (canvas) — call from client components on a user action.
+ */
+export async function resizeAndUploadAvatar(file: File): Promise<string> {
+  if (isGif(file)) return uploadToBlob(file);
+  const blob = await resizeToJpeg(file, 256, 0.85);
+  return uploadToBlob(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+}
+
+function resizeToJpeg(file: File, max: number, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(max / img.width, max / img.height, 1);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Image encode failed'))), 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}

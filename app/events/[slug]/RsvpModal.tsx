@@ -7,30 +7,12 @@ import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/usernameAvailability';
 import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
-import { isGif, uploadToBlob } from '../../../lib/uploadImage';
+import { resizeAndUploadAvatar } from '../../../lib/uploadImage';
 import TopiaLoader from '../../components/TopiaLoader';
 import RoleTagPicker from '../../components/RoleTagPicker';
 
-// Resize an image to max 256×256 → base64 JPEG (GIFs uploaded raw to keep motion).
-function resizeImage(file: File): Promise<string> {
-  if (isGif(file)) return uploadToBlob(file);
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 256;
-      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
-      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+// Avatars resize + upload to Blob (was inline base64). See lib/uploadImage.
+const resizeImage = resizeAndUploadAvatar;
 
 interface Question {
   id: string;

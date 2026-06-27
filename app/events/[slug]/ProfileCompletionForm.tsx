@@ -5,30 +5,11 @@ import { ROLE_TAGS } from '../../../lib/profile/roleTags';
 import { PATH_CONFIG, UserPath } from '../../components/profile/pathConfig';
 import { sanitizeUsername, useUsernameAvailability } from '../../onboarding/usernameAvailability';
 import { isRealPhoto } from '../../../lib/avatar';
+import { resizeAndUploadAvatar } from '../../../lib/uploadImage';
 import type { UserProfile } from '../../hooks/useUserProfile';
 
-// Resize an uploaded image to max 256×256 and return a base64 data URL.
-// (Same approach as onboarding's AvatarStep — avatars are stored inline.)
-function resizeImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 256;
-      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+// Avatars resize + upload to Blob (was inline base64). See lib/uploadImage.
+const resizeImage = resizeAndUploadAvatar;
 
 const PATH_OPTIONS: { id: UserPath; icon: string }[] = [
   { id: 'worldbuilder', icon: '◆' },
