@@ -1,8 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import GiphyPicker, { type PickedGif } from '../components/GiphyPicker';
+
+// Exact time shown when a message is tapped, e.g. "May 23, 1:57 PM".
+function exactTime(iso: string): string {
+  const d = new Date(iso), now = new Date();
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleString('en-US', opts);
+}
+
+// Subtle divider shown when there's a time gap: "8:50 PM", "Yesterday 8:50 PM",
+// "Mon 8:50 PM", or "May 23 · 1:57 PM".
+function separatorLabel(iso: string): string {
+  const d = new Date(iso), now = new Date();
+  const time = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (dayDiff <= 0) return time;
+  if (dayDiff === 1) return `Yesterday ${time}`;
+  if (dayDiff < 7) return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${time}`;
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return `${d.toLocaleDateString('en-US', opts)} · ${time}`;
+}
 
 interface Message {
   id: string;
@@ -42,11 +65,29 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
 
   const lastAtRef = useRef<string | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const stickRef = useRef(true);          // user is near the bottom
+  const initialDoneRef = useRef(false);   // did the first jump-to-bottom
+  const forceScrollRef = useRef(false);   // force a scroll regardless (e.g. after sending)
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   const scrollToBottom = useCallback((smooth = true) => {
-    requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' }));
+    const el = scrollerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  }, []);
+
+  const onScrollerScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  }, []);
+
+  const toggleReveal = useCallback((id: string) => {
+    setRevealed((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   }, []);
 
   const markRead = useCallback(() => {
@@ -72,12 +113,30 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
         setMeId(data.meId ?? null);
         lastAtRef.current = msgs.length ? msgs[msgs.length - 1].createdAt : null;
         setLoading(false);
-        scrollToBottom(false);
         if (msgs.some((m) => m.senderId !== data.meId)) markRead();
       })
       .catch(() => setLoading(false));
     return () => { alive = false; };
-  }, [conversationId, privyId, scrollToBottom, markRead]);
+  }, [conversationId, privyId, markRead]);
+
+  // Keep the newest message in view: jump to the bottom on first load, then
+  // follow new messages only when the user is already near the bottom (so
+  // scrolling up to read history isn't interrupted). Sending always scrolls.
+  useEffect(() => {
+    if (loading) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    if (!initialDoneRef.current) {
+      el.scrollTop = el.scrollHeight; // instant, no animation, on open
+      initialDoneRef.current = true;
+      stickRef.current = true;
+      return;
+    }
+    if (forceScrollRef.current || stickRef.current) {
+      forceScrollRef.current = false;
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages, loading]);
 
   // Poll for new messages (only the ones after our cursor).
   useEffect(() => {
@@ -96,7 +155,6 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
             add.forEach((m) => seenIds.current.add(m.id));
             setMessages((prev) => [...prev, ...add]);
             lastAtRef.current = add[add.length - 1].createdAt;
-            scrollToBottom();
             if (!document.hidden && add.some((m) => m.senderId !== meId)) markRead();
           }
         })
@@ -107,16 +165,16 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
     const onVis = () => { clearInterval(interval); if (!document.hidden) { poll(); start(); } };
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis); };
-  }, [conversationId, privyId, meId, scrollToBottom, markRead]);
+  }, [conversationId, privyId, meId, markRead]);
 
   const pushMessage = useCallback((msg: Message) => {
     if (seenIds.current.has(msg.id)) return;
     seenIds.current.add(msg.id);
+    forceScrollRef.current = true; // I just sent this — always scroll to it
     setMessages((prev) => [...prev, msg]);
     lastAtRef.current = msg.createdAt;
-    scrollToBottom();
     onActivity?.();
-  }, [scrollToBottom, onActivity]);
+  }, [onActivity]);
 
   const send = useCallback(async (payload: { body?: string; imageUrl?: string; giphyId?: string }) => {
     setSending(true);
@@ -190,7 +248,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
       </div>
 
       {/* Messages */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-2">
+      <div ref={scrollerRef} onScroll={onScrollerScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-1.5">
         {loading ? (
           // Header already shows from the inbox row — keep the body blank (no
           // flashing "loading…") so switching feels instant.
@@ -198,23 +256,41 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
         ) : messages.length === 0 ? (
           <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 text-center my-auto">say hi 👋</p>
         ) : (
-          messages.map((m) => {
+          messages.map((m, i) => {
             const mine = m.senderId === meId;
+            const prev = i > 0 ? messages[i - 1] : null;
+            // A subtle time divider when the conversation jumps forward in time.
+            const showSep = !prev
+              || new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() > 60 * 60 * 1000
+              || new Date(m.createdAt).toDateString() !== new Date(prev.createdAt).toDateString();
             return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[78%] rounded-2xl ${m.imageUrl ? 'p-1' : 'px-3 py-2'} ${mine ? 'bg-lime text-obsidian' : 'bg-ink/[0.06] text-ink'}`}>
-                  {m.imageUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={m.imageUrl} alt="" className="rounded-xl max-w-full max-h-64 object-cover" />
-                  ) : (
-                    <p className="font-mono text-[13px] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
+              <Fragment key={m.id}>
+                {showSep && (
+                  <div className="text-center py-1.5">
+                    <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-ink/30">{separatorLabel(m.createdAt)}</span>
+                  </div>
+                )}
+                <div className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                  {/* Tap/click a message to reveal its exact time (IG-style). */}
+                  <div
+                    onClick={() => toggleReveal(m.id)}
+                    className={`max-w-[78%] cursor-pointer select-none rounded-2xl ${m.imageUrl ? 'p-1' : 'px-3 py-2'} ${mine ? 'bg-lime text-obsidian' : 'bg-ink/[0.06] text-ink'}`}
+                  >
+                    {m.imageUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={m.imageUrl} alt="" onLoad={() => { if (stickRef.current) scrollToBottom(false); }} className="rounded-xl max-w-full max-h-64 object-cover" />
+                    ) : (
+                      <p className="font-mono text-[13px] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
+                    )}
+                  </div>
+                  {revealed.has(m.id) && (
+                    <span className="font-mono text-[9px] text-ink/35 mt-1 px-1">{exactTime(m.createdAt)}</span>
                   )}
                 </div>
-              </div>
+              </Fragment>
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Request bar OR composer */}
@@ -241,6 +317,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); } }}
+            onFocus={() => scrollToBottom(false)}
             placeholder={uploading ? 'uploading…' : 'message…'}
             rows={1}
             className="flex-1 resize-none bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-2 rounded-2xl outline-none min-h-9 max-h-28 leading-snug"
