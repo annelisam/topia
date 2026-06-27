@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isRealPhoto } from '../../lib/avatar';
+import { uploadToBlob } from '../../lib/uploadImage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -286,14 +287,16 @@ function WorldsTab() {
     setModal({ open: true, item });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setForm(p => ({ ...p, imageUrl: ev.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
+    // Upload to Blob and store the URL (was an inline base64 data URL).
+    try {
+      const url = await uploadToBlob(file);
+      setForm(p => ({ ...p, imageUrl: url }));
+    } catch {
+      setError('Image upload failed');
+    }
   };
 
   const selectedTools = (form.tools || '').split(',').map(t => t.trim()).filter(Boolean);
@@ -937,14 +940,16 @@ function CreatorsTab() {
     setModal({ open: true, item });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setForm(p => ({ ...p, imageUrl: ev.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
+    // Upload to Blob and store the URL (was an inline base64 data URL).
+    try {
+      const url = await uploadToBlob(file);
+      setForm(p => ({ ...p, imageUrl: url }));
+    } catch {
+      setError('Image upload failed');
+    }
   };
 
   const save = async () => {
