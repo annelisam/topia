@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useMessagesBadge } from '../MessagesNavIcon';
 
 const TAB_LINKS = [
   {
@@ -37,6 +38,15 @@ const TAB_LINKS = [
     ),
   },
   {
+    href: '/messages',
+    label: 'Messages',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard',
     label: 'Dashboard',
     icon: (
@@ -52,13 +62,15 @@ const TAB_LINKS = [
 
 interface MobileTabBarProps {
   onMenuToggle: () => void;
+  onOpenMessages: () => void;
 }
 
 // Collapsible bottom nav: hidden by default, leaving just a "^ Menu" handle
 // peeking at the bottom edge. Tapping the handle slides the tab bar up; tapping
 // a tab (or navigating) tucks it away again so it never blocks content.
-export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
+export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTabBarProps) {
   const [open, setOpen] = useState(false);
+  const messagesBadge = useMessagesBadge();
 
   return (
     <nav
@@ -88,18 +100,44 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
       {/* The tab bar — slides off-screen when collapsed */}
       <div className="backdrop-blur-xl" style={{ backgroundColor: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)' }}>
         <div className="flex items-center justify-around h-[var(--nav-height)] px-2">
-          {TAB_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-200 no-underline"
-              style={{ color: 'var(--page-text)', opacity: 0.4 }}
-            >
-              {link.icon}
-              <span className="font-mono text-[11px] uppercase tracking-wider">{link.label}</span>
-            </Link>
-          ))}
+          {TAB_LINKS.map((link) => {
+            const isMessages = link.href === '/messages';
+            const inner = (
+              <>
+                <span className="relative">
+                  {link.icon}
+                  {isMessages && messagesBadge > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold" style={{ backgroundColor: 'var(--accent, #e4fe52)', color: '#1a1a1a' }}>
+                      {messagesBadge > 9 ? '9+' : messagesBadge}
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-wider">{link.label}</span>
+              </>
+            );
+            const cls = 'flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-200 no-underline';
+            // Messages opens the slide-up modal instead of navigating.
+            return isMessages ? (
+              <button
+                key={link.href}
+                onClick={() => { setOpen(false); onOpenMessages(); }}
+                className={`${cls} bg-transparent border-none cursor-pointer`}
+                style={{ color: 'var(--page-text)', opacity: 0.4 }}
+              >
+                {inner}
+              </button>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cls}
+                style={{ color: 'var(--page-text)', opacity: 0.4 }}
+              >
+                {inner}
+              </Link>
+            );
+          })}
 
           {/* Full menu (Resources, About, etc.) */}
           <button

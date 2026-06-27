@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
+import MessagesNavIcon from '../MessagesNavIcon';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 type NavItem = {
@@ -33,7 +34,7 @@ const STATIC_LINKS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export default function TopNav() {
+export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { profile } = useUserProfile();
   // Passport routes to the viewer's own profile (their passport).
@@ -143,6 +144,7 @@ export default function TopNav() {
           )}
         </div>
 
+        <MessagesNavIcon onClick={onOpenMessages} />
         <NotificationBell />
         <LoginButton />
       </div>
