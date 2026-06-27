@@ -1,24 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import MessagesClient from '../messages/MessagesClient';
-import { useKeyboardViewport } from '../hooks/useKeyboardViewport';
 
 // Global Messages popup — mounted only while open (by Navigation). Desktop: a
 // roomy centered card that fades in. Mobile: a bottom sheet that slides up
 // (mirrors RsvpModal) and slides back down on close.
 //
-// Keyboard handling (the IG-smooth bit): a full-screen backdrop always covers
-// the page, and a separate positioning layer is clamped to window.visualViewport
-// (via useKeyboardViewport) so the bottom sheet — and its composer — ride flush
-// on top of the keyboard with no gap. `interactive-widget=resizes-content` in the
-// root viewport is a bonus for browsers that support it.
+// Keyboard handling: `interactive-widget=resizes-content` (set in the root
+// viewport) makes the browser shrink the viewport when the keyboard opens, so a
+// full-screen backdrop + an `items-end` dvh-sized sheet ride flush on top of the
+// keyboard natively — no JS, so no first-open lag. (We previously also clamped a
+// layer to visualViewport in JS, but that fought resizes-content and left a gap
+// on the very first keyboard open.)
 export default function MessagesModal({
   initialConversationId, onClose,
 }: { initialConversationId?: string | null; onClose: () => void }) {
   const [shown, setShown] = useState(false);
-  const positionerRef = useRef<HTMLDivElement>(null);
-  useKeyboardViewport(positionerRef);
 
   // Animate in on mount + lock body scroll. Double rAF guarantees the browser
   // paints the off-screen (translate-y-full) state before we flip to
@@ -52,12 +50,11 @@ export default function MessagesModal({
         style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
         onClick={requestClose}
       />
-      {/* Positioning layer — clamped to the visual viewport on mobile so the
-          sheet rides above the keyboard. Click-through to the backdrop. */}
-      <div
-        ref={positionerRef}
-        className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 overflow-hidden pointer-events-none"
-      >
+      {/* Positioning layer — the browser shrinks this with the keyboard
+          (resizes-content), so items-end keeps the sheet above it. Click-through
+          to the backdrop. */}
+      <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 overflow-hidden pointer-events-none">
+
         <div
           className={`pointer-events-auto relative w-full sm:max-w-[1000px] h-[88dvh] max-h-full sm:h-[80vh] sm:max-h-[820px] rounded-t-3xl sm:rounded-2xl border-0 sm:border border-ink/[0.12] flex flex-col overflow-hidden bg-[var(--page-bg)] text-ink shadow-[0_24px_80px_-12px_rgba(0,0,0,0.75)] transition-[translate,opacity] duration-300 ease-out opacity-100 ${shown ? 'translate-y-0 sm:opacity-100' : 'translate-y-full sm:translate-y-2 sm:opacity-0'}`}
           onClick={(e) => e.stopPropagation()}
