@@ -12,10 +12,16 @@ export async function GET(request: NextRequest) {
   if (!me) return NextResponse.json({ primary: [], requests: [], requestCount: 0, unreadTotal: 0 });
 
   try {
+    // The 100 most-recently-active conversations (ordered by recency *before*
+    // limiting, so newer threads are never dropped). Bounds the inbox payload
+    // for power users without any pagination UI.
     const myMems = await db
       .select({ conversationId: conversationMembers.conversationId, status: conversationMembers.status, lastReadAt: conversationMembers.lastReadAt })
       .from(conversationMembers)
-      .where(eq(conversationMembers.userId, me));
+      .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
+      .where(eq(conversationMembers.userId, me))
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(100);
     const convIds = myMems.map((m) => m.conversationId);
     if (convIds.length === 0) return NextResponse.json({ primary: [], requests: [], requestCount: 0, unreadTotal: 0 });
 

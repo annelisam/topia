@@ -2,7 +2,11 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import GiphyPicker, { type PickedGif } from '../components/GiphyPicker';
+import dynamic from 'next/dynamic';
+import { type PickedGif } from '../components/GiphyPicker';
+
+// Giphy SDK is heavy and only used when the picker opens — load it on demand.
+const GiphyPicker = dynamic(() => import('../components/GiphyPicker'), { ssr: false });
 
 // Exact time shown when a message is tapped, e.g. "May 23, 1:57 PM".
 function exactTime(iso: string): string {
@@ -45,7 +49,12 @@ interface Props {
   onActivity?: () => void;   // bump the inbox (counts, ordering)
 }
 
-const POLL_MS = 4000;
+// Adaptive poll: snappy while a conversation is active, then back off when it
+// sits idle so an open-but-unused thread isn't firing 15 requests/minute. Any
+// new message (sent or received) snaps it back to fast.
+const POLL_FAST = 4000;
+const POLL_IDLE = 12000;
+const IDLE_AFTER = 5; // empty polls (~20s) before slowing down
 
 // Image (photo) upload is disabled for now — the button is hidden but all the
 // wiring (onFile, /api/messages/upload, rendering of image messages) is kept so
@@ -70,6 +79,9 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
   const stickRef = useRef(true);          // user is near the bottom
   const initialDoneRef = useRef(false);   // did the first jump-to-bottom
   const forceScrollRef = useRef(false);   // force a scroll regardless (e.g. after sending)
+  const pollIdleRef = useRef(0);          // consecutive empty polls
+  const pollMsRef = useRef(POLL_FAST);    // current poll cadence
+  const bumpPollRef = useRef<() => void>(() => {}); // reset poll to fast (set by the poll effect)
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   const scrollToBottom = useCallback((smooth = true) => {
@@ -138,10 +150,19 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
     }
   }, [messages, loading]);
 
-  // Poll for new messages (only the ones after our cursor).
+  // Poll for new messages (only the ones after our cursor). Cadence adapts:
+  // fast while messages are flowing, slow once the thread goes quiet.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    const poll = () => {
+    const start = () => { interval = setInterval(poll, pollMsRef.current); };
+    const restart = () => { clearInterval(interval); start(); };
+    // Drop back to the fast cadence (called on send + on receiving a message).
+    const goFast = () => {
+      pollIdleRef.current = 0;
+      if (pollMsRef.current !== POLL_FAST) { pollMsRef.current = POLL_FAST; restart(); }
+    };
+    bumpPollRef.current = goFast;
+    function poll() {
       const after = lastAtRef.current;
       const q = after ? `&after=${encodeURIComponent(after)}` : '';
       fetch(`/api/messages/${conversationId}?privyId=${encodeURIComponent(privyId)}${q}`)
@@ -156,13 +177,16 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
             setMessages((prev) => [...prev, ...add]);
             lastAtRef.current = add[add.length - 1].createdAt;
             if (!document.hidden && add.some((m) => m.senderId !== meId)) markRead();
+            goFast();
+          } else if (++pollIdleRef.current >= IDLE_AFTER && pollMsRef.current !== POLL_IDLE) {
+            pollMsRef.current = POLL_IDLE;
+            restart();
           }
         })
         .catch(() => {});
-    };
-    const start = () => { interval = setInterval(poll, POLL_MS); };
+    }
     start();
-    const onVis = () => { clearInterval(interval); if (!document.hidden) { poll(); start(); } };
+    const onVis = () => { clearInterval(interval); if (!document.hidden) { goFast(); poll(); start(); } };
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis); };
   }, [conversationId, privyId, meId, markRead]);
@@ -173,6 +197,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
     forceScrollRef.current = true; // I just sent this — always scroll to it
     setMessages((prev) => [...prev, msg]);
     lastAtRef.current = msg.createdAt;
+    bumpPollRef.current(); // I'm active — poll fast for a reply
     onActivity?.();
   }, [onActivity]);
 

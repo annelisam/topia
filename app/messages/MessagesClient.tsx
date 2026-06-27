@@ -16,7 +16,10 @@ interface InboxItem {
 interface Inbox { primary: InboxItem[]; requests: InboxItem[]; requestCount: number; unreadTotal: number; }
 interface SearchUser { id: string; name: string | null; username: string | null; avatarUrl: string | null; mutual: boolean; }
 
-const POLL_MS = 10000;
+// The inbox only refreshes counts/ordering while the modal is open; the open
+// thread polls itself far faster (4s), and the nav badge has its own 45s poll.
+// 30s here is plenty and roughly thirds the inbox request volume.
+const POLL_MS = 30000;
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();

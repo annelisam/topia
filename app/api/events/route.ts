@@ -3,6 +3,10 @@ import { db, events, users, eventHosts, eventRsvps, worlds } from '@/lib/db';
 import { eq, asc, and, isNotNull, count, sql, inArray } from 'drizzle-orm';
 import { ensureShortLink } from '@/lib/shortlinkStore';
 
+// Cache only the viewer-independent public branches (default listing, cities).
+// The single-event (slug) branch returns per-viewer flags and must NOT be cached.
+const LIST_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+
 // Title-case normalize: "los angeles" → "Los Angeles"
 function titleCase(str: string): string {
   return str.trim().split(/\s+/).map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -78,7 +82,7 @@ export async function GET(request: NextRequest) {
         .from(events)
         .where(and(eq(events.published, true), isNotNull(events.city)));
       const cities = rows.map(r => r.city).filter(Boolean).sort() as string[];
-      return NextResponse.json({ cities });
+      return NextResponse.json({ cities }, { headers: { 'Cache-Control': LIST_CACHE } });
     }
 
     const eventSelect = {
@@ -290,7 +294,7 @@ export async function GET(request: NextRequest) {
       rsvpCount: rsvpMap[e.id] || 0,
     }));
 
-    return NextResponse.json({ events: enriched });
+    return NextResponse.json({ events: enriched }, { headers: { 'Cache-Control': LIST_CACHE } });
   } catch (error) {
     console.error('GET events:', error);
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });

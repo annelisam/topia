@@ -3,6 +3,9 @@ import { db, grants } from '@/lib/db';
 import { sql } from '@vercel/postgres';
 import { desc, asc, ilike, or } from 'drizzle-orm';
 
+// Public, viewer-independent list → CDN-cacheable (see /api/profiles).
+const LIST_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -61,7 +64,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       grants: results,
       count: results.length,
-    });
+    }, { headers: { 'Cache-Control': LIST_CACHE } });
   } catch (error) {
     console.error('Error fetching grants:', error);
     return NextResponse.json(

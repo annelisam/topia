@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import LoadingBar from '../../components/LoadingBar';
+import { Skeleton } from '../../components/Skeleton';
 
 interface Grant {
   id: string;
@@ -186,8 +186,14 @@ export default function GrantsList() {
           </div>
 
           {loading && initialLoad ? (
-            <div className="text-center py-8 sm:py-12">
-              <LoadingBar text="LOADING GRANTS" />
+            <div className="space-y-3 sm:space-y-4" aria-busy="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="border p-4 sm:p-6 rounded-2xl" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
+                  <Skeleton className="h-4 w-1/3 mb-3" />
+                  <Skeleton className="h-3 w-2/3 mb-2" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
             </div>
           ) : grants.length === 0 && !loading ? (
             <div className="text-center py-8 sm:py-12">
