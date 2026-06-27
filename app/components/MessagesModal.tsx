@@ -11,12 +11,15 @@ export default function MessagesModal({
 }: { initialConversationId?: string | null; onClose: () => void }) {
   const [shown, setShown] = useState(false);
 
-  // Animate in on mount + lock body scroll.
+  // Animate in on mount + lock body scroll. Double rAF guarantees the browser
+  // paints the off-screen (translate-y-full) state before we flip to
+  // translate-y-0, so the bottom sheet actually slides up rather than just fading.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setShown(true));
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setShown(true)); });
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { cancelAnimationFrame(raf); document.body.style.overflow = prev; };
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); document.body.style.overflow = prev; };
   }, []);
 
   // Animate out, then unmount.
@@ -35,7 +38,7 @@ export default function MessagesModal({
     <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4" onClick={requestClose}>
       <div className={`absolute inset-0 backdrop-blur-sm transition-opacity duration-300 ${shown ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} />
       <div
-        className={`relative w-full sm:max-w-[1000px] h-[88dvh] sm:h-[80vh] sm:max-h-[820px] rounded-t-3xl sm:rounded-2xl border-0 sm:border border-ink/[0.12] flex flex-col overflow-hidden bg-[var(--page-bg)] text-ink shadow-[0_24px_80px_-12px_rgba(0,0,0,0.75)] transition-[transform,opacity] duration-300 ease-out opacity-100 ${shown ? 'translate-y-0 sm:opacity-100' : 'translate-y-full sm:translate-y-2 sm:opacity-0'}`}
+        className={`relative w-full sm:max-w-[1000px] h-[88dvh] sm:h-[80vh] sm:max-h-[820px] rounded-t-3xl sm:rounded-2xl border-0 sm:border border-ink/[0.12] flex flex-col overflow-hidden bg-[var(--page-bg)] text-ink shadow-[0_24px_80px_-12px_rgba(0,0,0,0.75)] transition-[translate,opacity] duration-300 ease-out opacity-100 ${shown ? 'translate-y-0 sm:opacity-100' : 'translate-y-full sm:translate-y-2 sm:opacity-0'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top bar */}
