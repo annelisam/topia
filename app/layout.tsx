@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
@@ -19,6 +19,16 @@ export const metadata: Metadata = {
     title: "TOPIA — What You Make It",
     description: "A creator engine for artists, by artists.",
   },
+};
+
+// `interactive-widget=resizes-content` makes the browser shrink the viewport
+// when the on-screen keyboard opens, so dvh units + fixed/bottom-anchored UI
+// (e.g. a chat composer) sit above the keyboard with no JS — and the page
+// chrome behind a full-screen modal stays covered instead of peeking through.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 // Prevent flash of wrong theme on load. Accent is fixed site-wide to lime —
