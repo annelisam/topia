@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { isRealPhoto } from '../../lib/avatar';
 import { uploadToBlob } from '../../lib/uploadImage';
@@ -119,7 +119,7 @@ interface UserRow {
   worldMemberships: { worldId: string; role: string; worldTitle: string; worldSlug: string }[];
 }
 
-type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links' | 'emails' | 'newsletter';
+type Tab = 'worlds' | 'users' | 'creators' | 'events' | 'grants' | 'tools' | 'catalysts' | 'tv' | 'projects' | 'links' | 'emails' | 'broadcast' | 'newsletter';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1472,6 +1472,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'projects', label: 'PROJECTS' },
   { id: 'links', label: 'LINKS' },
   { id: 'emails', label: 'EMAILS' },
+  { id: 'broadcast', label: 'BROADCAST' },
   { id: 'newsletter', label: 'NEWSLETTER' },
 ];
 
@@ -1531,6 +1532,7 @@ export default function AdminDashboard() {
         {tab === 'projects' && <SimplePublishTab type="world-projects" noun="projects" />}
         {tab === 'links' && <LinksTab />}
         {tab === 'emails' && <EmailsTab />}
+        {tab === 'broadcast' && <BroadcastTab />}
         {tab === 'newsletter' && <NewsletterTab />}
       </main>
     </div>
@@ -1809,6 +1811,230 @@ function EmailsTab() {
           </div>
         ) : (
           <p className="font-mono text-[12px] opacity-50 mt-2">Pick a template{`'`}s options and hit Preview. With a recipient selected, the preview uses their name; otherwise it shows sample data.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Markdown editor with a formatting toolbar + shortcuts. Operates on the
+// textarea selection (wrap for inline, line-prefix for blocks) so the admin can
+// format without typing markdown syntax. Cmd/Ctrl+B / I / K shortcuts too. ─────
+function MarkdownField({ value, onChange, rows = 14 }: { value: string; onChange: (v: string) => void; rows?: number }) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Re-focus + reselect after the controlled re-render commits.
+  const restore = (start: number, end: number) => {
+    requestAnimationFrame(() => {
+      const ta = taRef.current; if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(start, end);
+    });
+  };
+
+  // Wrap the selection in `before`/`after` (inline styles: bold, italic, code).
+  const surround = (before: string, after = before) => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const sel = v.slice(s, e);
+    onChange(v.slice(0, s) + before + sel + after + v.slice(e));
+    restore(s + before.length, s + before.length + sel.length);
+  };
+
+  // Prefix every selected line (headings, lists, quote).
+  const prefixLines = (makePrefix: (i: number) => string) => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+    const block = v.slice(lineStart, e);
+    const prefixed = block.split('\n').map((l, i) => makePrefix(i) + l).join('\n');
+    onChange(v.slice(0, lineStart) + prefixed + v.slice(e));
+    restore(lineStart, lineStart + prefixed.length);
+  };
+
+  const insertLink = () => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const label = v.slice(s, e) || 'link text';
+    const snippet = `[${label}](https://)`;
+    onChange(v.slice(0, s) + snippet + v.slice(e));
+    const urlStart = s + label.length + 3; // after "[label]("
+    restore(urlStart, urlStart + 8);       // select "https://"
+  };
+
+  const onKeyDown = (ev: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!(ev.metaKey || ev.ctrlKey)) return;
+    const k = ev.key.toLowerCase();
+    if (k === 'b') { ev.preventDefault(); surround('**'); }
+    else if (k === 'i') { ev.preventDefault(); surround('*'); }
+    else if (k === 'k') { ev.preventDefault(); insertLink(); }
+  };
+
+  const Btn = ({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) => (
+    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title}
+      className="px-2 py-1 font-mono text-[12px] border hover:bg-[#1a1a1a] hover:text-[#f5f0e8] transition-colors"
+      style={{ borderColor: '#1a1a1a', minWidth: 30 }}>
+      {children}
+    </button>
+  );
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-1">
+        <Btn title="Heading" onClick={() => prefixLines(() => '## ')}>H</Btn>
+        <Btn title="Bold (⌘B)" onClick={() => surround('**')}><strong>B</strong></Btn>
+        <Btn title="Italic (⌘I)" onClick={() => surround('*')}><em>I</em></Btn>
+        <Btn title="Bulleted list" onClick={() => prefixLines(() => '- ')}>• List</Btn>
+        <Btn title="Numbered list" onClick={() => prefixLines((i) => `${i + 1}. `)}>1. List</Btn>
+        <Btn title="Quote" onClick={() => prefixLines(() => '> ')}>❝</Btn>
+        <Btn title="Link (⌘K)" onClick={insertLink}>Link</Btn>
+        <Btn title="Divider" onClick={() => { const ta = taRef.current; if (!ta) return; const { selectionStart: s, value: v } = ta; onChange(v.slice(0, s) + '\n\n---\n\n' + v.slice(s)); }}>―</Btn>
+      </div>
+      <textarea ref={taRef} value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={onKeyDown} rows={rows}
+        className="w-full border px-3 py-2 font-mono text-[12px] leading-relaxed outline-none resize-y"
+        style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a', borderColor: '#1a1a1a' }} />
+    </div>
+  );
+}
+
+// ─── Broadcast Tab — write a markdown email and send it to ALL confirmed RSVPs
+// of one event. Sends rate-limit-safe via the Resend batch API (server side). ──
+const BROADCAST_STARTER = `Hi {{firstName}},
+
+A quick update about **{{eventName}}**.
+
+-
+-
+
+See you there!`;
+
+function BroadcastTab() {
+  const [events, setEvents] = useState<EventLite[]>([]);
+  const [eventId, setEventId] = useState('');
+  const [subject, setSubject] = useState('');
+  const [markdown, setMarkdown] = useState(BROADCAST_STARTER);
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+  const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [results, setResults] = useState<{ sent: number; failed: number; total: number; errors: string[] } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/events').then(r => r.json())
+      .then(d => setEvents((d.events || []).map((e: EventLite) => ({ id: e.id, eventName: e.eventName, slug: e.slug }))))
+      .catch(() => {});
+  }, []);
+
+  // Recipient count refreshes whenever the chosen event changes.
+  useEffect(() => {
+    setRecipientCount(null);
+    if (!eventId) return;
+    let alive = true;
+    fetch(`/api/admin/broadcast?eventId=${encodeURIComponent(eventId)}`).then(r => r.json())
+      .then(d => { if (alive) setRecipientCount(typeof d.recipientCount === 'number' ? d.recipientCount : null); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [eventId]);
+
+  const doPreview = async () => {
+    setError(''); setResults(null);
+    if (!eventId) { setError('Pick an event'); return; }
+    if (!markdown.trim()) { setError('Write a message'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/broadcast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'preview', eventId, subject, markdown }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'Preview failed'); return; }
+      setPreview({ subject: d.subject, html: d.html });
+      if (typeof d.recipientCount === 'number') setRecipientCount(d.recipientCount);
+    } catch { setError('Preview failed'); }
+    finally { setBusy(false); }
+  };
+
+  const doSend = async () => {
+    setError(''); setResults(null);
+    if (!eventId) { setError('Pick an event'); return; }
+    if (!subject.trim()) { setError('Add a subject'); return; }
+    if (!markdown.trim()) { setError('Write a message'); return; }
+    if (!recipientCount) { setError('No confirmed RSVPs with an email for this event'); return; }
+    const ev = events.find(e => e.id === eventId);
+    if (!window.confirm(`Send this email to ${recipientCount} confirmed RSVP${recipientCount === 1 ? '' : 's'} of "${ev?.eventName}"?\n\nThis sends real emails and can't be undone.`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/admin/broadcast', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', eventId, subject, markdown }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'Send failed'); return; }
+      setResults({ sent: d.sent, failed: d.failed, total: d.total, errors: d.errors || [] });
+    } catch { setError('Send failed'); }
+    finally { setBusy(false); }
+  };
+
+  const sel = { backgroundColor: '#f5f0e8', color: '#1a1a1a', borderColor: '#1a1a1a' };
+  const countLabel = recipientCount == null ? '' : `${recipientCount} confirmed RSVP${recipientCount === 1 ? '' : 's'} with an email`;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ color: '#1a1a1a' }}>
+      {/* Left: compose */}
+      <div>
+        <Field label="Event">
+          <select value={eventId} onChange={e => { setEventId(e.target.value); setPreview(null); setResults(null); }} className="w-full border px-3 py-2 font-mono text-[13px] outline-none" style={sel}>
+            <option value="">Select an event…</option>
+            {events.map(e => <option key={e.id} value={e.id}>{e.eventName}</option>)}
+          </select>
+        </Field>
+        {eventId && (
+          <p className="font-mono text-[12px] -mt-2 mb-3 opacity-70">
+            {recipientCount == null ? 'Counting recipients…' : `→ ${countLabel}`}
+          </p>
+        )}
+
+        <Field label="Subject">
+          <input type="text" value={subject} onChange={e => { setSubject(e.target.value); setResults(null); }} placeholder="Subject line — {{eventName}} works here too" className="w-full border px-3 py-2 font-mono text-[13px] outline-none" style={sel} />
+        </Field>
+
+        <Field label="Message (Markdown)">
+          <MarkdownField value={markdown} onChange={v => { setMarkdown(v); setResults(null); }} rows={14} />
+        </Field>
+        <p className="font-mono text-[11px] opacity-60 -mt-2 mb-3">
+          Markdown: <code># heading</code>, <code>**bold**</code>, <code>- list</code>, <code>[link](url)</code>. Placeholders: <code>{'{{firstName}}'}</code>, <code>{'{{name}}'}</code>, <code>{'{{eventName}}'}</code>, <code>{'{{eventUrl}}'}</code>.
+        </p>
+
+        {error && <p className="font-mono text-[12px] mt-1 mb-2" style={{ color: '#FF5C34' }}>{error}</p>}
+
+        <div className="flex gap-2 mt-2">
+          <button onClick={doPreview} disabled={busy} className="px-4 py-2 font-mono text-[12px] uppercase tracking-widest border disabled:opacity-40" style={{ borderColor: '#1a1a1a' }}>{busy ? '…' : 'Preview'}</button>
+          <button onClick={doSend} disabled={busy || !recipientCount} className="px-4 py-2 font-mono text-[12px] uppercase tracking-widest font-bold disabled:opacity-40" style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}>
+            {busy ? 'Sending…' : recipientCount ? `Send to ${recipientCount}` : 'Send'}
+          </button>
+        </div>
+        <p className="font-mono text-[11px] opacity-50 mt-2">Sent in throttled batches (Resend batch API) so a large list won{`'`}t hit the rate limit.</p>
+
+        {results && (
+          <div className="mt-4 border p-3" style={{ borderColor: '#1a1a1a' }}>
+            <p className="font-mono text-[12px] font-bold mb-1">Sent {results.sent}/{results.total}{results.failed ? ` · ${results.failed} failed` : ''}</p>
+            {results.errors.length > 0
+              ? results.errors.map((er, i) => <p key={i} className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>✗ {er}</p>)
+              : <p className="font-mono text-[11px] opacity-70">All batches delivered to Resend.</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Right: preview */}
+      <div>
+        <span className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60">Preview</span>
+        {preview ? (
+          <div className="mt-2">
+            <p className="font-mono text-[12px] mb-2"><span className="opacity-50">Subject:</span> {preview.subject}</p>
+            <iframe title="broadcast preview" srcDoc={preview.html} className="w-full border" style={{ height: 620, borderColor: '#1a1a1a', backgroundColor: '#fff' }} />
+          </div>
+        ) : (
+          <p className="font-mono text-[12px] opacity-50 mt-2">Pick an event, write your message, and hit Preview. The preview fills <code>{'{{firstName}}'}</code> with a real attendee{`'`}s name when there is one.</p>
         )}
       </div>
     </div>
