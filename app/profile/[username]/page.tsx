@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
+import MessageButton from '../../components/MessageButton';
 import ShareButton from '../../components/ShareButton';
 import TopiaCardModal from '../../components/profile/TopiaCardModal';
 import { SocialIcon } from '../../components/SocialIcons';
@@ -460,6 +461,12 @@ export default function PublicProfilePage() {
                             <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
                               Edit
                             </Link>
+                          )}
+                          {!isOwnProfile && profile.id && (
+                            <MessageButton
+                              targetUserId={profile.id}
+                              className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                            />
                           )}
                           {!isOwnProfile && profile.id && (
                             <FollowButton

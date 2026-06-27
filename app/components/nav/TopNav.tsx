@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
+import MessagesNavIcon from '../MessagesNavIcon';
 import { useUserProfile } from '../../hooks/useUserProfile';
 
 type NavItem = {
@@ -143,6 +144,7 @@ export default function TopNav() {
           )}
         </div>
 
+        <MessagesNavIcon />
         <NotificationBell />
         <LoginButton />
       </div>

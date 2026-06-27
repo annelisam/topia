@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useMessagesBadge } from '../MessagesNavIcon';
 
 const TAB_LINKS = [
   {
@@ -37,6 +38,15 @@ const TAB_LINKS = [
     ),
   },
   {
+    href: '/messages',
+    label: 'Messages',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+    ),
+  },
+  {
     href: '/dashboard',
     label: 'Dashboard',
     icon: (
@@ -59,6 +69,7 @@ interface MobileTabBarProps {
 // a tab (or navigating) tucks it away again so it never blocks content.
 export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
   const [open, setOpen] = useState(false);
+  const messagesBadge = useMessagesBadge();
 
   return (
     <nav
@@ -96,7 +107,14 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
               className="flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-200 no-underline"
               style={{ color: 'var(--page-text)', opacity: 0.4 }}
             >
-              {link.icon}
+              <span className="relative">
+                {link.icon}
+                {link.href === '/messages' && messagesBadge > 0 && (
+                  <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold" style={{ backgroundColor: 'var(--accent, #e4fe52)', color: '#1a1a1a' }}>
+                    {messagesBadge > 9 ? '9+' : messagesBadge}
+                  </span>
+                )}
+              </span>
               <span className="font-mono text-[11px] uppercase tracking-wider">{link.label}</span>
             </Link>
           ))}

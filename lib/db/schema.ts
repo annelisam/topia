@@ -519,3 +519,41 @@ export const newsletterSignups = pgTable('newsletter_signups', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+/* ════════════════════════════════════════════════════════════════════
+ * DIRECT MESSAGES (Instagram-style)
+ *
+ * 1:1 conversations split into Primary vs Requests at the membership level:
+ *   - mutual follow (a "connection")  → both members 'accepted' → Primary
+ *   - non-mutual first message        → recipient member 'pending' → Requests
+ *     until they accept (sender is always 'accepted').
+ * Delivery is poll-based (no realtime infra). Group threads can come later by
+ * allowing >2 members + a null dmKey.
+ * ──────────────────────────────────────────────────────────────────── */
+export const conversations = pgTable('conversations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  // Deterministic key for a 1:1 pair — sorted "minUserId:maxUserId" — so a pair
+  // can only ever have one conversation. Null for (future) group threads.
+  dmKey: text('dm_key').unique(),
+  lastMessageAt: timestamp('last_message_at').defaultNow().notNull(), // sorts the inbox
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const conversationMembers = pgTable('conversation_members', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  status: text('status').notNull().default('accepted'), // 'accepted' (Primary) | 'pending' (Requests)
+  lastReadAt: timestamp('last_read_at'),                 // null = never opened; drives unread counts
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const messages = pgTable('messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }).notNull(),
+  senderId: uuid('sender_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  body: text('body'),                                    // text content (nullable for media-only)
+  imageUrl: text('image_url'),                           // uploaded image OR gif URL
+  giphyId: text('giphy_id'),                             // Giphy attribution when the image is a gif
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
