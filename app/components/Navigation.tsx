@@ -5,6 +5,7 @@ import TopNav from './nav/TopNav';
 import MobileTabBar from './nav/MobileTabBar';
 import MobileMenu from './nav/MobileMenu';
 import MessagesModal from './MessagesModal';
+import BadgesProvider from './BadgesProvider';
 import { OPEN_MESSAGES_EVENT } from '../../lib/openMessages';
 
 export default function Navigation() {
@@ -27,11 +28,11 @@ export default function Navigation() {
   }, [openMessages]);
 
   return (
-    <>
+    <BadgesProvider>
       <TopNav onOpenMessages={() => openMessages()} />
       <MobileTabBar onMenuToggle={() => setMenuOpen(true)} onOpenMessages={() => openMessages()} />
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       {msgOpen && <MessagesModal key={openKey} initialConversationId={initialConv} onClose={() => setMsgOpen(false)} />}
-    </>
+    </BadgesProvider>
   );
 }

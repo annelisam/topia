@@ -1,34 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useBadges } from './BadgesProvider';
 
-// Polls the lightweight unread endpoint, shared by the desktop nav icon and the
-// mobile tab bar. badge = unread Primary messages + pending Requests.
+// Messages badge (unread Primary + pending Requests), sourced from the shared
+// BadgesProvider poll so the nav icon and mobile tab bar don't each fetch.
 export function useMessagesBadge(): number {
-  const { authenticated, user } = usePrivy();
-  const [count, setCount] = useState(0);
-
-  const fetchCount = useCallback(() => {
-    if (!authenticated || !user) { setCount(0); return; }
-    fetch(`/api/messages/unread?privyId=${encodeURIComponent(user.id)}`)
-      .then((r) => r.json())
-      .then((d) => setCount((d.unreadTotal ?? 0) + (d.requestCount ?? 0)))
-      .catch(() => {});
-  }, [authenticated, user]);
-
-  useEffect(() => {
-    fetchCount();
-    let interval = setInterval(fetchCount, 30000);
-    const onVis = () => {
-      clearInterval(interval);
-      if (!document.hidden) { fetchCount(); interval = setInterval(fetchCount, 30000); }
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVis); };
-  }, [fetchCount]);
-
-  return count;
+  const { messagesUnread, requestCount } = useBadges();
+  return messagesUnread + requestCount;
 }
 
 export default function MessagesNavIcon({ onClick }: { onClick: () => void }) {
