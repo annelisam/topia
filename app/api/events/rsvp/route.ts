@@ -297,6 +297,8 @@ export async function POST(request: NextRequest) {
             profileComplete: !!u?.username,
             eventWhen,
             eventWhere,
+            username: u?.username,
+            userId,
           });
         } catch (e) { console.error('rsvp confirmation email:', e); }
       }

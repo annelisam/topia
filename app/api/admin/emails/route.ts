@@ -11,10 +11,20 @@ type UserRow = typeof users.$inferSelect;
 // Build the {{{VAR}}} values for one recipient + optional event context.
 function buildVariables(user: Partial<UserRow> | null, event: EventRow | null, origin: string): Record<string, string> {
   const name = (user?.name || '').trim() || 'there';
+  // Passport-card handle: prefer the username, fall back to the user id so the
+  // card still renders before a handle is set (the card route resolves either).
+  const handle = (user?.username || '').trim() || user?.id || '';
+  const card = handle ? `${origin}/api/profile/${encodeURIComponent(handle)}/card` : '';
+  // On event emails (RSVP confirmations) the card carries the event seal stamp.
+  const stampedCard = card && event ? `${card}?stamp=${encodeURIComponent(event.slug)}` : card;
   const vars: Record<string, string> = {
     GUEST_NAME: name,
     USER_NAME: name,
+    USERNAME: user?.username || '',
     PROFILE_URL: `${origin}/onboarding`,
+    CARD_URL: stampedCard,
+    SHARE_URL: user?.username ? `${origin}/@${user.username}` : `${origin}/onboarding`,
+    STORY_URL: card ? `${card}?format=story` : '',
   };
   if (event) {
     const { when, where } = formatEventSchedule(event);
@@ -31,16 +41,21 @@ function buildVariables(user: Partial<UserRow> | null, event: EventRow | null, o
   return vars;
 }
 
-// Sample values for preview when no real recipient/event is chosen.
+// Sample values for preview when no real recipient/event is chosen. For
+// passport-card templates, pick a real sample user in the UI to preview the
+// live card — this generic sample's CARD_URL may not resolve to a profile.
 function sampleVariables(origin: string): Record<string, string> {
   return {
-    GUEST_NAME: 'Alex', USER_NAME: 'Alex', INVITER_NAME: 'Latasha', STATUS: 'rsvp',
+    GUEST_NAME: 'Alex', USER_NAME: 'Alex', USERNAME: 'alex', INVITER_NAME: 'Latasha', STATUS: 'rsvp',
     EVENT_NAME: 'Like Minds: A Summer Series',
     EVENT_URL: `${origin}/events/like-minds-a-summer-series`,
     MANAGE_URL: `${origin}/events/like-minds-a-summer-series/manage`,
     EVENT_WHEN: 'Saturday, June 27 · 1:00 PM – 5:00 PM PT',
     EVENT_WHERE: 'The Love Song Bar · Los Angeles',
     PROFILE_URL: `${origin}/onboarding`,
+    CARD_URL: `${origin}/api/profile/alex/card`,
+    SHARE_URL: `${origin}/@alex`,
+    STORY_URL: `${origin}/api/profile/alex/card?format=story`,
   };
 }
 
