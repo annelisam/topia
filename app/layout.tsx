@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
 import CookieConsent from "./components/CookieConsent";
@@ -55,6 +56,7 @@ export default function RootLayout({
           <FeedbackWidget />
         </PrivyProviderWrapper>
         <CookieConsent />
+        <Analytics />
       </body>
     </html>
   );
