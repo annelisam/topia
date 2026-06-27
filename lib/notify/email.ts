@@ -19,6 +19,7 @@
 // can rename in Resend without a code change.
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const RESEND_BATCH_ENDPOINT = 'https://api.resend.com/emails/batch';
 
 export const EVENT_TEMPLATES = {
   invite:        process.env.RESEND_TPL_EVENT_INVITE        || 'event-invite',
@@ -66,6 +67,71 @@ export async function sendTemplateEmail(opts: { to: string; templateId: string; 
 
 function eventUrl(origin: string, slug: string): string {
   return `${origin}/events/${slug}`;
+}
+
+// ── Bulk send (rate-limit safe) ───────────────────────────────────────────
+// Resend caps requests at ~2/sec, so one-request-per-recipient blows the limit
+// on any real blast. The Batch API sends up to 100 *individually-addressed*
+// emails in ONE request; we chunk into 100s, throttle between chunks to stay
+// under the rate limit, and back off on a 429 (honoring Retry-After). Each
+// recipient still gets their own email (personalized; no shared To: header).
+const RESEND_BATCH_SIZE = 100;
+const RESEND_THROTTLE_MS = 600;   // < 2 req/sec
+const RESEND_MAX_RETRIES = 4;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+export interface BulkResult { sent: number; failed: number; total: number; errors: string[] }
+
+export async function sendBulkEmails(
+  messages: { to: string; subject: string; html: string }[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<BulkResult> {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.INVITE_EMAIL_FROM || 'Topia <onboarding@resend.dev>';
+  const total = messages.length;
+  if (!key) return { sent: 0, failed: total, total, errors: ['not_configured'] };
+  if (total === 0) return { sent: 0, failed: 0, total: 0, errors: [] };
+
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (let start = 0; start < total; start += RESEND_BATCH_SIZE) {
+    const chunk = messages.slice(start, start + RESEND_BATCH_SIZE);
+    const payload = chunk.map((m) => ({ from, to: m.to, subject: m.subject, html: m.html }));
+
+    for (let attempt = 0; ; attempt++) {
+      let res: Response;
+      try {
+        res = await fetch(RESEND_BATCH_ENDPOINT, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        failed += chunk.length;
+        errors.push(`network_error@${start}`);
+        break;
+      }
+      if (res.ok) { sent += chunk.length; break; }
+      // Rate limited — wait out the window and retry the same chunk.
+      if (res.status === 429 && attempt < RESEND_MAX_RETRIES) {
+        const ra = Number(res.headers.get('retry-after'));
+        const wait = Number.isFinite(ra) && ra > 0 ? ra * 1000 : RESEND_THROTTLE_MS * 2 ** attempt;
+        await sleep(wait);
+        continue;
+      }
+      failed += chunk.length;
+      errors.push(`resend_${res.status}@${start}`);
+      break;
+    }
+
+    onProgress?.(Math.min(start + RESEND_BATCH_SIZE, total), total);
+    if (start + RESEND_BATCH_SIZE < total) await sleep(RESEND_THROTTLE_MS); // pace the next request
+  }
+
+  return { sent, failed, total, errors };
 }
 
 // Send pre-rendered HTML (used by the admin email sender, where the preview is
