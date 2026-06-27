@@ -12,35 +12,15 @@ import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '..
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
 import HandleChangeModal from './_components/HandleChangeModal';
-import { isGif, uploadToBlob } from '../../lib/uploadImage';
+import { resizeAndUploadAvatar } from '../../lib/uploadImage';
 import RoleTagPicker from '../components/RoleTagPicker';
 import { ROLE_TAGS as EVENT_ROLE_TAGS, ROLES_MAX } from '../../lib/events/questions';
 import { roleLabelToSlug, roleSlugToLabel } from '../../lib/profile/roleTags';
 
 interface Tool { id: string; name: string; slug: string; category: string | null; }
 
-/** Resize image to a max 256×256 JPEG data URL (kept as-is — used for avatars). */
-function resizeImage(file: File): Promise<string> {
-  // GIFs would lose their animation through the canvas — upload raw to Blob.
-  if (isGif(file)) return uploadToBlob(file);
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 256;
-      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+/** Avatars now resize + upload to Blob (was inline base64). See lib/uploadImage. */
+const resizeImage = resizeAndUploadAvatar;
 
 /** Section header — used across all blocks for visual consistency. */
 function Section({ label, sub, children, id }: { label: string; sub?: string; children: React.ReactNode; id?: string }) {
