@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { isRealPhoto } from '../../lib/avatar';
 import { uploadToBlob } from '../../lib/uploadImage';
@@ -1817,6 +1817,86 @@ function EmailsTab() {
   );
 }
 
+// ─── Markdown editor with a formatting toolbar + shortcuts. Operates on the
+// textarea selection (wrap for inline, line-prefix for blocks) so the admin can
+// format without typing markdown syntax. Cmd/Ctrl+B / I / K shortcuts too. ─────
+function MarkdownField({ value, onChange, rows = 14 }: { value: string; onChange: (v: string) => void; rows?: number }) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Re-focus + reselect after the controlled re-render commits.
+  const restore = (start: number, end: number) => {
+    requestAnimationFrame(() => {
+      const ta = taRef.current; if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(start, end);
+    });
+  };
+
+  // Wrap the selection in `before`/`after` (inline styles: bold, italic, code).
+  const surround = (before: string, after = before) => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const sel = v.slice(s, e);
+    onChange(v.slice(0, s) + before + sel + after + v.slice(e));
+    restore(s + before.length, s + before.length + sel.length);
+  };
+
+  // Prefix every selected line (headings, lists, quote).
+  const prefixLines = (makePrefix: (i: number) => string) => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+    const block = v.slice(lineStart, e);
+    const prefixed = block.split('\n').map((l, i) => makePrefix(i) + l).join('\n');
+    onChange(v.slice(0, lineStart) + prefixed + v.slice(e));
+    restore(lineStart, lineStart + prefixed.length);
+  };
+
+  const insertLink = () => {
+    const ta = taRef.current; if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value: v } = ta;
+    const label = v.slice(s, e) || 'link text';
+    const snippet = `[${label}](https://)`;
+    onChange(v.slice(0, s) + snippet + v.slice(e));
+    const urlStart = s + label.length + 3; // after "[label]("
+    restore(urlStart, urlStart + 8);       // select "https://"
+  };
+
+  const onKeyDown = (ev: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!(ev.metaKey || ev.ctrlKey)) return;
+    const k = ev.key.toLowerCase();
+    if (k === 'b') { ev.preventDefault(); surround('**'); }
+    else if (k === 'i') { ev.preventDefault(); surround('*'); }
+    else if (k === 'k') { ev.preventDefault(); insertLink(); }
+  };
+
+  const Btn = ({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) => (
+    <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title}
+      className="px-2 py-1 font-mono text-[12px] border hover:bg-[#1a1a1a] hover:text-[#f5f0e8] transition-colors"
+      style={{ borderColor: '#1a1a1a', minWidth: 30 }}>
+      {children}
+    </button>
+  );
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-1">
+        <Btn title="Heading" onClick={() => prefixLines(() => '## ')}>H</Btn>
+        <Btn title="Bold (⌘B)" onClick={() => surround('**')}><strong>B</strong></Btn>
+        <Btn title="Italic (⌘I)" onClick={() => surround('*')}><em>I</em></Btn>
+        <Btn title="Bulleted list" onClick={() => prefixLines(() => '- ')}>• List</Btn>
+        <Btn title="Numbered list" onClick={() => prefixLines((i) => `${i + 1}. `)}>1. List</Btn>
+        <Btn title="Quote" onClick={() => prefixLines(() => '> ')}>❝</Btn>
+        <Btn title="Link (⌘K)" onClick={insertLink}>Link</Btn>
+        <Btn title="Divider" onClick={() => { const ta = taRef.current; if (!ta) return; const { selectionStart: s, value: v } = ta; onChange(v.slice(0, s) + '\n\n---\n\n' + v.slice(s)); }}>―</Btn>
+      </div>
+      <textarea ref={taRef} value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={onKeyDown} rows={rows}
+        className="w-full border px-3 py-2 font-mono text-[12px] leading-relaxed outline-none resize-y"
+        style={{ backgroundColor: '#f5f0e8', color: '#1a1a1a', borderColor: '#1a1a1a' }} />
+    </div>
+  );
+}
+
 // ─── Broadcast Tab — write a markdown email and send it to ALL confirmed RSVPs
 // of one event. Sends rate-limit-safe via the Resend batch API (server side). ──
 const BROADCAST_STARTER = `Hi {{firstName}},
@@ -1919,7 +1999,7 @@ function BroadcastTab() {
         </Field>
 
         <Field label="Message (Markdown)">
-          <textarea value={markdown} onChange={e => { setMarkdown(e.target.value); setResults(null); }} rows={14} className="w-full border px-3 py-2 font-mono text-[12px] leading-relaxed outline-none resize-y" style={sel} />
+          <MarkdownField value={markdown} onChange={v => { setMarkdown(v); setResults(null); }} rows={14} />
         </Field>
         <p className="font-mono text-[11px] opacity-60 -mt-2 mb-3">
           Markdown: <code># heading</code>, <code>**bold**</code>, <code>- list</code>, <code>[link](url)</code>. Placeholders: <code>{'{{firstName}}'}</code>, <code>{'{{name}}'}</code>, <code>{'{{eventName}}'}</code>, <code>{'{{eventUrl}}'}</code>.
