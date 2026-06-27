@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { openMessagesModal } from '../../lib/openMessages';
 
-// Starts (or opens) a DM with the target user, then routes to the thread.
+// Starts (or opens) a DM with the target user, then pops the Messages modal
+// focused on that thread.
 export default function MessageButton({ targetUserId, className }: { targetUserId: string; className?: string }) {
   const { authenticated, user, login } = usePrivy();
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const onClick = async () => {
@@ -19,7 +19,7 @@ export default function MessageButton({ targetUserId, className }: { targetUserI
         body: JSON.stringify({ privyId: user.id, targetUserId }),
       });
       const data = await res.json();
-      if (res.ok && data.conversationId) router.push(`/messages?c=${data.conversationId}`);
+      if (res.ok && data.conversationId) openMessagesModal(data.conversationId);
     } finally { setBusy(false); }
   };
 

@@ -62,12 +62,13 @@ const TAB_LINKS = [
 
 interface MobileTabBarProps {
   onMenuToggle: () => void;
+  onOpenMessages: () => void;
 }
 
 // Collapsible bottom nav: hidden by default, leaving just a "^ Menu" handle
 // peeking at the bottom edge. Tapping the handle slides the tab bar up; tapping
 // a tab (or navigating) tucks it away again so it never blocks content.
-export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
+export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTabBarProps) {
   const [open, setOpen] = useState(false);
   const messagesBadge = useMessagesBadge();
 
@@ -99,25 +100,44 @@ export default function MobileTabBar({ onMenuToggle }: MobileTabBarProps) {
       {/* The tab bar — slides off-screen when collapsed */}
       <div className="backdrop-blur-xl" style={{ backgroundColor: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)' }}>
         <div className="flex items-center justify-around h-[var(--nav-height)] px-2">
-          {TAB_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-200 no-underline"
-              style={{ color: 'var(--page-text)', opacity: 0.4 }}
-            >
-              <span className="relative">
-                {link.icon}
-                {link.href === '/messages' && messagesBadge > 0 && (
-                  <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold" style={{ backgroundColor: 'var(--accent, #e4fe52)', color: '#1a1a1a' }}>
-                    {messagesBadge > 9 ? '9+' : messagesBadge}
-                  </span>
-                )}
-              </span>
-              <span className="font-mono text-[11px] uppercase tracking-wider">{link.label}</span>
-            </Link>
-          ))}
+          {TAB_LINKS.map((link) => {
+            const isMessages = link.href === '/messages';
+            const inner = (
+              <>
+                <span className="relative">
+                  {link.icon}
+                  {isMessages && messagesBadge > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold" style={{ backgroundColor: 'var(--accent, #e4fe52)', color: '#1a1a1a' }}>
+                      {messagesBadge > 9 ? '9+' : messagesBadge}
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-wider">{link.label}</span>
+              </>
+            );
+            const cls = 'flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] transition-colors duration-200 no-underline';
+            // Messages opens the slide-up modal instead of navigating.
+            return isMessages ? (
+              <button
+                key={link.href}
+                onClick={() => { setOpen(false); onOpenMessages(); }}
+                className={`${cls} bg-transparent border-none cursor-pointer`}
+                style={{ color: 'var(--page-text)', opacity: 0.4 }}
+              >
+                {inner}
+              </button>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cls}
+                style={{ color: 'var(--page-text)', opacity: 0.4 }}
+              >
+                {inner}
+              </Link>
+            );
+          })}
 
           {/* Full menu (Resources, About, etc.) */}
           <button

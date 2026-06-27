@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import Thread, { Avatar } from './Thread';
 
@@ -28,12 +28,17 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d`;
 }
 
-export default function MessagesClient() {
+interface MessagesClientProps {
+  initialConversationId?: string | null;
+  onClose?: () => void;     // renders a close button (modal)
+  fullViewHref?: string;    // renders an expand link (modal → full page)
+}
+
+export default function MessagesClient({ initialConversationId = null, onClose, fullViewHref }: MessagesClientProps) {
   const { authenticated, user, ready } = usePrivy();
-  const searchParams = useSearchParams();
   const [inbox, setInbox] = useState<Inbox>({ primary: [], requests: [], requestCount: 0, unreadTotal: 0 });
   const [tab, setTab] = useState<'primary' | 'requests'>('primary');
-  const [selected, setSelected] = useState<string | null>(searchParams.get('c'));
+  const [selected, setSelected] = useState<string | null>(initialConversationId);
 
   const fetchInbox = useCallback(() => {
     if (!authenticated || !user) return;
@@ -94,7 +99,23 @@ export default function MessagesClient() {
       {/* List pane */}
       <div className={`w-full md:w-[340px] md:shrink-0 border-r border-ink/[0.08] flex flex-col min-h-0 ${selected ? 'hidden md:flex' : 'flex'}`}>
         <div className="px-4 pt-4 pb-2 shrink-0">
-          <h1 className="font-basement font-black text-[22px] uppercase text-ink leading-none">Messages</h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="font-basement font-black text-[22px] uppercase text-ink leading-none">Messages</h1>
+            {(fullViewHref || onClose) && (
+              <div className="flex items-center gap-1 -mr-1">
+                {fullViewHref && (
+                  <Link href={selected ? `${fullViewHref}?c=${selected}` : fullViewHref} onClick={onClose} aria-label="Open full view" className="text-ink/45 hover:text-ink p-1.5 no-underline">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+                  </Link>
+                )}
+                {onClose && (
+                  <button onClick={onClose} aria-label="Close" className="text-ink/45 hover:text-ink p-1.5 bg-transparent border-none cursor-pointer">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex gap-1 mt-3">
             <button
               onClick={() => setTab('primary')}

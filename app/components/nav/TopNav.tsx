@@ -34,7 +34,7 @@ const STATIC_LINKS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export default function TopNav() {
+export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { profile } = useUserProfile();
   // Passport routes to the viewer's own profile (their passport).
@@ -144,7 +144,7 @@ export default function TopNav() {
           )}
         </div>
 
-        <MessagesNavIcon />
+        <MessagesNavIcon onClick={onOpenMessages} />
         <NotificationBell />
         <LoginButton />
       </div>
