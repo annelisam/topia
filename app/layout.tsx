@@ -21,14 +21,18 @@ export const metadata: Metadata = {
   },
 };
 
-// `interactive-widget=resizes-content` makes the browser shrink the viewport
-// when the on-screen keyboard opens, so dvh units + fixed/bottom-anchored UI
-// (e.g. a chat composer) sit above the keyboard with no JS — and the page
-// chrome behind a full-screen modal stays covered instead of peeking through.
+// `interactive-widget=overlays-content` (the browser default): the on-screen
+// keyboard floats OVER the page, so the layout viewport stays full-height and
+// `window.visualViewport` reliably reports the true visible area above the
+// keyboard. Forms scroll their focused field into view natively; the one place
+// that needs help is a pinned footer (the messages composer), which clamps a
+// layer to visualViewport so it sits flush on the keyboard (see
+// useKeyboardViewport). We tried resizes-content, but its dvh shrink left the
+// composer floating with a gap above the keyboard on iOS Safari.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  interactiveWidget: "resizes-content",
+  interactiveWidget: "overlays-content",
 };
 
 // Prevent flash of wrong theme on load. Accent is fixed site-wide to lime —
