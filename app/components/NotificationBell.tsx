@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
+import { useBadges } from './BadgesProvider';
 
 interface NotificationMetadata {
   worldTitle?: string;
@@ -27,38 +28,28 @@ interface Notification {
 
 export default function NotificationBell() {
   const { authenticated, user } = usePrivy();
+  const { notificationsUnread, refreshBadges } = useBadges();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(() => {
     if (!authenticated || !user) return;
+    setLoading(true);
     fetch(`/api/notifications?privyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then((data) => setNotifications(data.notifications ?? []))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [authenticated, user]);
 
-  // Initial fetch + poll every 30s, pause when tab is hidden
+  // Fetch the list only when the dropdown opens — the unread *count* comes from
+  // the shared BadgesProvider poll, so we don't fetch the full list every 30s.
   useEffect(() => {
-    fetchNotifications();
-    let interval = setInterval(fetchNotifications, 30000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        clearInterval(interval);
-      } else {
-        fetchNotifications();
-        interval = setInterval(fetchNotifications, 30000);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [fetchNotifications]);
+    if (open) fetchNotifications();
+  }, [open, fetchNotifications]);
 
   // Close on click outside
   useEffect(() => {
@@ -71,7 +62,7 @@ export default function NotificationBell() {
 
   if (!authenticated) return null;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notificationsUnread;
 
   const markAllRead = async () => {
     if (!user || unreadCount === 0) return;
@@ -81,6 +72,7 @@ export default function NotificationBell() {
       body: JSON.stringify({ privyId: user.id }),
     });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    refreshBadges();
   };
 
   const respondToInvite = async (invitationId: string, action: 'accept' | 'decline') => {
@@ -106,6 +98,7 @@ export default function NotificationBell() {
             return n;
           })
         );
+        refreshBadges();
       }
     } catch (err) {
       console.error('Failed to respond to invite:', err);
@@ -136,6 +129,7 @@ export default function NotificationBell() {
             return n;
           })
         );
+        refreshBadges();
       }
     } catch (err) {
       console.error('Failed to respond to event invite:', err);
@@ -199,7 +193,13 @@ export default function NotificationBell() {
           </div>
 
           {/* List */}
-          {notifications.length === 0 ? (
+          {loading && notifications.length === 0 ? (
+            <div className="px-3 py-6 text-center">
+              <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>
+                Loading…
+              </p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="px-3 py-6 text-center">
               <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>
                 No notifications yet
