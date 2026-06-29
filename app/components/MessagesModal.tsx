@@ -51,9 +51,16 @@ export default function MessagesModal({
   return (
     <>
       {/* ── Mobile: full-screen page takeover ── */}
+      {/* Background layer — always covers the entire screen so the page never
+          peeks through, even during the iOS keyboard first-open lag frame. */}
+      <div
+        className={`fixed inset-0 z-[2100] bg-[var(--page-bg)] sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
+      />
+      {/* Content layer — clamped to the visible viewport above the keyboard
+          (useKeyboardViewport) so the composer sits flush. */}
       <div
         ref={mobileLayerRef}
-        className={`fixed inset-0 z-[2100] flex flex-col bg-[var(--page-bg)] text-ink sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 z-[2101] flex flex-col text-ink sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
       >
         {topBar}
         <MessagesClient initialConversationId={initialConversationId} />
