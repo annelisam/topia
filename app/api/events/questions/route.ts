@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { db, events, eventHosts, eventQuestions, users } from '@/lib/db';
 import { QUESTION_TYPES, SELECT_TYPES } from '@/lib/events/questions';
 
@@ -34,9 +34,34 @@ function normalizeOptions(type: string, options: unknown): string[] | null {
 }
 
 // GET /api/events/questions?eventId=... | ?slug=...   (public: active only)
+// GET /api/events/questions?myEvents=1&privyId=...     (user's events with questions)
 export async function GET(request: NextRequest) {
   try {
     const sp = request.nextUrl.searchParams;
+
+    // List the caller's events that have at least one question.
+    if (sp.get('myEvents') === '1') {
+      const privyId = sp.get('privyId');
+      if (!privyId) return NextResponse.json({ error: 'Missing privyId' }, { status: 400 });
+      const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
+      if (!user) return NextResponse.json({ events: [] });
+      const rows = await db
+        .select({
+          eventId: events.id,
+          eventName: events.eventName,
+          slug: events.slug,
+          date: events.dateIso,
+          questionCount: sql<number>`count(${eventQuestions.id})`.as('qc'),
+        })
+        .from(events)
+        .innerJoin(eventQuestions, and(eq(eventQuestions.eventId, events.id), eq(eventQuestions.isActive, true)))
+        .where(eq(events.createdBy, user.id))
+        .groupBy(events.id)
+        .orderBy(desc(events.createdAt))
+        .limit(20);
+      return NextResponse.json({ events: rows });
+    }
+
     let eventId = sp.get('eventId') ?? undefined;
     const slug = sp.get('slug');
     const includeInactive = sp.get('includeInactive') === '1';
