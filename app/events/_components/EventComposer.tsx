@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
@@ -92,6 +92,106 @@ function MarkdownToolbar({ onInsert }: { onInsert: (b: string, a: string, p: str
 
 const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+const COVER_PALETTES = [
+  { name: 'obsidian',  bg: '#1a1a1a', fg: '#e4fe52', label: '#e4fe52', logoDark: false },
+  { name: 'lime',      bg: '#e4fe52', fg: '#1a1a1a', label: '#1a1a1a', logoDark: true },
+  { name: 'bone',      bg: '#f5f0e8', fg: '#1a1a1a', label: '#1a1a1a', logoDark: true },
+  { name: 'blue',      bg: '#4F46FF', fg: '#ffffff', label: '#ffffff', logoDark: false },
+  { name: 'orange',    bg: '#FF5C34', fg: '#ffffff', label: '#ffffff', logoDark: false },
+  { name: 'pink',      bg: '#FF5BD7', fg: '#ffffff', label: '#ffffff', logoDark: false },
+  { name: 'green',     bg: '#00FF88', fg: '#1a1a1a', label: '#1a1a1a', logoDark: true },
+] as const;
+
+// Preload both logo variants so canvas draws are instant.
+let _logoWhite: HTMLImageElement | null = null;
+let _logoDark: HTMLImageElement | null = null;
+function getLogoImage(dark: boolean): HTMLImageElement {
+  if (dark) {
+    if (!_logoDark) { _logoDark = new Image(); _logoDark.src = '/brand/topia-mark.png'; }
+    return _logoDark;
+  }
+  if (!_logoWhite) { _logoWhite = new Image(); _logoWhite.src = '/brand/logo-white.png'; }
+  return _logoWhite;
+}
+
+function drawPlaceholderCover(
+  canvas: HTMLCanvasElement,
+  eventName: string,
+  palette: typeof COVER_PALETTES[number],
+) {
+  const W = 1200, H = 1500; // 4:5 portrait
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // Background
+  ctx.fillStyle = palette.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle radial gradient overlay for depth
+  const grad = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.4, W * 0.8);
+  grad.addColorStop(0, palette.fg + '08');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Logo mark — outlined star from topia-mark.png / logo-white.png
+  const logoImg = getLogoImage(palette.logoDark);
+  if (logoImg.complete && logoImg.naturalWidth > 0) {
+    const logoW = 700, logoH = logoW * (logoImg.naturalHeight / logoImg.naturalWidth);
+    ctx.globalAlpha = 0.15;
+    ctx.drawImage(logoImg, (W - logoW) / 2, H * 0.22 - logoH / 2, logoW, logoH);
+    ctx.globalAlpha = 1;
+  }
+
+  // "TOPIA" wordmark above event name
+  ctx.fillStyle = palette.fg;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = '900 48px "Basement Grotesque", "Zalando Sans Expanded", "Arial Black", Impact, sans-serif';
+  const topiaY = H * 0.48;
+  ctx.fillText('TOPIA', W / 2, topiaY);
+
+  // Event name — large, centered, wrapping
+  const maxTextW = W - 160;
+  const words = eventName.toUpperCase().split(/\s+/);
+  let fontSize = 96;
+  let lines: string[] = [];
+  while (fontSize >= 36) {
+    ctx.font = `900 ${fontSize}px "Basement Grotesque", "Zalando Sans Expanded", "Arial Black", Impact, sans-serif`;
+    lines = [];
+    let current = '';
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      if (ctx.measureText(test).width > maxTextW && current) {
+        lines.push(current);
+        current = word;
+      } else current = test;
+    }
+    if (current) lines.push(current);
+    if (lines.length <= 4) break;
+    fontSize -= 4;
+  }
+  const lineHeight = fontSize * 1.05;
+  const blockH = lines.length * lineHeight;
+  const startY = topiaY + 70;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], W / 2, startY + i * lineHeight, maxTextW);
+  }
+
+  // Thin divider line
+  ctx.strokeStyle = palette.fg + '20';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(80, H - 160);
+  ctx.lineTo(W - 80, H - 160);
+  ctx.stroke();
+
+  // "TOPIA" small footer
+  ctx.fillStyle = palette.label + '60';
+  ctx.font = '900 28px "Basement Grotesque", "Zalando Sans Expanded", "Arial Black", Impact, sans-serif';
+  ctx.fillText('TOPIA', W / 2, H - 120);
+}
+
 function formatDateForStorage(isoDate: string): string {
   if (!isoDate) return '';
   const d = new Date(isoDate + 'T00:00:00');
@@ -131,6 +231,13 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   const [accent] = useState<typeof ACCENTS[number]>(ACCENTS[0]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [paletteIdx, setPaletteIdx] = useState(0);
+  const placeholderCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [canvasMounted, setCanvasMounted] = useState(false);
+  const placeholderCanvasCallback = useCallback((node: HTMLCanvasElement | null) => {
+    placeholderCanvasRef.current = node;
+    setCanvasMounted(!!node);
+  }, []);
 
   // Import-from-link (create only): paste a Partiful/Luma/Posh URL to autofill.
   const [importUrl, setImportUrl] = useState('');
@@ -153,6 +260,10 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   // "adding new", a number means "editing the question at that index".
   const [editorOpen, setEditorOpen] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
+  // Copy-from-previous-event state.
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyEvents, setCopyEvents] = useState<{ eventId: string; eventName: string; slug: string; date: string | null; questionCount: number }[]>([]);
+  const [copyLoading, setCopyLoading] = useState(false);
 
   // Edit mode: load existing questions (managed live against the API).
   useEffect(() => {
@@ -179,6 +290,31 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
     setEditIdx(idx); setEditorOpen(true);
   };
   const closeEditor = () => { setEditorOpen(false); setEditIdx(null); resetEditorFields(); setQError(''); };
+
+  const openCopyPicker = async () => {
+    if (!user) return;
+    setCopyOpen(true);
+    setCopyLoading(true);
+    try {
+      const res = await fetch(`/api/events/questions?myEvents=1&privyId=${encodeURIComponent(user.id)}`);
+      const data = await res.json();
+      setCopyEvents(data.events ?? []);
+    } catch { setCopyEvents([]); }
+    finally { setCopyLoading(false); }
+  };
+  const copyQuestionsFrom = async (eventId: string) => {
+    setQError('');
+    try {
+      const res = await fetch(`/api/events/questions?eventId=${encodeURIComponent(eventId)}`);
+      const data = await res.json();
+      const imported: DraftQuestion[] = (data.questions ?? []).map((q: { label: string; type: string; options: string[] | null; required: boolean }) => ({
+        label: q.label, type: q.type, options: q.options ?? [], required: q.required,
+      }));
+      if (imported.length === 0) { setQError('No questions found on that event.'); return; }
+      setQuestions((prev) => [...prev, ...imported]);
+      setCopyOpen(false);
+    } catch { setQError('Could not load questions — try again.'); }
+  };
 
   // Save the editor — adds a new question (editIdx === null) or updates an
   // existing one. Edit mode persists immediately; create mode stages until save.
@@ -260,6 +396,32 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
   useEffect(() => {
     fetch('/api/events?cities=true').then((r) => r.json()).then((d) => setCities(d.cities || [])).catch(console.error);
   }, []);
+
+  // Redraw placeholder cover preview when name, palette, or canvas mount state changes.
+  useEffect(() => {
+    const c = placeholderCanvasRef.current;
+    if (!c || imageUrl) return;
+    const palette = COVER_PALETTES[paletteIdx];
+    const name = eventName.trim() || 'Your Event';
+    const img = getLogoImage(palette.logoDark);
+    const draw = () => drawPlaceholderCover(c, name, palette);
+    if (img.complete && img.naturalWidth > 0) { draw(); return; }
+    img.onload = draw;
+    draw();
+  }, [eventName, paletteIdx, imageUrl, canvasMounted]);
+
+  const generatePlaceholderBlob = useCallback((): Promise<Blob> => {
+    const palette = COVER_PALETTES[paletteIdx];
+    const name = eventName.trim() || 'Your Event';
+    const img = getLogoImage(palette.logoDark);
+    const go = () => new Promise<Blob>((resolve, reject) => {
+      const c = document.createElement('canvas');
+      drawPlaceholderCover(c, name, palette);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas encode failed'))), 'image/jpeg', 0.92);
+    });
+    if (img.complete && img.naturalWidth > 0) return go();
+    return new Promise<Blob>((resolve) => { img.onload = () => resolve(go()); });
+  }, [eventName, paletteIdx]);
 
   /* ── cover upload ── */
   // Preserve the poster's full aspect ratio — only scale down so the longest
@@ -378,6 +540,17 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
     }
     setSaving(publish ? 'publish' : 'draft');
     setError('');
+
+    // Auto-generate a placeholder cover if none was uploaded.
+    let finalImageUrl = imageUrl;
+    if (!finalImageUrl && eventName.trim()) {
+      try {
+        const blob = await generatePlaceholderBlob();
+        finalImageUrl = await uploadToBlob(blob, 'cover.jpg');
+        setImageUrl(finalImageUrl);
+      } catch { /* proceed without — not critical */ }
+    }
+
     const payload = {
       privyId: user.id,
       eventName: eventName.trim(),
@@ -391,7 +564,7 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       city: (showCustomCity ? customCity.trim() : city) || null,
       address: venue || null,
       link: link || null,
-      imageUrl: imageUrl || null,
+      imageUrl: finalImageUrl || null,
       published: publish,
       // Capacity below 1 is meaningless (locks everyone out) → unlimited.
       rsvpCapacity: (() => { const n = capacity.trim() === '' ? NaN : Number(capacity); return Number.isFinite(n) && n >= 1 ? Math.floor(n) : null; })(),
@@ -540,12 +713,11 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`relative group rounded-2xl overflow-hidden mb-8 transition-all duration-300 ${imageUrl ? 'border' : 'border-2 border-dashed'}`}
-          style={{ aspectRatio: imageUrl ? undefined : '4 / 5', borderColor: dragOver ? accent.hex : 'var(--border-color)', backgroundColor: 'var(--surface-hover)', boxShadow: dragOver ? `0 0 0 4px ${accent.hex}30` : 'none' }}
+          className={`relative group rounded-2xl overflow-hidden mb-8 transition-all duration-300 border ${dragOver ? 'border-[var(--accent)]' : 'border-[var(--border-color)]'}`}
+          style={{ boxShadow: dragOver ? `0 0 0 4px ${accent.hex}30` : 'none' }}
         >
           {imageUrl ? (
             <>
-              {/* Full poster at its natural aspect ratio — fills the box, no crop */}
               {coverIsVideo ? (
                 <video src={imageUrl} className="w-full h-auto block" autoPlay loop muted playsInline preload="metadata" />
               ) : (
@@ -561,13 +733,36 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
               </div>
             </>
           ) : (
-            <label className={`absolute inset-0 flex flex-col items-center justify-center gap-2 cursor-pointer ${uploading ? 'cursor-wait' : ''}`}>
-              <input type="file" accept={COVER_ACCEPT} onChange={onPick} className="hidden" disabled={uploading} />
-              <span className="font-basement font-black uppercase leading-none" style={{ fontSize: 'clamp(28px, 5vw, 56px)', color: accent.hex, opacity: 0.85 }}>
-                {uploading ? 'Uploading…' : dragOver ? 'Drop it' : '+ Cover'}
-              </span>
-              <span className="font-mono text-[11px] uppercase tracking-[2px] opacity-40 text-center px-6">drag a file · or click · jpg · gif · mp4 (≤10s)</span>
-            </label>
+            <div className="relative">
+              {/* Live placeholder preview */}
+              <canvas ref={placeholderCanvasCallback} className="w-full h-auto block" style={{ aspectRatio: '4 / 5' }} />
+              {/* Overlay controls */}
+              <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 gap-3">
+                {/* Palette picker */}
+                <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-2">
+                  {COVER_PALETTES.map((p, i) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => setPaletteIdx(i)}
+                      className="w-7 h-7 rounded-full border-2 transition-all cursor-pointer"
+                      style={{
+                        backgroundColor: p.bg,
+                        borderColor: i === paletteIdx ? '#ffffff' : 'rgba(255,255,255,0.15)',
+                        boxShadow: i === paletteIdx ? '0 0 0 2px rgba(0,0,0,0.4)' : 'none',
+                      }}
+                      title={p.name}
+                    />
+                  ))}
+                </div>
+                {/* Upload button */}
+                <label className={`font-mono text-[10px] uppercase tracking-[2px] bg-white/90 text-black px-4 py-2 rounded-full cursor-pointer hover:bg-white transition ${uploading ? 'opacity-50 cursor-wait' : ''}`}>
+                  <input type="file" accept={COVER_ACCEPT} onChange={onPick} className="hidden" disabled={uploading} />
+                  {uploading ? 'Uploading…' : 'Upload your own'}
+                </label>
+                <span className="font-mono text-[9px] uppercase tracking-[2px] text-white/40">or save with this generated cover</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -712,11 +907,47 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
 
               {editorOpen && editIdx === null ? (
                 renderQuestionEditor()
-              ) : !editorOpen ? (
-                <button type="button" onClick={() => openEditor(null)} className="w-full font-mono text-[11px] uppercase tracking-[2px] border border-dashed px-3 py-2.5 rounded-lg cursor-pointer bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
-                  + Add question
-                </button>
+              ) : !editorOpen && !copyOpen ? (
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => openEditor(null)} className="flex-1 font-mono text-[11px] uppercase tracking-[2px] border border-dashed px-3 py-2.5 rounded-lg cursor-pointer bg-transparent hover:opacity-70" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+                    + Add question
+                  </button>
+                  <button type="button" onClick={openCopyPicker} className="font-mono text-[11px] uppercase tracking-[2px] border border-dashed px-3 py-2.5 rounded-lg cursor-pointer bg-transparent hover:opacity-70 shrink-0" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+                    Copy from event
+                  </button>
+                </div>
               ) : null}
+
+              {copyOpen && (
+                <div className="border rounded-lg p-3 space-y-2" style={{ borderColor: 'var(--accent)', backgroundColor: 'var(--surface-hover)' }}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40">Copy questions from…</p>
+                    <button type="button" onClick={() => setCopyOpen(false)} className="font-mono text-[11px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }}>✕</button>
+                  </div>
+                  {copyLoading ? (
+                    <p className="font-mono text-[11px] opacity-40 py-4 text-center">Loading your events…</p>
+                  ) : copyEvents.length === 0 ? (
+                    <p className="font-mono text-[11px] opacity-40 py-4 text-center">No previous events with questions found.</p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto -mx-1 px-1 space-y-1">
+                      {copyEvents.map((ev) => (
+                        <button
+                          key={ev.eventId}
+                          type="button"
+                          onClick={() => copyQuestionsFrom(ev.eventId)}
+                          className="w-full text-left flex items-center justify-between gap-3 px-3 py-2 rounded-sm hover:bg-[var(--foreground)]/5 cursor-pointer bg-transparent border-none transition"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-mono text-[12px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{ev.eventName}</p>
+                            {ev.date && <p className="font-mono text-[10px] opacity-40">{ev.date}</p>}
+                          </div>
+                          <span className="font-mono text-[10px] opacity-40 shrink-0">{ev.questionCount}q</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {qError && !editorOpen && <p className="font-mono text-[11px] mt-2" style={{ color: ERR }}>{qError}</p>}
             </div>
