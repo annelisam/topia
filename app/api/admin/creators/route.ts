@@ -6,7 +6,7 @@ import { isAdminRequest } from '@/lib/adminAuth';
 
 // GET – all creators (including unpublished), with linked user info
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const results = await db
       .select({
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
 // POST – create creator
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     const result = await db.insert(creators).values({
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
 // PUT – update creator
 export async function PUT(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -84,7 +84,7 @@ export async function PUT(request: Request) {
 
 // DELETE – delete creator
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });

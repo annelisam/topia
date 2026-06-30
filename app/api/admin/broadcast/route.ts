@@ -54,7 +54,7 @@ function renderFor(markdown: string, subject: string, vars: Record<string, strin
 
 // GET ?eventId= — recipient count for the picker.
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const eventId = new URL(request.url).searchParams.get('eventId');
   if (!eventId) return NextResponse.json({ error: 'eventId required' }, { status: 400 });
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 
 // POST { action: 'preview' | 'send', eventId, subject, markdown }
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const { action, eventId, subject, markdown } = (await request.json()) as {
       action?: string; eventId?: string; subject?: string; markdown?: string;

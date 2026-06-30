@@ -8,7 +8,7 @@ import { isAdminRequest } from '@/lib/adminAuth';
 // live (case-insensitive email) to a profile so attribution stays current even
 // for profiles created after the signup.
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const rows = await db
       .select({
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
 // DELETE – remove a sign-up by id.
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const { id } = await request.json();
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

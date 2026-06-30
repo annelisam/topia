@@ -28,6 +28,7 @@ export default function DashboardOverviewPage() {
   const initial = (displayName[0] || '?').toUpperCase();
   const builderCount = worldMemberships.filter((w) => w.role === 'world_builder' || w.role === 'owner').length;
   const firstName = displayName.split(' ')[0];
+  const isCatalyst = profile?.path === 'catalyst';
 
   return (
     <div>
@@ -101,18 +102,22 @@ export default function DashboardOverviewPage() {
 
           {/* Quick actions in the same band — primary CTA + secondaries */}
           <div className="px-5 py-3 flex flex-wrap items-center gap-2 lg:shrink-0">
-            <Link
-              href="/dashboard/create-world"
-              className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-3 py-1.5 rounded-sm hover:opacity-90 transition no-underline"
-            >
-              + World
-            </Link>
-            <Link
-              href="/events/create"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
-            >
-              + Event
-            </Link>
+            {!isCatalyst && (
+              <Link
+                href="/dashboard/create-world"
+                className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-3 py-1.5 rounded-sm hover:opacity-90 transition no-underline"
+              >
+                + World
+              </Link>
+            )}
+            {!isCatalyst && (
+              <Link
+                href="/events/create"
+                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+              >
+                + Event
+              </Link>
+            )}
             <Link
               href="/dashboard/submit-tool"
               className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
@@ -148,7 +153,7 @@ export default function DashboardOverviewPage() {
           {worldMemberships.length > 0 ? (
             <YourWorldsSection worldMemberships={worldMemberships} />
           ) : (
-            <EmptyWorldsCard />
+            <EmptyWorldsCard isCatalyst={isCatalyst} />
           )}
 
           {/* Tools row — in-kit and saved tools side-by-side on wide. The
@@ -222,7 +227,7 @@ function YourWorldsSection({ worldMemberships }: { worldMemberships: WorldMember
   );
 }
 
-function EmptyWorldsCard() {
+function EmptyWorldsCard({ isCatalyst }: { isCatalyst: boolean }) {
   return (
     <div className="border border-ink/[0.08] rounded-lg overflow-hidden">
       <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2">
@@ -231,15 +236,17 @@ function EmptyWorldsCard() {
       <div className="bg-[var(--page-bg)] p-6 text-center">
         <p className="font-basement font-black text-[24px] uppercase text-ink leading-tight">No worlds yet.</p>
         <p className="font-mono text-[12px] text-ink/50 mt-2 max-w-xs mx-auto">
-          A world is your scene — a place creators rally around. Start one, or join one you love.
+          A world is your scene — a place creators rally around. {isCatalyst ? 'Join one you love.' : 'Start one, or join one you love.'}
         </p>
         <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-          <Link
-            href="/dashboard/create-world"
-            className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-4 py-2 rounded-sm hover:opacity-90 transition no-underline"
-          >
-            + Create a world
-          </Link>
+          {!isCatalyst && (
+            <Link
+              href="/dashboard/create-world"
+              className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-4 py-2 rounded-sm hover:opacity-90 transition no-underline"
+            >
+              + Create a world
+            </Link>
+          )}
           <Link
             href="/worlds"
             className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/20 hover:border-ink/60 hover:text-ink px-4 py-2 rounded-sm transition no-underline"

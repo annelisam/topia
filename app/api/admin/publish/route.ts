@@ -38,7 +38,7 @@ function resolve(type: string | null) {
 
 // GET /api/admin/publish?type=catalysts → list items (id, name, slug, published)
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) {
+  if (!(await isAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const url = new URL(request.url);
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
 // POST /api/admin/publish  body: { type, id, published }
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) {
+  if (!(await isAdminRequest(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {

@@ -1,76 +1,67 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useEffect, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { ready, authenticated, login, getAccessToken } = usePrivy();
   const router = useRouter();
+  const [checking, setChecking] = useState(false);
+  const [denied, setDenied] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
+  useEffect(() => {
+    if (!ready || !authenticated) return;
+    let cancelled = false;
+    setChecking(true);
+    (async () => {
+      const token = await getAccessToken();
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ accessToken: token }),
       });
-
-      if (!res.ok) {
-        setError('Invalid password');
-        setLoading(false);
-        return;
+      if (cancelled) return;
+      if (res.ok) {
+        router.replace('/admin');
+      } else {
+        setDenied(true);
+        setChecking(false);
       }
-
-      router.push('/admin');
-    } catch {
-      setError('Network error');
-      setLoading(false);
-    }
-  };
+    })();
+    return () => { cancelled = true; };
+  }, [ready, authenticated, getAccessToken, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f0e8' }}>
       <div className="w-full max-w-sm">
-        <div className="border border-[var(--foreground)] p-8" style={{ backgroundColor: 'var(--background)' }}>
-          <h1 className="font-mono text-[13px] uppercase tracking-widest mb-1" style={{ color: 'var(--foreground)' }}>
+        <div className="border border-[#1a1a1a] p-8" style={{ backgroundColor: '#f5f0e8' }}>
+          <h1 className="font-mono text-[13px] uppercase tracking-widest mb-1" style={{ color: '#1a1a1a' }}>
             TOPIA
           </h1>
-          <h2 className="font-mono text-[24px] font-bold mb-8" style={{ color: 'var(--foreground)' }}>
+          <h2 className="font-mono text-[24px] font-bold mb-8" style={{ color: '#1a1a1a' }}>
             ADMIN
           </h2>
 
-          <form onSubmit={handleSubmit}>
-            <label className="block font-mono text-[12px] uppercase tracking-widest mb-2" style={{ color: 'var(--foreground)' }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              className="w-full border border-[var(--foreground)] px-3 py-2 font-mono text-[13px] outline-none focus:ring-2 focus:ring-[var(--foreground)]"
-              style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
-            />
+          {denied && (
+            <p className="font-mono text-[12px] mb-4" style={{ color: '#FF5C34' }}>
+              Your account is not authorized for admin access.
+            </p>
+          )}
 
-            {error && (
-              <p className="font-mono text-[12px] mt-2" style={{ color: '#FF5C34' }}>{error}</p>
-            )}
-
+          {checking ? (
+            <p className="font-mono text-[12px] uppercase tracking-widest" style={{ color: '#1a1a1a80' }}>
+              Verifying access…
+            </p>
+          ) : (
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-6 px-4 py-2.5 font-mono text-[13px] uppercase tracking-widest border border-[var(--foreground)] transition-colors disabled:opacity-50"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              onClick={login}
+              className="w-full px-4 py-2.5 font-mono text-[13px] uppercase tracking-widest border border-[#1a1a1a] transition-colors hover:opacity-80"
+              style={{ backgroundColor: '#1a1a1a', color: '#f5f0e8' }}
             >
-              {loading ? 'SIGNING IN...' : 'SIGN IN'}
+              Sign in
             </button>
-          </form>
+          )}
         </div>
       </div>
     </div>

@@ -1,31 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
-import { db, events, eventHosts, eventQuestions, users } from '@/lib/db';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { db, events, eventQuestions, users } from '@/lib/db';
 import { QUESTION_TYPES, SELECT_TYPES } from '@/lib/events/questions';
+import { requireManager } from '@/lib/events/auth';
 
-// Single source of truth for valid question types (incl. instagram/twitter).
 const ALL_TYPES = new Set(QUESTION_TYPES.map((t) => t.value));
-
-// Resolve the privyId to a user that hosts the event (creator or co-host).
-async function requireHost(privyId: string | undefined, eventId: string) {
-  if (!privyId) return { error: 'Not authenticated', status: 401 as const };
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
-  if (!user) return { error: 'User not found', status: 404 as const };
-  const [host] = await db
-    .select({ id: eventHosts.id })
-    .from(eventHosts)
-    .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, user.id)));
-  if (!host) {
-    const [ev] = await db
-      .select({ createdBy: events.createdBy, externalSource: events.externalSource })
-      .from(events)
-      .where(eq(events.id, eventId));
-    if (!ev || ev.createdBy !== user.id || ev.externalSource) {
-      return { error: 'Not authorized', status: 403 as const };
-    }
-  }
-  return { userId: user.id };
-}
 
 function normalizeOptions(type: string, options: unknown): string[] | null {
   if (!SELECT_TYPES.has(type)) return null;
@@ -93,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (!data.eventId || !data.label?.trim()) {
       return NextResponse.json({ error: 'eventId and label are required' }, { status: 400 });
     }
-    const auth = await requireHost(data.privyId, data.eventId);
+    const auth = await requireManager(data.privyId, data.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const type = ALL_TYPES.has(data.type) ? data.type : 'short_text';
@@ -126,7 +105,7 @@ export async function PUT(request: NextRequest) {
     const [existing] = await db.select().from(eventQuestions).where(eq(eventQuestions.id, data.id));
     if (!existing) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
-    const auth = await requireHost(data.privyId, existing.eventId);
+    const auth = await requireManager(data.privyId, existing.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const type = data.type != null ? (ALL_TYPES.has(data.type) ? data.type : existing.type) : existing.type;
@@ -157,7 +136,7 @@ export async function DELETE(request: NextRequest) {
     const [existing] = await db.select().from(eventQuestions).where(eq(eventQuestions.id, id));
     if (!existing) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
-    const auth = await requireHost(privyId, existing.eventId);
+    const auth = await requireManager(privyId, existing.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     await db.delete(eventQuestions).where(eq(eventQuestions.id, id));

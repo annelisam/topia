@@ -10,7 +10,7 @@ import { feedbackRef } from '@/lib/feedbackId';
 
 // GET – all users with their world memberships
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const allUsers = await db
       .select()
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
 // PUT – update user profile
 export async function PUT(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -88,7 +88,7 @@ export async function PUT(request: Request) {
 
 // PATCH – publish/unpublish a profile (one-click toggle from the admin table)
 export async function PATCH(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const { id, published } = await request.json();
     if (!id || typeof published !== 'boolean') {
@@ -109,7 +109,7 @@ export async function PATCH(request: Request) {
 
 // DELETE – delete user
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });

@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useDashboard } from '../_components/DashboardContext';
 
 export default function DashboardWorldsPage() {
-  const { worldMemberships } = useDashboard();
+  const { worldMemberships, profile } = useDashboard();
   const { user } = usePrivy();
   const [busyId, setBusyId] = useState<string | null>(null);
   // Optimistic published overrides keyed by worldId (membership list is
@@ -44,9 +44,11 @@ export default function DashboardWorldsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl font-bold uppercase" style={{ color: 'var(--foreground)' }}>Worlds</h1>
-        <Link href="/dashboard/create-world" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
-          + Create World
-        </Link>
+        {profile?.path !== 'catalyst' && (
+          <Link href="/dashboard/create-world" className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-70 transition" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)' }}>
+            + Create World
+          </Link>
+        )}
       </div>
 
       {sortedWorlds.length === 0 ? (

@@ -61,7 +61,7 @@ function sampleVariables(origin: string): Record<string, string> {
 
 // GET — template catalogue for the picker.
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   return NextResponse.json({
     templates: EMAIL_TEMPLATES.map((t) => ({ id: t.id, label: t.label, scope: t.scope, variables: t.variables })),
   });
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
 // POST — { action: 'preview' | 'send', ... }
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const body = await request.json();
     const { action, templateId, eventId } = body as { action?: string; templateId?: string; eventId?: string };

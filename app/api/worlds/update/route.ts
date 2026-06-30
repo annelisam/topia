@@ -13,13 +13,16 @@ export async function PUT(request: Request) {
 
     // Resolve Privy ID to user ID
     const userResult = await db
-      .select({ id: users.id })
+      .select({ id: users.id, path: users.path })
       .from(users)
       .where(eq(users.privyId, data.privyId))
       .limit(1);
 
     if (userResult.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (userResult[0].path === 'catalyst') {
+      return NextResponse.json({ error: 'Catalysts cannot edit worlds' }, { status: 403 });
     }
 
     const userId = userResult[0].id;
