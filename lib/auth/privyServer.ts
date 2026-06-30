@@ -45,14 +45,16 @@ export async function verifyPrivyIdentity(accessToken: string | null | undefined
   try {
     const claims = await c.verifyAuthToken(accessToken);
     const user = await c.getUser(claims.userId);
-    const verifiedEmails: string[] = [];
-    const verifiedPhones: string[] = [];
+    const emailSet = new Set<string>();
+    const phoneSet = new Set<string>();
+    if (user.email?.address) emailSet.add(user.email.address.toLowerCase());
+    if (user.phone?.number) phoneSet.add(user.phone.number);
     for (const acct of user.linkedAccounts) {
-      if (acct.type === 'email' && acct.address) verifiedEmails.push(acct.address.toLowerCase());
-      else if (acct.type === 'google_oauth' && acct.email) verifiedEmails.push(acct.email.toLowerCase());
-      else if (acct.type === 'phone' && acct.number) verifiedPhones.push(acct.number);
+      if (acct.type === 'email' && acct.address) emailSet.add(acct.address.toLowerCase());
+      else if (acct.type === 'google_oauth' && acct.email) emailSet.add(acct.email.toLowerCase());
+      else if (acct.type === 'phone' && acct.number) phoneSet.add(acct.number);
     }
-    return { configured: true, ok: true, did: claims.userId, verifiedEmails, verifiedPhones };
+    return { configured: true, ok: true, did: claims.userId, verifiedEmails: [...emailSet], verifiedPhones: [...phoneSet] };
   } catch {
     return { configured: true, ok: false };
   }
