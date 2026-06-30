@@ -28,14 +28,19 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     (async () => {
-      const token = await getAccessToken();
-      const res = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken: token }),
-      });
-      if (cancelled) return;
-      setStatus(res.ok ? 'authorized' : 'denied');
+      try {
+        const token = await getAccessToken();
+        const res = await fetch('/api/admin/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: token }),
+        });
+        if (cancelled) return;
+        setStatus(res.ok ? 'authorized' : 'denied');
+      } catch {
+        if (cancelled) return;
+        setStatus('denied');
+      }
     })();
     return () => { cancelled = true; };
   }, [ready, authenticated, getAccessToken, router]);

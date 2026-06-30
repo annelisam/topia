@@ -14,17 +14,24 @@ export default function AdminLoginPage() {
     if (!ready || !authenticated) return;
     let cancelled = false;
     setChecking(true);
+    setDenied(false);
     (async () => {
-      const token = await getAccessToken();
-      const res = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken: token }),
-      });
-      if (cancelled) return;
-      if (res.ok) {
-        router.replace('/admin');
-      } else {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch('/api/admin/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: token }),
+        });
+        if (cancelled) return;
+        if (res.ok) {
+          router.replace('/admin');
+        } else {
+          setDenied(true);
+          setChecking(false);
+        }
+      } catch {
+        if (cancelled) return;
         setDenied(true);
         setChecking(false);
       }

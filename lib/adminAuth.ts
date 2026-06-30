@@ -2,6 +2,7 @@ import { verifyPrivyIdentity } from '@/lib/auth/privyServer';
 
 const ADMIN_EMAILS = new Set([
   'annelisamm@icloud.com',
+  'annelisamm@gmail.com',
   'contact@callmelatasha.com',
   'latasha@topia.vision',
   'jada@topia.vision',
