@@ -139,7 +139,15 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
     const el = scrollerRef.current;
     if (!el) return;
     if (!initialDoneRef.current) {
-      el.scrollTop = el.scrollHeight; // instant, no animation, on open
+      // The DOM may not have laid out the messages yet (especially on mobile
+      // where the fixed-position body + dvh container delays layout). Defer
+      // the scroll until after the browser paints, then retry a few times to
+      // catch late image loads or iOS keyboard layout shifts.
+      const jump = () => { el.scrollTop = el.scrollHeight; };
+      jump();
+      requestAnimationFrame(jump);
+      setTimeout(jump, 50);
+      setTimeout(jump, 200);
       initialDoneRef.current = true;
       stickRef.current = true;
       return;
@@ -273,7 +281,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
       </div>
 
       {/* Messages */}
-      <div ref={scrollerRef} onScroll={onScrollerScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-1.5">
+      <div ref={scrollerRef} onScroll={onScrollerScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-1.5" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
         {loading ? (
           // Header already shows from the inbox row — keep the body blank (no
           // flashing "loading…") so switching feels instant.

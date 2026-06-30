@@ -1,17 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import MessagesClient from '../messages/MessagesClient';
 import { useKeyboardViewport } from '../hooks/useKeyboardViewport';
 
-// Global Messages UI — mounted only while open (by Navigation).
-//
-// Mobile (<640px): full-screen takeover. Fixed inset-0, solid background, no
-// backdrop, no bottom-sheet scroll issues. The page is completely hidden behind
-// it so there's nothing to scroll. Keyboard handling via useKeyboardViewport
-// still applies so the composer sits flush on the keyboard.
-//
-// Desktop (≥640px): centered card with backdrop blur, same as before.
 export default function MessagesModal({
   initialConversationId, onClose,
 }: { initialConversationId?: string | null; onClose: () => void }) {
@@ -20,12 +13,39 @@ export default function MessagesModal({
   const desktopPositionerRef = useRef<HTMLDivElement>(null);
   useKeyboardViewport(mobileLayerRef);
 
+  // iOS-proof scroll lock: position:fixed on body prevents background scroll
+  // even on iOS Safari where overflow:hidden alone is ignored.
   useEffect(() => {
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setShown(true)); });
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); document.body.style.overflow = prev; };
+
+    const scrollY = window.scrollY;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevBodyStyles = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    const prevHtmlOverflow = html.style.overflow;
+
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      body.style.position = prevBodyStyles.position;
+      body.style.top = prevBodyStyles.top;
+      body.style.width = prevBodyStyles.width;
+      body.style.overflow = prevBodyStyles.overflow;
+      html.style.overflow = prevHtmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
   }, []);
 
   const requestClose = useCallback(() => {
@@ -48,19 +68,17 @@ export default function MessagesModal({
     </div>
   );
 
-  return (
+  const content = (
     <>
       {/* ── Mobile: full-screen page takeover ── */}
-      {/* Background layer — always covers the entire screen so the page never
-          peeks through, even during the iOS keyboard first-open lag frame. */}
       <div
         className={`fixed inset-0 z-[2100] bg-[var(--page-bg)] sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
+        style={{ touchAction: 'none' }}
       />
-      {/* Content layer — clamped to the visible viewport above the keyboard
-          (useKeyboardViewport) so the composer sits flush. */}
       <div
         ref={mobileLayerRef}
         className={`fixed inset-0 z-[2101] flex flex-col text-ink sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
+        style={{ height: '100dvh', overflow: 'hidden' }}
       >
         {topBar}
         <MessagesClient initialConversationId={initialConversationId} />
@@ -86,4 +104,6 @@ export default function MessagesModal({
       </div>
     </>
   );
+
+  return createPortal(content, document.body);
 }

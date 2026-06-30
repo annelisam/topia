@@ -146,7 +146,7 @@ export default function MessagesClient({ initialConversationId = null }: Message
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           {composing ? (
             <ComposeSearch privyId={user?.id ?? ''} onPick={startChat} />
           ) : list.length === 0 ? (
