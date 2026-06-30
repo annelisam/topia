@@ -14,6 +14,12 @@ function norm(body: Record<string, unknown>, key: string): string | null | undef
   return trimmed.length > 0 ? trimmed : null;   // empty string → null
 }
 
+function ensureProtocol(url: string | null | undefined): string | null | undefined {
+  if (url == null || url === undefined) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -32,17 +38,19 @@ export async function POST(request: NextRequest) {
     const username          = norm(body, 'username');
     const bio               = norm(body, 'bio');
     const avatarUrl         = norm(body, 'avatarUrl');
-    const socialWebsite     = norm(body, 'socialWebsite');
-    const socialTwitter     = norm(body, 'socialTwitter');
-    const socialInstagram   = norm(body, 'socialInstagram');
-    const socialSoundcloud  = norm(body, 'socialSoundcloud');
-    const socialSpotify     = norm(body, 'socialSpotify');
-    const socialLinkedin    = norm(body, 'socialLinkedin');
-    const socialSubstack    = norm(body, 'socialSubstack');
-    const socialFarcaster   = norm(body, 'socialFarcaster');
+    const socialWebsite     = ensureProtocol(norm(body, 'socialWebsite'));
+    const socialTwitter     = ensureProtocol(norm(body, 'socialTwitter'));
+    const socialInstagram   = ensureProtocol(norm(body, 'socialInstagram'));
+    const socialSoundcloud  = ensureProtocol(norm(body, 'socialSoundcloud'));
+    const socialSpotify     = ensureProtocol(norm(body, 'socialSpotify'));
+    const socialLinkedin    = ensureProtocol(norm(body, 'socialLinkedin'));
+    const socialSubstack    = ensureProtocol(norm(body, 'socialSubstack'));
+    const socialFarcaster   = ensureProtocol(norm(body, 'socialFarcaster'));
     const pronouns          = norm(body, 'pronouns');
-    // customLinks is structured (array of {label, url}); pass through if present
-    const customLinks       = 'customLinks' in body ? body.customLinks : undefined;
+    // customLinks is structured (array of {label, url}); normalize URLs
+    const customLinks       = 'customLinks' in body
+      ? (Array.isArray(body.customLinks) ? body.customLinks.map((l: { label: string; url: string }) => ({ ...l, url: l.url && !/^https?:\/\//i.test(l.url) ? `https://${l.url}` : l.url })) : body.customLinks)
+      : undefined;
     const roleTags          = 'roleTags'  in body ? body.roleTags  : undefined;
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
     const path              = norm(body, 'path');
