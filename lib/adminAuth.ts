@@ -36,7 +36,17 @@ export async function verifyAdminToken(accessToken: string | null | undefined): 
   | { ok: true; did: string; emails: string[] }
 > {
   const result = await verifyPrivyIdentity(accessToken);
-  if (!result.configured || !result.ok) return { ok: false };
-  if (!isAllowed(result)) return { ok: false };
+  if (!result.configured) {
+    console.error('[admin-auth] Privy not configured');
+    return { ok: false };
+  }
+  if (!result.ok) {
+    console.error('[admin-auth] Token verification returned ok:false');
+    return { ok: false };
+  }
+  if (!isAllowed(result)) {
+    console.error('[admin-auth] User not in allowlist. Emails:', result.verifiedEmails, 'Phones:', result.verifiedPhones);
+    return { ok: false };
+  }
   return { ok: true, did: result.did, emails: result.verifiedEmails };
 }

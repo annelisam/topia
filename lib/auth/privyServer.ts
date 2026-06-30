@@ -40,8 +40,14 @@ export type PrivyIdentityResult =
 
 export async function verifyPrivyIdentity(accessToken: string | null | undefined): Promise<PrivyIdentityResult> {
   const c = getClient();
-  if (!c) return { configured: false };
-  if (!accessToken) return { configured: true, ok: false };
+  if (!c) {
+    console.error('[admin-auth] Privy client not configured — missing NEXT_PUBLIC_PRIVY_APP_ID or PRIVY_APP_SECRET');
+    return { configured: false };
+  }
+  if (!accessToken) {
+    console.error('[admin-auth] No access token provided');
+    return { configured: true, ok: false };
+  }
   try {
     const claims = await c.verifyAuthToken(accessToken);
     const user = await c.getUser(claims.userId);
@@ -54,8 +60,10 @@ export async function verifyPrivyIdentity(accessToken: string | null | undefined
       else if (acct.type === 'google_oauth' && acct.email) emailSet.add(acct.email.toLowerCase());
       else if (acct.type === 'phone' && acct.number) phoneSet.add(acct.number);
     }
+    console.log('[admin-auth] Verified identity:', claims.userId, 'emails:', [...emailSet], 'phones:', [...phoneSet]);
     return { configured: true, ok: true, did: claims.userId, verifiedEmails: [...emailSet], verifiedPhones: [...phoneSet] };
-  } catch {
+  } catch (err) {
+    console.error('[admin-auth] Token verification failed:', err);
     return { configured: true, ok: false };
   }
 }

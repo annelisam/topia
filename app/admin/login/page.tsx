@@ -18,6 +18,13 @@ export default function AdminLoginPage() {
     (async () => {
       try {
         const token = await getAccessToken();
+        if (!token) {
+          console.error('[admin-login] getAccessToken() returned null — user is authenticated but no token available');
+          if (cancelled) return;
+          setDenied(true);
+          setChecking(false);
+          return;
+        }
         const res = await fetch('/api/admin/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -27,10 +34,13 @@ export default function AdminLoginPage() {
         if (res.ok) {
           router.replace('/admin');
         } else {
+          const data = await res.json().catch(() => ({}));
+          console.error('[admin-login] Auth check failed:', res.status, data);
           setDenied(true);
           setChecking(false);
         }
-      } catch {
+      } catch (err) {
+        console.error('[admin-login] Auth check error:', err);
         if (cancelled) return;
         setDenied(true);
         setChecking(false);

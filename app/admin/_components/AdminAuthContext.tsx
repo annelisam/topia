@@ -30,14 +30,25 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const token = await getAccessToken();
+        if (!token) {
+          console.error('[admin-auth] getAccessToken() returned null');
+          if (cancelled) return;
+          setStatus('denied');
+          return;
+        }
         const res = await fetch('/api/admin/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: token }),
         });
         if (cancelled) return;
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          console.error('[admin-auth] Auth denied:', res.status, data);
+        }
         setStatus(res.ok ? 'authorized' : 'denied');
-      } catch {
+      } catch (err) {
+        console.error('[admin-auth] Auth check error:', err);
         if (cancelled) return;
         setStatus('denied');
       }
