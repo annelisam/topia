@@ -313,10 +313,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event name and slug are required' }, { status: 400 });
     }
 
-    // Resolve user
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId));
+    const [user] = await db.select({ id: users.id, path: users.path }).from(users).where(eq(users.privyId, data.privyId));
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (user.path === 'catalyst') {
+      return NextResponse.json({ error: 'Catalysts cannot create events' }, { status: 403 });
     }
 
     const city = data.city ? titleCase(data.city) : null;
@@ -393,13 +395,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Missing privyId or eventId' }, { status: 400 });
     }
 
-    // Resolve user
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId));
+    const [user] = await db.select({ id: users.id, path: users.path }).from(users).where(eq(users.privyId, data.privyId));
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    if (user.path === 'catalyst') {
+      return NextResponse.json({ error: 'Catalysts cannot edit events' }, { status: 403 });
+    }
 
-    // Verify user is a host (capture their role for host-as-world).
     const [host] = await db.select({ id: eventHosts.id, role: eventHosts.role }).from(eventHosts)
       .where(and(eq(eventHosts.eventId, data.eventId), eq(eventHosts.userId, user.id)));
     if (!host) {

@@ -15,10 +15,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify user exists. Any authenticated user may create a world; the
-    // creator becomes its owner below.
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId)).limit(1);
+    const [user] = await db.select({ id: users.id, path: users.path }).from(users).where(eq(users.privyId, data.privyId)).limit(1);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (user.path === 'catalyst') return NextResponse.json({ error: 'Catalysts cannot create worlds' }, { status: 403 });
 
     const slug = createSlug(data.title);
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });

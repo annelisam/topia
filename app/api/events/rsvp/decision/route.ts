@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq } from 'drizzle-orm';
-import { db, users, events, eventRsvps, eventHosts, notifications } from '@/lib/db';
+import { db, users, events, eventRsvps, notifications } from '@/lib/db';
 import { isEmailConfigured, sendRsvpDecision, formatEventSchedule } from '@/lib/notify/email';
+import { requireManager } from '@/lib/events/auth';
 
-// POST /api/events/rsvp/decision — host approves or declines a pending RSVP.
+// POST /api/events/rsvp/decision — manager approves or declines a pending RSVP.
 // Body: { privyId, eventId, guestUserId, decision: 'approve' | 'decline' }
 export async function POST(request: NextRequest) {
   try {
@@ -12,14 +13,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'privyId, eventId, guestUserId, decision required' }, { status: 400 });
     }
 
-    // Auth: caller must host the event.
-    const [host] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
-    if (!host) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    const [isHost] = await db
-      .select({ id: eventHosts.id })
-      .from(eventHosts)
-      .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, host.id)));
-    if (!isHost) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    const auth = await requireManager(privyId, eventId);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+    const host = auth.user;
 
     const [rsvp] = await db
       .select({ status: eventRsvps.status })

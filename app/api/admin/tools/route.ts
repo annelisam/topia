@@ -5,7 +5,7 @@ import { eq, asc } from 'drizzle-orm';
 import { isAdminRequest } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const results = await db.select().from(tools).orderBy(asc(tools.name));
     return NextResponse.json({ tools: results });
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     const result = await db.insert(tools).values({
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -100,7 +100,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });

@@ -19,7 +19,7 @@ const WORLD_CATEGORIES = [
 export default function CreateWorldPage() {
   const { ready, authenticated, user } = usePrivy();
   const router = useRouter();
-  const { loading } = useUserProfile();
+  const { profile, loading } = useUserProfile();
 
   const [form, setForm] = useState({
     title: '',
@@ -34,6 +34,10 @@ export default function CreateWorldPage() {
   useEffect(() => {
     if (ready && !authenticated) router.push('/');
   }, [ready, authenticated, router]);
+
+  useEffect(() => {
+    if (!loading && profile?.path === 'catalyst') router.push('/dashboard');
+  }, [loading, profile?.path, router]);
 
   if (!ready || loading) {
     return (

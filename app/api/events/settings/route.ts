@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
-import { db, users, events, eventHosts, eventRsvps } from '@/lib/db';
+import { db, events, eventRsvps } from '@/lib/db';
+import { requireManager } from '@/lib/events/auth';
 
-// POST /api/events/settings — host updates RSVP/registration settings.
+// POST /api/events/settings — manager updates RSVP/registration settings.
 // Body: { privyId, eventId, rsvpCapacity?, rsvpApprovalRequired?, rsvpClosed? }
 export async function POST(request: NextRequest) {
   try {
@@ -11,13 +12,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing privyId or eventId' }, { status: 400 });
     }
 
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, data.privyId));
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    const [host] = await db
-      .select({ id: eventHosts.id })
-      .from(eventHosts)
-      .where(and(eq(eventHosts.eventId, data.eventId), eq(eventHosts.userId, user.id)));
-    if (!host) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    const auth = await requireManager(data.privyId, data.eventId);
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const patch: Partial<typeof events.$inferInsert> = { updatedAt: new Date() };
     if (data.rsvpCapacity !== undefined) {

@@ -1,28 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { and, asc, eq } from 'drizzle-orm';
-import { db, events, eventHosts, eventTicketTypes, users } from '@/lib/db';
-
-// Resolve the user behind a privyId and confirm they host the event.
-async function requireHost(privyId: string | undefined, eventId: string) {
-  if (!privyId) return { error: 'Not authenticated', status: 401 as const };
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
-  if (!user) return { error: 'User not found', status: 404 as const };
-  const [host] = await db
-    .select({ id: eventHosts.id })
-    .from(eventHosts)
-    .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, user.id)));
-  // Fall back to the event's createdBy for original (non-external) events.
-  if (!host) {
-    const [ev] = await db
-      .select({ createdBy: events.createdBy, externalSource: events.externalSource })
-      .from(events)
-      .where(eq(events.id, eventId));
-    if (!ev || ev.createdBy !== user.id || ev.externalSource) {
-      return { error: 'Not authorized', status: 403 as const };
-    }
-  }
-  return { userId: user.id };
-}
+import { asc, eq } from 'drizzle-orm';
+import { db, events, eventTicketTypes } from '@/lib/db';
+import { requireManager } from '@/lib/events/auth';
 
 // GET /api/events/ticket-types?eventId=... OR ?slug=...
 // Public — lists active tiers (hosts see inactive too via includeInactive=1).
@@ -70,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (!data.eventId || !data.name) {
       return NextResponse.json({ error: 'eventId and name are required' }, { status: 400 });
     }
-    const auth = await requireHost(data.privyId, data.eventId);
+    const auth = await requireManager(data.privyId, data.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const priceCents = Math.max(0, Math.round(Number(data.priceCents ?? 0)));
@@ -113,7 +92,7 @@ export async function PUT(request: NextRequest) {
       .where(eq(eventTicketTypes.id, data.id));
     if (!existing) return NextResponse.json({ error: 'Ticket type not found' }, { status: 404 });
 
-    const auth = await requireHost(data.privyId, existing.eventId);
+    const auth = await requireManager(data.privyId, existing.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const patch: Partial<typeof eventTicketTypes.$inferInsert> = { updatedAt: new Date() };
@@ -156,7 +135,7 @@ export async function DELETE(request: NextRequest) {
     const [existing] = await db.select().from(eventTicketTypes).where(eq(eventTicketTypes.id, id));
     if (!existing) return NextResponse.json({ error: 'Ticket type not found' }, { status: 404 });
 
-    const auth = await requireHost(privyId, existing.eventId);
+    const auth = await requireManager(privyId, existing.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     if (existing.quantitySold > 0) {

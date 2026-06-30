@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { isRealPhoto } from '../../lib/avatar';
 import { uploadToBlob } from '../../lib/uploadImage';
+import { AdminAuthProvider, useAdminAuth } from './_components/AdminAuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,11 +147,12 @@ function downloadCsv(filename: string, header: string[], rows: (string | number 
 // One-click publish/unpublish. Renders like the Badge but toggles on click via
 // the generic /api/admin/publish endpoint, then asks the parent tab to reload.
 function PublishToggle({ type, id, published, onChange }: { type: string; id: string; published: boolean; onChange: () => void }) {
+  const { adminFetch } = useAdminAuth();
   const [busy, setBusy] = useState(false);
   const toggle = async () => {
     setBusy(true);
     try {
-      const res = await fetch('/api/admin/publish', {
+      const res = await adminFetch('/api/admin/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, id, published: !published }),
@@ -246,6 +247,7 @@ interface Creator {
 }
 
 function WorldsTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<WorldWithMembers[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: WorldWithMembers | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -261,16 +263,16 @@ function WorldsTab() {
   const [allUsers, setAllUsers] = useState<{ id: string; name: string | null; username: string | null }[]>([]);
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/worlds');
+    const res = await adminFetch('/api/admin/worlds');
     const data = await res.json();
     setItems(data.worlds || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => {
     load();
-    fetch('/api/admin/creators').then(r => r.json()).then(d => setCreators(d.creators || []));
-    fetch('/api/admin/tools').then(r => r.json()).then(d => setAllTools(d.tools || []));
-    fetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
+    adminFetch('/api/admin/creators').then(r => r.json()).then(d => setCreators(d.creators || []));
+    adminFetch('/api/admin/tools').then(r => r.json()).then(d => setAllTools(d.tools || []));
+    adminFetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
   }, [load]);
 
   const openCreate = () => {
@@ -341,7 +343,7 @@ function WorldsTab() {
       collaboratorIds: form.collaboratorIds,
     };
     const method = modal.item ? 'PUT' : 'POST';
-    const res = await fetch('/api/admin/worlds', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await adminFetch('/api/admin/worlds', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || 'Save failed');
@@ -354,7 +356,7 @@ function WorldsTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/worlds', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/worlds', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -535,6 +537,7 @@ function WorldsTab() {
 // ─── Events Tab ───────────────────────────────────────────────────────────────
 
 function EventsTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<Event[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: Event | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -543,10 +546,10 @@ function EventsTab() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/events');
+    const res = await adminFetch('/api/admin/events');
     const data = await res.json();
     setItems(data.events || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -567,7 +570,7 @@ function EventsTab() {
     setError('');
     const payload = { ...form, slug: form.slug || generateSlug(form.eventName) };
     const method = modal.item ? 'PUT' : 'POST';
-    const res = await fetch('/api/admin/events', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await adminFetch('/api/admin/events', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     setSaving(false);
@@ -576,7 +579,7 @@ function EventsTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/events', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/events', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -644,6 +647,7 @@ function EventsTab() {
 // ─── Grants Tab ───────────────────────────────────────────────────────────────
 
 function GrantsTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<Grant[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: Grant | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -656,10 +660,10 @@ function GrantsTab() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/grants');
+    const res = await adminFetch('/api/admin/grants');
     const data = await res.json();
     setItems(data.grants || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -687,7 +691,7 @@ function GrantsTab() {
     setError('');
     const payload = { ...form, slug: form.slug || generateSlug(form.grantName) };
     const method = modal.item ? 'PUT' : 'POST';
-    const res = await fetch('/api/admin/grants', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await adminFetch('/api/admin/grants', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     setSaving(false);
@@ -696,7 +700,7 @@ function GrantsTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/grants', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/grants', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -782,6 +786,7 @@ function GrantsTab() {
 // ─── Tools Tab ────────────────────────────────────────────────────────────────
 
 function ToolsTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<Tool[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: Tool | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -790,10 +795,10 @@ function ToolsTab() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/tools');
+    const res = await adminFetch('/api/admin/tools');
     const data = await res.json();
     setItems(data.tools || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -814,7 +819,7 @@ function ToolsTab() {
     setError('');
     const payload = { ...form, slug: form.slug || generateSlug(form.name) };
     const method = modal.item ? 'PUT' : 'POST';
-    const res = await fetch('/api/admin/tools', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await adminFetch('/api/admin/tools', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     setSaving(false);
@@ -823,7 +828,7 @@ function ToolsTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/tools', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/tools', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -909,6 +914,7 @@ interface CreatorRow {
 }
 
 function CreatorsTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<CreatorRow[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: CreatorRow | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -918,14 +924,14 @@ function CreatorsTab() {
   const [allUsers, setAllUsers] = useState<{ id: string; name: string | null; username: string | null }[]>([]);
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/creators');
+    const res = await adminFetch('/api/admin/creators');
     const data = await res.json();
     setItems(data.creators || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => {
     load();
-    fetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
+    adminFetch('/api/admin/users').then(r => r.json()).then(d => setAllUsers((d.users || []).map((u: UserRow) => ({ id: u.id, name: u.name, username: u.username }))));
   }, [load]);
 
   const openCreate = () => {
@@ -957,7 +963,7 @@ function CreatorsTab() {
     setError('');
     const payload = { ...form, slug: form.slug || generateSlug(form.name) };
     const method = modal.item ? 'PUT' : 'POST';
-    const res = await fetch('/api/admin/creators', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await adminFetch('/api/admin/creators', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     setSaving(false);
@@ -966,7 +972,7 @@ function CreatorsTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/creators', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/creators', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -1069,6 +1075,7 @@ const ROLE_TAGS = [
 ];
 
 function UsersTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<UserRow[]>([]);
   const [modal, setModal] = useState<{ open: boolean; item: UserRow | null }>({ open: false, item: null });
   const [saving, setSaving] = useState(false);
@@ -1083,10 +1090,10 @@ function UsersTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/users');
+    const res = await adminFetch('/api/admin/users');
     const data = await res.json();
     setItems(data.users || []);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1108,7 +1115,7 @@ function UsersTab() {
   const save = async () => {
     setSaving(true);
     setError('');
-    const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    const res = await adminFetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     setSaving(false);
@@ -1117,7 +1124,7 @@ function UsersTab() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (!res.ok) { setError('Delete failed'); return; }
     setDeleteConfirm(null);
     load();
@@ -1126,7 +1133,7 @@ function UsersTab() {
   // Publish / unpublish a profile (hides it from the Discover grid).
   const togglePublished = async (item: UserRow) => {
     setItems((prev) => prev.map((u) => (u.id === item.id ? { ...u, published: !item.published } : u))); // optimistic
-    const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, published: !item.published }) });
+    const res = await adminFetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, published: !item.published }) });
     if (!res.ok) { setError('Failed to update visibility'); load(); }
   };
 
@@ -1326,15 +1333,16 @@ interface PublishItem {
 }
 
 function SimplePublishTab({ type, noun }: { type: string; noun: string }) {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<PublishItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/admin/publish?type=${type}`);
+    const res = await adminFetch(`/api/admin/publish?type=${type}`);
     const data = await res.json();
     setItems(data.items || []);
     setLoading(false);
-  }, [type]);
+  }, [type, adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1386,16 +1394,17 @@ interface ShortLinkRow {
 }
 
 function LinksTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<ShortLinkRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch('/api/admin/links')
+    adminFetch('/api/admin/links')
       .then((r) => r.json())
       .then((d) => setItems(d.links || []))
       .finally(() => setLoading(false));
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1476,14 +1485,17 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'newsletter', label: 'NEWSLETTER' },
 ];
 
-export default function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>('worlds');
-  const router = useRouter();
+export default function AdminPage() {
+  return (
+    <AdminAuthProvider>
+      <AdminDashboard />
+    </AdminAuthProvider>
+  );
+}
 
-  const logout = async () => {
-    await fetch('/api/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
-    router.push('/admin/login');
-  };
+function AdminDashboard() {
+  const [tab, setTab] = useState<Tab>('worlds');
+  const { logout } = useAdminAuth();
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f0e8' }}>
@@ -1553,6 +1565,7 @@ interface NewsletterRow {
 }
 
 function NewsletterTab() {
+  const { adminFetch } = useAdminAuth();
   const [items, setItems] = useState<NewsletterRow[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1560,16 +1573,16 @@ function NewsletterTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/newsletter');
+    const res = await adminFetch('/api/admin/newsletter');
     const data = await res.json();
     setItems(data.signups || []);
     setLoading(false);
-  }, []);
+  }, [adminFetch]);
 
   useEffect(() => { load(); }, [load]);
 
   const remove = async (id: string) => {
-    const res = await fetch('/api/admin/newsletter', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    const res = await adminFetch('/api/admin/newsletter', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (res.ok) { setDeleteConfirm(null); load(); }
   };
 
@@ -1669,6 +1682,7 @@ interface EventLite { id: string; eventName: string; slug: string }
 interface SendResult { email: string | null; name: string | null; sent: boolean; reason?: string }
 
 function EmailsTab() {
+  const { adminFetch } = useAdminAuth();
   const [templates, setTemplates] = useState<TemplateMeta[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [events, setEvents] = useState<EventLite[]>([]);
@@ -1682,10 +1696,10 @@ function EmailsTab() {
   const [results, setResults] = useState<{ sentCount: number; total: number; results: SendResult[] } | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/emails').then(r => r.json()).then(d => setTemplates(d.templates || [])).catch(() => {});
-    fetch('/api/admin/users').then(r => r.json()).then(d => setUsers(d.users || [])).catch(() => {});
-    fetch('/api/admin/events').then(r => r.json()).then(d => setEvents((d.events || []).map((e: EventLite) => ({ id: e.id, eventName: e.eventName, slug: e.slug })))).catch(() => {});
-  }, []);
+    adminFetch('/api/admin/emails').then(r => r.json()).then(d => setTemplates(d.templates || [])).catch(() => {});
+    adminFetch('/api/admin/users').then(r => r.json()).then(d => setUsers(d.users || [])).catch(() => {});
+    adminFetch('/api/admin/events').then(r => r.json()).then(d => setEvents((d.events || []).map((e: EventLite) => ({ id: e.id, eventName: e.eventName, slug: e.slug })))).catch(() => {});
+  }, [adminFetch]);
 
   const tpl = templates.find(t => t.id === templateId);
   const needsEvent = tpl?.scope === 'event';
@@ -1709,7 +1723,7 @@ function EmailsTab() {
     setBusy(true);
     try {
       const sampleUserId = [...selected][0];
-      const res = await fetch('/api/admin/emails', {
+      const res = await adminFetch('/api/admin/emails', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'preview', templateId, eventId: needsEvent ? eventId : undefined, sampleUserId }),
       });
@@ -1728,7 +1742,7 @@ function EmailsTab() {
     if (!window.confirm(`Send "${tpl?.label}" to ${selected.size} recipient(s)?`)) return;
     setBusy(true);
     try {
-      const res = await fetch('/api/admin/emails', {
+      const res = await adminFetch('/api/admin/emails', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'send', templateId, eventId: needsEvent ? eventId : undefined, userIds: [...selected] }),
       });
@@ -1909,6 +1923,7 @@ A quick update about **{{eventName}}**.
 See you there!`;
 
 function BroadcastTab() {
+  const { adminFetch } = useAdminAuth();
   const [events, setEvents] = useState<EventLite[]>([]);
   const [eventId, setEventId] = useState('');
   const [subject, setSubject] = useState('');
@@ -1920,17 +1935,17 @@ function BroadcastTab() {
   const [results, setResults] = useState<{ sent: number; failed: number; total: number; errors: string[] } | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/events').then(r => r.json())
+    adminFetch('/api/admin/events').then(r => r.json())
       .then(d => setEvents((d.events || []).map((e: EventLite) => ({ id: e.id, eventName: e.eventName, slug: e.slug }))))
       .catch(() => {});
-  }, []);
+  }, [adminFetch]);
 
   // Recipient count refreshes whenever the chosen event changes.
   useEffect(() => {
     setRecipientCount(null);
     if (!eventId) return;
     let alive = true;
-    fetch(`/api/admin/broadcast?eventId=${encodeURIComponent(eventId)}`).then(r => r.json())
+    adminFetch(`/api/admin/broadcast?eventId=${encodeURIComponent(eventId)}`).then(r => r.json())
       .then(d => { if (alive) setRecipientCount(typeof d.recipientCount === 'number' ? d.recipientCount : null); })
       .catch(() => {});
     return () => { alive = false; };
@@ -1942,7 +1957,7 @@ function BroadcastTab() {
     if (!markdown.trim()) { setError('Write a message'); return; }
     setBusy(true);
     try {
-      const res = await fetch('/api/admin/broadcast', {
+      const res = await adminFetch('/api/admin/broadcast', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'preview', eventId, subject, markdown }),
       });
@@ -1964,7 +1979,7 @@ function BroadcastTab() {
     if (!window.confirm(`Send this email to ${recipientCount} confirmed RSVP${recipientCount === 1 ? '' : 's'} of "${ev?.eventName}"?\n\nThis sends real emails and can't be undone.`)) return;
     setBusy(true);
     try {
-      const res = await fetch('/api/admin/broadcast', {
+      const res = await adminFetch('/api/admin/broadcast', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'send', eventId, subject, markdown }),
       });

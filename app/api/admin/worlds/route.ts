@@ -6,7 +6,7 @@ import { isAdminRequest } from '@/lib/adminAuth';
 
 // GET – all worlds (including unpublished) with members
 export async function GET(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const results = await db
       .select({
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
 
 // POST – create world
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     const result = await db.insert(worlds).values({
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
 
 // PUT – update world
 export async function PUT(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -150,7 +150,7 @@ export async function PUT(request: Request) {
 
 // DELETE – delete world
 export async function DELETE(request: Request) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const data = await request.json();
     if (!data.id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });

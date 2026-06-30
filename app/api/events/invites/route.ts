@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { and, desc, eq } from 'drizzle-orm';
-import { db, events, eventHosts, eventInvites, users } from '@/lib/db';
+import { desc, eq } from 'drizzle-orm';
+import { db, events, eventInvites } from '@/lib/db';
 import { sendInvite } from '@/lib/notify/invites';
 import { formatEventSchedule } from '@/lib/notify/email';
+import { requireManager } from '@/lib/events/auth';
 
-// Classify a raw recipient string into an email or a phone (best-effort E.164).
 function classify(raw: string): { email?: string; phone?: string } | null {
   const s = raw.trim();
   if (!s) return null;
@@ -19,16 +19,6 @@ function classify(raw: string): { email?: string; phone?: string } | null {
   return { phone: cleaned.startsWith('+') ? cleaned : `+${digits}` };
 }
 
-async function requireHost(privyId: string | undefined, eventId: string) {
-  if (!privyId) return { error: 'Not authenticated', status: 401 as const };
-  const [user] = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.privyId, privyId));
-  if (!user) return { error: 'User not found', status: 404 as const };
-  const [host] = await db.select({ id: eventHosts.id }).from(eventHosts)
-    .where(and(eq(eventHosts.eventId, eventId), eq(eventHosts.userId, user.id)));
-  if (!host) return { error: 'Not authorized', status: 403 as const };
-  return { user };
-}
-
 function inviteUrl(origin: string, slug: string, token: string) {
   return `${origin}/events/${slug}?invite=${token}`;
 }
@@ -40,7 +30,7 @@ export async function GET(request: NextRequest) {
     const eventId = sp.get('eventId');
     const privyId = sp.get('privyId') ?? undefined;
     if (!eventId) return NextResponse.json({ error: 'Missing eventId' }, { status: 400 });
-    const auth = await requireHost(privyId, eventId);
+    const auth = await requireManager(privyId, eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const [ev] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, eventId));
@@ -60,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     if (!data.eventId) return NextResponse.json({ error: 'Missing eventId' }, { status: 400 });
-    const auth = await requireHost(data.privyId, data.eventId);
+    const auth = await requireManager(data.privyId, data.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const raw: string[] = Array.isArray(data.recipients)
@@ -135,7 +125,7 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     const [invite] = await db.select({ eventId: eventInvites.eventId }).from(eventInvites).where(eq(eventInvites.id, id));
     if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
-    const auth = await requireHost(privyId, invite.eventId);
+    const auth = await requireManager(privyId, invite.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
     await db.delete(eventInvites).where(eq(eventInvites.id, id));
     return NextResponse.json({ deleted: true });

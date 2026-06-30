@@ -6,7 +6,7 @@ import { isAdminRequest } from '@/lib/adminAuth';
 
 // GET /api/admin/links — all short links with click counts, most-clicked first.
 export async function GET(request: NextRequest) {
-  if (!isAdminRequest(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await isAdminRequest(request))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const rows = await db
       .select({
