@@ -1,25 +1,68 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import PageShell from '../components/PageShell';
 import GlitchType from '../components/ui/GlitchType';
 
-const teamMembers = [
-  { name: 'Latashá', role: 'CEO' },
-  { name: 'Annelisa', role: 'CPO' },
-  { name: 'Jah.', role: 'CCO' },
-  { name: 'Jada', role: 'CMO' },
-  { name: 'Dae', role: 'Community Lead' },
-  { name: 'Kesaun', role: 'Business Manager' },
-  { name: 'CY Lee', role: 'Executive Producer' },
-];
+interface TeamMember {
+  username: string;
+  name: string | null;
+  title: string;
+  avatarUrl: string | null;
+  tags: string[];
+}
+
+const TEAM_META: Record<string, { title: string }> = {
+  callmelatasha: { title: 'CEO' },
+  annelisa: { title: 'Chief Technology Officer' },
+  jada: { title: 'Chief Marketing Officer' },
+  artbyjah: { title: 'Creative Director' },
+  d: { title: 'Community Lead' },
+  cxy: { title: 'Executive Producer' },
+};
+
+const TEAM_ORDER = ['callmelatasha', 'annelisa', 'jada', 'artbyjah', 'd', 'cxy'];
 
 export default function AboutPage() {
   const [screen, setScreen] = useState(0);
   const [sub, setSub] = useState(0);
+  const [team, setTeam] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     setTimeout(() => setScreen(1), 500);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/team');
+        if (!res.ok) return;
+        const data = await res.json();
+        const byUsername = new Map<string, { name: string | null; avatarUrl: string | null; roleTags: string | null }>();
+        for (const row of data.team) {
+          byUsername.set(row.username, row);
+        }
+        const ordered: TeamMember[] = TEAM_ORDER
+          .map((username) => {
+            const row = byUsername.get(username);
+            const meta = TEAM_META[username];
+            if (!meta) return null;
+            const tags = row?.roleTags
+              ? row.roleTags.split(',').map((t: string) => t.trim().replace(/-/g, ' ')).filter(Boolean).slice(0, 3)
+              : [];
+            return {
+              username,
+              name: row?.name ?? username,
+              title: meta.title,
+              avatarUrl: row?.avatarUrl ?? null,
+              tags,
+            };
+          })
+          .filter(Boolean) as TeamMember[];
+        setTeam(ordered);
+      } catch { /* silent */ }
+    })();
   }, []);
 
   const s1Done = useCallback(() => {
@@ -55,7 +98,7 @@ export default function AboutPage() {
       <section
         className={`min-h-screen ${screenBg} transition-colors duration-500 flex items-center justify-center px-6 md:px-10 py-20`}
       >
-        <div className="max-w-3xl w-full relative">
+        <div className="max-w-4xl w-full relative">
           <span
             className={`font-mono text-[11px] uppercase tracking-[3px] ${textSub} block mb-6`}
           >
@@ -134,25 +177,56 @@ export default function AboutPage() {
                 />
               </div>
               {sub >= 1 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-8">
-                  {teamMembers.map((m, i) => (
-                    <div
-                      key={m.name}
-                      className="opacity-0 animate-[fadeUp_0.5s_ease_forwards]"
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mt-8">
+                  {team.map((m, i) => (
+                    <Link
+                      key={m.username}
+                      href={`/profile/${m.username}`}
+                      className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] group"
                       style={{ animationDelay: `${i * 150}ms` }}
                     >
-                      <div className="aspect-square bg-obsidian/10 rounded-lg mb-3 flex items-center justify-center">
-                        <span className="font-basement text-3xl text-obsidian/20">
-                          {m.name[0]}
-                        </span>
+                      <div className="border border-obsidian/10 rounded-xl overflow-hidden bg-white/60 backdrop-blur-sm transition-shadow hover:shadow-lg">
+                        <div className="aspect-square bg-obsidian/5 relative overflow-hidden">
+                          {m.avatarUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={m.avatarUrl}
+                              alt={m.name ?? m.username}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="font-basement text-5xl text-obsidian/15">
+                                {(m.name ?? m.username)[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-mono font-bold text-[14px] uppercase text-obsidian leading-tight">
+                            {m.name}
+                          </h3>
+                          <p className="font-mono text-[11px] text-obsidian/40 mt-0.5">
+                            @{m.username}
+                          </p>
+                          <p className="font-mono text-[11px] uppercase tracking-wider text-obsidian/60 mt-2">
+                            {m.title}
+                          </p>
+                          {m.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {m.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-obsidian/5 text-obsidian/50"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="font-mono font-bold text-sm uppercase">
-                        {m.name}
-                      </h3>
-                      <p className="font-mono text-[12px] uppercase tracking-wider opacity-40">
-                        {m.role}
-                      </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
