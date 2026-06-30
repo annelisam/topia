@@ -321,9 +321,24 @@ export async function POST(request: NextRequest) {
 
     const city = data.city ? titleCase(data.city) : null;
 
+    // Deduplicate slug: if the base slug is taken, try appending -2, -3, … up to -9.
+    let slug = data.slug;
+    const existing = await db.select({ id: events.id }).from(events).where(eq(events.slug, slug));
+    if (existing.length > 0) {
+      let found = false;
+      for (let i = 2; i <= 9; i++) {
+        const candidate = `${data.slug}-${i}`;
+        const taken = await db.select({ id: events.id }).from(events).where(eq(events.slug, candidate));
+        if (taken.length === 0) { slug = candidate; found = true; break; }
+      }
+      if (!found) {
+        slug = `${data.slug}-${Date.now().toString(36)}`;
+      }
+    }
+
     const result = await db.insert(events).values({
       eventName: data.eventName,
-      slug: data.slug,
+      slug,
       description: data.description || null,
       date: data.date || null,
       dateIso: data.dateIso || null,
@@ -359,7 +374,7 @@ export async function POST(request: NextRequest) {
 
     // Auto-generate the shareable short link (best-effort — never blocks create).
     try {
-      await ensureShortLink({ path: `/events/${data.slug}`, kind: 'event', createdBy: user.id });
+      await ensureShortLink({ path: `/events/${slug}`, kind: 'event', createdBy: user.id });
     } catch { /* ignore */ }
 
     return NextResponse.json({ event: result[0] }, { status: 201 });
