@@ -162,6 +162,7 @@ export default function PublicProfilePage() {
     } catch { return null; }
   }
 
+  const ensureHttp = (u: string) => /^https?:\/\//i.test(u) ? u : `https://${u}`;
   const socialLinks = profile ? [
     { type: 'website',    url: profile.socialWebsite,    label: 'WEB',  verified: false },
     { type: 'twitter',    url: profile.socialTwitter,    label: 'X',    verified: verifiedSet.has('twitter') },
@@ -173,6 +174,7 @@ export default function PublicProfilePage() {
     { type: 'substack',   url: profile.socialSubstack,   label: 'SUB',  verified: false },
   ]
     .filter((l) => l.url)
+    .map((l) => ({ ...l, url: ensureHttp(l.url!) }))
     .map((l) => ({
       ...l,
       // Preserve the case as the provider stored it (e.g. @AnneliSam stays as-is).
