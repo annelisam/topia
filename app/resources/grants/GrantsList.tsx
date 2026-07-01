@@ -180,9 +180,18 @@ export default function GrantsList() {
         <main className="flex-1">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-6 sm:mb-8">
             <h1 className="font-mono text-[13px] uppercase" style={{ color: 'var(--foreground)' }}>GRANTS</h1>
-            <p className="font-mono text-[13px] uppercase" style={{ color: 'var(--foreground)' }}>
-              SHOWING {grants.length} GRANT{grants.length !== 1 ? 'S' : ''}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="font-mono text-[13px] uppercase" style={{ color: 'var(--foreground)' }}>
+                SHOWING {grants.length} GRANT{grants.length !== 1 ? 'S' : ''}
+              </p>
+              <Link
+                href="/dashboard/submit-grant"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] uppercase rounded-full hover:opacity-80 transition"
+                style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+              >
+                SUBMIT GRANT
+              </Link>
+            </div>
           </div>
 
           {loading && initialLoad ? (
