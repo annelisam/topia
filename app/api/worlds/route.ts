@@ -41,6 +41,7 @@ export async function GET(request: Request) {
         collaborators: worlds.collaborators,
         socialLinks: worlds.socialLinks,
         dateAdded: worlds.dateAdded,
+        createdAt: worlds.createdAt,
         published: worlds.published,
         creatorId: worlds.creatorId,
         creatorName: creators.name,
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
 
     // Fetch world members for all returned worlds
     const worldIds = results.map(w => w.id);
-    let members: { worldId: string; userId: string; role: string; userName: string | null; userUsername: string | null; userAvatarUrl: string | null }[] = [];
+    let members: { worldId: string; userId: string; role: string; userName: string | null; userUsername: string | null; userAvatarUrl: string | null; createdAt: Date }[] = [];
     if (worldIds.length > 0) {
       // Only the returned worlds' members — not the whole table (indexed on world_id).
       members = await db
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
           userName: users.name,
           userUsername: users.username,
           userAvatarUrl: users.avatarUrl,
+          createdAt: worldMembers.createdAt,
         })
         .from(worldMembers)
         .innerJoin(users, eq(worldMembers.userId, users.id))

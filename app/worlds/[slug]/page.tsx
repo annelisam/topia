@@ -7,13 +7,30 @@ import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import ShareButton from '../../components/ShareButton';
 import { getWorldConfig } from '../../components/world/worldConfig';
-import OverviewLayer, { type SocialLinks } from '../../components/world/OverviewLayer';
+import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../components/world/OverviewLayer';
 import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
-import TeamLayer, { type WorldMember } from '../../components/world/TeamLayer';
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
+import ToolsLayer from '../../components/world/ToolsLayer';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
 /* ── Types ────────────────────────────────────────────────────── */
+
+interface WorldMember {
+  userId: string;
+  role: string;
+  userName: string | null;
+  userUsername: string | null;
+  userAvatarUrl: string | null;
+  createdAt?: string;
+}
+
+interface Announcement {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorName: string | null;
+  authorUsername: string | null;
+}
 
 interface WorldDetail {
   id: string;
@@ -29,6 +46,7 @@ interface WorldDetail {
   collaborators: string | null;
   socialLinks: SocialLinks | null;
   dateAdded: string | null;
+  createdAt: string;
   creatorName: string | null;
   creatorSlug: string | null;
   creatorWebsiteUrl: string | null;
@@ -39,8 +57,8 @@ interface WorldDetail {
 const SECTIONS = [
   { id: 'overview', label: 'OVERVIEW' },
   { id: 'projects', label: 'PROJECTS' },
-  { id: 'team',     label: 'TEAM' },
   { id: 'events',   label: 'EVENTS' },
+  { id: 'tools',    label: 'TOOLS' },
 ] as const;
 type SectionId = typeof SECTIONS[number]['id'];
 
@@ -51,6 +69,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [world, setWorld] = useState<WorldDetail | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const { user, authenticated } = usePrivy();
@@ -82,6 +101,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .then((r) => r.json())
       .then((data) => setWorldEvents(data.events || []))
       .catch(console.error);
+    fetch(`/api/worlds/announcements?worldId=${world.id}`)
+      .then((r) => r.json())
+      .then((data) => setAnnouncements(data.announcements || []))
+      .catch(console.error);
   }, [world?.id]);
 
   useRecordWorldView(world ? { slug: world.slug, title: world.title, imageUrl: world.imageUrl } : null);
@@ -93,15 +116,62 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
   const toolsList = world?.tools ? world.tools.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
+  const activity: ActivityItem[] = useMemo(() => {
+    if (!world) return [];
+    const items: ActivityItem[] = [
+      { id: `published-${world.id}`, type: 'published', primaryText: `${world.title} went live`, timestamp: new Date(world.createdAt) },
+    ];
+
+    for (const m of world.members) {
+      if (!m.createdAt) continue;
+      items.push({
+        id: `member-${m.userId}`,
+        type: 'member',
+        primaryText: `${m.userName || m.userUsername || 'Someone'} joined as ${m.role.replace('_', ' ')}`,
+        timestamp: new Date(m.createdAt),
+      });
+    }
+
+    for (const p of projects) {
+      if (!p.createdAt) continue;
+      items.push({ id: `project-${p.id}`, type: 'project', primaryText: `Project added — ${p.name}`, timestamp: new Date(p.createdAt) });
+    }
+
+    for (const ev of worldEvents) {
+      const ts = ev.dateIso || ev.createdAt;
+      if (!ts) continue;
+      const when = new Date(ts);
+      if (Number.isNaN(when.getTime())) continue;
+      items.push({ id: `event-${ev.id}`, type: 'event', primaryText: `Event — ${ev.eventName}${ev.date ? ` scheduled for ${ev.date}` : ''}`, timestamp: when });
+    }
+
+    for (const a of announcements) {
+      const who = a.authorName || a.authorUsername || 'Someone';
+      items.push({ id: `announcement-${a.id}`, type: 'announcement', primaryText: `${who}: ${a.body}`, timestamp: new Date(a.createdAt) });
+    }
+
+    return items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [world, projects, worldEvents, announcements]);
+
+  async function handlePostUpdate(body: string) {
+    if (!world || !user?.id) return;
+    const res = await fetch('/api/worlds/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ worldId: world.id, privyId: user.id, body }),
+    });
+    const data = await res.json();
+    if (data.announcement) setAnnouncements((prev) => [data.announcement, ...prev]);
+  }
+
   const established = world?.dateAdded
     ? new Date(world.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
     : null;
 
-  // Overview + Projects (with the globe) always show; Team/Events hide when empty.
+  // Overview + Projects + Tools always show; Events hides when empty.
   const visibleSections = SECTIONS.filter((s) => {
-    if (s.id === 'team') return worldBuilders.length + collaboratorMembers.length > 0;
     if (s.id === 'events') return worldEvents.length > 0;
-    return true; // overview + projects always
+    return true; // overview + projects + tools always
   });
 
   // Barcode + machine-readable zone, keyed off the world.
@@ -118,9 +188,20 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   function renderSection() {
     switch (activeSection) {
       case 'projects': return <ProjectsLayer config={config} projects={projects} slug={slug} />;
-      case 'team':     return <TeamLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} />;
       case 'events':   return <EventsLayer config={config} events={worldEvents} />;
-      default:         return <OverviewLayer config={config} description={world?.description ?? null} shortDescription={world?.shortDescription ?? null} tools={toolsList} socialLinks={world?.socialLinks ?? null} />;
+      case 'tools':    return <ToolsLayer config={config} tools={toolsList} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
+      default:
+        return (
+          <OverviewLayer
+            config={config}
+            description={world?.description ?? null}
+            shortDescription={world?.shortDescription ?? null}
+            socialLinks={world?.socialLinks ?? null}
+            activity={activity}
+            canPostUpdate={!!isWorldBuilder}
+            onPostUpdate={handlePostUpdate}
+          />
+        );
     }
   }
 
