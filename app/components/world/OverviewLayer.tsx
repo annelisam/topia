@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { markdownComponents } from '../ProjectContent';
 import { SocialIcon } from '../SocialIcons';
 import { WorldConfig } from './worldConfig';
+import { type WorldEvent } from './EventsLayer';
 
 export interface SocialLinks {
   website?: string;
@@ -17,18 +19,19 @@ export interface SocialLinks {
   substack?: string;
 }
 
-export type ActivityType = 'announcement' | 'project' | 'member' | 'event' | 'published';
+export type ActivityType = 'announcement' | 'project' | 'member' | 'published';
 
 export interface ActivityItem {
   id: string;
   type: ActivityType;
   primaryText: string;
   timestamp: Date;
+  /** Member rows only — renders a small avatar stack instead of the dot. */
+  avatarUrls?: (string | null)[];
 }
 
 const ACTIVITY_DOT: Record<ActivityType, string> = {
   announcement: 'bg-lime',
-  event: 'bg-blue',
   project: 'bg-green',
   member: 'bg-pink',
   published: 'bg-ink/20',
@@ -36,7 +39,6 @@ const ACTIVITY_DOT: Record<ActivityType, string> = {
 
 const ACTIVITY_LABEL: Record<ActivityType, string> = {
   announcement: 'Announcement',
-  event: 'Event',
   project: 'Project',
   member: 'Member',
   published: 'Milestone',
@@ -52,10 +54,29 @@ function timeAgo(date: Date): string {
   return 'just now';
 }
 
+function AvatarStack({ urls }: { urls: (string | null)[] }) {
+  return (
+    <span className="flex items-center shrink-0 mt-0.5">
+      {urls.slice(0, 3).map((url, i) => (
+        <span key={i} className="w-4 h-4 rounded-full border border-[var(--page-bg)] bg-ink/10 overflow-hidden -ml-1 first:ml-0">
+          {url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" className="w-full h-full object-cover" />
+          ) : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function ActivityRow({ item }: { item: ActivityItem }) {
   return (
     <div className="flex items-start gap-3 py-2.5 border-b border-ink/[0.06] last:border-b-0">
-      <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${ACTIVITY_DOT[item.type]}`} />
+      {item.type === 'member' && item.avatarUrls?.length ? (
+        <AvatarStack urls={item.avatarUrls} />
+      ) : (
+        <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${ACTIVITY_DOT[item.type]}`} />
+      )}
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[12px] text-ink/80 leading-snug">{item.primaryText}</p>
         <p className="font-mono text-[10px] uppercase tracking-wider text-ink/30 mt-0.5">
@@ -71,6 +92,8 @@ export default function OverviewLayer({
   description,
   shortDescription,
   socialLinks,
+  events,
+  onViewEvents,
   activity,
   canPostUpdate,
   onPostUpdate,
@@ -79,6 +102,8 @@ export default function OverviewLayer({
   description: string | null;
   shortDescription: string | null;
   socialLinks: SocialLinks | null;
+  events: WorldEvent[];
+  onViewEvents: () => void;
   activity: ActivityItem[];
   canPostUpdate: boolean;
   onPostUpdate: (body: string) => Promise<void>;
@@ -89,6 +114,7 @@ export default function OverviewLayer({
 
   const hasSocial = socialLinks && Object.values(socialLinks).some((v) => v);
   const body = description || shortDescription;
+  const latestEvents = events.slice(0, 3);
 
   async function handlePost() {
     if (!draft.trim() || posting) return;
@@ -109,9 +135,9 @@ export default function OverviewLayer({
         <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>topia://about</span>
       </div>
 
-      <div className="p-5 md:p-6 flex flex-col gap-6">
+      <div className="p-5 md:p-6 flex flex-col gap-5">
         {(body || hasSocial) && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pb-5 border-b border-ink/[0.08]">
             {body ? (
               <div className="prose prose-sm max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{body}</ReactMarkdown>
@@ -133,9 +159,32 @@ export default function OverviewLayer({
           </div>
         )}
 
-        <div className="border-t border-ink/[0.08] pt-4">
+        {latestEvents.length > 0 && (
+          <div className="pb-5 border-b border-ink/[0.08]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30">Latest events</span>
+              <button onClick={onViewEvents} className="font-mono text-[10px] uppercase tracking-wider text-ink/40 hover:text-ink/70 transition-colors cursor-pointer bg-transparent border-none">
+                View all →
+              </button>
+            </div>
+            <div>
+              {latestEvents.map((ev) => (
+                <Link
+                  key={ev.id}
+                  href={`/events/${ev.slug}`}
+                  className="flex items-center justify-between gap-3 py-2 border-b border-ink/[0.06] last:border-b-0 no-underline group"
+                >
+                  <span className="font-mono text-[12px] text-ink/80 group-hover:text-ink transition-colors truncate">{ev.eventName}</span>
+                  {ev.date && <span className="font-mono text-[10px] uppercase tracking-wider text-ink/30 shrink-0">{ev.date}</span>}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30">Activity</span>
+            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30">Recent activity</span>
             {canPostUpdate && !composing && (
               <button onClick={() => setComposing(true)} className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/70 transition-colors border border-ink/[0.12] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent">
                 + Post update

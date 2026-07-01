@@ -125,20 +125,44 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
   const toolsList = world?.tools ? world.tools.split(',').map((t) => t.trim()).filter(Boolean) : [];
 
+  // Events get their own "Latest events" section in Overview, so they're
+  // deliberately left out of this log — otherwise every event shows up twice.
   const activity: ActivityItem[] = useMemo(() => {
     if (!world) return [];
     const items: ActivityItem[] = [
       { id: `published-${world.id}`, type: 'published', primaryText: `${world.title} went live`, timestamp: new Date(world.createdAt) },
     ];
 
+    // Batch-seeded crews (e.g. at world creation) join within the same day —
+    // group same-day joins into one line instead of one row per person.
+    const byDay = new Map<string, { userName: string | null; userUsername: string | null; userAvatarUrl: string | null; role: string; timestamp: Date }[]>();
     for (const m of world.members) {
       if (!m.createdAt) continue;
-      items.push({
-        id: `member-${m.userId}`,
-        type: 'member',
-        primaryText: `${m.userName || m.userUsername || 'Someone'} joined as ${m.role.replace('_', ' ')}`,
-        timestamp: new Date(m.createdAt),
-      });
+      const timestamp = new Date(m.createdAt);
+      const key = timestamp.toDateString();
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key)!.push({ userName: m.userName, userUsername: m.userUsername, userAvatarUrl: m.userAvatarUrl, role: m.role, timestamp });
+    }
+    for (const group of byDay.values()) {
+      const latest = group.reduce((a, b) => (b.timestamp > a.timestamp ? b : a));
+      if (group.length === 1) {
+        const m = group[0];
+        items.push({
+          id: `member-${m.userUsername || m.userName}-${m.timestamp.getTime()}`,
+          type: 'member',
+          primaryText: `${m.userName || m.userUsername || 'Someone'} joined as ${m.role.replace('_', ' ')}`,
+          timestamp: m.timestamp,
+          avatarUrls: [m.userAvatarUrl],
+        });
+      } else {
+        items.push({
+          id: `member-group-${latest.timestamp.getTime()}`,
+          type: 'member',
+          primaryText: `${group.length} people joined the world`,
+          timestamp: latest.timestamp,
+          avatarUrls: group.slice(0, 5).map((g) => g.userAvatarUrl),
+        });
+      }
     }
 
     for (const p of projects) {
@@ -146,21 +170,13 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       items.push({ id: `project-${p.id}`, type: 'project', primaryText: `Project added — ${p.name}`, timestamp: new Date(p.createdAt) });
     }
 
-    for (const ev of worldEvents) {
-      const ts = ev.dateIso || ev.createdAt;
-      if (!ts) continue;
-      const when = new Date(ts);
-      if (Number.isNaN(when.getTime())) continue;
-      items.push({ id: `event-${ev.id}`, type: 'event', primaryText: `Event — ${ev.eventName}${ev.date ? ` scheduled for ${ev.date}` : ''}`, timestamp: when });
-    }
-
     for (const a of announcements) {
       const who = a.authorName || a.authorUsername || 'Someone';
       items.push({ id: `announcement-${a.id}`, type: 'announcement', primaryText: `${who}: ${a.body}`, timestamp: new Date(a.createdAt) });
     }
 
-    return items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [world, projects, worldEvents, announcements]);
+    return items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 8);
+  }, [world, projects, announcements]);
 
   async function handlePostUpdate(body: string) {
     if (!world || !user?.id) return;
@@ -206,6 +222,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             description={world?.description ?? null}
             shortDescription={world?.shortDescription ?? null}
             socialLinks={world?.socialLinks ?? null}
+            events={worldEvents}
+            onViewEvents={() => setActiveSection('events')}
             activity={activity}
             canPostUpdate={!!isWorldBuilder}
             onPostUpdate={handlePostUpdate}
@@ -302,6 +320,19 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                           </div>
                         </div>
                       </div>
+                      <div className="py-1.5 border-b border-ink/[0.04] grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[
+                          { label: 'projects', value: projects.length },
+                          { label: 'members', value: world.members?.length || 0 },
+                          { label: 'events', value: worldEvents.length },
+                          { label: 'collabs', value: collaboratorMembers.length },
+                        ].map((stat, i) => (
+                          <div key={stat.label} className={i % 2 === 1 ? 'text-right' : ''}>
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">{stat.label}</span>
+                            <span className="font-mono text-[15px] text-ink font-bold leading-none mt-0.5 block">{stat.value}</span>
+                          </div>
+                        ))}
+                      </div>
                       <div className="py-1 border-b border-ink/[0.04]">
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">architect{worldBuilders.length > 1 ? 's' : ''}</span>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -357,31 +388,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </div>
                 </div>
 
-                {/* ═══ RIGHT — STATS / TABS / CONTENT / MRZ (stacks below the card on mobile) ═══ */}
+                {/* ═══ RIGHT — TABS / CONTENT / MRZ (stacks below the card on mobile) ═══ */}
                 <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
 
-                {/* ═══ ROW 2 — STATS BAR ═══ */}
-                <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-0">
-                    {[
-                      { label: 'Projects', value: String(projects.length) },
-                      { label: 'Members', value: String(world.members?.length || 0) },
-                      { label: 'Events', value: String(worldEvents.length) },
-                      { label: 'Collabs', value: String(collaboratorMembers.length) },
-                    ].map((stat, i, arr) => (
-                      <div key={stat.label} className={`flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
-                        <span className="font-mono text-[9px] font-semibold uppercase tracking-[2px] text-ink/20">{stat.label}</span>
-                        <span className="font-mono text-[15px] text-ink font-bold leading-none mt-0.5">{stat.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="hidden md:flex items-center gap-3">
-                    <div className="w-32 h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${config.hex}30, ${config.hex}60, ${config.hex}30, transparent)` }} />
-                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/15">topia://stats</span>
-                  </div>
-                </div>
-
-                {/* ═══ ROW 3 — SECTION TAB NAV ═══ */}
+                {/* ═══ ROW 2 — SECTION TAB NAV ═══ */}
                 <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                   {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
@@ -398,12 +408,12 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
-                {/* ═══ ROW 4 — ACTIVE SECTION ═══ */}
+                {/* ═══ ROW 3 — ACTIVE SECTION ═══ */}
                 <div className="bg-[var(--page-bg)] min-h-[280px]">
                   {renderSection()}
                 </div>
 
-                {/* ═══ ROW 5 — MRZ STRIP ═══ */}
+                {/* ═══ ROW 4 — MRZ STRIP ═══ */}
                 <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04]">
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-end gap-0 h-4">
