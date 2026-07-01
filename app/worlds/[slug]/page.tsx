@@ -11,6 +11,7 @@ import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../compon
 import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
 import ToolsLayer from '../../components/world/ToolsLayer';
+import { type ToolMiniData } from '../../resources/tools/ToolMiniCard';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
 /* ── Types ────────────────────────────────────────────────────── */
@@ -70,6 +71,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [allTools, setAllTools] = useState<ToolMiniData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const { user, authenticated } = usePrivy();
@@ -90,6 +92,13 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
     Promise.all([worldPromise, userPromise]).catch(console.error).finally(() => setLoading(false));
   }, [slug, authenticated, user?.id]);
+
+  useEffect(() => {
+    fetch('/api/tools')
+      .then((r) => r.json())
+      .then((data) => setAllTools(data.tools || []))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!world?.id) return;
@@ -189,7 +198,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     switch (activeSection) {
       case 'projects': return <ProjectsLayer config={config} projects={projects} slug={slug} />;
       case 'events':   return <EventsLayer config={config} events={worldEvents} />;
-      case 'tools':    return <ToolsLayer config={config} tools={toolsList} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
+      case 'tools':    return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
       default:
         return (
           <OverviewLayer
@@ -223,10 +232,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 flex flex-col md:flex-row gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
-                {/* ═══ ROW 1 — REGISTRY CARD ═══ */}
-                <div className="bg-[var(--page-bg)] relative overflow-hidden">
+                {/* ═══ LEFT — REGISTRY CARD (sidebar on desktop, stacked on mobile) ═══ */}
+                <div className="bg-[var(--page-bg)] relative overflow-hidden md:w-[280px] lg:w-[320px] md:shrink-0">
                   {/* Category-colored accent strip */}
                   <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
                     <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
@@ -234,21 +243,21 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>WORLD-{world.id.slice(0, 4).toUpperCase()}</span>
                   </div>
 
-                  {/* Image + Fields */}
-                  <div className="flex flex-col md:flex-row relative">
+                  {/* Image + Fields — stacked vertically at any width (the card is a narrow column on desktop) */}
+                  <div className="flex flex-col relative">
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.012] select-none" draggable={false} />
+                      <img src="/brand/logo-white.png" alt="" className="w-32 opacity-[0.012] select-none" draggable={false} />
                     </div>
 
-                    {/* World image — compact on mobile, larger photo slot on desktop */}
-                    <div className="flex items-center justify-center pt-5 pb-2 px-4 md:p-5 relative z-10 md:w-[28%] shrink-0">
+                    {/* World image */}
+                    <div className="flex items-center justify-center pt-5 pb-2 px-4 relative z-10">
                       <div className="relative">
                         <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -bottom-2 -left-2 w-4 h-4 z-30"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -bottom-2 -right-2 w-4 h-4 z-30"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/15" /></div>
-                        <div className="w-24 h-24 md:w-44 md:h-44 rounded-lg relative overflow-hidden border border-dashed border-ink/15 p-1.5">
+                        <div className="w-24 h-24 rounded-lg relative overflow-hidden border border-dashed border-ink/15 p-1.5">
                           <div className="w-full h-full rounded-md relative overflow-hidden border-2 border-ink/20">
                             {world.imageUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -348,6 +357,9 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </div>
                 </div>
 
+                {/* ═══ RIGHT — STATS / TABS / CONTENT / MRZ (stacks below the card on mobile) ═══ */}
+                <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
+
                 {/* ═══ ROW 2 — STATS BAR ═══ */}
                 <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-0">
@@ -408,6 +420,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <span className="font-mono text-[8px] text-ink/10 uppercase">W1</span>
                   </div>
+                </div>
+
                 </div>
 
               </div>
