@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Skeleton } from '../../components/Skeleton';
+
+const SubmitGrantModal = dynamic(() => import('./SubmitGrantModal'), { ssr: false });
 
 interface Grant {
   id: string;
@@ -36,6 +39,7 @@ export default function GrantsList() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('all tags');
   const [sortBy, setSortBy] = useState('deadline-asc');
+  const [submitOpen, setSubmitOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>(undefined);
 
   // Debounce search input by 300ms
@@ -184,13 +188,13 @@ export default function GrantsList() {
               <p className="font-mono text-[13px] uppercase" style={{ color: 'var(--foreground)' }}>
                 SHOWING {grants.length} GRANT{grants.length !== 1 ? 'S' : ''}
               </p>
-              <Link
-                href="/dashboard/submit-grant"
-                className="px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] uppercase rounded-full hover:opacity-80 transition"
+              <button
+                onClick={() => setSubmitOpen(true)}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 font-mono text-[13px] uppercase rounded-full hover:opacity-80 transition cursor-pointer border-none"
                 style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
               >
                 SUBMIT GRANT
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -286,6 +290,12 @@ export default function GrantsList() {
           )}
         </main>
       </div>
+
+      <SubmitGrantModal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        onSubmitted={() => fetchGrants()}
+      />
     </div>
   );
 }
