@@ -263,30 +263,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 max-w-[1160px] flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
-                {/* ═══ SECTION TAB NAV — full width, shared above both columns so the colored bands below line up ═══ */}
-                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                  {visibleSections.map((s) => {
-                    const isActive = activeSection === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => setActiveSection(s.id)}
-                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/70 bg-transparent'}`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
-                </div>
-
-                {/* ═══ TWO-COLUMN AREA — passport card + active section ═══ */}
-                <div className="flex flex-col md:flex-row gap-[3px]">
-
-                {/* ═══ LEFT — REGISTRY CARD (sidebar on desktop, stacked on mobile) ═══ */}
-                <div className="bg-[var(--page-bg)] relative overflow-hidden md:w-[280px] lg:w-[320px] md:shrink-0">
+                {/* ═══ TOP — ABOUT (full width, horizontal) ═══ */}
+                <div className="bg-[var(--page-bg)] relative overflow-hidden">
                   {/* Category-colored accent strip */}
                   <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
                     <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
@@ -294,21 +274,21 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>WORLD-{world.id.slice(0, 4).toUpperCase()}</span>
                   </div>
 
-                  {/* Image + Fields — stacked vertically at any width (the card is a narrow column on desktop) */}
-                  <div className="flex flex-col relative">
+                  {/* Image + Fields — horizontal on desktop, stacked on mobile */}
+                  <div className="flex flex-col md:flex-row relative">
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/brand/logo-white.png" alt="" className="w-32 opacity-[0.012] select-none" draggable={false} />
+                      <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.012] select-none" draggable={false} />
                     </div>
 
                     {/* World image */}
-                    <div className="flex items-center justify-center pt-5 pb-2 px-4 relative z-10">
+                    <div className="flex items-center justify-center pt-5 pb-2 px-4 md:p-5 relative z-10 md:w-[180px] shrink-0">
                       <div className="relative">
                         <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -bottom-2 -left-2 w-4 h-4 z-30"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -bottom-2 -right-2 w-4 h-4 z-30"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/15" /></div>
-                        <div className="w-24 h-24 rounded-lg relative overflow-hidden border border-dashed border-ink/15 p-1.5">
+                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg relative overflow-hidden border border-dashed border-ink/15 p-1.5">
                           <div className="w-full h-full rounded-md relative overflow-hidden border-2 border-ink/20">
                             {world.imageUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -325,50 +305,51 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     </div>
 
                     {/* Registry fields */}
-                    <div className="flex-1 px-3 py-2 md:px-4 md:py-2.5 flex flex-col justify-center relative z-10">
-                      <div className="py-1 border-b border-ink/[0.04]">
+                    <div className="flex-1 px-4 py-2 md:py-3 flex flex-col justify-center relative z-10 min-w-0">
+                      <div className="py-1.5 border-b border-ink/[0.04]">
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">designation</span>
-                        <h1 className="font-basement font-black text-[clamp(20px,2.6vw,34px)] leading-[0.9] uppercase text-ink mt-0.5">{world.title}</h1>
+                        <h1 className="font-basement font-black text-[clamp(24px,3vw,40px)] leading-[0.9] uppercase text-ink mt-0.5">{world.title}</h1>
                       </div>
-                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
+
+                      <div className="py-2 border-b border-ink/[0.04] grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
                         <div>
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">handle</span>
-                          <span className="font-mono text-[13px] text-ink/60 mt-0.5 block">topia://{slug}</span>
+                          <span className="font-mono text-[13px] text-ink/60 mt-0.5 block truncate">topia://{slug}</span>
                         </div>
-                        <div className="text-right">
+                        <div>
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">category</span>
                           <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{world.category || 'GENERAL'}</span>
                         </div>
-                      </div>
-                      <div className="py-1 border-b border-ink/[0.04] flex items-center justify-between">
                         <div>
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">established</span>
                           <span className="font-mono text-[11px] text-ink/40 mt-0.5 block">{established || '—'}</span>
                         </div>
-                        <div className="text-right">
+                        <div>
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">status</span>
-                          <div className="flex items-center gap-1.5 mt-0.5 justify-end">
+                          <div className="flex items-center gap-1.5 mt-0.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
                             <span className="font-mono text-[11px] text-ink/50">LIVE</span>
                           </div>
                         </div>
                       </div>
-                      <div className="py-1.5 border-b border-ink/[0.04] grid grid-cols-2 gap-x-4 gap-y-2">
+
+                      <div className="py-2 border-b border-ink/[0.04] grid grid-cols-4 gap-x-4 gap-y-2">
                         {[
                           { label: 'projects', value: projects.length },
                           { label: 'members', value: world.members?.length || 0 },
                           { label: 'events', value: worldEvents.length },
                           { label: 'collabs', value: collaboratorMembers.length },
-                        ].map((stat, i) => (
-                          <div key={stat.label} className={i % 2 === 1 ? 'text-right' : ''}>
+                        ].map((stat) => (
+                          <div key={stat.label}>
                             <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">{stat.label}</span>
                             <span className="font-mono text-[15px] text-ink font-bold leading-none mt-0.5 block">{stat.value}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="py-1 border-b border-ink/[0.04]">
-                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">architect{worldBuilders.length > 1 ? 's' : ''}</span>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+
+                      <div className="py-2 border-b border-ink/[0.04] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 shrink-0">architect{worldBuilders.length > 1 ? 's' : ''}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {worldBuilders.length > 0 ? (
                             worldBuilders.map((b) => {
                               const chip = (
@@ -397,39 +378,56 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                           )}
                         </div>
                       </div>
-                      {world.shortDescription && (
-                        <div className="py-1 border-b border-ink/[0.04]">
-                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">declaration</span>
-                          <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{world.shortDescription}&rdquo;</span>
+
+                      <div className="py-2 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+                        {world.shortDescription ? (
+                          <div className="min-w-0">
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">declaration</span>
+                            <span className="font-zirkon text-[11px] text-ink/50 italic mt-0.5 block leading-relaxed line-clamp-2">&ldquo;{world.shortDescription}&rdquo;</span>
+                          </div>
+                        ) : <div />}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <ShareButton
+                            kind="world"
+                            title={world.title}
+                            text={`${world.title} — a world on TOPIA`}
+                            iconSize={11}
+                            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
+                          />
+                          {isWorldBuilder && (
+                            <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
+                              Manage
+                            </Link>
+                          )}
                         </div>
-                      )}
-                      <div className="py-1.5 flex items-center justify-end gap-1.5">
-                        <ShareButton
-                          kind="world"
-                          title={world.title}
-                          text={`${world.title} — a world on TOPIA`}
-                          iconSize={11}
-                          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
-                        />
-                        {isWorldBuilder && (
-                          <Link href={`/dashboard/worlds/${world.slug}`} className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
-                            Manage
-                          </Link>
-                        )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* ═══ RIGHT — CONTENT / MRZ (stacks below the card on mobile) ═══ */}
-                <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
+                {/* ═══ SECTION TAB NAV — full width, above the active section ═══ */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {visibleSections.map((s) => {
+                    const isActive = activeSection === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/70 bg-transparent'}`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                </div>
 
-                {/* ═══ ROW 3 — ACTIVE SECTION ═══ */}
+                {/* ═══ ACTIVE SECTION ═══ */}
                 <div className="bg-[var(--page-bg)] min-h-[280px]">
                   {renderSection()}
                 </div>
 
-                {/* ═══ ROW 4 — MRZ STRIP ═══ */}
+                {/* ═══ MRZ STRIP ═══ */}
                 <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04]">
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-end gap-0 h-4">
@@ -446,10 +444,6 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <span className="font-mono text-[8px] text-ink/10 uppercase">W1</span>
                   </div>
-                </div>
-
-                </div>
-
                 </div>
 
               </div>

@@ -135,7 +135,7 @@ export default function OverviewLayer({
         <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>topia://about</span>
       </div>
 
-      <div className="p-5 md:p-6 flex flex-col gap-5">
+      <div className="p-5 md:p-6 flex flex-col gap-5 max-w-2xl">
         {(body || hasSocial) && (
           <div className="flex flex-col gap-4 pb-5 border-b border-ink/[0.08]">
             {body ? (
