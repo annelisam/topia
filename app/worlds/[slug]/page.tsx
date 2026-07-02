@@ -123,7 +123,20 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const worldBuilders = useMemo(() => world?.members?.filter((m) => m.role === 'world_builder' || m.role === 'owner') || [], [world]);
   const collaboratorMembers = useMemo(() => world?.members?.filter((m) => m.role === 'collaborator') || [], [world]);
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
-  const toolsList = world?.tools ? world.tools.split(',').map((t) => t.trim()).filter(Boolean) : [];
+
+  // Tools come from two places: the world's own `tools` field, and any
+  // `tool:` tags builders attached to individual projects — merged so a tool
+  // used on a project shows up here too, case-insensitively deduped.
+  const toolsList = useMemo(() => {
+    const worldToolNames = world?.tools ? world.tools.split(',').map((t) => t.trim()).filter(Boolean) : [];
+    const projectToolNames = projects.flatMap((p) => (p.tags || []).filter((t) => t.startsWith('tool:')).map((t) => t.replace('tool:', '')));
+    const seen = new Map<string, string>();
+    for (const name of [...worldToolNames, ...projectToolNames]) {
+      const key = name.toLowerCase();
+      if (!seen.has(key)) seen.set(key, name);
+    }
+    return Array.from(seen.values());
+  }, [world?.tools, projects]);
 
   // Events get their own "Latest events" section in Overview, so they're
   // deliberately left out of this log — otherwise every event shows up twice.
@@ -250,7 +263,27 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 flex flex-col md:flex-row gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+
+                {/* ═══ SECTION TAB NAV — full width, shared above both columns so the colored bands below line up ═══ */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {visibleSections.map((s) => {
+                    const isActive = activeSection === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/70 bg-transparent'}`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                </div>
+
+                {/* ═══ TWO-COLUMN AREA — passport card + active section ═══ */}
+                <div className="flex flex-col md:flex-row gap-[3px]">
 
                 {/* ═══ LEFT — REGISTRY CARD (sidebar on desktop, stacked on mobile) ═══ */}
                 <div className="bg-[var(--page-bg)] relative overflow-hidden md:w-[280px] lg:w-[320px] md:shrink-0">
@@ -388,25 +421,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </div>
                 </div>
 
-                {/* ═══ RIGHT — TABS / CONTENT / MRZ (stacks below the card on mobile) ═══ */}
+                {/* ═══ RIGHT — CONTENT / MRZ (stacks below the card on mobile) ═══ */}
                 <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
-
-                {/* ═══ ROW 2 — SECTION TAB NAV ═══ */}
-                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                  {visibleSections.map((s) => {
-                    const isActive = activeSection === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => setActiveSection(s.id)}
-                        className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/70 bg-transparent'}`}
-                      >
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
-                </div>
 
                 {/* ═══ ROW 3 — ACTIVE SECTION ═══ */}
                 <div className="bg-[var(--page-bg)] min-h-[280px]">
@@ -430,6 +446,8 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <span className="font-mono text-[8px] text-ink/10 uppercase">W1</span>
                   </div>
+                </div>
+
                 </div>
 
                 </div>
