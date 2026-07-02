@@ -263,7 +263,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 max-w-[1160px] flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
                 {/* ═══ SECTION TAB NAV — full width, shared above both columns so the colored bands below line up ═══ */}
                 <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
