@@ -6,11 +6,13 @@ import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import ShareButton from '../../components/ShareButton';
+import { SocialIcon } from '../../components/SocialIcons';
 import { getWorldConfig } from '../../components/world/worldConfig';
 import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../components/world/OverviewLayer';
 import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
 import ToolsLayer from '../../components/world/ToolsLayer';
+import ArchitectsLayer from '../../components/world/ArchitectsLayer';
 import { type ToolMiniData } from '../../resources/tools/ToolMiniCard';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
@@ -56,10 +58,11 @@ interface WorldDetail {
 }
 
 const SECTIONS = [
-  { id: 'overview', label: 'OVERVIEW' },
-  { id: 'projects', label: 'PROJECTS' },
-  { id: 'events',   label: 'EVENTS' },
-  { id: 'tools',    label: 'TOOLS' },
+  { id: 'overview',   label: 'OVERVIEW' },
+  { id: 'projects',   label: 'PROJECTS' },
+  { id: 'architects', label: 'ARCHITECTS' },
+  { id: 'events',     label: 'EVENTS' },
+  { id: 'tools',      label: 'TOOLS' },
 ] as const;
 type SectionId = typeof SECTIONS[number]['id'];
 
@@ -123,6 +126,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const worldBuilders = useMemo(() => world?.members?.filter((m) => m.role === 'world_builder' || m.role === 'owner') || [], [world]);
   const collaboratorMembers = useMemo(() => world?.members?.filter((m) => m.role === 'collaborator') || [], [world]);
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
+  const hasSocial = world?.socialLinks && Object.values(world.socialLinks).some((v) => v);
 
   // Tools come from two places: the world's own `tools` field, and any
   // `tool:` tags builders attached to individual projects — merged so a tool
@@ -206,10 +210,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     ? new Date(world.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
     : null;
 
-  // Overview + Projects + Tools always show; Events hides when empty.
+  // Overview + Projects + Architects + Tools always show; Events hides when empty.
   const visibleSections = SECTIONS.filter((s) => {
     if (s.id === 'events') return worldEvents.length > 0;
-    return true; // overview + projects + tools always
+    return true; // overview + projects + architects + tools always
   });
 
   // Barcode + machine-readable zone, keyed off the world.
@@ -225,16 +229,16 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
   function renderSection() {
     switch (activeSection) {
-      case 'projects': return <ProjectsLayer config={config} projects={projects} slug={slug} />;
-      case 'events':   return <EventsLayer config={config} events={worldEvents} />;
-      case 'tools':    return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
+      case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} />;
+      case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} />;
+      case 'events':     return <EventsLayer config={config} events={worldEvents} />;
+      case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
       default:
         return (
           <OverviewLayer
             config={config}
             description={world?.description ?? null}
             shortDescription={world?.shortDescription ?? null}
-            socialLinks={world?.socialLinks ?? null}
             events={worldEvents}
             onViewEvents={() => setActiveSection('events')}
             activity={activity}
@@ -333,50 +337,21 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                         </div>
                       </div>
 
-                      <div className="py-2 border-b border-ink/[0.04] grid grid-cols-4 gap-x-4 gap-y-2">
-                        {[
-                          { label: 'projects', value: projects.length },
-                          { label: 'members', value: world.members?.length || 0 },
-                          { label: 'events', value: worldEvents.length },
-                          { label: 'collabs', value: collaboratorMembers.length },
-                        ].map((stat) => (
-                          <div key={stat.label}>
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">{stat.label}</span>
-                            <span className="font-mono text-[15px] text-ink font-bold leading-none mt-0.5 block">{stat.value}</span>
+                      <div className="py-2 border-b border-ink/[0.04]">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">connect</span>
+                        {hasSocial ? (
+                          <div className="flex flex-wrap gap-3">
+                            {Object.entries(world.socialLinks || {}).map(([key, url]) =>
+                              url ? (
+                                <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/40 hover:text-ink/70 transition-colors" title={key}>
+                                  <SocialIcon type={key} size={16} />
+                                </a>
+                              ) : null,
+                            )}
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="py-2 border-b border-ink/[0.04] flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 shrink-0">architect{worldBuilders.length > 1 ? 's' : ''}</span>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {worldBuilders.length > 0 ? (
-                            worldBuilders.map((b) => {
-                              const chip = (
-                                <span className="inline-flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full border border-ink/[0.08] hover:border-ink/25 transition-colors">
-                                  {b.userAvatarUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={b.userAvatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                  ) : (
-                                    <span className="w-5 h-5 rounded-full bg-ink/10 flex items-center justify-center font-mono text-[9px] font-bold text-ink">{(b.userName || b.userUsername || '?')[0]?.toUpperCase()}</span>
-                                  )}
-                                  <span className="font-mono text-[11px] text-ink/60 truncate max-w-[140px]">{b.userName || b.userUsername || 'Unknown'}</span>
-                                </span>
-                              );
-                              return b.userUsername
-                                ? <Link key={b.userId} href={`/profile/${b.userUsername}`} className="no-underline">{chip}</Link>
-                                : <span key={b.userId}>{chip}</span>;
-                            })
-                          ) : world.creatorName ? (
-                            world.creatorSlug ? (
-                              <Link href={`/profile/${world.creatorSlug}`} className="font-mono text-[11px] text-ink/50 no-underline hover:text-ink/80 transition-colors">{world.creatorName}</Link>
-                            ) : (
-                              <span className="font-mono text-[11px] text-ink/40">{world.creatorName}</span>
-                            )
-                          ) : (
-                            <span className="font-mono text-[11px] text-ink/40">—</span>
-                          )}
-                        </div>
+                        ) : (
+                          <span className="font-mono text-[11px] text-ink/30">—</span>
+                        )}
                       </div>
 
                       <div className="py-2 flex flex-col sm:flex-row sm:items-end justify-between gap-2">

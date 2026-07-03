@@ -5,7 +5,6 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { markdownComponents } from '../ProjectContent';
-import { SocialIcon } from '../SocialIcons';
 import { WorldConfig } from './worldConfig';
 import { type WorldEvent } from './EventsLayer';
 
@@ -91,7 +90,6 @@ export default function OverviewLayer({
   config,
   description,
   shortDescription,
-  socialLinks,
   events,
   onViewEvents,
   activity,
@@ -101,7 +99,6 @@ export default function OverviewLayer({
   config: WorldConfig;
   description: string | null;
   shortDescription: string | null;
-  socialLinks: SocialLinks | null;
   events: WorldEvent[];
   onViewEvents: () => void;
   activity: ActivityItem[];
@@ -112,7 +109,6 @@ export default function OverviewLayer({
   const [posting, setPosting] = useState(false);
   const [composing, setComposing] = useState(false);
 
-  const hasSocial = socialLinks && Object.values(socialLinks).some((v) => v);
   const body = description || shortDescription;
   const latestEvents = events.slice(0, 3);
 
@@ -136,26 +132,11 @@ export default function OverviewLayer({
       </div>
 
       <div className="p-5 md:p-6 flex flex-col gap-5 max-w-2xl">
-        {(body || hasSocial) && (
-          <div className="flex flex-col gap-4 pb-5 border-b border-ink/[0.08]">
-            {body ? (
-              <div className="prose prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{body}</ReactMarkdown>
-              </div>
-            ) : (
-              <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No description yet</span>
-            )}
-            {hasSocial && (
-              <div className="flex flex-wrap gap-4">
-                {Object.entries(socialLinks!).map(([key, url]) =>
-                  url ? (
-                    <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/40 hover:text-ink/70 transition-colors" title={key}>
-                      <SocialIcon type={key} size={18} />
-                    </a>
-                  ) : null,
-                )}
-              </div>
-            )}
+        {body && (
+          <div className="pb-5 border-b border-ink/[0.08]">
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{body}</ReactMarkdown>
+            </div>
           </div>
         )}
 
