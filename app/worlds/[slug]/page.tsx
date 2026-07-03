@@ -267,7 +267,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div className="relative z-10 max-w-[1320px] mx-auto flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
                 {/* ═══ TOP — ABOUT (full width, horizontal) ═══ */}
                 <div className="bg-[var(--page-bg)] relative overflow-hidden">
@@ -315,7 +315,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                         <h1 className="font-basement font-black text-[clamp(24px,3vw,40px)] leading-[0.9] uppercase text-ink mt-0.5">{world.title}</h1>
                       </div>
 
-                      <div className="py-2 border-b border-ink/[0.04] grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+                      <div className="py-2 border-b border-ink/[0.04] flex flex-wrap gap-x-10 gap-y-3">
                         <div>
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">handle</span>
                           <span className="font-mono text-[13px] text-ink/60 mt-0.5 block truncate">topia://{slug}</span>
