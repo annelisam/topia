@@ -44,9 +44,12 @@ export default function AvatarMenu() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
-  if (!ready) return null;
+  // While Privy is still initializing, show the cached avatar (if we have
+  // one) instead of a blank spot — the profile hook serves the last-known
+  // profile from sessionStorage and revalidates in the background.
+  if (!ready && !profile) return null;
 
-  if (!authenticated) {
+  if (ready && !authenticated) {
     return (
       <button
         onClick={login}
