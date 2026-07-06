@@ -83,7 +83,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [photoChoice, setPhotoChoice] = useState<'upload' | 'generate' | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const availability = useUsernameAvailability(username, privyId);
   const previewColor = avatarColor(username || contactName || privyId);
 
   // What the profile already has — those fields are managed in profile settings,
@@ -91,6 +90,19 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [existingName, setExistingName] = useState(false);
   const [existingUsername, setExistingUsername] = useState(false);
   const [existingPhoto, setExistingPhoto] = useState(false);
+  // A locked (existing) handle was already accepted when the profile was
+  // created, so it never runs through availability again here — that check
+  // is only for a handle the guest is actively choosing. Without this, a
+  // legacy handle shorter than today's minimum (e.g. a 1-character handle)
+  // would read as permanently "invalid" with no way to fix it, since the
+  // field is locked and can't be retyped from this form.
+  const availability = useUsernameAvailability(existingUsername ? '' : username, privyId);
+  const effectiveAvailability = existingUsername ? 'available' : availability;
+  // Returning guests who already completed their passport see a read-only
+  // summary (imported from their profile) with an "Edit" button, instead of
+  // the full form again. `editingPassport` lets them reopen it.
+  const [editingPassport, setEditingPassport] = useState(false);
+  const [profileSocials, setProfileSocials] = useState<{ instagram?: string; twitter?: string }>({});
   // True once the profile prefill fetch settles — gates the branded loader so
   // existing data shows up populated instead of popping in.
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -194,6 +206,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         if (u.roleTags) {
           setProfileRoleSlugs(String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean));
         }
+        if (u.socialInstagram || u.socialTwitter) {
+          setProfileSocials({ instagram: u.socialInstagram || undefined, twitter: u.socialTwitter || undefined });
+        }
       })
       .catch(() => {})
       .finally(() => setProfileLoaded(true));
@@ -246,6 +261,22 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     });
   }, [questions, profileRoleSlugs]);
 
+  // Carry the user's saved Instagram/Twitter into any matching questions —
+  // only seed empties, so we never stomp an answer the guest is actively
+  // editing. These persist on the profile but aren't tied to any one event.
+  useEffect(() => {
+    if (!questions || (!profileSocials.instagram && !profileSocials.twitter)) return;
+    setAnswers((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const q of questions) {
+        if (q.type === 'instagram' && profileSocials.instagram && !prev[q.id]) { next[q.id] = profileSocials.instagram; changed = true; }
+        if (q.type === 'twitter' && profileSocials.twitter && !prev[q.id]) { next[q.id] = profileSocials.twitter; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [questions, profileSocials]);
+
   const set = (id: string, v: AnswerValue) => setAnswers((a) => ({ ...a, [id]: v }));
   const toggleMulti = (id: string, opt: string) =>
     setAnswers((a) => {
@@ -274,9 +305,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const submit = async () => {
     if (!contactName.trim() || !verifiedEmail || !consent) { setError('Please complete the first step'); setStep(1); return; }
     if (!username.trim()) { setError('Pick a handle to claim your TOPIA passport'); return; }
-    if (availability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
-    if (availability === 'taken') { setError('That handle is taken — try another'); return; }
-    if (availability === 'checking') { setError('Hang on — still checking that handle'); return; }
+    if (effectiveAvailability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
+    if (effectiveAvailability === 'taken') { setError('That handle is taken — try another'); return; }
+    if (effectiveAvailability === 'checking') { setError('Hang on — still checking that handle'); return; }
     if (!photoChoice) { setError('Add a profile photo, or choose the generated avatar'); return; }
     // Phone is optional, but if provided it must look like a real number.
     const digits = phoneNumber.replace(/\D/g, '');
@@ -378,6 +409,17 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         );
     }
   };
+
+  // Passport identity fields — photo, handle, "what you do", socials — are the
+  // ones carried over from the profile/a previous RSVP. Any other host
+  // question is event-specific and always shown, edit mode or not.
+  const rolesQuestion = (questions ?? []).find((q) => q.type === 'roles') ?? null;
+  const socialQuestions = (questions ?? []).filter((q) => q.type === 'instagram' || q.type === 'twitter');
+  const otherQuestions = (questions ?? []).filter((q) => q.type !== 'instagram' && q.type !== 'twitter' && q.type !== 'roles');
+  const passportRequiredUnanswered = [rolesQuestion, ...socialQuestions].some((q) => q && q.required && !answered(q));
+  // Complete + not explicitly reopened → show the read-only summary instead
+  // of the form. Anything still missing forces the editable form open.
+  const showPassportSummary = existingUsername && !!photoChoice && !passportRequiredUnanswered && !editingPassport;
 
   return (
     <div className="fixed inset-0 z-[2100] flex items-end justify-center sm:items-center sm:p-4 backdrop-blur-sm overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={handleExit}>
@@ -498,6 +540,49 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             {/* STEP 2 · complete Topia passport — photo, handle, what you do, socials */}
             {step === 2 && (
             <div className="space-y-5 mb-6">
+              {showPassportSummary ? (
+                /* Returning guest — passport already complete. Show it read-only,
+                   imported from their profile, with an Edit escape hatch. */
+                <div className="rounded-xl border p-4 flex items-start gap-3.5" style={{ borderColor: 'var(--border-color)' }}>
+                  <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 border" style={{ borderColor: 'var(--border-color)' }}>
+                    {avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center font-basement font-black text-[20px]" style={{ backgroundColor: previewColor, color: avatarTextColor(previewColor) }}>
+                        {avatarInitial(contactName || username)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-[14px] font-bold truncate" style={{ color: 'var(--foreground)' }}>@{username}</p>
+                    {profileRoleSlugs.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {profileRoleSlugs.slice(0, ROLES_MAX).map((slug) => (
+                          <span key={slug} className="font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border" style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)', opacity: 0.65 }}>
+                            {roleSlugToLabel(slug)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(profileSocials.instagram || profileSocials.twitter) && (
+                      <div className="flex flex-wrap gap-3 mt-2 font-mono text-[11px] opacity-60" style={{ color: 'var(--foreground)' }}>
+                        {profileSocials.instagram && <span>IG @{profileSocials.instagram}</span>}
+                        {profileSocials.twitter && <span>X @{profileSocials.twitter}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPassport(true)}
+                    className="shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              ) : (
+              <>
               {/* Photo + handle, the passport identity, up top */}
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-2 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -580,35 +665,65 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   Handle<span style={{ color: '#FF5C34' }}> *</span>
                   {existingUsername && <LockHint text="Your handle is set on your TOPIA profile. To change it, edit your profile in settings." />}
                 </label>
-                <div className={`flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]${existingUsername ? ' opacity-80' : ''}`} style={fieldStyle}>
-                  <span className="opacity-40 font-mono text-[13px]">@</span>
-                  <input
-                    type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    value={username}
-                    onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
-                    readOnly={existingUsername} disabled={existingUsername}
-                    className={`flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3${existingUsername ? ' cursor-not-allowed' : ''}`}
-                    style={{ color: 'var(--foreground)' }}
-                    placeholder="yourhandle"
-                  />
-                  {username && !existingUsername && (
-                    <span
-                      className="font-mono text-[10px] uppercase tracking-wider shrink-0"
-                      style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
-                    >
-                      {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
-                    </span>
-                  )}
-                </div>
-                {!existingUsername && (
-                  <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
-                    Claim your TOPIA handle — you can change it anytime.
-                  </p>
+                {existingUsername ? (
+                  <div className="flex items-center gap-2 border px-4 rounded-xl opacity-80" style={fieldStyle}>
+                    <span className="opacity-40 font-mono text-[13px]">@</span>
+                    <span className="flex-1 font-mono text-[13px] py-3" style={{ color: 'var(--foreground)' }}>{username}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 border px-4 rounded-xl transition focus-within:border-[var(--foreground)]" style={fieldStyle}>
+                      <span className="opacity-40 font-mono text-[13px]">@</span>
+                      <input
+                        type="text" inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                        value={username}
+                        onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                        className="flex-1 bg-transparent border-none outline-none font-mono text-[13px] py-3"
+                        style={{ color: 'var(--foreground)' }}
+                        placeholder="yourhandle"
+                      />
+                      {username && (
+                        <span
+                          className="font-mono text-[10px] uppercase tracking-wider shrink-0"
+                          style={{ color: availability === 'available' ? '#00b36b' : (availability === 'taken' || availability === 'invalid') ? '#FF5C34' : 'var(--foreground)', opacity: availability === 'checking' ? 0.5 : 1 }}
+                        >
+                          {availability === 'checking' ? '…' : availability === 'available' ? 'available ✓' : availability === 'taken' ? 'taken' : availability === 'invalid' ? 'invalid' : ''}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+                      Claim your TOPIA handle — you can change it anytime.
+                    </p>
+                  </>
                 )}
               </div>
 
-              {/* What you do + any other host questions (socials handled below) */}
-              {questions.filter((q) => q.type !== 'instagram' && q.type !== 'twitter').map((q) => (
+              {/* What you do */}
+              {rolesQuestion && (
+                <div>
+                  <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                    {rolesQuestion.label}{rolesQuestion.required && <span style={{ color: '#FF5C34' }}> *</span>}
+                  </label>
+                  {renderField(rolesQuestion)}
+                </div>
+              )}
+
+              {/* Socials — Instagram + Twitter side by side */}
+              {socialQuestions.length > 0 && (
+                <div>
+                  <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
+                    What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {socialQuestions.map((q) => <div key={q.id}>{renderField(q)}</div>)}
+                  </div>
+                </div>
+              )}
+              </>
+              )}
+
+              {/* Any other host question — event-specific, always shown */}
+              {otherQuestions.map((q) => (
                 <div key={q.id}>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
                     {q.label}{q.required && <span style={{ color: '#FF5C34' }}> *</span>}
@@ -616,22 +731,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   {renderField(q)}
                 </div>
               ))}
-
-              {/* Socials — Instagram + Twitter side by side */}
-              {(() => {
-                const socials = questions.filter((q) => q.type === 'instagram' || q.type === 'twitter');
-                if (socials.length === 0) return null;
-                return (
-                  <div>
-                    <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                      What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {socials.map((q) => <div key={q.id}>{renderField(q)}</div>)}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
             )}
 
@@ -704,11 +803,18 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     </button>
                     <button
                       onClick={submit}
-                      disabled={submitting || availability !== 'available' || !photoChoice}
+                      disabled={submitting || effectiveAvailability !== 'available' || !photoChoice}
                       className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                     >
-                      {submitting ? 'Submitting…' : availability !== 'available' ? 'Pick a handle to continue' : !photoChoice ? 'Choose a profile photo' : approvalRequired ? 'Send request' : 'Complete RSVP'}
+                      {submitting ? 'Submitting…'
+                        : !username ? 'Pick a handle to continue'
+                        : effectiveAvailability === 'invalid' ? 'Handle needs 3+ characters'
+                        : effectiveAvailability === 'checking' ? 'Checking availability…'
+                        : effectiveAvailability === 'taken' ? 'Handle already taken'
+                        : effectiveAvailability !== 'available' ? 'Pick a handle to continue'
+                        : !photoChoice ? 'Choose a profile photo'
+                        : approvalRequired ? 'Send request' : 'Complete RSVP'}
                     </button>
                   </div>
                 )}

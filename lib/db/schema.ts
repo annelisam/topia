@@ -329,6 +329,18 @@ export const worldProjects = pgTable('world_projects', {
   index('world_projects_world_id_idx').on(t.worldId),
 ]);
 
+// World announcements — short builder-posted updates shown in a world's
+// Overview activity feed alongside auto-logged project/member/event activity.
+export const worldAnnouncements = pgTable('world_announcements', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  authorId: uuid('author_id').references(() => users.id).notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('world_announcements_world_id_idx').on(t.worldId),
+]);
+
 /* ────────────────────────────────────────────────────────────────────
  * Guestbook entries — drawings, text messages, gifs left on a user's
  * public profile. Visibility is always public; the *write* permission

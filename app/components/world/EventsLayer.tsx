@@ -10,6 +10,8 @@ export interface WorldEvent {
   date: string | null;
   city: string | null;
   imageUrl: string | null;
+  dateIso?: string | null;
+  createdAt?: string;
 }
 
 export default function EventsLayer({ config, events }: { config: WorldConfig; events: WorldEvent[] }) {

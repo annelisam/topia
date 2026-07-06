@@ -17,6 +17,7 @@ export interface ProjectItem {
   url?: string | null;
   links?: { label: string; url: string }[] | null;
   tags?: string[] | null;
+  createdAt?: string;
 }
 
 /* ── Project Detail Slide Panel ───────────────────────────────── */
@@ -100,6 +101,7 @@ export default function ProjectsLayer({
   const router = useRouter();
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [view, setView] = useState<'galaxy' | 'index'>('galaxy');
 
   const openProject = useCallback((proj: { id: string; name: string; slug: string } | null) => {
     if (!proj) { setSelectedProject(null); return; }
@@ -113,25 +115,48 @@ export default function ProjectsLayer({
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
       <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
         <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Projects</span>
-        <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-full overflow-hidden border border-current/20">
+            <button
+              onClick={() => setView('galaxy')}
+              className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'galaxy' ? 'bg-lime text-obsidian font-bold' : `${config.textOn} opacity-60 bg-transparent`}`}
+            >
+              Galaxy
+            </button>
+            <button
+              onClick={() => setView('index')}
+              className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'index' ? 'bg-lime text-obsidian font-bold' : `${config.textOn} opacity-60 bg-transparent`}`}
+            >
+              Index
+            </button>
+          </div>
+          <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+        </div>
       </div>
 
       {/* Globe — interactive when populated, ambient when empty */}
-      <div className="relative overflow-hidden border-b border-ink/[0.06]" style={{ height: isEmpty ? 'max(34vh, 260px)' : 'max(40vh, 300px)' }}>
-        <WorldGlobe projects={projects} onSelectProject={openProject} selectedProjectSlug={selectedProject?.slug || null} />
-        <div className="absolute bottom-3 left-4 z-10 pointer-events-none">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30">topia://{slug}</span>
-        </div>
-        {isEmpty && (
-          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 pb-7 pointer-events-none">
-            <span className="font-mono text-[12px] uppercase tracking-[2px] text-ink/40">No projects in orbit yet</span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-ink/25">this world is still being built</span>
+      {view === 'galaxy' && (
+        <div className="relative overflow-hidden border-b border-ink/[0.06]" style={{ height: isEmpty ? 'max(34vh, 260px)' : 'max(40vh, 300px)' }}>
+          <WorldGlobe projects={projects} onSelectProject={openProject} selectedProjectSlug={selectedProject?.slug || null} />
+          <div className="absolute bottom-3 left-4 z-10 pointer-events-none">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30">topia://{slug}</span>
           </div>
-        )}
-      </div>
+          {isEmpty && (
+            <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 pb-7 pointer-events-none">
+              <span className="font-mono text-[12px] uppercase tracking-[2px] text-ink/40">No projects in orbit yet</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-ink/25">this world is still being built</span>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Project card grid — consistent with Team / Events */}
-      {!isEmpty && (
+      {/* Index — flat browsable grid, the peer view to the galaxy */}
+      {view === 'index' && isEmpty && (
+        <div className="flex-1 flex items-center justify-center py-10">
+          <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No projects yet</span>
+        </div>
+      )}
+      {view === 'index' && !isEmpty && (
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {projects.map((proj) => {
             const isSelected = selectedProject?.slug === proj.slug;

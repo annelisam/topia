@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { faviconUrl } from '../resources/tools/favicon';
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -86,6 +88,11 @@ export default function ProjectContent({
   project: ProjectItem;
   maxImageHeight?: string;
 }) {
+  const [registryTools, setRegistryTools] = useState<{ slug: string; name: string; url: string | null }[]>([]);
+  useEffect(() => {
+    fetch('/api/tools').then((r) => r.json()).then((data) => setRegistryTools(data.tools || [])).catch(() => {});
+  }, []);
+
   const embed = project.videoUrl ? getEmbedUrl(project.videoUrl) : null;
   const projectLinks = (project.links as { label: string; url: string }[] | null) || [];
   const allTags = (project.tags as string[] | null) || [];
@@ -125,19 +132,30 @@ export default function ProjectContent({
       {toolTags.length > 0 && (
         <div className="mb-5">
           <p className="font-mono text-[12px] uppercase tracking-[0.2em] mb-2 font-bold opacity-40" style={{ color: 'var(--foreground)' }}>Tools Used</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {toolTags.map(tag => {
               const toolName = tag.replace('tool:', '');
-              const toolSlug = toolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+              const match = registryTools.find(t => t.name.toLowerCase() === toolName.toLowerCase());
+              const fav = match ? faviconUrl(match.url, 64) : null;
+              const href = match ? `/resources/tools/${match.slug}` : '/resources/tools';
               return (
                 <a
                   key={tag}
-                  href={`/resources/tools#${toolSlug}`}
-                  className="font-mono text-[13px] uppercase tracking-widest px-2.5 py-1 rounded-full border hover:opacity-70 transition inline-flex items-center gap-1"
-                  style={{ color: 'var(--foreground)', borderColor: 'var(--foreground)' }}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 pl-2 pr-3.5 py-2 rounded-full border hover:opacity-70 transition no-underline"
+                  style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                  {toolName}
+                  <span className="w-6 h-6 shrink-0 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--surface-hover)' }}>
+                    {fav ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={fav} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="font-mono text-[10px] opacity-40">{toolName[0]?.toUpperCase()}</span>
+                    )}
+                  </span>
+                  <span className="font-mono text-[13px]">{toolName}</span>
                 </a>
               );
             })}

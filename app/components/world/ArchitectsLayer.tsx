@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { WorldConfig } from './worldConfig';
 
-export interface WorldMember {
+export interface ArchitectMember {
   userId: string;
   role: string;
   userName: string | null;
@@ -11,7 +11,7 @@ export interface WorldMember {
   userAvatarUrl: string | null;
 }
 
-function MemberCard({ member }: { member: WorldMember }) {
+function MemberCard({ member }: { member: ArchitectMember }) {
   const inner = (
     <div className="flex items-center gap-3 p-3 rounded-lg border border-ink/[0.08] bg-[var(--page-bg)] transition-colors hover:border-ink/25">
       {member.userAvatarUrl ? (
@@ -33,26 +33,26 @@ function MemberCard({ member }: { member: WorldMember }) {
   return <div>{inner}</div>;
 }
 
-export default function TeamLayer({
+export default function ArchitectsLayer({
   config,
   builders,
   collaborators,
 }: {
   config: WorldConfig;
-  builders: WorldMember[];
-  collaborators: WorldMember[];
+  builders: ArchitectMember[];
+  collaborators: ArchitectMember[];
 }) {
   const total = builders.length + collaborators.length;
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
       <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
-        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Team</span>
+        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Architects</span>
         <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{total} {total === 1 ? 'member' : 'members'}</span>
       </div>
 
       {total === 0 ? (
         <div className="flex-1 flex items-center justify-center py-10">
-          <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No team yet</span>
+          <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No architects yet</span>
         </div>
       ) : (
         <div className="p-4 space-y-5">
