@@ -341,6 +341,19 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     }
   };
 
+  // "Save" on the reopened passport edit — just validates the passport-only
+  // fields and drops back to the read-only summary. Nothing is sent to the
+  // server here; the actual submit still happens from "Complete RSVP".
+  const savePassport = () => {
+    setError('');
+    if (!photoChoice) { setError('Add a profile photo, or choose the generated avatar'); return; }
+    if (rolesQuestion && rolesQuestion.required && !answered(rolesQuestion)) { setError(`Please answer: ${rolesQuestion.label}`); return; }
+    for (const q of socialQuestions) {
+      if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
+    }
+    setEditingPassport(false);
+  };
+
   const renderField = (q: Question) => {
     const v = answers[q.id];
     switch (q.type) {
@@ -802,12 +815,13 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                       ← Back
                     </button>
                     <button
-                      onClick={submit}
+                      onClick={editingPassport ? savePassport : submit}
                       disabled={submitting || effectiveAvailability !== 'available' || !photoChoice}
                       className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
                     >
                       {submitting ? 'Submitting…'
+                        : editingPassport ? 'Save'
                         : !username ? 'Pick a handle to continue'
                         : effectiveAvailability === 'invalid' ? 'Handle needs 3+ characters'
                         : effectiveAvailability === 'checking' ? 'Checking availability…'
