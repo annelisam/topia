@@ -59,7 +59,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
           : 'bg-lime text-obsidian border border-lime font-bold hover:opacity-80'
       }`}
     >
-      {busy ? '···' : isFollowing ? 'Following' : 'Follow'}
+      {busy ? '···' : isFollowing ? 'Connected' : 'Connect'}
     </button>
   );
 }

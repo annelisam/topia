@@ -303,7 +303,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
         )}
         {relation === 'none' && (
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 text-center py-2">
-            follow @{profileUsername} to leave a note
+            connect with @{profileUsername} to leave a note
           </p>
         )}
         {canMessage && (
@@ -338,7 +338,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
                 type="button"
                 onClick={() => setDrawingOpen(true)}
                 disabled={submitting}
-                title={relation === 'self' ? 'Draw on your own guestbook' : 'Draw a picture (mutual follow only)'}
+                title={relation === 'self' ? 'Draw on your own guestbook' : 'Draw a picture (mutual connects only)'}
                 className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
               >
                 ✎ DRAW
@@ -356,7 +356,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
         {error && <p className="font-mono text-[10px] uppercase tracking-[2px] text-pink/80 mt-2">{error}</p>}
         {canMessage && !canDraw && (
           <p className="font-mono text-[9px] uppercase tracking-[2px] text-ink/25 mt-2">
-            ◆ become mutual follows with @{profileUsername} to unlock drawings
+            ◆ become mutual connects with @{profileUsername} to unlock drawings
           </p>
         )}
         {relation === 'self' && (

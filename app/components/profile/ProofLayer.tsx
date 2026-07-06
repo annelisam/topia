@@ -14,7 +14,7 @@ export default function ProofLayer({ config, path, stats }: Props) {
         { label: 'Worlds Created', value: stats.worlds },
         { label: 'Events Hosted', value: stats.events },
         { label: 'Collabs', value: stats.collabs },
-        { label: 'Followers', value: stats.followers },
+        { label: 'Connects', value: stats.followers },
       ]
     : path === 'catalyst'
     ? [
@@ -27,7 +27,7 @@ export default function ProofLayer({ config, path, stats }: Props) {
         { label: 'Worlds Visited', value: stats.worlds },
         { label: 'Events Attended', value: stats.events },
         { label: 'Collabs Supported', value: stats.collabs },
-        { label: 'Followers', value: stats.followers },
+        { label: 'Connects', value: stats.followers },
       ];
 
   return (

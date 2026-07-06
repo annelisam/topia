@@ -212,7 +212,7 @@ function ComposeSearch({ privyId, onPick }: { privyId: string; onPick: (user: Se
           className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-2 rounded-sm outline-none transition-colors"
         />
         <p className="font-mono text-[10px] leading-snug text-ink/35 mt-2">
-          If you don&apos;t follow each other, your message is sent as a <span className="text-ink/55">request</span>.
+          If you aren&apos;t connected with each other, your message is sent as a <span className="text-ink/55">request</span>.
         </p>
       </div>
       {term.length < 2 ? null : loading && results.length === 0 ? (

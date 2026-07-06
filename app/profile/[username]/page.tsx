@@ -492,8 +492,8 @@ export default function PublicProfilePage() {
                     {[
                       { label: 'Worlds', value: String(stats.worlds), tab: null },
                       { label: 'Events', value: String(stats.events), tab: null },
-                      { label: 'Followers', value: String(stats.followers), tab: 'followers' as const },
-                      { label: 'Following', value: String(stats.following), tab: 'following' as const },
+                      { label: 'Connects', value: String(stats.followers), tab: 'followers' as const },
+                      { label: 'Connected', value: String(stats.following), tab: 'following' as const },
                     ].map((stat, i, arr) => {
                       const cls = `flex flex-col px-3 md:px-5 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`;
                       const inner = (

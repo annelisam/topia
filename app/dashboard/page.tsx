@@ -80,8 +80,8 @@ export default function DashboardOverviewPage() {
               { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
               { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events,    href: '/events' },
               { label: 'Builder',   value: builderCount,             delta: undefined,                href: null },
-              { label: 'Followers', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
-              { label: 'Following', value: stats?.following ?? 0,    delta: undefined,                href: null },
+              { label: 'Connects', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
+              { label: 'Connected', value: stats?.following ?? 0,    delta: undefined,                href: null },
             ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
               const inner = (
                 <div className={`flex flex-col px-3 md:px-4 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>

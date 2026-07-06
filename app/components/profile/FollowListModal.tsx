@@ -87,7 +87,7 @@ export default function FollowListModal({
                 tab === t ? 'text-ink border-b-2 border-[var(--accent)]' : 'text-ink/40 hover:text-ink/60'
               }`}
             >
-              {t === 'followers' ? followerCount : followingCount} {t}
+              {t === 'followers' ? followerCount : followingCount} {t === 'followers' ? 'connects' : 'connected'}
             </button>
           ))}
         </div>
@@ -134,7 +134,7 @@ export default function FollowListModal({
             </ul>
           ) : (
             <div className="py-10 text-center font-mono text-[11px] uppercase tracking-[2px] text-ink/30">
-              {tab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
+              {tab === 'followers' ? 'No connects yet' : 'Not connected with anyone yet'}
             </div>
           )}
         </div>
