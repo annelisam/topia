@@ -24,8 +24,8 @@ export function useUsernameAvailability(username: string, forPrivyId?: string) {
         const json = await res.json();
         if (json.reason === 'invalid') setState('invalid');
         else setState(json.available ? 'available' : 'taken');
-      } catch {
-        // aborted or network error — silently keep checking state
+      } catch (err) {
+        if ((err as Error)?.name !== 'AbortError') setState('idle');
       }
     }, DEBOUNCE_MS);
 
