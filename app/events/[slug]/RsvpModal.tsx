@@ -679,9 +679,13 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   {existingUsername && <LockHint text="Your handle is set on your TOPIA profile. To change it, edit your profile in settings." />}
                 </label>
                 {existingUsername ? (
-                  <div className="flex items-center gap-2 border px-4 rounded-xl opacity-80" style={fieldStyle}>
-                    <span className="opacity-40 font-mono text-[13px]">@</span>
+                  <div className="flex items-center gap-2 border px-4 rounded-xl cursor-not-allowed" style={{ ...fieldStyle, backgroundColor: 'var(--border-color)', opacity: 0.55 }}>
+                    <span className="opacity-60 font-mono text-[13px]">@</span>
                     <span className="flex-1 font-mono text-[13px] py-3" style={{ color: 'var(--foreground)' }}>{username}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60" style={{ color: 'var(--foreground)' }} aria-hidden="true">
+                      <rect x="4" y="11" width="16" height="10" rx="2" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
                   </div>
                 ) : (
                   <>
