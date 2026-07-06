@@ -13,7 +13,11 @@ interface ContentItem {
 
 export type StampRarity = 'common' | 'rare' | 'legendary';
 
+export type StampCategory = 'event' | 'connect' | 'core';
+
 export interface Stamp {
+  kind?: string;             // stable stamp-type id (from lib/profile/stamps)
+  category?: StampCategory;  // filter bucket: event / connect / core
   label: string;             // center / top-arc word (event or world name, etc.)
   caption: string;           // the stamp "type" word (FOUNDER, CHECK-IN, …)
   date: string;
@@ -283,8 +287,19 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
   }, [lsKey]);
   const drag = useRef<{ key: string; offX: number; offY: number; size: number; stampH: number; rot: number } | null>(null);
 
-  const placedAuto = layoutStamps(stamps, areaW);
-  const placed = stamps.map((stamp, i) => {
+  // Filter views — ALL is default; EVENTS = event stamps, CONNECTS = mutual
+  // follows, CORE = everything else. Zero-count buckets are hidden.
+  const [filter, setFilter] = useState<'all' | StampCategory>('all');
+  const catOf = (s: Stamp): StampCategory => s.category ?? 'core';
+  const counts: Record<'all' | StampCategory, number> = { all: stamps.length, event: 0, connect: 0, core: 0 };
+  for (const s of stamps) counts[catOf(s)] += 1;
+  const FILTERS: { key: 'all' | StampCategory; label: string }[] = [
+    { key: 'all', label: 'ALL' }, { key: 'event', label: 'EVENTS' }, { key: 'connect', label: 'CONNECTS' }, { key: 'core', label: 'CORE' },
+  ];
+  const visible = filter === 'all' ? stamps : stamps.filter((s) => catOf(s) === filter);
+
+  const placedAuto = layoutStamps(visible, areaW);
+  const placed = visible.map((stamp, i) => {
     const base = placedAuto[i];
     const cp = custom[stampKey(stamp)];
     if (!cp) return base;
@@ -381,7 +396,7 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
                   <button onClick={saveLayout} disabled={saving} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2.5 py-1 rounded-sm font-bold text-obsidian transition cursor-pointer disabled:opacity-50" style={{ backgroundColor: config.hex }}>{saving ? 'Saving…' : dirty ? 'Save' : 'Done'}</button>
                 </>
               ) : (
-                <button onClick={() => setReorder(true)} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-ink/15 text-ink/50 hover:text-ink hover:border-ink/40 transition cursor-pointer bg-transparent flex items-center gap-1">
+                <button onClick={() => { setFilter('all'); setReorder(true); }} className="font-mono text-[8px] uppercase tracking-[1.5px] px-2 py-1 rounded-sm border border-ink/15 text-ink/50 hover:text-ink hover:border-ink/40 transition cursor-pointer bg-transparent flex items-center gap-1">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" /></svg>
                   Reorder
                 </button>
@@ -390,13 +405,31 @@ export default function IdentityLayer({ config, sectionLabel, items, stamps, sho
           </div>
         </div>
         {reorder && <p className="font-mono text-[8px] uppercase tracking-[1.5px] text-ink/30 mb-2 relative z-10">Drag stamps to rearrange · then save</p>}
+        {/* Filter views — ALL [10] EVENTS [4] CONNECTS [3] … */}
+        {!reorder && stamps.length > 0 && (
+          <div className="flex items-center gap-3 mb-2 relative z-10">
+            {FILTERS.filter((f) => f.key === 'all' || counts[f.key] > 0).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`font-mono text-[8px] uppercase tracking-[1.5px] bg-transparent border-none p-0 cursor-pointer transition ${filter === f.key ? 'text-ink font-bold' : 'text-ink/30 hover:text-ink/60'}`}
+              >
+                {f.label} [{counts[f.key]}]
+              </button>
+            ))}
+          </div>
+        )}
         {stamps.length === 0 ? (
           <div className="flex items-center justify-center relative z-10" style={{ minHeight: 180 }}>
             <span className="font-mono text-[11px] text-ink/20 uppercase tracking-wider">No travel yet</span>
           </div>
+        ) : visible.length === 0 ? (
+          <div className="flex items-center justify-center relative z-10" style={{ height: BAND_H }}>
+            <span className="font-mono text-[11px] text-ink/20 uppercase tracking-wider">No stamps here yet</span>
+          </div>
         ) : (
           <div ref={areaRef} className="relative z-10" style={{ height: BAND_H }}>
-            {stamps.map((stamp, i) => {
+            {visible.map((stamp, i) => {
               const p = placed[i];
               return (
                 <button
