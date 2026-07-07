@@ -20,7 +20,7 @@ export default async function ToolsPage() {
   return (
     <PageShell>
       <LoadingScreen />
-      <ToolsList initialTools={initialTools} />
+      <ToolsList initialTools={initialTools.map((t) => ({ ...t, featured: t.featured ?? false }))} />
     </PageShell>
   );
 }

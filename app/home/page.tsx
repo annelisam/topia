@@ -25,7 +25,7 @@ export default async function HomePage() {
     <HomeClient
       initialEpisodes={episodes}
       initialEvents={overview.events}
-      initialProfiles={profiles}
+      initialProfiles={profiles.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() }))}
     />
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
+import { useToast } from '../components/Toast';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventSourceBadge from './EventSourceBadge';
 import EventCover from './EventCover';
@@ -120,6 +121,7 @@ export default function EventsPageClient({
   initialCities: string[];
 }) {
   const { authenticated, user } = usePrivy();
+  const toast = useToast();
   const [events, setEvents] = useState<EventCard[]>(initialEvents);
   const [cities, setCities] = useState<string[]>(initialCities);
   const [selectedCity, setSelectedCity] = useState('');
