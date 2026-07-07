@@ -138,7 +138,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
             {categories.map((cat) => (
               <span
                 key={cat}
-                className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-lime/30 text-lime/80 rounded-sm"
+                className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-[var(--accent-ink)]/30 text-[var(--accent-ink)]/80 rounded-sm"
               >
                 {cat}
               </span>
@@ -303,7 +303,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                   <Link
                     key={r.slug}
                     href={`/resources/tools/${r.slug}`}
-                    className="flex items-center gap-3 border border-ink/10 hover:border-lime/40 px-3 py-2 rounded-sm transition no-underline"
+                    className="flex items-center gap-3 border border-ink/10 hover:border-[var(--accent-ink)]/40 px-3 py-2 rounded-sm transition no-underline"
                   >
                     <span className="w-8 h-8 shrink-0 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center">
                       {rFavicon ? (

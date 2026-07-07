@@ -63,7 +63,7 @@ export default function DashboardSidebar() {
     <div ref={switcherRef} className="relative px-3 pb-3">
       <button
         onClick={() => setSwitcherOpen(!switcherOpen)}
-        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-sm border bg-ink/[0.02] border-ink/15 text-ink hover:border-lime/40 hover:bg-ink/[0.05] transition cursor-pointer"
+        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-sm border bg-ink/[0.02] border-ink/15 text-ink hover:border-[var(--accent-ink)]/40 hover:bg-ink/[0.05] transition cursor-pointer"
       >
         {currentWorld ? (
           <>
@@ -279,7 +279,7 @@ export default function DashboardSidebar() {
           <button
             onClick={toggle}
             title="Expand sidebar"
-            className="mx-auto block w-9 h-9 rounded-full overflow-hidden border border-ink/15 hover:border-lime/50 transition cursor-pointer bg-ink/[0.02]"
+            className="mx-auto block w-9 h-9 rounded-full overflow-hidden border border-ink/15 hover:border-[var(--accent-ink)]/50 transition cursor-pointer bg-ink/[0.02]"
           >
             {currentWorld ? (
               currentWorld.worldImageUrl ? (

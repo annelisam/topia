@@ -444,7 +444,7 @@ export default function TVPage() {
                 ) : loadError && episodes.length === 0 ? (
                   <div className="py-12 px-4 text-center">
                     <span className="font-mono text-[12px] uppercase tracking-[2px] text-[var(--text-muted)] block">couldn&rsquo;t load the channel</span>
-                    <button onClick={() => setLoadAttempt((n) => n + 1)} className="mt-3 font-mono text-[11px] uppercase tracking-[2px] text-lime hover:opacity-70 bg-transparent border-none cursor-pointer">
+                    <button onClick={() => setLoadAttempt((n) => n + 1)} className="mt-3 font-mono text-[11px] uppercase tracking-[2px] text-[var(--accent-ink)] hover:opacity-70 bg-transparent border-none cursor-pointer">
                       retry
                     </button>
                   </div>
@@ -452,7 +452,7 @@ export default function TVPage() {
                   <div className="py-12 px-4 text-center">
                     <span className="font-mono text-[12px] uppercase tracking-[2px] text-ink/25 block">no programs match</span>
                     {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="mt-3 font-mono text-[11px] uppercase tracking-[2px] text-lime hover:opacity-70 bg-transparent border-none cursor-pointer">
+                      <button onClick={() => setSearchQuery('')} className="mt-3 font-mono text-[11px] uppercase tracking-[2px] text-[var(--accent-ink)] hover:opacity-70 bg-transparent border-none cursor-pointer">
                         clear search
                       </button>
                     )}

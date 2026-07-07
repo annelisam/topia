@@ -36,7 +36,7 @@ function Section({ label, sub, children, id }: { label: string; sub?: string; ch
 }
 
 const fieldLabel = 'block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1.5';
-const fieldInput = 'w-full bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-3 py-2 font-mono text-[13px] text-ink placeholder:text-ink/25 outline-none transition-colors';
+const fieldInput = 'w-full bg-ink/[0.04] border border-ink/15 focus:border-[var(--accent-ink)]/40 rounded-sm px-3 py-2 font-mono text-[13px] text-ink placeholder:text-ink/25 outline-none transition-colors';
 
 export default function ProfilePage() {
   const {
@@ -311,7 +311,7 @@ export default function ProfilePage() {
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/25">Public:</span>
               <Link
                 href={`/profile/${username}`}
-                className="font-mono text-[11px] text-ink/60 hover:text-lime no-underline transition truncate"
+                className="font-mono text-[11px] text-ink/60 hover:text-[var(--accent-ink)] no-underline transition truncate"
               >
                 topia.so/profile/@{username}
               </Link>
@@ -344,7 +344,7 @@ export default function ProfilePage() {
               >
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="block w-28 h-28 rounded-full overflow-hidden border-2 border-dashed border-ink/20 hover:border-lime/50 transition bg-ink/[0.03] cursor-pointer"
+                  className="block w-28 h-28 rounded-full overflow-hidden border-2 border-dashed border-ink/20 hover:border-[var(--accent-ink)]/50 transition bg-ink/[0.03] cursor-pointer"
                   title="Click or drop an image"
                 >
                   {avatarUrl ? (
@@ -392,13 +392,13 @@ export default function ProfilePage() {
                       {username || 'pick a handle'}
                     </span>
                     {handleChanged && (
-                      <span className="font-mono text-[9px] uppercase tracking-[2px] text-lime/80 mr-2">
+                      <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--accent-ink)]/80 mr-2">
                         ◆ changed
                       </span>
                     )}
                     <button
                       onClick={() => setHandleModalOpen(true)}
-                      className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
+                      className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition cursor-pointer"
                     >
                       {username ? '✎ change' : '+ set handle'}
                     </button>
@@ -422,7 +422,7 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
                     <label className={`${fieldLabel} mb-0`}>Bio · declaration</label>
-                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${bio.length > 260 ? (bio.length >= 280 ? 'text-pink' : 'text-lime/70') : 'text-ink/25'}`}>
+                    <span className={`font-mono text-[9px] uppercase tracking-[2px] ${bio.length > 260 ? (bio.length >= 280 ? 'text-pink' : 'text-[var(--accent-ink)]/70') : 'text-ink/25'}`}>
                       {bio.length}/280
                     </span>
                   </div>
@@ -579,7 +579,7 @@ export default function ProfilePage() {
                 <span className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/30 mb-2">Links</span>
                 <div className="space-y-2.5">
                   {/* Instagram — handle only, no OAuth needed. Stored as a full URL. */}
-                  <div className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
+                  <div className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-[var(--accent-ink)]/40 rounded-sm px-3 py-1.5 transition-colors">
                     <span className="text-ink/40 shrink-0 w-4 flex items-center justify-center"><SocialIcon type="instagram" /></span>
                     <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 w-20 shrink-0">Instagram</span>
                     <span className="font-mono text-[12px] text-ink/30 shrink-0">@</span>
@@ -599,7 +599,7 @@ export default function ProfilePage() {
                     { key: 'soundcloud', label: 'SoundCloud', value: socialSoundcloud, set: setSocialSoundcloud, placeholder: 'https://soundcloud.com/handle', icon: <SocialIcon type="soundcloud" /> },
                     { key: 'substack',   label: 'Substack',   value: socialSubstack,   set: setSocialSubstack,   placeholder: 'https://handle.substack.com',   icon: <SocialIcon type="substack" /> },
                   ].map(({ key, label, value, set, placeholder, icon }) => (
-                    <div key={key} className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-1.5 transition-colors">
+                    <div key={key} className="flex items-center gap-2 bg-ink/[0.03] border border-ink/15 focus-within:border-[var(--accent-ink)]/40 rounded-sm px-3 py-1.5 transition-colors">
                       <span className="text-ink/40 shrink-0 w-4 flex items-center justify-center">{icon}</span>
                       <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 w-20 shrink-0">{label}</span>
                       <input
@@ -636,7 +636,7 @@ export default function ProfilePage() {
                         }}
                         placeholder="LABEL"
                         maxLength={20}
-                        className="w-28 bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] text-ink outline-none transition-colors"
+                        className="w-28 bg-ink/[0.04] border border-ink/15 focus:border-[var(--accent-ink)]/40 rounded-sm px-2 py-1.5 font-mono text-[10px] uppercase tracking-[2px] text-ink outline-none transition-colors"
                       />
                       <input
                         type="url"
@@ -647,7 +647,7 @@ export default function ProfilePage() {
                           setCustomLinks(next);
                         }}
                         placeholder="https://"
-                        className="flex-1 bg-ink/[0.04] border border-ink/15 focus:border-lime/40 rounded-sm px-2 py-1.5 font-mono text-[12px] text-ink outline-none transition-colors"
+                        className="flex-1 bg-ink/[0.04] border border-ink/15 focus:border-[var(--accent-ink)]/40 rounded-sm px-2 py-1.5 font-mono text-[12px] text-ink outline-none transition-colors"
                       />
                       <button
                         onClick={() => setCustomLinks(customLinks.filter((_, i) => i !== idx))}
@@ -758,7 +758,7 @@ function AccountRow({ label, value, isLinked, unlinking, canUnlink, onConnect, o
         ) : (
           <button
             onClick={onConnect}
-            className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-transparent border border-ink/15 hover:border-lime/50 hover:text-lime text-ink/60 rounded-sm cursor-pointer transition"
+            className="font-mono text-[10px] uppercase tracking-[2px] px-2.5 py-1 bg-transparent border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-[var(--accent-ink)] text-ink/60 rounded-sm cursor-pointer transition"
           >
             + connect
           </button>

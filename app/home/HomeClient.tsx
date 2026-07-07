@@ -297,12 +297,14 @@ function DraggablePopup({ boundsRef, title, children }: { boundsRef: React.RefOb
         boxShadow: 'inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fdfdfd, 7px 7px 0 rgba(0,0,0,0.45)',
       }}
     >
-      {/* Title bar — drag handle */}
+      {/* Title bar — drag handle. Inset 2px so it sits INSIDE the window's
+          bevel frame (like a real win95 title bar) instead of painting over
+          it and overhanging the body. */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="flex items-center justify-between gap-2 px-2 py-1 cursor-grab active:cursor-grabbing touch-none"
+        className="flex items-center justify-between gap-2 px-2 py-1 mx-[2px] mt-[2px] cursor-grab active:cursor-grabbing touch-none"
         style={{ background: 'linear-gradient(90deg, var(--accent, #e4fe52), #aacb33)' }}
       >
         <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-obsidian truncate">{title}</span>
@@ -653,7 +655,7 @@ export default function HomeClient({
                     <div className="relative z-[2] flex items-stretch border-b border-bone/[0.08] bg-bone/[0.05]">
                       <div className={`w-1 shrink-0 ${CAT_DOT[featuredEp.category] ?? 'bg-lime'}`} />
                       <div className="px-3 py-2.5 min-w-0 flex-1">
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-lime block mb-1">▸ Now playing</span>
+                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-[var(--accent-ink)] block mb-1">▸ Now playing</span>
                         <span className="font-mono text-[12px] font-bold uppercase text-bone block truncate">{featuredEp.title}</span>
                         <span className="font-mono text-[9px] text-bone/40 uppercase tracking-wider">{[featuredEp.category, featuredEp.guestName].filter(Boolean).join(' · ')}</span>
                       </div>

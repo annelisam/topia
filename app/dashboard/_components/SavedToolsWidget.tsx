@@ -15,7 +15,7 @@ export default function SavedToolsWidget() {
     <div className="border border-ink/[0.08] rounded-lg overflow-hidden bg-[var(--page-bg)]">
       <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
         <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 flex items-center gap-2">
-          <span className="text-lime/80"><StarIcon size={11} filled /></span>
+          <span className="text-[var(--accent-ink)]/80"><StarIcon size={11} filled /></span>
           Saved tools{data && data.savedTools.length > 0 && <span className="text-ink/30">· {data.savedTools.length}</span>}
         </span>
         <Link
@@ -42,7 +42,7 @@ export default function SavedToolsWidget() {
         ) : data.savedTools.length === 0 ? (
           <p className="font-mono text-[11px] text-ink/40 leading-relaxed">
             Click <StarIcon size={10} filled={false} className="inline align-middle" /> on any tool in{' '}
-            <Link href="/resources/tools" className="text-lime underline">/resources/tools</Link>{' '}
+            <Link href="/resources/tools" className="text-[var(--accent-ink)] underline">/resources/tools</Link>{' '}
             to save it here.
           </p>
         ) : (

@@ -175,7 +175,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
               </div>
             )}
             {e.authorUsername ? (
-              <Link href={`/profile/${e.authorUsername}`} className="font-mono text-[11px] text-ink hover:text-lime font-bold no-underline">
+              <Link href={`/profile/${e.authorUsername}`} className="font-mono text-[11px] text-ink hover:text-[var(--accent-ink)] font-bold no-underline">
                 @{e.authorUsername}
               </Link>
             ) : (
@@ -228,7 +228,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
 
           {/* Inline reply composer — text-only by design */}
           {!isReply && replyOpenFor === e.id && (
-            <div className="mt-2 border border-ink/15 focus-within:border-lime/40 rounded-md p-2.5 bg-ink/[0.02] transition-colors">
+            <div className="mt-2 border border-ink/15 focus-within:border-[var(--accent-ink)]/40 rounded-md p-2.5 bg-ink/[0.02] transition-colors">
               <textarea
                 value={replyBody}
                 onChange={(ev) => setReplyBody(ev.target.value)}
@@ -323,7 +323,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
                     : 'leave a note or send a gif…'
               }
               disabled={submitting}
-              className="flex-1 font-mono text-[12px] bg-ink/[0.04] border border-ink/15 focus:border-lime/40 text-ink placeholder:text-ink/25 px-2.5 py-1.5 rounded-sm outline-none disabled:opacity-60"
+              className="flex-1 font-mono text-[12px] bg-ink/[0.04] border border-ink/15 focus:border-[var(--accent-ink)]/40 text-ink placeholder:text-ink/25 px-2.5 py-1.5 rounded-sm outline-none disabled:opacity-60"
               maxLength={500}
             />
             <button
@@ -331,7 +331,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
               onClick={() => setGifPickerOpen(true)}
               disabled={submitting}
               title="Add a GIF"
-              className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
+              className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition cursor-pointer"
             >
               GIF
             </button>
@@ -341,7 +341,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
                 onClick={() => setDrawingOpen(true)}
                 disabled={submitting}
                 title={relation === 'self' ? 'Draw on your own guestbook' : 'Draw a picture (mutual connects only)'}
-                className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
+                className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition cursor-pointer"
               >
                 ✎ DRAW
               </button>

@@ -87,7 +87,7 @@ export default function ActivityFeedWidget() {
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-[12px] text-ink truncate">
                   {actorHref ? (
-                    <Link href={actorHref} className="font-bold uppercase text-ink hover:text-lime no-underline">
+                    <Link href={actorHref} className="font-bold uppercase text-ink hover:text-[var(--accent-ink)] no-underline">
                       {n.actorName || `@${n.actorUsername}`}
                     </Link>
                   ) : (
@@ -95,7 +95,7 @@ export default function ActivityFeedWidget() {
                   )}
                   <span className="text-ink/60"> {d.verb} </span>
                   {d.objectHref && d.objectLabel ? (
-                    <Link href={d.objectHref} className="font-bold uppercase text-lime hover:opacity-80 no-underline">{d.objectLabel}</Link>
+                    <Link href={d.objectHref} className="font-bold uppercase text-[var(--accent-ink)] hover:opacity-80 no-underline">{d.objectLabel}</Link>
                   ) : d.objectLabel ? (
                     <span className="font-bold uppercase text-ink">{d.objectLabel}</span>
                   ) : null}

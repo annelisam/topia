@@ -222,7 +222,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             {c.authorUsername ? (
-              <Link href={`/profile/${c.authorUsername}`} className="font-mono text-[11px] text-ink font-bold no-underline hover:text-lime">@{c.authorUsername}</Link>
+              <Link href={`/profile/${c.authorUsername}`} className="font-mono text-[11px] text-ink font-bold no-underline hover:text-[var(--accent-ink)]">@{c.authorUsername}</Link>
             ) : (
               <span className="font-mono text-[11px] text-ink/60 font-bold">{c.authorName || 'anon'}</span>
             )}
@@ -232,7 +232,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             {kind === 'tool' && c.rating != null && !isReply && (
               <span className="flex items-center gap-0.5 text-[var(--accent-ink)]">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <StarIcon key={n} size={9} filled={n <= (c.rating ?? 0)} className={n <= (c.rating ?? 0) ? 'text-lime' : 'text-ink/15'} />
+                  <StarIcon key={n} size={9} filled={n <= (c.rating ?? 0)} className={n <= (c.rating ?? 0) ? 'text-[var(--accent-ink)]' : 'text-ink/15'} />
                 ))}
               </span>
             )}
@@ -289,7 +289,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
           {/* Inline reply composer */}
           {!isReply && replyOpenFor === c.id && (
-            <div className="mt-2 border border-ink/15 focus-within:border-lime/40 rounded-md p-2.5 bg-ink/[0.02] transition-colors">
+            <div className="mt-2 border border-ink/15 focus-within:border-[var(--accent-ink)]/40 rounded-md p-2.5 bg-ink/[0.02] transition-colors">
               <textarea
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
@@ -319,14 +319,14 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
               <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-ink/[0.05]">
                 {kind === 'event' && (
                   <>
-                    <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                    <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                       {replyUploading ? '…' : '+ photo / video'}
                       <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={replyUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadReplyMedia(f); e.currentTarget.value = ''; }} />
                     </label>
                     <button
                       type="button"
                       onClick={() => setReplyGifOpen(true)}
-                      className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
+                      className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition cursor-pointer"
                     >
                       + GIF
                     </button>
@@ -377,7 +377,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       ) : !canPost ? (
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 py-2">{gateHint}</p>
       ) : (
-        <div className="border border-ink/10 hover:border-ink/20 focus-within:border-lime/40 rounded-md p-3 mb-4 transition-colors bg-ink/[0.02]">
+        <div className="border border-ink/10 hover:border-ink/20 focus-within:border-[var(--accent-ink)]/40 rounded-md p-3 mb-4 transition-colors bg-ink/[0.02]">
           {kind === 'tool' && (
             <div className="flex items-center gap-1.5 mb-2.5">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mr-1">rating</span>
@@ -388,10 +388,10 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                   onClick={() => setRating(rating === n ? 0 : n)}
                   onMouseEnter={() => setHoverRating(n)}
                   onMouseLeave={() => setHoverRating(0)}
-                  className="bg-transparent border-none cursor-pointer text-ink/30 hover:text-lime transition p-0"
+                  className="bg-transparent border-none cursor-pointer text-ink/30 hover:text-[var(--accent-ink)] transition p-0"
                   title={`${n} of 5`}
                 >
-                  <StarIcon size={16} filled={n <= (hoverRating || rating)} className={n <= (hoverRating || rating) ? 'text-lime' : 'text-ink/25'} />
+                  <StarIcon size={16} filled={n <= (hoverRating || rating)} className={n <= (hoverRating || rating) ? 'text-[var(--accent-ink)]' : 'text-ink/25'} />
                 </button>
               ))}
               {rating > 0 && (
@@ -434,14 +434,14 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-ink/[0.05]">
             {kind === 'event' && (
               <>
-                <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
+                <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                   {uploadingMedia ? 'uploading…' : '+ photo / video'}
                   <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm" className="hidden" disabled={uploadingMedia} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia(f); e.currentTarget.value = ''; }} />
                 </label>
                 <button
                   type="button"
                   onClick={() => setGifOpen(true)}
-                  className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-lime/40 rounded-sm transition cursor-pointer"
+                  className="font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition cursor-pointer"
                 >
                   + GIF
                 </button>

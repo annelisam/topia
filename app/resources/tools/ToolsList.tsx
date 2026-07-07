@@ -265,7 +265,7 @@ export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[]
                           <button
                             key={t.slug}
                             onClick={() => setModalSlug(t.slug)}
-                            className="inline-flex items-center gap-2 border border-ink/15 hover:border-lime/50 px-2.5 py-1.5 rounded-sm transition cursor-pointer bg-ink/[0.02]"
+                            className="inline-flex items-center gap-2 border border-ink/15 hover:border-[var(--accent-ink)]/50 px-2.5 py-1.5 rounded-sm transition cursor-pointer bg-ink/[0.02]"
                           >
                             {fav && (
                               /* eslint-disable-next-line @next/next/no-img-element */
@@ -363,7 +363,7 @@ export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[]
                       <button
                         key={tool.id}
                         onClick={() => setModalSlug(tool.slug)}
-                        className="relative text-left bg-ink/[0.02] hover:bg-ink/[0.06] border border-ink/10 hover:border-lime/40 rounded-md p-4 transition-all flex flex-col gap-3 cursor-pointer"
+                        className="relative text-left bg-ink/[0.02] hover:bg-ink/[0.06] border border-ink/10 hover:border-[var(--accent-ink)]/40 rounded-md p-4 transition-all flex flex-col gap-3 cursor-pointer"
                       >
                         {isNew && (
                           <span className="absolute top-2 right-2 font-mono text-[8px] uppercase tracking-[2px] bg-pink/15 text-pink border border-pink/30 px-1.5 py-0.5 rounded-sm">
@@ -383,7 +383,7 @@ export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[]
                             <div className="flex items-center justify-between gap-2">
                               <h2 className="font-mono text-[13px] uppercase font-bold text-ink truncate">{tool.name}</h2>
                               {tool.featured && !isNew && (
-                                <span className="font-mono text-[9px] uppercase tracking-wider text-lime/80 shrink-0">★</span>
+                                <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--accent-ink)]/80 shrink-0">★</span>
                               )}
                             </div>
                             {tool.pricing && (
