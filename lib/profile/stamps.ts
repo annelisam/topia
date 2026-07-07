@@ -117,6 +117,12 @@ export async function computeProfileStamps(opts: {
     stamps.push({ ...s, kind, category: STAMP_CATEGORY[kind], weight: WEIGHT[s.rarity] });
   };
 
+  // Events created to test the platform don't mint stamps — RSVPs to an
+  // archived event literally named "test" were showing up as real travel.
+  const isTestEvent = (name: string) => /\btest\b/i.test(name);
+  const realRsvps = rsvpRows.filter((r) => !isTestEvent(r.name));
+  const realCheckIns = checkIns.filter((c) => !isTestEvent(c.name));
+
   // ── TOPIA member — a special seal for members of the TOPIA world ───────────
   const inTopia = worldMemberships.some(
     (w) => (w.worldTitle || '').trim().toUpperCase() === 'TOPIA' || (w.worldSlug || '').toLowerCase() === 'topia',
@@ -127,7 +133,7 @@ export async function computeProfileStamps(opts: {
   }
 
   // ── TOPIA Like Minds — RSVP'd to the flagship gathering ────────────────────
-  const likeMinds = rsvpRows.find((r) => /like\s*minds/i.test(r.name));
+  const likeMinds = realRsvps.find((r) => /like\s*minds/i.test(r.name));
   if (likeMinds) {
     add('like-minds', {label: 'LIKE MINDS', caption: 'TOPIA', date: ym(likeMinds.dateIso ?? likeMinds.at), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia',
       title: 'TOPIA Like Minds', description: "RSVP'd to TOPIA Like Minds — in the room with the others." });
@@ -176,19 +182,19 @@ export async function computeProfileStamps(opts: {
   }
 
   // ── Events: first stamp + frequent flyer + check-in ────────────────────────
-  if (rsvpRows.length > 0) {
-    const first = rsvpRows[0];
+  if (realRsvps.length > 0) {
+    const first = realRsvps[0];
     add('first-stamp', {label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'cyan', shape: 'circle', rarity: 'common',
       title: 'First Stamp', description: `Your very first RSVP — ${first.name}. Every passport starts somewhere.` });
   }
-  if (rsvpRows.length >= FF_COMMON) {
-    const rarity: StampRarity = rsvpRows.length >= FF_LEGENDARY ? 'legendary' : rsvpRows.length >= FF_RARE ? 'rare' : 'common';
-    add('frequent-flyer', {label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'purple', shape: 'circle', rarity,
-      title: 'Frequent Flyer', description: `RSVP'd to ${rsvpRows.length} events. A regular on the circuit.` });
+  if (realRsvps.length >= FF_COMMON) {
+    const rarity: StampRarity = realRsvps.length >= FF_LEGENDARY ? 'legendary' : realRsvps.length >= FF_RARE ? 'rare' : 'common';
+    add('frequent-flyer', {label: `${realRsvps.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'purple', shape: 'circle', rarity,
+      title: 'Frequent Flyer', description: `RSVP'd to ${realRsvps.length} events. A regular on the circuit.` });
   }
-  if (checkIns.length > 0) {
-    const latest = checkIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
-    add('check-in', {label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
+  if (realCheckIns.length > 0) {
+    const latest = realCheckIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
+    add('check-in', {label: realCheckIns.length > 1 ? `${realCheckIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
       title: 'Checked In', description: 'Showed up and checked in on-site. Presence verified.' });
   }
 
