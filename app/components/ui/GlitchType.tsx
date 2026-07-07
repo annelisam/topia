@@ -4,23 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 const GLITCH_CHARS = '▓▒░█▌▐┃┫╋╳※¤◊⌐¬≡≈';
 
-export default function GlitchType({
-  text,
-  onComplete,
-  speed = 40,
-  className = '',
-  flicker = true,
-  skip = false,
-}: {
-  text: string;
-  onComplete?: () => void;
-  speed?: number;
-  className?: string;
-  // When false, only the characters scramble — no element-level shake/flicker.
-  flicker?: boolean;
-  // Flip to true to finish the reveal instantly (e.g. a user skip action).
-  skip?: boolean;
-}) {
+/** Progressive glitch-typing state for `text`. Extracted so decorative
+ * consumers (SentientText) can paint the string via CSS pseudo-elements
+ * instead of text nodes. Honors prefers-reduced-motion and an external
+ * `skip` flag (both finish the reveal instantly). */
+export function useGlitchTypedText(text: string, speed = 40, onComplete?: () => void, skip = false) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
   const [glitching, setGlitching] = useState(false);
@@ -83,9 +71,31 @@ export default function GlitchType({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  return { display: glitching ? glitchText : displayed, done, glitching };
+}
+
+export default function GlitchType({
+  text,
+  onComplete,
+  speed = 40,
+  className = '',
+  flicker = true,
+  skip = false,
+}: {
+  text: string;
+  onComplete?: () => void;
+  speed?: number;
+  className?: string;
+  // When false, only the characters scramble — no element-level shake/flicker.
+  flicker?: boolean;
+  // Flip to true to finish the reveal instantly (e.g. a user skip action).
+  skip?: boolean;
+}) {
+  const { display, done, glitching } = useGlitchTypedText(text, speed, onComplete, skip);
+
   return (
     <span className={`${className} ${flicker && glitching ? 'animate-[glitchFlicker_0.1s_steps(2)_infinite]' : ''}`}>
-      {glitching ? glitchText : displayed}
+      {display}
       {!done && (
         <span
           className="inline-block w-[2px] h-[1.1em] bg-current ml-[2px] align-middle"

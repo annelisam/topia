@@ -278,7 +278,7 @@ export default function EventsPage() {
               <div className="bg-[var(--accent)] relative">
                 <div className="px-4 md:px-6 py-4 md:py-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                   <div>
-                    <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--accent-text)]/50 block">events // gatherings</span>
+                    <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--on-accent-muted)] block">events // gatherings</span>
                     <h1 className="font-basement font-black text-[clamp(28px,5vw,64px)] uppercase leading-[0.9] text-[var(--accent-text)] mt-1">
                       EVENTS
                     </h1>
@@ -310,7 +310,7 @@ export default function EventsPage() {
                   {search && (
                     <button
                       onClick={() => setSearch('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] text-[var(--foreground)]/40 hover:text-[var(--foreground)] transition bg-transparent border-none cursor-pointer w-5 h-5 flex items-center justify-center"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition bg-transparent border-none cursor-pointer w-5 h-5 flex items-center justify-center"
                       aria-label="Clear"
                     >
                       ×
@@ -328,14 +328,14 @@ export default function EventsPage() {
                     <option key={c} value={c} className="bg-[var(--background)] text-[var(--foreground)]">{c}</option>
                   ))}
                 </select>
-                <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--foreground)]/40 md:ml-auto shrink-0">
+                <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--text-muted)] md:ml-auto shrink-0">
                   {filtered.length} event{filtered.length !== 1 ? 's' : ''}
                 </span>
                 {/* List/grid toggle */}
                 <div className="flex items-center border border-[var(--border-color)] rounded-sm overflow-hidden shrink-0">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-1.5 transition cursor-pointer ${viewMode === 'grid' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
+                    className={`p-1.5 transition cursor-pointer ${viewMode === 'grid' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
                     title="Gallery view"
                     aria-label="Gallery view"
                   >
@@ -348,7 +348,7 @@ export default function EventsPage() {
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-1.5 transition cursor-pointer border-l border-[var(--border-color)] ${viewMode === 'list' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--foreground)]/40 hover:text-[var(--foreground)]'}`}
+                    className={`p-1.5 transition cursor-pointer border-l border-[var(--border-color)] ${viewMode === 'list' ? 'bg-[var(--foreground)] text-[var(--background)]' : 'bg-transparent text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
                     title="List view"
                     aria-label="List view"
                   >
@@ -373,11 +373,11 @@ export default function EventsPage() {
                       className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm whitespace-nowrap transition cursor-pointer ${
                         active
                           ? 'bg-[var(--accent)] text-[var(--accent-text)] font-bold border-transparent'
-                          : 'text-[var(--foreground)]/40 hover:text-[var(--foreground)]/80 bg-transparent border border-transparent'
+                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)]/80 bg-transparent border border-transparent'
                       }`}
                     >
                       {t.label}
-                      {n > 0 && <span className={active ? 'text-[var(--accent-text)]/60' : 'text-[var(--foreground)]/30'}>{n}</span>}
+                      {n > 0 && <span className={active ? 'text-[var(--accent-text)]/60' : 'text-[var(--text-muted)]'}>{n}</span>}
                     </button>
                   );
                 })}
@@ -393,7 +393,7 @@ export default function EventsPage() {
                   grouped.map((group, gi) => (
                     <div key={group.label}>
                       <div className="sticky top-[58px] md:top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
-                        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--foreground)]/40">{group.label} · {group.items.length}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--text-muted)]">{group.label} · {group.items.length}</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
                         {group.items.map((ev, i) => (
@@ -415,7 +415,7 @@ export default function EventsPage() {
                   grouped.map((group, gi) => (
                     <div key={group.label}>
                       <div className="sticky top-[58px] md:top-[calc(var(--nav-height,56px)+58px)] z-20 bg-[var(--background)]/95 backdrop-blur-sm px-4 py-1.5 border-y border-[var(--border-color)]">
-                        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--foreground)]/40">{group.label} · {group.items.length}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--text-muted)]">{group.label} · {group.items.length}</span>
                       </div>
                       <div className="divide-y divide-bone/[0.04]">
                         {group.items.map((ev, i) => (
@@ -484,7 +484,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
       {/* Date chip */}
       <div className="shrink-0 w-12 text-center border border-[var(--border-color)] rounded-sm py-1.5">
         <div className="font-basement text-[18px] leading-none text-[var(--foreground)]">{chip.day}</div>
-        <div className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--foreground)]/40 mt-0.5">{chip.mon}</div>
+        <div className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--text-muted)] mt-0.5">{chip.mon}</div>
       </div>
 
       {/* Thumbnail */}
@@ -504,7 +504,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
           )}
           <EventSourceBadge source={event.externalSource} size="xs" />
         </div>
-        <div className="font-mono text-[10px] text-[var(--foreground)]/40 truncate mt-0.5">
+        <div className="font-mono text-[10px] text-[var(--text-muted)] truncate mt-0.5">
           {event.startTime ? `${event.startTime} ` : ''}
           {event.city ? `· ${event.city}` : ''}
           {attendanceLine(event) ? ` · ${attendanceLine(event)}` : ''}
@@ -525,7 +525,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--foreground)]/40">
+                <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--text-muted)]">
                   {(h.name || h.username || '?')[0]?.toUpperCase()}
                 </span>
               )}
@@ -564,7 +564,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
             className={`inline-flex items-center justify-center w-7 h-7 rounded-sm border transition cursor-pointer ${
               event.isSaved
                 ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--border-color)]'
-                : 'bg-transparent border-[var(--border-color)] text-[var(--foreground)]/40 hover:border-[var(--border-color)] hover:text-[var(--foreground)]'
+                : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--border-color)] hover:text-[var(--foreground)]'
             }`}
             title={event.isSaved ? 'Saved' : 'Save'}
           >
@@ -632,7 +632,7 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
     <div className="bg-[var(--background)] border-b border-[var(--border-color)] p-4">
       <div className="flex items-center gap-2 mb-3">
         <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent-ink)]">◉ FEATURED</span>
-        <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/30">next up</span>
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--text-muted)]">next up</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {events.map((ev, i) => {
@@ -706,13 +706,13 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--foreground)]/40">
+                        <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--text-muted)]">
                           {(h.name || h.username || '?')[0]?.toUpperCase()}
                         </span>
                       )}
                     </span>
                   ))}
-                  <span className="font-mono text-[10px] text-[var(--foreground)]/30 pl-3">{attendanceLine(ev) || (ev.externalSource ? '— external' : '— no rsvps yet')}</span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)] pl-3">{attendanceLine(ev) || (ev.externalSource ? '— external' : '— no rsvps yet')}</span>
                 </div>
                 {ev.externalSource && ev.link ? (
                   <a
@@ -755,7 +755,7 @@ function FeaturedRowCompact({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-[3px] text-[var(--accent-ink)]">◉ FEATURED</span>
-          <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/30">next up</span>
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--text-muted)]">next up</span>
         </div>
         {!few && (
           <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--foreground)]/20 hidden sm:inline">scroll →</span>
@@ -813,7 +813,7 @@ function FeaturedRowCompact({
               </div>
               {/* Small footer with quick action */}
               <div className="px-2 py-1.5 flex items-center justify-between gap-1 bg-[var(--surface-hover)] border-t border-[var(--border-color)]">
-                <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--foreground)]/40 truncate">
+                <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--text-muted)] truncate">
                   {ev.startTime ? `${ev.startTime}` : ''}{ev.city ? ` · ${ev.city}` : ''}
                 </span>
                 {ev.externalSource && ev.link ? (
@@ -892,7 +892,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
           <h2 className="font-mono text-[12px] uppercase font-bold text-[var(--foreground)] leading-tight line-clamp-2 flex-1">{event.eventName}</h2>
           <EventSourceBadge source={event.externalSource} size="xs" />
         </div>
-        <div className="font-mono text-[10px] text-[var(--foreground)]/40 truncate">
+        <div className="font-mono text-[10px] text-[var(--text-muted)] truncate">
           {event.startTime ? `${event.startTime} ` : ''}
           {event.city ? `· ${event.city}` : ''}
         </div>
@@ -911,7 +911,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--foreground)]/40">
+                      <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--text-muted)]">
                         {(h.name || h.username || '?')[0]?.toUpperCase()}
                       </span>
                     )}
@@ -920,7 +920,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
               </div>
             )}
             {attendanceLine(event) && (
-              <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--foreground)]/30">{attendanceLine(event)}</span>
+              <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--text-muted)]">{attendanceLine(event)}</span>
             )}
           </div>
           {(authenticated || (event.externalSource && event.link)) && (
@@ -950,7 +950,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                   className={`inline-flex items-center justify-center w-6 h-6 rounded-sm border transition cursor-pointer ${
                     event.isSaved
                       ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--border-color)]'
-                      : 'bg-transparent border-[var(--border-color)] text-[var(--foreground)]/40 hover:border-[var(--border-color)] hover:text-[var(--foreground)]'
+                      : 'bg-transparent border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--border-color)] hover:text-[var(--foreground)]'
                   }`}
                   title={event.isSaved ? 'Saved' : 'Save'}
                 >
@@ -975,7 +975,7 @@ function EmptyState({ tab, search, selectedCity, onClear, onCreate }: { tab: Tab
     "No events yet";
   return (
     <div className="text-center py-16 px-4">
-      <p className="font-mono text-[13px] uppercase tracking-[2px] text-[var(--foreground)]/40 mb-4">{label}</p>
+      <p className="font-mono text-[13px] uppercase tracking-[2px] text-[var(--text-muted)] mb-4">{label}</p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         {(search || selectedCity || tab !== 'all') && (
           <button

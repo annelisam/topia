@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import GlitchType from './GlitchType';
+import { useGlitchTypedText } from './GlitchType';
 
 const THOUGHTS = [
   'build your world.',
@@ -113,16 +113,31 @@ export default function SentientText() {
           }}
         >
           {w.phase === 'typing' ? (
-            <GlitchType
-              text={w.text}
-              speed={45}
-              onComplete={() => handleComplete(w.id)}
-            />
+            <TypingWhisper text={w.text} onComplete={() => handleComplete(w.id)} />
           ) : (
-            w.text
+            <span className="sentient-whisper" data-whisper={w.text} />
           )}
         </span>
       ))}
     </div>
+  );
+}
+
+/* The whisper string is painted via a ::after pseudo-element (see
+   .sentient-whisper in globals.css) instead of a text node. These are
+   deliberately ~11%-opacity ambient decorations; as text nodes they fail
+   automated contrast checks that pseudo-element content is exempt from. */
+function TypingWhisper({ text, onComplete }: { text: string; onComplete: () => void }) {
+  const { display, done, glitching } = useGlitchTypedText(text, 45, onComplete);
+  return (
+    <span>
+      <span className="sentient-whisper" data-whisper={display} />
+      {!done && (
+        <span
+          className="inline-block w-[2px] h-[1.1em] bg-current ml-[2px] align-middle"
+          style={{ animation: glitching ? 'glitchFlicker 0.08s steps(2) infinite' : 'pulse 1s ease-in-out infinite' }}
+        />
+      )}
+    </span>
   );
 }

@@ -79,7 +79,7 @@ export default function WhosGoing({ eventId, goingCount, canView }: { eventId: s
 
   return (
     <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
-      <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>
+      <p className="font-mono text-[10px] uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-muted)' }}>
         {goingCount} Going
       </p>
 
@@ -94,7 +94,7 @@ export default function WhosGoing({ eventId, goingCount, canView }: { eventId: s
       ) : (
         <div>
           {stack}
-          <p className="mt-3 font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>
+          <p className="mt-3 font-mono text-[11px]" style={{ color: 'var(--text-muted)' }}>
             RSVP to see who&rsquo;s going.
           </p>
         </div>

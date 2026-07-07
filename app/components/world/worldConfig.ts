@@ -16,8 +16,9 @@ export interface WorldConfig {
 
 const CYCLE = ['lime', 'blue', 'pink', 'orange', 'green'] as const;
 const BG: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pink: 'bg-pink', orange: 'bg-orange', green: 'bg-green' };
-// Light foreground colors read on lime/green; dark text reads on blue/pink/orange.
-const TEXT_ON: Record<string, string> = { lime: 'text-obsidian', green: 'text-obsidian', blue: 'text-bone', pink: 'text-bone', orange: 'text-bone' };
+// Dark text on the bright fills (lime/green/pink/orange — bone fails WCAG AA
+// on pink 2.4:1 and orange 2.7:1); bone only on blue (5.0:1).
+const TEXT_ON: Record<string, string> = { lime: 'text-obsidian', green: 'text-obsidian', blue: 'text-bone', pink: 'text-obsidian', orange: 'text-obsidian' };
 
 function hash(str: string): number {
   let h = 0;
