@@ -95,6 +95,9 @@ export default function GrantsList() {
   };
 
   const isGrantClosed = (grant: Grant) => {
+    // An explicit Closed status wins — some programs are discontinued even
+    // though their deadline reads "Rolling" or "Varies".
+    if ((grant.status ?? '').toLowerCase().includes('closed')) return true;
     if (!grant.deadlineDate) return false;
     try {
       const deadline = new Date(grant.deadlineDate);
