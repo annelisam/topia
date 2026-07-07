@@ -44,6 +44,19 @@ export async function resizeAndUploadAvatar(file: File): Promise<string> {
   return uploadToBlob(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
 }
 
+/**
+ * General image pipeline (world images, headers): resize a non-GIF to `max`
+ * px on the long edge and upload to Blob, returning the public URL. Replaces
+ * the old compressImage→data-URL path that bloated world rows with base64
+ * (cleaned up once already by scripts/migrate-world-images-to-blob.mjs;
+ * don't re-bloat).
+ */
+export async function resizeAndUploadImage(file: File, max = 1024): Promise<string> {
+  if (isGif(file)) return uploadToBlob(file);
+  const blob = await resizeToJpeg(file, max, 0.85);
+  return uploadToBlob(new File([blob], 'image.jpg', { type: 'image/jpeg' }));
+}
+
 function resizeToJpeg(file: File, max: number, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();

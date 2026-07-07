@@ -42,6 +42,17 @@ export default function GrantsList({ initialGrants = [] }: { initialGrants?: Gra
   const [submitOpen, setSubmitOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>(undefined);
 
+  // ?submit=1 deep-link (dashboard "+ Grant" quick action) — open the submit
+  // modal on arrival, then strip the param so refresh/back doesn't reopen it.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('submit') === '1') {
+      setSubmitOpen(true);
+      url.searchParams.delete('submit');
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  }, []);
+
   // Debounce search input by 300ms
   useEffect(() => {
     debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);

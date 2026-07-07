@@ -177,6 +177,41 @@ export default function WorldDashboardLayout({
         currentUserRole,
       }}
     >
+      {/* World identity header — shared by every manage subpage so you always
+          know which world you're editing. */}
+      <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-6">
+        <div className="bg-lime px-5 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={imageUrl} alt="" className="w-11 h-11 rounded-sm object-cover border border-obsidian/20 shrink-0" />
+            ) : (
+              <div className="w-11 h-11 rounded-sm bg-obsidian flex items-center justify-center shrink-0">
+                <span className="font-basement text-[18px] text-lime">{world.title[0]?.toUpperCase()}</span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/50 block">topia://world-manage</span>
+              <h1 className="font-basement font-black text-[clamp(20px,3vw,28px)] uppercase leading-[0.9] text-obsidian mt-0.5 truncate">
+                {world.title}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/60 hidden sm:block">
+              {currentUserRole === 'owner' ? 'Owner' : currentUserRole === 'world_builder' ? 'Builder' : 'Collab'}
+            </span>
+            <a
+              href={`/worlds/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[11px] uppercase tracking-[2px] bg-obsidian text-lime px-3 py-1.5 rounded-sm hover:opacity-90 transition no-underline font-bold"
+            >
+              View ↗
+            </a>
+          </div>
+        </div>
+      </div>
       {children}
     </WorldDashboardContext.Provider>
   );

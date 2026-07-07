@@ -8,16 +8,28 @@ import { inputCls, labelCls } from '../../../_components/sharedStyles';
 import { mdComponents } from '../../../_components/mdComponents';
 import { MdToolbar } from '../../../_components/MdToolbar';
 import { WritePrevToggle } from '../../../_components/WritePrevToggle';
-import { compressImage } from '../../../_components/compressImage';
+import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
 import { ToolPicker } from '../../../_components/ToolPicker';
 import { SocialLinks } from '../../../_components/types';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import { useWorldDashboard } from '../layout';
 
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-5">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">{title}</span>
+      </div>
+      <div className="bg-[var(--page-bg)] p-4 sm:p-5">{children}</div>
+    </div>
+  );
+}
+
 export default function WorldDetailsPage() {
   const { world, allTools, privyId, imageUrl, setImageUrl, isBuilder } = useWorldDashboard();
 
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<'image' | 'header' | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [shortDescription, setShortDescription] = useState(world.shortDescription || '');
@@ -35,6 +47,23 @@ export default function WorldDetailsPage() {
     setTools((c.includes(name) ? c.filter(t => t !== name) : [...c, name]).join(', '));
   };
 
+  const uploadImage = async (file: File | undefined, kind: 'image' | 'header') => {
+    if (!file) return;
+    setUploading(kind);
+    setError('');
+    try {
+      // Blob URL, not a base64 data URL — world rows were migrated off base64
+      // once already (scripts/migrate-world-images-to-blob.mjs).
+      const url = await resizeAndUploadImage(file, kind === 'header' ? 1600 : 1024);
+      if (kind === 'image') setImageUrl(url);
+      else setHeaderImageUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const saveDetails = async () => {
     if (!world || !isBuilder) return;
     setSaving(true); setError(''); setSuccess('');
@@ -49,124 +78,128 @@ export default function WorldDetailsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Save failed'); } finally { setSaving(false); }
   };
 
+  const uploadBtnCls = 'inline-block font-mono text-[11px] uppercase tracking-[1px] border border-ink/15 rounded-sm px-3 py-2 cursor-pointer text-ink/60 hover:border-ink/40 hover:text-ink transition';
+
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold uppercase mb-6" style={{ color: 'var(--foreground)' }}>Details</h1>
-
       {!isBuilder && <ReadOnlyBanner />}
 
-      {/* Images card */}
-      <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-        <p className={labelCls} style={{ color: 'var(--foreground)' }}>Images</p>
+      <SectionCard title="Images">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <p className="font-mono text-[11px] mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>World Image</p>
-            {imageUrl ? (
-              <div className="mb-2 relative inline-block">
-                <img src={imageUrl} alt="" className="w-20 h-20 rounded-full object-cover border" style={{ borderColor: 'var(--border-color)' }} />
-                {isBuilder && (
-                  <button onClick={() => setImageUrl('')} className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
-                )}
-              </div>
-            ) : (
-              <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>No image</p>
-            )}
-            {isBuilder && (
-              <label className="inline-block px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-                {imageUrl ? 'Change' : 'Upload'}
-                <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setImageUrl(await compressImage(f)); }} className="hidden" />
-              </label>
-            )}
+            <span className={labelCls}>World image</span>
+            <div className="flex items-center gap-3">
+              {imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={imageUrl} alt="" className="w-16 h-16 rounded-sm object-cover border border-ink/15 shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-sm border border-dashed border-ink/20 bg-ink/[0.03] shrink-0" />
+              )}
+              {isBuilder && (
+                <div className="flex flex-col gap-1.5">
+                  <label className={`${uploadBtnCls} ${uploading === 'image' ? 'opacity-40 pointer-events-none' : ''}`}>
+                    {uploading === 'image' ? 'Uploading…' : imageUrl ? 'Change' : 'Upload'}
+                    <input type="file" accept="image/*" onChange={(e) => uploadImage(e.target.files?.[0], 'image')} className="hidden" />
+                  </label>
+                  {imageUrl && (
+                    <button onClick={() => setImageUrl('')} className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 hover:text-ink transition bg-transparent border-none cursor-pointer text-left">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div>
-            <p className="font-mono text-[11px] mb-2 opacity-50" style={{ color: 'var(--foreground)' }}>Header Image</p>
-            {headerImageUrl ? (
-              <div className="mb-2 relative inline-block">
-                <img src={headerImageUrl} alt="" className="max-w-full h-20 object-cover border rounded-lg" style={{ borderColor: 'var(--border-color)' }} />
-                {isBuilder && (
-                  <button onClick={() => setHeaderImageUrl('')} className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
-                )}
-              </div>
-            ) : (
-              <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>No header image</p>
-            )}
-            {isBuilder && (
-              <label className="inline-block px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-                {headerImageUrl ? 'Change' : 'Upload'}
-                <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setHeaderImageUrl(await compressImage(f, 1600)); }} className="hidden" />
-              </label>
-            )}
+            <span className={labelCls}>Header image</span>
+            <div className="flex items-start gap-3">
+              {headerImageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={headerImageUrl} alt="" className="h-16 max-w-[60%] rounded-sm object-cover border border-ink/15" />
+              ) : (
+                <div className="w-28 h-16 rounded-sm border border-dashed border-ink/20 bg-ink/[0.03] shrink-0" />
+              )}
+              {isBuilder && (
+                <div className="flex flex-col gap-1.5">
+                  <label className={`${uploadBtnCls} ${uploading === 'header' ? 'opacity-40 pointer-events-none' : ''}`}>
+                    {uploading === 'header' ? 'Uploading…' : headerImageUrl ? 'Change' : 'Upload'}
+                    <input type="file" accept="image/*" onChange={(e) => uploadImage(e.target.files?.[0], 'header')} className="hidden" />
+                  </label>
+                  {headerImageUrl && (
+                    <button onClick={() => setHeaderImageUrl('')} className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 hover:text-ink transition bg-transparent border-none cursor-pointer text-left">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Description card */}
-      <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-        <p className={labelCls} style={{ color: 'var(--foreground)' }}>Description</p>
+      <SectionCard title="Description">
         <div className="space-y-4">
           <div>
-            <label className="font-mono text-[11px] mb-1.5 block opacity-50" style={{ color: 'var(--foreground)' }}>Short Description</label>
+            <span className={labelCls}>Short description</span>
             {isBuilder ? (
-              <input type="text" value={shortDescription} onChange={e => setShortDescription(e.target.value)} placeholder="Brief one-liner" className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+              <input type="text" value={shortDescription} onChange={e => setShortDescription(e.target.value)} placeholder="Brief one-liner" className={inputCls} />
             ) : (
-              <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: shortDescription ? 1 : 0.3 }}>{shortDescription || 'None'}</p>
+              <p className={`font-mono text-[13px] ${shortDescription ? 'text-ink' : 'text-ink/30'}`}>{shortDescription || 'None'}</p>
             )}
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>About</label>
+              <span className={`${labelCls} mb-0`}>About</span>
               {isBuilder && <WritePrevToggle preview={descPreview} setPreview={setDescPreview} />}
             </div>
             {isBuilder && !descPreview ? (
               <>
                 <MdToolbar tid="desc-editor" value={description} onChange={setDescription} />
-                <textarea id="desc-editor" value={description} onChange={e => setDescription(e.target.value)} rows={8} placeholder="Write about this world..." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)', resize: 'vertical', minHeight: '150px' }} />
+                <textarea id="desc-editor" value={description} onChange={e => setDescription(e.target.value)} rows={8} placeholder="Write about this world..." className={inputCls} style={{ resize: 'vertical', minHeight: '150px' }} />
               </>
             ) : (
-              <div className="border px-4 py-3 rounded-lg min-h-[80px]" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
-                {description ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{description}</ReactMarkdown> : <p className="font-mono text-[12px] opacity-25" style={{ color: 'var(--foreground)' }}>{isBuilder ? 'Nothing to preview' : 'No description yet'}</p>}
+              <div className="border border-ink/10 rounded-sm px-4 py-3 min-h-[80px] bg-ink/[0.02]">
+                {description ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{description}</ReactMarkdown> : <p className="font-mono text-[12px] text-ink/25">{isBuilder ? 'Nothing to preview' : 'No description yet'}</p>}
               </div>
             )}
           </div>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Tools & Social card */}
-      <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-        <p className={labelCls} style={{ color: 'var(--foreground)' }}>Tools & Social</p>
+      <SectionCard title="Tools & social">
         <div className="space-y-5">
           <div>
-            <label className="font-mono text-[11px] mb-1.5 block opacity-50" style={{ color: 'var(--foreground)' }}>Tools</label>
+            <span className={labelCls}>Tools</span>
             {isBuilder ? (
               allTools.length > 0 ? (
                 <ToolPicker allTools={allTools} selected={selectedTools} onToggle={toggleTool} search={toolSearch} setSearch={setToolSearch} />
               ) : (
-                <input type="text" value={tools} onChange={e => setTools(e.target.value)} placeholder="Comma-separated" className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+                <input type="text" value={tools} onChange={e => setTools(e.target.value)} placeholder="Comma-separated" className={inputCls} />
               )
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {selectedTools.length > 0 ? selectedTools.map(t => (
-                  <span key={t} className="font-mono text-[13px] uppercase tracking-widest px-2.5 py-1 rounded-full border" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>{t}</span>
+                  <span key={t} className="font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1 rounded-sm border border-ink/15 text-ink/60">{t}</span>
                 )) : (
-                  <p className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>None</p>
+                  <p className="font-mono text-[11px] text-ink/30">None</p>
                 )}
               </div>
             )}
           </div>
           <div>
-            <label className="font-mono text-[11px] mb-2 block opacity-50" style={{ color: 'var(--foreground)' }}>Social Links</label>
+            <span className={labelCls}>Social links</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {SOCIAL_PLATFORMS.map(({ key, label, placeholder }) => {
                 const val = (socialLinks as Record<string, string | undefined>)[key] || '';
                 return (
-                  <div key={key} className="flex items-center gap-2">
-                    <div className="opacity-30 shrink-0" style={{ color: 'var(--foreground)' }}><SocialIcon type={key} size={14} /></div>
+                  <div key={key} className="flex items-center gap-2" title={label}>
+                    <div className="text-ink/30 shrink-0"><SocialIcon type={key} size={14} /></div>
                     {isBuilder ? (
-                      <input type="url" value={val} onChange={e => setSocialLinks(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} className="flex-1 border-b bg-transparent font-mono text-[12px] py-1.5 outline-none" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+                      <input type="url" value={val} onChange={e => setSocialLinks(p => ({ ...p, [key]: e.target.value }))} placeholder={placeholder} className="flex-1 min-w-0 border-b border-ink/15 focus:border-lime/60 bg-transparent font-mono text-[16px] md:text-[12px] text-ink py-1.5 outline-none transition-colors" />
                     ) : val ? (
-                      <a href={val} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] truncate hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>{val}</a>
+                      <a href={val} target="_blank" rel="noopener noreferrer" className="font-mono text-[12px] text-ink truncate hover:opacity-70 transition">{val}</a>
                     ) : (
-                      <span className="font-mono text-[12px] opacity-20" style={{ color: 'var(--foreground)' }}>—</span>
+                      <span className="font-mono text-[12px] text-ink/20">—</span>
                     )}
                   </div>
                 );
@@ -174,16 +207,20 @@ export default function WorldDetailsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Save — builders only */}
       {isBuilder && (
-        <div className="flex items-center gap-3 pt-3">
-          <button onClick={saveDetails} disabled={saving} className="px-5 py-2 font-mono text-[11px] uppercase tracking-widest hover:opacity-80 transition disabled:opacity-40 rounded-lg" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-            {saving ? 'Saving...' : 'Save Changes'}
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            onClick={saveDetails}
+            disabled={saving || uploading !== null}
+            className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian font-bold px-5 py-2 rounded-sm hover:opacity-90 transition disabled:opacity-40 cursor-pointer border-none"
+          >
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
-          {error && <span className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</span>}
-          {success && <span className="font-mono text-[11px]" style={{ color: '#00AA55' }}>{success}</span>}
+          {error && <span className="font-mono text-[11px] text-orange">{error}</span>}
+          {success && <span className="font-mono text-[11px]" style={{ color: 'var(--accent-ink)' }}>{success}</span>}
         </div>
       )}
     </div>

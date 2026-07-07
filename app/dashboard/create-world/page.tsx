@@ -1,25 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navigation from '../../components/Navigation';
-import LoadingBar from '../../components/LoadingBar';
-import { useUserProfile } from '../../hooks/useUserProfile';
-
-const inputCls = 'w-full border px-3 py-2 font-mono text-[13px] outline-none transition-colors rounded-lg';
-const labelCls = 'block font-mono text-[13px] uppercase tracking-[0.15em] mb-1.5 font-bold opacity-60';
+import { useDashboard } from '../_components/DashboardContext';
+import { resizeAndUploadImage } from '../../../lib/uploadImage';
 
 const WORLD_CATEGORIES = [
   'Art', 'Music', 'Film', 'Gaming', 'Fashion', 'Technology',
   'Photography', 'Dance', 'Theater', 'Literature', 'Design', 'Other',
 ];
 
+/**
+ * Create-world lives INSIDE the dashboard shell (sidebar + nav come from
+ * dashboard/layout.tsx — this page must not render its own chrome).
+ */
 export default function CreateWorldPage() {
-  const { ready, authenticated, user } = usePrivy();
+  const { user } = usePrivy();
   const router = useRouter();
-  const { profile, loading } = useUserProfile();
+  const { profile } = useDashboard();
 
   const [form, setForm] = useState({
     title: '',
@@ -28,27 +28,30 @@ export default function CreateWorldPage() {
     country: '',
     imageUrl: '',
   });
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
+  // Catalysts can't create worlds — bounce to the overview.
   useEffect(() => {
-    if (ready && !authenticated) router.push('/');
-  }, [ready, authenticated, router]);
+    if (profile?.path === 'catalyst') router.replace('/dashboard');
+  }, [profile?.path, router]);
 
-  useEffect(() => {
-    if (!loading && profile?.path === 'catalyst') router.push('/dashboard');
-  }, [loading, profile?.path, router]);
-
-  if (!ready || loading) {
-    return (
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-        <Navigation />
-        <div className="flex items-center justify-center pt-40"><LoadingBar /></div>
-      </div>
-    );
-  }
-
-  if (!authenticated) return null;
+  const handleImage = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const url = await resizeAndUploadImage(file, 1024);
+      setForm((p) => ({ ...p, imageUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +71,6 @@ export default function CreateWorldPage() {
         setError(data.error || 'Failed to create world');
         return;
       }
-      // Redirect to the new world's edit page
       router.push(`/dashboard/worlds/${data.world.slug}`);
     } catch {
       setError('Failed to create world');
@@ -77,107 +79,149 @@ export default function CreateWorldPage() {
     }
   };
 
+  const inputCls = 'w-full bg-transparent border border-ink/15 rounded-sm px-3 py-2.5 font-mono text-[16px] md:text-[13px] text-ink outline-none focus:border-lime/60 transition-colors';
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <Navigation />
-
-      <main className="container mx-auto max-w-xl px-4 sm:px-6 pt-8 sm:pt-28 pb-16">
-        <div className="mb-6">
-          <Link
-            href="/dashboard"
-            className="font-mono text-[12px] uppercase tracking-tight opacity-40 hover:opacity-70 transition"
-            style={{ color: 'var(--foreground)' }}
-          >
-            ← Dashboard
-          </Link>
+    <div className="max-w-2xl">
+      {/* Header band */}
+      <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-6">
+        <div className="bg-lime px-5 py-4">
+          <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/50 block">topia://new-world</span>
+          <h1 className="font-basement font-black text-[clamp(22px,3.5vw,32px)] uppercase leading-[0.9] text-obsidian mt-0.5">
+            Create a world.
+          </h1>
         </div>
+        <div className="bg-[var(--page-bg)] px-5 py-3">
+          <p className="font-mono text-[12px] text-ink/50 leading-relaxed">
+            A world is your scene — a project, collective, or community creators rally around.
+            You can fill in the details (description, tools, socials, projects) after it exists.
+          </p>
+        </div>
+      </div>
 
-        <h1 className="font-mono text-[13px] uppercase tracking-tight mb-6" style={{ color: 'var(--foreground)' }}>
-          CREATE A WORLD
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="border border-ink/[0.08] rounded-lg overflow-hidden">
+        <div className="bg-[var(--page-bg)] p-5 space-y-5">
+          {/* Title */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>World Title *</label>
+            <label className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">
+              World title <span className="text-ink/30">*</span>
+            </label>
             <input
               className={inputCls}
-              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', backgroundColor: 'transparent' }}
               value={form.title}
               onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
               placeholder="Your world's name"
+              autoFocus
             />
           </div>
 
+          {/* Short description */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Short Description</label>
+            <label className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">
+              Short description
+            </label>
             <textarea
-              className={inputCls}
-              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', backgroundColor: 'transparent' }}
+              className={`${inputCls} resize-none`}
               rows={3}
               value={form.shortDescription}
               onChange={(e) => setForm((p) => ({ ...p, shortDescription: e.target.value }))}
-              placeholder="A brief description of your world..."
+              placeholder="One or two lines on what this world is about"
             />
           </div>
 
+          {/* Category chips */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Category</label>
-            <select
-              className={inputCls}
-              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
-              value={form.category}
-              onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-            >
-              <option value="">Select category...</option>
-              {WORLD_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <label className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">
+              Category
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {WORLD_CATEGORIES.map((cat) => {
+                const active = form.category === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, category: active ? '' : cat }))}
+                    className={`font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1.5 rounded-sm border transition cursor-pointer ${
+                      active
+                        ? 'bg-lime text-obsidian border-lime font-bold'
+                        : 'bg-transparent text-ink/55 border-ink/15 hover:border-ink/40 hover:text-ink'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Country</label>
-            <input
-              className={inputCls}
-              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', backgroundColor: 'transparent' }}
-              value={form.country}
-              onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
-              placeholder="e.g. US, UK, DE"
-            />
+          {/* Country + image, side by side on wide */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">
+                Country
+              </label>
+              <input
+                className={inputCls}
+                value={form.country}
+                onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
+                placeholder="e.g. US, UK, DE"
+              />
+            </div>
+            <div>
+              <label className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">
+                World image
+              </label>
+              <div className="flex items-center gap-3">
+                {form.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={form.imageUrl} alt="" className="w-11 h-11 rounded-sm object-cover border border-ink/15 shrink-0" />
+                ) : (
+                  <div className="w-11 h-11 rounded-sm border border-dashed border-ink/20 bg-ink/[0.03] shrink-0" />
+                )}
+                <label className={`font-mono text-[11px] uppercase tracking-[1px] border border-ink/15 rounded-sm px-3 py-2 transition ${uploading ? 'opacity-40' : 'cursor-pointer text-ink/60 hover:border-ink/40 hover:text-ink'}`}>
+                  {uploading ? 'Uploading…' : form.imageUrl ? 'Change' : 'Upload'}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    onChange={(e) => handleImage(e.target.files?.[0])}
+                    className="hidden"
+                  />
+                </label>
+                {form.imageUrl && !uploading && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, imageUrl: '' }))}
+                    className="font-mono text-[11px] uppercase tracking-[1px] text-ink/40 hover:text-ink transition bg-transparent border-none cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Cover Image URL</label>
-            <input
-              className={inputCls}
-              style={{ borderColor: 'var(--foreground)', color: 'var(--foreground)', backgroundColor: 'transparent' }}
-              value={form.imageUrl}
-              onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-              placeholder="https://..."
-            />
-            <p className="font-mono text-[13px] opacity-40 mt-1" style={{ color: 'var(--foreground)' }}>
-              You can update this later from the world edit page.
-            </p>
-          </div>
-
-          {error && (
-            <p className="font-mono text-[12px] text-red-500">{error}</p>
-          )}
-
+        {/* Footer actions */}
+        <div className="bg-[var(--page-bg)] border-t border-ink/[0.06] px-5 py-3 flex items-center gap-3">
           <button
             type="submit"
-            disabled={submitting}
-            className="font-mono text-[13px] uppercase tracking-tight border rounded-lg px-5 py-2 hover:opacity-70 transition disabled:opacity-40"
-            style={{
-              color: 'var(--background)',
-              backgroundColor: 'var(--foreground)',
-              borderColor: 'var(--foreground)',
-            }}
+            disabled={submitting || uploading}
+            className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-4 py-2 rounded-sm hover:opacity-90 transition disabled:opacity-40 cursor-pointer border-none font-bold"
           >
-            {submitting ? 'CREATING...' : 'CREATE WORLD'}
+            {submitting ? 'Creating…' : 'Create world'}
           </button>
-        </form>
-      </main>
+          <Link
+            href="/dashboard"
+            className="font-mono text-[11px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition no-underline"
+          >
+            Cancel
+          </Link>
+          {error && <span className="font-mono text-[11px] text-orange">{error}</span>}
+        </div>
+      </form>
     </div>
   );
 }

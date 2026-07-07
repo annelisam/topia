@@ -45,6 +45,46 @@ export default function SubmitGrantModal({ open, onClose, onSubmitted }: Props) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [parseUrl, setParseUrl] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState('');
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+
+  async function handleParse() {
+    if (!parseUrl.trim() || !user) return;
+    try { new URL(parseUrl); } catch { setParseError('Please enter a valid URL'); return; }
+    setParsing(true);
+    setParseError('');
+    setParseWarnings([]);
+    try {
+      const res = await fetch('/api/grants/parse-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: parseUrl, privyId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setParseError(data.error || 'Failed to parse URL'); return; }
+      const g = data.grant;
+      setForm((prev) => ({
+        ...prev,
+        grantName: g.grantName || prev.grantName,
+        orgName: g.orgName || prev.orgName,
+        shortDescription: g.shortDescription || prev.shortDescription,
+        link: g.link || prev.link,
+        amountMin: g.amountMin != null ? String(g.amountMin) : prev.amountMin,
+        amountMax: g.amountMax != null ? String(g.amountMax) : prev.amountMax,
+        currency: g.currency || prev.currency,
+        deadlineType: g.deadlineType || prev.deadlineType,
+        deadlineDate: g.deadlineDate || prev.deadlineDate,
+        region: g.region || prev.region,
+      }));
+      setParseWarnings(data.warnings || []);
+    } catch {
+      setParseError('Failed to parse URL. Please try again.');
+    } finally {
+      setParsing(false);
+    }
+  }
 
   // ESC + body scroll lock
   useEffect(() => {
@@ -65,6 +105,9 @@ export default function SubmitGrantModal({ open, onClose, onSubmitted }: Props) 
     setForm(initialForm);
     setError('');
     setSuccess(false);
+    setParseUrl('');
+    setParseError('');
+    setParseWarnings([]);
   }, [open]);
 
   if (!open) return null;
@@ -160,6 +203,41 @@ export default function SubmitGrantModal({ open, onClose, onSubmitted }: Props) 
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3">
+            {/* Auto-fill from a grant page URL */}
+            <div className="border rounded-lg p-3" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
+              <label className="block font-mono text-[13px] uppercase mb-1" style={{ color: 'var(--foreground)' }}>Auto-fill from URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={parseUrl}
+                  onChange={(e) => setParseUrl(e.target.value)}
+                  placeholder="Paste a grant page link…"
+                  className="flex-1 min-w-0 px-3 py-1.5 font-mono text-[13px] border rounded-lg focus:outline-none focus:ring-2 bg-transparent"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleParse}
+                  disabled={parsing || !parseUrl.trim()}
+                  className="font-mono text-[13px] uppercase rounded-lg px-3 py-1.5 disabled:opacity-40 hover:opacity-80 transition cursor-pointer border-none shrink-0"
+                  style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                >
+                  {parsing ? '…' : 'Fill'}
+                </button>
+              </div>
+              {parseError && <p className="font-mono text-[12px] mt-1.5" style={{ color: '#C63A1E' }}>{parseError}</p>}
+              {parseWarnings.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {parseWarnings.map((w, i) => (
+                    <li key={i} className="font-mono text-[12px] opacity-60" style={{ color: 'var(--foreground)' }}>· {w}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="font-mono text-[12px] opacity-40 mt-1.5" style={{ color: 'var(--foreground)' }}>
+                Fills the fields below — review before submitting.
+              </p>
+            </div>
+
             <div>
               <label className="block font-mono text-[13px] uppercase mb-1" style={{ color: 'var(--foreground)' }}>Grant Name *</label>
               <input

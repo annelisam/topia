@@ -74,6 +74,17 @@ export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[]
   const initialFetchedRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // ?submit=1 deep-link (dashboard "+ Tool" quick action) — open the submit
+  // modal on arrival, then strip the param so refresh/back doesn't reopen it.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('submit') === '1') {
+      setSubmitOpen(true);
+      url.searchParams.delete('submit');
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  }, []);
+
   // Set of slugs added in the last 30 days (from /api/tools/trending newest)
   const newSlugSet = useMemo(() => new Set(newest.map((t) => t.slug)), [newest]);
 
