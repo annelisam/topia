@@ -4,10 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useDashboard } from '../_components/DashboardContext';
+import { useToast } from '../../components/Toast';
 
 export default function DashboardEventsPage() {
   const { hostedEvents, refreshEvents } = useDashboard();
   const { user } = usePrivy();
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   // Soft remove / restore — flips events.published. Recoverable.
@@ -21,6 +23,9 @@ export default function DashboardEventsPage() {
         body: JSON.stringify({ privyId: user.id, eventId, published }),
       });
       if (res.ok) refreshEvents();
+      else toast.error(`Couldn't ${published ? 'restore' : 'remove'} the event — try again.`);
+    } catch {
+      toast.error('Network error — the event was not changed.');
     } finally {
       setBusyId(null);
     }

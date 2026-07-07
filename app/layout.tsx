@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
+import { ToastProvider } from "./components/Toast";
 import CookieConsent from "./components/CookieConsent";
 import FeedbackWidget from "./components/FeedbackWidget";
 
@@ -82,8 +83,10 @@ export default function RootLayout({
         <div className="scanlines-overlay" />
 
         <PrivyProviderWrapper>
-          {children}
-          <FeedbackWidget />
+          <ToastProvider>
+            {children}
+            <FeedbackWidget />
+          </ToastProvider>
         </PrivyProviderWrapper>
         <CookieConsent />
         <Analytics />

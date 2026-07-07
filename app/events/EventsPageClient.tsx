@@ -275,6 +275,7 @@ export default function EventsPageClient({
         ? { ...e, isSaved: !saved, interestedCount: Math.max(0, e.interestedCount + (saved ? -1 : 1)) }
         : e
       ));
+      toast.error("Couldn't save the event — try again.");
     }
   }
 
