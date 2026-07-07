@@ -31,10 +31,10 @@ const COMMON_TAGS = [
   'public-goods', 'queer', 'residency', 'social', 'trans', 'visual arts', 'women'
 ];
 
-export default function GrantsList() {
-  const [grants, setGrants] = useState<Grant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+export default function GrantsList({ initialGrants = [] }: { initialGrants?: Grant[] }) {
+  const [grants, setGrants] = useState<Grant[]>(initialGrants);
+  const [loading, setLoading] = useState(initialGrants.length === 0);
+  const [initialLoad, setInitialLoad] = useState(initialGrants.length === 0);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('all tags');
@@ -48,7 +48,11 @@ export default function GrantsList() {
     return () => clearTimeout(debounceRef.current);
   }, [search]);
 
+  // Server page seeds the default list — skip the first (mount) fetch and
+  // only hit the API when filters actually change.
+  const skipFirstFetch = useRef(initialGrants.length > 0);
   useEffect(() => {
+    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
     fetchGrants();
   }, [debouncedSearch, selectedTag, sortBy]);
 

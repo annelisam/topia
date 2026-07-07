@@ -59,10 +59,10 @@ interface TrendingTool {
   score?: number;
 }
 
-export default function ToolsList() {
-  const [allTools, setAllTools] = useState<Tool[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[] }) {
+  const [allTools, setAllTools] = useState<Tool[]>(initialTools);
+  const [loading, setLoading] = useState(initialTools.length === 0);
+  const [initialLoad, setInitialLoad] = useState(initialTools.length === 0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
@@ -96,10 +96,12 @@ export default function ToolsList() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy
+  // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy.
+  // Skipped when the server page already seeded the list.
   useEffect(() => {
     if (initialFetchedRef.current) return;
     initialFetchedRef.current = true;
+    if (initialTools.length > 0) return;
     (async () => {
       try {
         const response = await fetch('/api/tools');
