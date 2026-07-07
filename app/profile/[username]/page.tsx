@@ -3,13 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import MessageButton from '../../components/MessageButton';
 import ShareButton from '../../components/ShareButton';
-import TopiaCardModal from '../../components/profile/TopiaCardModal';
+
+// 3D card modal — loads only when the passport card opens.
+const TopiaCardModal = dynamic(() => import('../../components/profile/TopiaCardModal'), { ssr: false });
 import { SocialIcon } from '../../components/SocialIcons';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 import FollowListModal from '../../components/profile/FollowListModal';

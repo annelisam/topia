@@ -7,7 +7,8 @@ import dynamic from 'next/dynamic';
 import { PathConfig } from './pathConfig';
 import { type PickedGif } from '../GiphyPicker';
 import { gifDisplayUrl } from '@/lib/giphy';
-import DrawingCanvas from '../DrawingCanvas';
+// Canvas drawing tool — loads only when the drawing composer opens.
+const DrawingCanvas = dynamic(() => import('../DrawingCanvas'), { ssr: false });
 import ReactionBar, { type ReactionSummary } from '../ReactionBar';
 
 // Giphy SDK loads on demand (only when the picker opens).

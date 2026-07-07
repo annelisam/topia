@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { usePrivy } from '@privy-io/react-auth';
@@ -9,16 +10,17 @@ import Navigation from '../../components/Navigation';
 import SentientText from '../../components/ui/SentientText';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
-import RsvpModal from './RsvpModal';
+// Heavy flows — load on demand, not in the event-page bundle.
+const RsvpModal = dynamic(() => import('./RsvpModal'), { ssr: false });
 import WhosGoing from './WhosGoing';
-import TicketPurchase from './TicketPurchase';
+const TicketPurchase = dynamic(() => import('./TicketPurchase'), { ssr: false });
 import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
 import { shortenPath } from '../../../lib/shortlink';
-import ShareModal from '../../components/ShareModal';
+const ShareModal = dynamic(() => import('../../components/ShareModal'), { ssr: false });
 
 interface EventHost {
   userId: string;

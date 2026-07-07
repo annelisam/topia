@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import TopNav from './nav/TopNav';
 import MobileTabBar from './nav/MobileTabBar';
 import MobileMenu from './nav/MobileMenu';
-import MessagesModal from './MessagesModal';
+import dynamic from 'next/dynamic';
+
+// Heavy modal — loads only when the messages panel opens.
+const MessagesModal = dynamic(() => import('./MessagesModal'), { ssr: false });
 import BadgesProvider from './BadgesProvider';
 import { OPEN_MESSAGES_EVENT } from '../../lib/openMessages';
 
