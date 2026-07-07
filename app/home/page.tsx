@@ -555,7 +555,7 @@ export default function HomePreview() {
                     <Link href={`/events/${featuredEvent.slug}`} className="group block relative aspect-[16/10] md:aspect-auto bg-obsidian overflow-hidden no-underline">
                       {featuredEvent.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={featuredEvent.imageUrl} alt={featuredEvent.eventName} className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                        <img src={featuredEvent.imageUrl} alt={featuredEvent.eventName} loading="lazy" className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center font-basement font-black text-[40px] uppercase text-bone/15">TOPIA</div>
                       )}
@@ -580,7 +580,7 @@ export default function HomePreview() {
                                   <span key={h.userId} className="block w-6 h-6 rounded-full overflow-hidden border-2 bg-obsidian" style={{ borderColor: 'var(--background)' }} title={h.name || h.username || ''}>
                                     {h.avatarUrl ? (
                                       // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={h.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                      <img src={h.avatarUrl} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />
                                     ) : (
                                       <span className="w-full h-full flex items-center justify-center text-[9px] opacity-50">{(h.name || h.username || '?')[0]?.toUpperCase()}</span>
                                     )}
@@ -618,7 +618,7 @@ export default function HomePreview() {
                         <div className="aspect-[4/3] bg-obsidian/[0.06] overflow-hidden">
                           {ev.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={ev.imageUrl} alt={ev.eventName} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                            <img src={ev.imageUrl} alt={ev.eventName} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center font-basement font-black text-[28px] uppercase opacity-15" style={txt}>TOPIA</div>
                           )}

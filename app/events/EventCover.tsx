@@ -10,10 +10,14 @@ export default function EventCover({
   src,
   alt = '',
   className,
+  lazy = false,
 }: {
   src: string;
   alt?: string;
   className?: string;
+  // List/grid cards pass true; the browser still loads in-viewport lazy
+  // images immediately, so above-fold cards are unaffected.
+  lazy?: boolean;
 }) {
   if (!src) return null;
   const lower = src.toLowerCase();
@@ -36,5 +40,5 @@ export default function EventCover({
     );
   }
   /* eslint-disable-next-line @next/next/no-img-element */
-  return <img src={src} alt={alt} className={className} />;
+  return <img src={src} alt={alt} loading={lazy ? 'lazy' : undefined} className={className} />;
 }

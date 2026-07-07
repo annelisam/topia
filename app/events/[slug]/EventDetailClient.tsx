@@ -496,8 +496,11 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   // Full poster at its natural aspect ratio — fills the box, no crop.
                   <video src={event.imageUrl} className="w-full h-auto block" autoPlay loop muted playsInline preload="metadata" />
                 ) : (
+                  /* Sized square (uploads are 1200x1200) so the layout below
+                     doesn't shift while the poster loads; h-auto corrects any
+                     non-square externals on decode. */
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={event.imageUrl} alt={event.eventName} className="w-full h-auto block" />
+                  <img src={event.imageUrl} alt={event.eventName} width={1200} height={1200} fetchPriority="high" className="w-full h-auto block" />
                 )
               ) : (
                 <div className="w-full flex items-center justify-center" style={{ aspectRatio: '4 / 5' }}>

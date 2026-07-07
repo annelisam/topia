@@ -489,7 +489,7 @@ function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleS
 
       {/* Thumbnail */}
       {event.imageUrl ? (
-        <EventCover src={event.imageUrl} className="w-10 h-10 rounded-sm object-cover shrink-0" />
+        <EventCover src={event.imageUrl} lazy className="w-10 h-10 rounded-sm object-cover shrink-0" />
       ) : null}
 
       {/* Title + meta */}
@@ -779,7 +779,7 @@ function FeaturedRowCompact({
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-[var(--surface-hover)]">
                 {ev.imageUrl && (
-                  <EventCover src={ev.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <EventCover src={ev.imageUrl} lazy className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/20 to-transparent pointer-events-none" />
                 {/* Date chip */}
@@ -861,6 +861,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
         {event.imageUrl ? (
           <EventCover
             src={event.imageUrl}
+            lazy
             className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isPast ? 'grayscale opacity-60' : ''}`}
           />
         ) : (
