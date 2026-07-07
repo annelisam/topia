@@ -165,8 +165,9 @@ export default function GrantsList() {
 
             {/* Sort By */}
             <div>
-              <label className="block font-mono text-[13px] mb-2 sm:mb-3 uppercase" style={{ color: 'var(--foreground)' }}>SORT BY</label>
+              <label htmlFor="grants-sort" className="block font-mono text-[13px] mb-2 sm:mb-3 uppercase" style={{ color: 'var(--foreground)' }}>SORT BY</label>
               <select
+                id="grants-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 font-mono text-[13px] border focus:outline-none focus:ring-2"

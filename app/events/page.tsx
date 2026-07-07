@@ -320,6 +320,7 @@ export default function EventsPage() {
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
+                  aria-label="Filter by city"
                   className="bg-transparent border border-[var(--border-color)] focus:border-[var(--border-color)] font-mono text-[12px] uppercase tracking-[1px] text-[var(--foreground)]/70 px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-colors"
                 >
                   <option value="" className="bg-[var(--background)] text-[var(--foreground)]">all locations</option>
@@ -682,9 +683,9 @@ function FeaturedRow({ events, authenticated, compact, onOpen, onToggleRsvp, onT
                 )}
                 {/* Title overlay bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <h3 className="font-basement font-black text-[clamp(15px,1.5vw,20px)] uppercase leading-[0.95] text-[var(--foreground)] line-clamp-2">
+                  <h2 className="font-basement font-black text-[clamp(15px,1.5vw,20px)] uppercase leading-[0.95] text-[var(--foreground)] line-clamp-2">
                     {ev.eventName}
-                  </h3>
+                  </h2>
                   <div className="font-mono text-[10px] text-[var(--foreground)]/60 mt-1 truncate">
                     {ev.startTime ? `${ev.startTime} ` : ''}
                     {ev.city ? `· ${ev.city}` : ''}
@@ -807,7 +808,7 @@ function FeaturedRowCompact({
                 )}
                 {/* Title overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-1.5">
-                  <h3 className="font-basement font-black text-[12px] uppercase leading-[0.95] text-[var(--foreground)] line-clamp-2">{ev.eventName}</h3>
+                  <h2 className="font-basement font-black text-[12px] uppercase leading-[0.95] text-[var(--foreground)] line-clamp-2">{ev.eventName}</h2>
                 </div>
               </div>
               {/* Small footer with quick action */}
@@ -821,14 +822,14 @@ function FeaturedRowCompact({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 rounded-sm border bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition no-underline shrink-0"
+                    className="font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 min-h-[24px] inline-flex items-center rounded-sm border bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition no-underline shrink-0"
                   >
                     {externalLinkShort(ev.externalSource)}
                   </a>
                 ) : !ev.isHosting && (
                   <button
                     onClick={(e) => { e.stopPropagation(); void onToggleRsvp(ev.id, !ev.isGoing); }}
-                    className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer shrink-0 inline-flex items-center justify-center px-1.5 py-0.5 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
+                    className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer shrink-0 inline-flex items-center justify-center px-2 py-1 min-h-[24px] min-w-[24px] bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
                   >
                     View
                   </button>
@@ -888,7 +889,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
       {/* Body */}
       <div className="p-3 flex flex-col gap-2 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-mono text-[12px] uppercase font-bold text-[var(--foreground)] leading-tight line-clamp-2 flex-1">{event.eventName}</h3>
+          <h2 className="font-mono text-[12px] uppercase font-bold text-[var(--foreground)] leading-tight line-clamp-2 flex-1">{event.eventName}</h2>
           <EventSourceBadge source={event.externalSource} size="xs" />
         </div>
         <div className="font-mono text-[10px] text-[var(--foreground)]/40 truncate">
@@ -929,7 +930,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
                   href={event.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition no-underline"
+                  className="font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 min-h-[24px] inline-flex items-center rounded-sm border bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition no-underline"
                   title={`Opens on ${event.externalSource}`}
                 >
                   {externalLinkShort(event.externalSource)}
@@ -937,7 +938,7 @@ function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onTo
               ) : !isPast && (
                 <button
                   onClick={onToggleRsvp}
-                  className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer inline-flex items-center justify-center px-2 py-1 bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
+                  className="font-mono text-[9px] uppercase tracking-[2px] rounded-sm border transition cursor-pointer inline-flex items-center justify-center px-2 py-1 min-h-[24px] min-w-[24px] bg-transparent border-[var(--border-color)] text-[var(--foreground)]/60 hover:bg-[var(--accent)] hover:text-[var(--accent-text)] hover:border-[var(--accent)]"
                   title="View event"
                 >
                   View

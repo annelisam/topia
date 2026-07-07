@@ -205,6 +205,7 @@ export default function ToolsList() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort tools"
                 className="bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[12px] uppercase tracking-[1px] text-ink/70 px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-colors"
               >
                 {SORT_OPTIONS.map((opt) => (
@@ -367,7 +368,7 @@ export default function ToolsList() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <h3 className="font-mono text-[13px] uppercase font-bold text-ink truncate">{tool.name}</h3>
+                              <h2 className="font-mono text-[13px] uppercase font-bold text-ink truncate">{tool.name}</h2>
                               {tool.featured && !isNew && (
                                 <span className="font-mono text-[9px] uppercase tracking-wider text-lime/80 shrink-0">★</span>
                               )}
