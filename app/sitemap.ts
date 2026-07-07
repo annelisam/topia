@@ -14,6 +14,7 @@ const STATIC_PATHS = [
   '/resources',
   '/resources/tools',
   '/resources/grants',
+  '/topians',
   '/tv',
   '/about',
   '/contact',
