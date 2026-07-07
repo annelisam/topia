@@ -58,7 +58,20 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <link rel="stylesheet" href="https://use.typekit.net/gjn0rep.css" />
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/BasementGrotesque-Black.woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/otf"
+          href="/fonts/GTZirkon-Regular.otf"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="antialiased">
         {/* Global texture overlays */}
