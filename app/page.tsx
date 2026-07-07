@@ -57,10 +57,11 @@ export default function Home() {
       </div>
     );
   }
-  if (!ready) {
-    return null;
-  }
-
+  // No `if (!ready) return null` gate: the splash is pure branding with no
+  // auth-dependent content, so it renders immediately AND server-renders —
+  // which makes the star video (the LCP element) discoverable in the initial
+  // HTML. Gating it on Privy `ready` cost ~2s of LCP. The only auth-dependent
+  // piece is the CTA click, which no-ops until Privy is ready.
   return (
     <div
       className="fixed inset-0 overflow-hidden transition-colors duration-300"
@@ -70,11 +71,15 @@ export default function Home() {
       <div className="absolute inset-0 flex items-center justify-center z-[2]">
         <video
           src="/brand/star-sequence.mp4"
+          poster="/brand/star-poster.webp"
           autoPlay
           loop
           muted
           playsInline
           className="w-[clamp(300px,50vw,700px)] h-auto mix-blend-multiply"
+          // Hint the preload scanner to fetch the LCP video first. React 19
+          // supports fetchPriority but React's video prop types don't yet.
+          {...({ fetchPriority: 'high' } as unknown as React.VideoHTMLAttributes<HTMLVideoElement>)}
         />
       </div>
 
@@ -189,7 +194,7 @@ export default function Home() {
         </div>
 
         {/* Big CTA — triggers Privy login (which routes via the home effect once authenticated) */}
-        <button onClick={() => login()} className="group block no-underline w-full text-left bg-transparent border-none cursor-pointer p-0">
+        <button onClick={() => { if (ready) login(); }} className="group block no-underline w-full text-left bg-transparent border-none cursor-pointer p-0">
           <div className="flex items-baseline justify-between">
             <span className="font-basement font-black text-[clamp(48px,10vw,120px)] uppercase text-[#1a1a1a] leading-none group-hover:text-bone transition-colors duration-300">
               {phase >= 7 ? <GlitchType text="ENTER TOPIA" speed={50} /> : ''}

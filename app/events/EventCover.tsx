@@ -14,6 +14,7 @@ export default function EventCover({
   alt = '',
   className,
   lazy = false,
+  priority = false,
 }: {
   src: string;
   alt?: string;
@@ -21,6 +22,9 @@ export default function EventCover({
   // List/grid cards pass true; the browser still loads in-viewport lazy
   // images immediately, so above-fold cards are unaffected.
   lazy?: boolean;
+  // Likely-LCP covers (e.g. the featured event on /home) pass true so the
+  // image is preloaded with fetchpriority=high.
+  priority?: boolean;
 }) {
   if (!src) return null;
   const lower = src.toLowerCase();
@@ -54,6 +58,7 @@ export default function EventCover({
         width={1200}
         height={1200}
         loading={lazy ? 'lazy' : undefined}
+        priority={priority}
         sizes="(max-width: 768px) 100vw, 33vw"
         className={className}
       />

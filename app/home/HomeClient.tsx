@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
 import PassportLoop from '../components/home/PassportLoop';
+import BlobImage from '../components/BlobImage';
+import EventCover from '../events/EventCover';
 import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
 import { isRealPhoto } from '../../lib/avatar';
@@ -551,8 +553,9 @@ export default function HomeClient({
                         flyer never stretches the row — the details drive height. */}
                     <Link href={`/events/${featuredEvent.slug}`} className="group block relative aspect-[16/10] md:aspect-auto bg-obsidian overflow-hidden no-underline">
                       {featuredEvent.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={featuredEvent.imageUrl} alt={featuredEvent.eventName} loading="lazy" className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                        // Largest above-the-fold image on /home → priority so
+                        // it's preloaded instead of waiting for hydration.
+                        <EventCover src={featuredEvent.imageUrl} alt={featuredEvent.eventName} priority className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center font-basement font-black text-[40px] uppercase text-bone/15">TOPIA</div>
                       )}
@@ -576,8 +579,7 @@ export default function HomeClient({
                                 {featuredEvent.hosts.slice(0, 5).map((h) => (
                                   <span key={h.userId} className="block w-6 h-6 rounded-full overflow-hidden border-2 bg-obsidian" style={{ borderColor: 'var(--background)' }} title={h.name || h.username || ''}>
                                     {h.avatarUrl ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={h.avatarUrl} alt="" width={24} height={24} loading="lazy" className="w-full h-full object-cover" />
+                                      <BlobImage src={h.avatarUrl} alt="" width={48} height={48} sizes="24px" className="w-full h-full object-cover" />
                                     ) : (
                                       <span className="w-full h-full flex items-center justify-center text-[9px] opacity-50">{(h.name || h.username || '?')[0]?.toUpperCase()}</span>
                                     )}
@@ -614,8 +616,7 @@ export default function HomeClient({
                       <Link key={ev.id} href={`/events/${ev.slug}`} className="group block rounded-xl overflow-hidden border hover:opacity-90 transition-opacity no-underline" style={card}>
                         <div className="aspect-[4/3] bg-obsidian/[0.06] overflow-hidden">
                           {ev.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={ev.imageUrl} alt={ev.eventName} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                            <EventCover src={ev.imageUrl} alt={ev.eventName} lazy className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center font-basement font-black text-[28px] uppercase opacity-15" style={txt}>TOPIA</div>
                           )}

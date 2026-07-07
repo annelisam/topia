@@ -72,8 +72,8 @@ export default function RootLayout({
         <link
           rel="preload"
           as="font"
-          type="font/otf"
-          href="/fonts/GTZirkon-Regular.otf"
+          type="font/woff2"
+          href="/fonts/GTZirkon-Regular.woff2"
           crossOrigin="anonymous"
         />
       </head>
