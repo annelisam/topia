@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PATH_CONFIG, resolvePath, type UserPath } from './pathConfig';
+import FitText from './FitText';
 
 export interface TopiaCardProps {
   name: string;
@@ -147,7 +148,12 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
                 <span className="font-basement font-black text-[40px] text-bone/50">{initial}</span>
               )}
             </div>
-            <div className="font-basement font-black uppercase text-bone leading-[0.95] mt-4 text-center px-2 break-words max-w-full" style={{ fontSize: (name || username || '').length > 14 ? 19 : 26 }}>{name || username || 'Unnamed'}</div>
+            <FitText
+              text={name || username || 'Unnamed'}
+              maxSize={26}
+              minSize={14}
+              className="font-basement font-black uppercase text-bone mt-4 text-center px-2 break-words w-full"
+            />
             <div className="font-mono text-[11px] text-bone/55 mt-1">@{username}</div>
             <div className="mt-3 font-mono text-[9px] font-bold tracking-[3px] uppercase px-3 py-1 rounded" style={{ background: accent, color: onAccent }}>{cfg.label}</div>
             {roleTags.length > 0 && (
