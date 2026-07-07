@@ -29,6 +29,8 @@ const LOGO_PATH = 'M248.244 0L249.567 0.534218C253.772 5.33588 268.237 51.6617 2
 // Full TopiaCard proportions — this deck is the hero of the section.
 const CARD_W = 300;
 const CARD_H = 375;
+// Auto-advance one card this often until the visitor interacts.
+const AUTO_ADVANCE_MS = 3000;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GSAP's buildSeamlessLoop helper — the engine behind the GreenSock
@@ -72,7 +74,8 @@ function accentFor(p: LoopProfile): string {
 }
 
 // One passport card — the same design language (and size) as TopiaCard, the
-// shareable identity card. No per-card tilt loop; the deck supplies motion.
+// shareable identity card. Names are never truncated: long ones wrap at a
+// smaller size instead. A slight 3D tilt lifts the card on hover.
 function PassportCard({ p }: { p: LoopProfile }) {
   const roleTags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean);
   const resolved = resolvePath(p.path, roleTags, !!p.isWorldBuilder);
@@ -81,10 +84,11 @@ function PassportCard({ p }: { p: LoopProfile }) {
   const onAccent = resolved === 'worldbuilder' ? '#0a0a0a' : '#f5f0e8';
   const initial = (p.name || p.username || '?')[0]?.toUpperCase() ?? '?';
   const issued = p.createdAt ? new Date(p.createdAt).getFullYear() : new Date().getFullYear();
+  const displayName = p.name || `@${p.username}`;
 
   return (
     <div
-      className="relative w-full h-full rounded-2xl overflow-hidden"
+      className="relative w-full h-full rounded-2xl overflow-hidden transition-transform duration-300 ease-out group-hover:[transform:perspective(900px)_rotateX(5deg)_rotateY(-7deg)_translateY(-6px)]"
       style={{
         background: '#0f0f0f',
         border: `1px solid ${accent}55`,
@@ -111,11 +115,16 @@ function PassportCard({ p }: { p: LoopProfile }) {
               <span className="font-basement font-black text-[40px] text-bone/50">{initial}</span>
             )}
           </div>
-          <div className="font-basement font-black text-[26px] uppercase text-bone leading-none mt-4 text-center px-2 truncate max-w-full">{p.name || `@${p.username}`}</div>
-          <div className="font-mono text-[11px] text-bone/55 mt-1 truncate max-w-full">@{p.username}</div>
+          <div
+            className="font-basement font-black uppercase text-bone leading-[0.95] mt-4 text-center px-2 break-words max-w-full"
+            style={{ fontSize: displayName.length > 14 ? 19 : 26 }}
+          >
+            {displayName}
+          </div>
+          <div className="font-mono text-[11px] text-bone/55 mt-1 break-all text-center px-2 max-w-full">@{p.username}</div>
           <div className="mt-3 font-mono text-[9px] font-bold tracking-[3px] uppercase px-3 py-1 rounded" style={{ background: accent, color: onAccent }}>{cfg.label}</div>
           {roleTags.length > 0 && (
-            <div className="font-mono text-[8px] tracking-[2px] uppercase text-bone/40 mt-3 text-center px-2 truncate max-w-full">
+            <div className="font-mono text-[8px] tracking-[2px] uppercase text-bone/40 mt-3 text-center px-2 max-w-full">
               {roleTags.slice(0, 3).map((r) => r.replace(/-/g, ' ')).join('  ·  ')}
             </div>
           )}
@@ -130,10 +139,10 @@ function PassportCard({ p }: { p: LoopProfile }) {
   );
 }
 
-// The DISCOVER deck: TOPIA passport cards fanned through a 3D center stage —
-// the GreenSock seamless-loop treatment with a perspective tilt, an ambient
-// glow that takes on the centered card's path color, and no autoplay: the
-// deck moves only when you drag, flick a trackpad, or use the arrow keys.
+// The DISCOVER deck: TOPIA passport cards fanned through a 3D center stage
+// over a giant TOPIANS wordmark — the GreenSock seamless-loop treatment.
+// Auto-advances one card every few seconds until the visitor interacts, then
+// it's all theirs: drag/flick, horizontal trackpad scrub, or arrow keys.
 export default function PassportLoop({ profiles, showCompleteCta = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -162,21 +171,27 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     });
 
     // Cover-flow through the center: cards travel right → left while tilting
-    // in perspective (side cards face the middle), scaling and fading up to
-    // full size on top at dead center.
+    // in perspective. Opacity fades linearly (not eased) so more neighbors
+    // stay readable — a fuller fan on both sides of the center card.
     const spacing = 0.1;
     const snapTime = gsap.utils.snap(spacing);
     const animateFunc = (element: HTMLElement) => {
       const tl = gsap.timeline();
       tl.fromTo(
         element,
-        { scale: 0.4, opacity: 0 },
-        { scale: 1, opacity: 1, zIndex: 100, duration: 0.5, yoyo: true, repeat: 1, ease: 'power1.in', immediateRender: false }
+        { scale: 0.5 },
+        { scale: 1, zIndex: 100, duration: 0.5, yoyo: true, repeat: 1, ease: 'power1.in', immediateRender: false }
       )
         .fromTo(
           element,
-          { xPercent: 360 },
-          { xPercent: -360, duration: 1, ease: 'none', immediateRender: false },
+          { opacity: 0 },
+          { opacity: 1, duration: 0.5, yoyo: true, repeat: 1, ease: 'none', immediateRender: false },
+          0
+        )
+        .fromTo(
+          element,
+          { xPercent: 420 },
+          { xPercent: -420, duration: 1, ease: 'none', immediateRender: false },
           0
         )
         .fromTo(
@@ -205,7 +220,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
         seamlessLoop.time(wrapTime(playhead.offset));
         updateGlow();
       },
-      duration: 0.6,
+      duration: 0.7,
       ease: 'power3',
       paused: true,
     });
@@ -217,6 +232,18 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     seamlessLoop.time(0); // render the initial card states
     updateGlow();
 
+    // Gentle attract mode: one card every few seconds, suspended while the
+    // pointer is over the deck and retired for good on the first real
+    // interaction (press, drag, scrub, or keys).
+    let hovering = false;
+    let autoTimer: ReturnType<typeof setInterval> | undefined = setInterval(() => {
+      if (!hovering && !document.hidden) scrubTo(snapTime(vars.offset) + spacing);
+    }, AUTO_ADVANCE_MS);
+    const stopAuto = () => {
+      if (autoTimer) { clearInterval(autoTimer); autoTimer = undefined; }
+    };
+    const markInteracted = () => { stopAuto(); setInteracted(true); };
+
     // Drag / flick to scrub, snapping to the nearest card on release.
     const proxy = document.createElement('div');
     let startOffset = 0;
@@ -224,16 +251,19 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
       type: 'x',
       trigger: wrap,
       onPress() {
+        stopAuto();
+        wrap.classList.add('deck-dragging');
         draggedRef.current = false;
         startOffset = vars.offset;
         gsap.set(proxy, { x: 0 });
       },
       onDrag() {
         draggedRef.current = true;
-        setInteracted(true);
+        markInteracted();
         scrubTo(startOffset + (this.startX - this.x) * 0.0012);
       },
       onRelease() {
+        wrap.classList.remove('deck-dragging');
         if (draggedRef.current) scrubTo(snapTime(vars.offset));
         // Let the click event (if any) read draggedRef before clearing it.
         setTimeout(() => { draggedRef.current = false; }, 0);
@@ -246,7 +276,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      setInteracted(true);
+      markInteracted();
       scrubTo(vars.offset + e.deltaX * 0.0014);
       clearTimeout(wheelSnap);
       wheelSnap = setTimeout(() => scrubTo(snapTime(vars.offset)), 180);
@@ -257,14 +287,22 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
-      setInteracted(true);
+      markInteracted();
       scrubTo(snapTime(vars.offset) + (e.key === 'ArrowRight' ? spacing : -spacing));
     };
     wrap.addEventListener('keydown', onKey);
 
+    const onEnter = () => { hovering = true; };
+    const onLeave = () => { hovering = false; };
+    wrap.addEventListener('mouseenter', onEnter);
+    wrap.addEventListener('mouseleave', onLeave);
+
     return () => {
+      stopAuto();
       wrap.removeEventListener('wheel', onWheel);
       wrap.removeEventListener('keydown', onKey);
+      wrap.removeEventListener('mouseenter', onEnter);
+      wrap.removeEventListener('mouseleave', onLeave);
       clearTimeout(wheelSnap);
       draggable.kill();
       scrub.kill();
@@ -306,17 +344,19 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
       tabIndex={0}
       role="region"
       aria-label="Discover Topians — drag or use arrow keys to browse"
-      className="relative overflow-hidden -mx-4 md:-mx-8 select-none outline-none"
-      style={{ height: CARD_H + 90, touchAction: 'pan-y', cursor: 'grab' }}
+      className="relative -mx-4 md:-mx-8 select-none outline-none cursor-grab [&.deck-dragging]:cursor-grabbing"
+      style={{ height: CARD_H + 100, touchAction: 'pan-y' }}
     >
-      {/* Ambient glow — takes on the centered card's path color */}
+      {/* Ambient glow — takes on the centered card's path color. Lives
+          outside the clip layer so its falloff fades naturally instead of
+          being cut off at the section edge. */}
       <div
         ref={glowRef}
         aria-hidden
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
         style={{
-          width: CARD_W * 2.6,
-          height: CARD_H * 1.1,
+          width: CARD_W * 2.4,
+          height: CARD_H * 0.9,
           backgroundColor: '#e4fe52',
           opacity: 0.1,
           filter: 'blur(90px)',
@@ -324,35 +364,54 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
         }}
       />
 
-      {/* Center stage — every card lives here; GSAP fans them across it */}
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{ width: CARD_W, height: CARD_H, perspective: '1400px' }}
-      >
-        {showCompleteCta && (
-          <Link
-            href="/onboarding"
-            onClick={suppressDragClick}
-            data-profile="cta"
-            className="passport-item absolute inset-0 flex flex-col items-center justify-center text-center gap-3 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-lime transition-colors opacity-0"
-            style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--page-bg)' }}
-            draggable={false}
-          >
-            {ctaInner}
-          </Link>
-        )}
-        {profiles.map((p) => (
-          <Link
-            key={p.id}
-            href={`/profile/${p.username}`}
-            onClick={suppressDragClick}
-            data-profile={p.id}
-            className="passport-item absolute inset-0 block no-underline opacity-0"
-            draggable={false}
-          >
-            <PassportCard p={p} />
-          </Link>
-        ))}
+      {/* Giant TOPIANS wordmark behind the deck */}
+      <div aria-hidden className="absolute inset-x-0 top-[44%] -translate-y-1/2 flex justify-center pointer-events-none">
+        <span
+          className="font-basement font-black uppercase whitespace-nowrap leading-none select-none"
+          style={{
+            fontSize: 'clamp(56px, 15vw, 210px)',
+            color: 'transparent',
+            WebkitTextStroke: '1.5px rgba(245,240,232,0.16)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          TOPIANS
+        </span>
+      </div>
+
+      {/* Clip layer — only the flying cards get clipped; glow + wordmark
+          above sit outside it */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Center stage — every card lives here; GSAP fans them across it */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ width: CARD_W, height: CARD_H, perspective: '1400px' }}
+        >
+          {showCompleteCta && (
+            <Link
+              href="/onboarding"
+              onClick={suppressDragClick}
+              data-profile="cta"
+              className="passport-item absolute inset-0 flex flex-col items-center justify-center text-center gap-3 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-lime transition-colors opacity-0 cursor-grab [.deck-dragging_&]:cursor-grabbing"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--page-bg)' }}
+              draggable={false}
+            >
+              {ctaInner}
+            </Link>
+          )}
+          {profiles.map((p) => (
+            <Link
+              key={p.id}
+              href={`/profile/${p.username}`}
+              onClick={suppressDragClick}
+              data-profile={p.id}
+              className="passport-item group absolute inset-0 block no-underline opacity-0 cursor-grab [.deck-dragging_&]:cursor-grabbing"
+              draggable={false}
+            >
+              <PassportCard p={p} />
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Drag affordance — fades away after the first interaction */}

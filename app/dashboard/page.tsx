@@ -49,11 +49,11 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="min-w-0">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/50 block">topia://dashboard</span>
-              <h1 className="font-basement font-black text-[clamp(22px,3.5vw,36px)] uppercase leading-[0.9] text-obsidian mt-0.5 truncate">
+              <h1 className="font-basement font-black text-[clamp(22px,3.5vw,36px)] uppercase leading-[0.9] text-obsidian mt-0.5 break-words">
                 Hello, {firstName}.
               </h1>
               {profile?.username && (
-                <span className="font-mono text-[11px] text-obsidian/70 mt-0.5 block truncate">@{profile.username}</span>
+                <span className="font-mono text-[11px] text-obsidian/70 mt-0.5 block break-all">@{profile.username}</span>
               )}
             </div>
           </div>

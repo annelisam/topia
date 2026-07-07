@@ -123,11 +123,11 @@ export default function AvatarMenu() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-mono text-[13px] font-bold uppercase truncate" style={{ color: 'var(--foreground)' }}>
+                  <div className="font-mono text-[13px] font-bold uppercase break-words" style={{ color: 'var(--foreground)' }}>
                     {displayName}
                   </div>
                   {profile?.username && (
-                    <div className="font-mono text-[11px] opacity-50 truncate" style={{ color: 'var(--foreground)' }}>
+                    <div className="font-mono text-[11px] opacity-50 break-all" style={{ color: 'var(--foreground)' }}>
                       @{profile.username}
                     </div>
                   )}
