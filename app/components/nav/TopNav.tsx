@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
 import MessagesNavIcon from '../MessagesNavIcon';
@@ -37,8 +38,13 @@ const STATIC_LINKS = [
 export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { profile } = useUserProfile();
+  const pathname = usePathname();
   // Passport routes to the viewer's own profile (their passport).
   const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
+
+  // Current-page marker: exact match or a sub-route of the item.
+  const isActive = (href?: string) =>
+    !!href && href !== '#' && href !== '/' && (pathname === href || pathname.startsWith(`${href}/`));
 
   return (
     <nav
@@ -63,6 +69,8 @@ export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void 
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
             className="font-mono font-normal text-[13px] tracking-wider uppercase opacity-50 hover:opacity-100 transition-opacity duration-300 bg-transparent border-none cursor-pointer flex items-center gap-2"
             style={{ color: 'var(--page-text)' }}
           >
@@ -98,10 +106,12 @@ export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void 
                           key={child.href}
                           href={child.href}
                           onClick={() => setMenuOpen(false)}
-                          className="block pl-7 pr-4 py-2.5 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
+                          aria-current={isActive(child.href) ? 'page' : undefined}
+                          className={`flex items-center justify-between pl-7 pr-4 py-2.5 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline ${isActive(child.href) ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
                           style={{ color: 'var(--page-text)' }}
                         >
-                          {child.label}
+                          <span>{child.label}</span>
+                          {isActive(child.href) && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--accent, #e4fe52)' }} />}
                         </Link>
                       ))}
                     </div>
@@ -119,10 +129,12 @@ export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void 
                       key={item.href}
                       href={item.label === 'Passport' ? passportHref : item.href!}
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline opacity-50 hover:opacity-100"
+                      aria-current={isActive(item.label === 'Passport' ? '/profile' : item.href) ? 'page' : undefined}
+                      className={`flex items-center justify-between px-4 py-3 font-mono text-[13px] tracking-wider uppercase transition-all duration-200 no-underline ${isActive(item.label === 'Passport' ? '/profile' : item.href) ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
                       style={{ color: 'var(--page-text)' }}
                     >
                       <span>{item.label}</span>
+                      {isActive(item.label === 'Passport' ? '/profile' : item.href) && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--accent, #e4fe52)' }} />}
                     </Link>
                   )
                 )}
