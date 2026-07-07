@@ -38,22 +38,22 @@ export default function ToolMiniCard({ tool, onOpen, size = 'sm', className = ''
 
   const inner = (
     <>
-      <span className={`${iconBox} shrink-0 rounded-sm border border-bone/10 bg-bone/[0.04] overflow-hidden flex items-center justify-center`}>
+      <span className={`${iconBox} shrink-0 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center`}>
         {fav ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={fav} alt="" className="w-full h-full object-contain" />
         ) : (
-          <span className="font-basement text-[11px] text-bone/30">{tool.name[0]?.toUpperCase()}</span>
+          <span className="font-basement text-[11px] text-ink/40">{tool.name[0]?.toUpperCase()}</span>
         )}
       </span>
       <div className="min-w-0 flex-1 text-left">
-        <div className={`font-mono ${nameSize} uppercase font-bold text-bone truncate`}>{tool.name}</div>
-        {tool.category && <div className={`font-mono ${catSize} text-bone/30 truncate`}>{tool.category}</div>}
+        <div className={`font-mono ${nameSize} uppercase font-bold text-ink truncate`}>{tool.name}</div>
+        {tool.category && <div className={`font-mono ${catSize} text-ink/40 truncate`}>{tool.category}</div>}
       </div>
     </>
   );
 
-  const wrapperCls = `flex items-center gap-3 border border-bone/10 hover:border-lime/40 hover:bg-bone/[0.03] rounded-sm ${pad} transition no-underline ${className}`;
+  const wrapperCls = `flex items-center gap-3 border border-ink/10 hover:border-ink/40 hover:bg-ink/[0.03] rounded-sm ${pad} transition no-underline ${className}`;
 
   if (onOpen) {
     return (
