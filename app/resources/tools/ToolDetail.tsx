@@ -122,7 +122,7 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
         <div className="shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-md border border-ink/15 overflow-hidden flex items-center justify-center bg-ink/[0.04]">
           {favicon ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={favicon} alt="" className="w-full h-full object-contain" />
+            <img src={favicon} alt="" width={64} height={64} loading="lazy" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           ) : (
             <span className="font-basement text-2xl text-ink/30">{tool.name[0]?.toUpperCase()}</span>
           )}

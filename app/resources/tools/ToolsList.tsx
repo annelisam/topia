@@ -255,7 +255,7 @@ export default function ToolsList() {
                           >
                             {fav && (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                              <img src={fav} alt="" width={16} height={16} loading="lazy" className="w-4 h-4 rounded-sm object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             )}
                             <span className="font-mono text-[11px] text-ink">{t.name}</span>
                           </button>
@@ -280,7 +280,7 @@ export default function ToolsList() {
                           >
                             {fav && (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                              <img src={fav} alt="" width={16} height={16} loading="lazy" className="w-4 h-4 rounded-sm object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             )}
                             <span className="font-mono text-[11px] text-ink">{t.name}</span>
                           </button>
@@ -360,7 +360,7 @@ export default function ToolsList() {
                           <div className="shrink-0 w-10 h-10 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center">
                             {favicon ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={favicon} alt="" className="w-full h-full object-contain" />
+                              <img src={favicon} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             ) : (
                               <span className="font-basement text-base text-ink/30">{tool.name[0]?.toUpperCase()}</span>
                             )}
