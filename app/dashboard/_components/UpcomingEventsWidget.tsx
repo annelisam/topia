@@ -52,7 +52,7 @@ export default function UpcomingEventsWidget() {
               </div>
               <span
                 className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-0.5 border rounded-sm shrink-0 ${
-                  ev.role === 'hosting' ? 'text-lime border-lime/40' : 'text-ink/40 border-ink/15'
+                  ev.role === 'hosting' ? 'text-[var(--accent-ink)] border-[var(--accent-ink)]/40' : 'text-ink/40 border-ink/15'
                 }`}
               >
                 {ev.role}

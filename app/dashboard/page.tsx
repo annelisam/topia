@@ -15,7 +15,7 @@ import InMyKitWidget from './_components/InMyKitWidget';
 function Delta({ n }: { n: number | undefined }) {
   if (!n || n <= 0) return null;
   return (
-    <span className="font-mono text-[9px] uppercase tracking-[2px] text-lime/80 ml-1.5">+{n}</span>
+    <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--accent-ink)]/80 ml-1.5">+{n}</span>
   );
 }
 
@@ -43,7 +43,7 @@ export default function DashboardOverviewPage() {
                 <img src={profile.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-[var(--page-bg)]">
-                  <span className="font-basement text-[20px] text-lime">{initial}</span>
+                  <span className="font-basement text-[20px] text-[var(--accent-ink)]">{initial}</span>
                 </div>
               )}
             </div>
@@ -113,20 +113,20 @@ export default function DashboardOverviewPage() {
             {!isCatalyst && (
               <Link
                 href="/events/create"
-                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
               >
                 + Event
               </Link>
             )}
             <Link
               href="/resources/tools?submit=1"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Tool
             </Link>
             <Link
               href="/resources/grants?submit=1"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Grant
             </Link>

@@ -80,7 +80,7 @@ export default function ContactPage() {
                   className="block px-5 py-4 border border-ink/[0.06] hover:border-lime hover:bg-lime/5 transition-all duration-300 group no-underline rounded-sm"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[13px] text-ink group-hover:text-lime transition-colors">
+                    <span className="font-mono text-[13px] text-ink group-hover:text-[var(--accent-ink)] transition-colors">
                       hello@topia.vision
                     </span>
                     <span className="font-mono text-[11px] uppercase tracking-wider text-ink">

@@ -36,7 +36,7 @@ interface Point3D { x: number; y: number; z: number; }
 
 const COLOR_CYCLE = ['lime', 'blue', 'pink', 'orange', 'green'];
 const COLOR_DOT: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pink: 'bg-pink', orange: 'bg-orange', green: 'bg-green' };
-const COLOR_TEXT: Record<string, string> = { lime: 'text-lime', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
+const COLOR_TEXT: Record<string, string> = { lime: 'text-[var(--accent-ink)]', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
 const GIF_MAP: Record<string, string> = { lime: '/gif/spiral.gif', blue: '/gif/surreal.gif', pink: '/gif/Topian-Gif.gif', orange: '/gif/spiral.gif', green: '/gif/surreal.gif' };
 
 // ─── Orbit configs (wider radii for fuller spread) ──────────────

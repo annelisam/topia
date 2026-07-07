@@ -124,7 +124,7 @@ export default function SubmitToolModal({ open, onClose, onSubmitted }: Props) {
           </div>
         ) : success ? (
           <div className="p-6 text-center">
-            <h2 className="font-basement font-black text-[24px] uppercase text-lime mb-2 inline-flex items-center gap-2">Submitted <CheckIcon size={18} strokeWidth={2.2} /></h2>
+            <h2 className="font-basement font-black text-[24px] uppercase text-[var(--accent-ink)] mb-2 inline-flex items-center gap-2">Submitted <CheckIcon size={18} strokeWidth={2.2} /></h2>
             <p className="font-mono text-[12px] text-ink/60 leading-relaxed">
               Your tool is pending review. It will appear in the public list once an admin approves it.
             </p>

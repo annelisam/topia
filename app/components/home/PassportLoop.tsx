@@ -316,9 +316,9 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
 
   const ctaInner = (
     <>
-      <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
+      <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-[var(--accent-ink)]" style={{ borderColor: 'var(--border-color)' }}>+</span>
       <span className="font-basement font-black text-[18px] uppercase leading-tight" style={{ color: 'var(--foreground)' }}>Complete your passport</span>
-      <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
+      <span className="font-mono text-[10px] uppercase tracking-[2px] text-[var(--accent-ink)]">Finish onboarding →</span>
     </>
   );
 
@@ -326,7 +326,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     return (
       <div className="flex gap-4 overflow-x-auto -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none' }}>
         {showCompleteCta && (
-          <Link href="/onboarding" className="flex flex-col items-center justify-center text-center gap-3 shrink-0 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-lime transition-colors" style={{ width: CARD_W, height: CARD_H, borderColor: 'var(--border-color)' }}>
+          <Link href="/onboarding" className="flex flex-col items-center justify-center text-center gap-3 shrink-0 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-[var(--accent-ink)] transition-colors" style={{ width: CARD_W, height: CARD_H, borderColor: 'var(--border-color)' }}>
             {ctaInner}
           </Link>
         )}
@@ -393,7 +393,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
               href="/onboarding"
               onClick={suppressDragClick}
               data-profile="cta"
-              className="passport-item absolute inset-0 flex flex-col items-center justify-center text-center gap-3 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-lime transition-colors opacity-0 cursor-grab [.deck-dragging_&]:cursor-grabbing"
+              className="passport-item absolute inset-0 flex flex-col items-center justify-center text-center gap-3 no-underline rounded-2xl border-2 border-dashed p-5 hover:border-[var(--accent-ink)] transition-colors opacity-0 cursor-grab [.deck-dragging_&]:cursor-grabbing"
               style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--page-bg)' }}
               draggable={false}
             >

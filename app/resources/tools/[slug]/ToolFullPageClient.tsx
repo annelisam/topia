@@ -55,7 +55,7 @@ export default function ToolFullPageClient({ slug }: { slug: string }) {
               <p className="font-mono text-[12px] uppercase tracking-[2px] text-ink/40">Tool not found.</p>
               <Link
                 href="/resources/tools"
-                className="inline-block mt-3 font-mono text-[11px] uppercase tracking-[2px] text-lime hover:opacity-80 no-underline"
+                className="inline-block mt-3 font-mono text-[11px] uppercase tracking-[2px] text-[var(--accent-ink)] hover:opacity-80 no-underline"
               >
                 ← back to tools
               </Link>

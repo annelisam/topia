@@ -54,7 +54,7 @@ export default function RecentlyViewedWorldsWidget() {
           <Link
             key={w.slug}
             href={`/worlds/${w.slug}`}
-            className="inline-flex items-center gap-2 border border-ink/10 hover:border-lime/40 px-2.5 py-1.5 rounded-sm transition no-underline"
+            className="inline-flex items-center gap-2 border border-ink/10 hover:border-[var(--accent-ink)]/40 px-2.5 py-1.5 rounded-sm transition no-underline"
           >
             {w.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */

@@ -58,8 +58,10 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
   const hostCount = allRows.filter((r) => r.role === 'HOST').length;
   const goingCount = allRows.length - hostCount;
 
+  // Accent TEXT must use --accent-ink (deep lime in light mode) — raw lime is
+  // illegible on the bone page background.
   const roleBadge = (role: 'HOST' | 'GOING') =>
-    `font-mono text-[8px] uppercase tracking-wider rounded-sm px-1.5 py-0.5 shrink-0 border ${role === 'HOST' ? 'text-lime border-lime/30' : 'text-ink/40 border-ink/[0.12]'}`;
+    `font-mono text-[8px] uppercase tracking-wider rounded-sm px-1.5 py-0.5 shrink-0 border ${role === 'HOST' ? 'text-[var(--accent-ink)] border-[var(--accent-ink)]/30' : 'text-ink/40 border-ink/[0.12]'}`;
   // What the badge says on the card — hosting it vs. attending it.
   const roleLabel = (role: 'HOST' | 'GOING') => (role === 'HOST' ? 'HOSTING' : 'ATTENDING');
 

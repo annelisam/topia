@@ -5,7 +5,7 @@ import { PathConfig, COLOR_HEX } from './pathConfig';
 
 const STATUS_STYLE: Record<string, string> = {
   dormant: 'text-ink/40 border-ink/[0.12]',
-  active: 'text-lime border-lime/30',
+  active: 'text-[var(--accent-ink)] border-[var(--accent-ink)]/30',
   live: 'text-pink border-pink/40',
   rising: 'text-cyan border-cyan/40',
 };

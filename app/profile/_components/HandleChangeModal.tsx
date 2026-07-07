@@ -83,7 +83,7 @@ export default function HandleChangeModal({ open, currentHandle, privyId, onClos
             <label className="block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1">
               New handle
             </label>
-            <div className="flex items-center bg-ink/[0.04] border border-ink/15 focus-within:border-lime/40 rounded-sm px-3 py-2 transition-colors">
+            <div className="flex items-center bg-ink/[0.04] border border-ink/15 focus-within:border-[var(--accent-ink)]/40 rounded-sm px-3 py-2 transition-colors">
               <span className="font-mono text-[13px] text-ink/25 mr-1">@</span>
               <input
                 type="text"
