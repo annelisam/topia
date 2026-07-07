@@ -381,8 +381,8 @@ export default function PublicProfilePage() {
                           </div>
                         )}
                       </div>
-                      <div className="py-1 flex items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
+                      <div className="py-1 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between md:gap-3">
+                        <div className="min-w-0 md:flex-1">
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">links</span>
                           {socialLinks.length > 0 ? (
                             <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5">
@@ -454,7 +454,7 @@ export default function PublicProfilePage() {
                             <span className="font-mono text-[11px] text-ink/20">—</span>
                           )}
                         </div>
-                        <div className="shrink-0 flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 md:shrink-0">
                           <button
                             onClick={() => setCardOpen(true)}
                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
