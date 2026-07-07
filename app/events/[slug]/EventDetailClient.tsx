@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { usePrivy } from '@privy-io/react-auth';
@@ -500,9 +501,15 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 ) : (
                   /* Sized square (uploads are 1200x1200) so the layout below
                      doesn't shift while the poster loads; h-auto corrects any
-                     non-square externals on decode. */
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={event.imageUrl} alt={event.eventName} width={1200} height={1200} fetchPriority="high" className="w-full h-auto block" />
+                     non-square externals on decode. next/image (priority — this
+                     is the LCP element) for https non-GIFs; raw img for
+                     data:/GIF sources it can't proxy. */
+                  event.imageUrl.startsWith('https://') && !/\.gif(\?|#|$)/i.test(event.imageUrl) ? (
+                    <Image src={event.imageUrl} alt={event.eventName} width={1200} height={1200} priority sizes="(max-width: 1024px) 100vw, 50vw" className="w-full h-auto block" />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={event.imageUrl} alt={event.eventName} width={1200} height={1200} fetchPriority="high" className="w-full h-auto block" />
+                  )
                 )
               ) : (
                 <div className="w-full flex items-center justify-center" style={{ aspectRatio: '4 / 5' }}>
