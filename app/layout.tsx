@@ -6,6 +6,7 @@ import CookieConsent from "./components/CookieConsent";
 import FeedbackWidget from "./components/FeedbackWidget";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://topia.vision"),
   title: "TOPIA - Culture Before Tech",
   description: "A breathing network for artists, audiences, and communities to create, explore, and sustain collaborative worlds.",
   openGraph: {
@@ -13,11 +14,13 @@ export const metadata: Metadata = {
     description: "A creator engine for artists, by artists.",
     type: "website",
     siteName: "Topia",
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "TOPIA" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "TOPIA — What You Make It",
     description: "A creator engine for artists, by artists.",
+    images: ["/brand/og-image.png"],
   },
 };
 
