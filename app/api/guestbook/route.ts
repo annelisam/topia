@@ -160,13 +160,13 @@ export async function POST(request: NextRequest) {
 
     // Gate by kind
     if (kind === 'drawing' && !isSelf && !isMutual) {
-      return NextResponse.json({ error: 'Drawings require a mutual follow' }, { status: 403 });
+      return NextResponse.json({ error: 'Drawings require a mutual connect' }, { status: 403 });
     }
     if ((kind === 'message' || kind === 'gif') && !isSelf && !isOneway) {
-      return NextResponse.json({ error: 'Follow each other first to leave a note' }, { status: 403 });
+      return NextResponse.json({ error: 'Connect with each other first to leave a note' }, { status: 403 });
     }
     if (kind === 'reply' && !isSelf && !isOneway) {
-      return NextResponse.json({ error: 'Follow each other first to reply' }, { status: 403 });
+      return NextResponse.json({ error: 'Connect with each other first to reply' }, { status: 403 });
     }
 
     // Validate parent if this is a reply: must be top-level + same profile

@@ -5,7 +5,32 @@ import { resolvePath, PATH_CONFIG } from '@/app/components/profile/pathConfig';
 
 export type StampRarity = 'common' | 'rare' | 'legendary';
 
+/** Every stamp type has a stable kind so it can be filtered or retired. */
+export type StampKind =
+  | 'topia-member' | 'like-minds' | 'path-seal' | 'early-citizen' | 'certified'
+  | 'founder' | 'settler' | 'first-stamp' | 'frequent-flyer' | 'check-in'
+  | 'connector' | 'guestbook' | 'toolmaker' | 'orbit';
+
+/** Passport filter buckets: event stamps, connection stamps, everything else. */
+export type StampCategory = 'event' | 'connect' | 'core';
+
+const STAMP_CATEGORY: Record<StampKind, StampCategory> = {
+  'like-minds': 'event', 'first-stamp': 'event', 'frequent-flyer': 'event', 'check-in': 'event',
+  'orbit': 'connect', 'connector': 'connect',
+  'topia-member': 'core', 'path-seal': 'core', 'early-citizen': 'core', 'certified': 'core',
+  'founder': 'core', 'settler': 'core', 'guestbook': 'core', 'toolmaker': 'core',
+};
+
+// Stamps are computed, not stored — so "deleting" a stamp type means retiring
+// its kind here. Anything in this set stops appearing on every passport
+// immediately, with no data migration.
+const RETIRED_STAMP_KINDS = new Set<StampKind>([]);
+
 export interface ProfileStamp {
+  /** Stable id for this stamp type — used for filtering and retirement. */
+  kind: StampKind;
+  /** Filter bucket shown on the passport (ALL / EVENTS / CONNECTS / CORE). */
+  category: StampCategory;
   /** Center / main label (event or world name, or the stamp's headline word). */
   label: string;
   /** The word stamped around the ring / across the top (the stamp's "type"). */
@@ -87,21 +112,30 @@ export async function computeProfileStamps(opts: {
   ]);
 
   const stamps: ProfileStamp[] = [];
-  const add = (s: Omit<ProfileStamp, 'weight'>) => stamps.push({ ...s, weight: WEIGHT[s.rarity] });
+  const add = (kind: StampKind, s: Omit<ProfileStamp, 'weight' | 'kind' | 'category'>) => {
+    if (RETIRED_STAMP_KINDS.has(kind)) return;
+    stamps.push({ ...s, kind, category: STAMP_CATEGORY[kind], weight: WEIGHT[s.rarity] });
+  };
+
+  // Events created to test the platform don't mint stamps — RSVPs to an
+  // archived event literally named "test" were showing up as real travel.
+  const isTestEvent = (name: string) => /\btest\b/i.test(name);
+  const realRsvps = rsvpRows.filter((r) => !isTestEvent(r.name));
+  const realCheckIns = checkIns.filter((c) => !isTestEvent(c.name));
 
   // ── TOPIA member — a special seal for members of the TOPIA world ───────────
   const inTopia = worldMemberships.some(
     (w) => (w.worldTitle || '').trim().toUpperCase() === 'TOPIA' || (w.worldSlug || '').toLowerCase() === 'topia',
   );
   if (inTopia) {
-    add({ label: 'TOPIA', caption: 'MEMBER', date: ym(opts.createdAt), color: 'silver', shape: 'seal', rarity: 'legendary', emblem: 'topia',
+    add('topia-member', {label: 'TOPIA', caption: 'MEMBER', date: ym(opts.createdAt), color: 'silver', shape: 'seal', rarity: 'legendary', emblem: 'topia',
       title: 'TOPIA Member', description: 'A member of TOPIA — the world at the center of it all. The rarest seal on the passport.' });
   }
 
   // ── TOPIA Like Minds — RSVP'd to the flagship gathering ────────────────────
-  const likeMinds = rsvpRows.find((r) => /like\s*minds/i.test(r.name));
+  const likeMinds = realRsvps.find((r) => /like\s*minds/i.test(r.name));
   if (likeMinds) {
-    add({ label: 'LIKE MINDS', caption: 'TOPIA', date: ym(likeMinds.dateIso ?? likeMinds.at), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia',
+    add('like-minds', {label: 'LIKE MINDS', caption: 'TOPIA', date: ym(likeMinds.dateIso ?? likeMinds.at), color: 'lime', shape: 'seal', rarity: 'legendary', emblem: 'topia',
       title: 'TOPIA Like Minds', description: "RSVP'd to TOPIA Like Minds — in the room with the others." });
   }
 
@@ -109,24 +143,24 @@ export async function computeProfileStamps(opts: {
   const path = resolvePath(opts.path, roleTagList, hasOwnedWorlds);
   const pathCfg = PATH_CONFIG[path];
   const pathBrand = pathCfg.color === 'blue' ? 'cyan' : pathCfg.color === 'pink' ? 'magenta' : pathCfg.color;
-  add({ label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathBrand, shape: 'seal', rarity: 'rare', emblem: 'star',
+  add('path-seal', {label: pathCfg.label, caption: 'OFFICIAL SEAL', date: ym(opts.createdAt), color: pathBrand, shape: 'seal', rarity: 'rare', emblem: 'star',
     title: `${pathCfg.label} Seal`, description: 'Your official path seal — the lane you build in across TOPIA.' });
 
   // ── Early citizen ──────────────────────────────────────────────────────────
   if (new Date(opts.createdAt) <= BETA_CUTOFF) {
-    add({ label: 'BETA', caption: 'EARLY CITIZEN', date: ym(opts.createdAt), color: 'orange', shape: 'circle', rarity: 'legendary',
+    add('early-citizen', {label: 'BETA', caption: 'EARLY CITIZEN', date: ym(opts.createdAt), color: 'orange', shape: 'circle', rarity: 'legendary',
       title: 'Early Citizen', description: 'Joined TOPIA during the beta — here before it was here.' });
   }
 
   // ── Profile complete (renamed from "Completionist" → "Certified") ──────────
   if (opts.avatarUrl && opts.bio && roleTagList.length > 0 && opts.path) {
-    add({ label: 'PROFILE', caption: 'CERTIFIED', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'common',
+    add('certified', {label: 'PROFILE', caption: 'CERTIFIED', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'common',
       title: 'Certified', description: 'Completed your profile — photo, story, and path all in place.' });
   }
 
   // ── Founder — owns a world ─────────────────────────────────────────────────
   worldMemberships.filter((w) => w.role === 'owner').slice(0, 2).forEach((w) => {
-    add({ label: w.worldTitle.toUpperCase().slice(0, 14), caption: 'FOUNDER', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'legendary',
+    add('founder', {label: w.worldTitle.toUpperCase().slice(0, 14), caption: 'FOUNDER', date: ym(opts.createdAt), color: 'lime', shape: 'circle', rarity: 'legendary',
       title: 'Founder', description: `Founded ${w.worldTitle} and shaped it from day one.` });
   });
 
@@ -143,42 +177,42 @@ export async function computeProfileStamps(opts: {
     }
   }
   if (bestSettler) {
-    add({ label: bestSettler.world.toUpperCase().slice(0, 14), caption: 'SETTLER', date: ym(bestSettler.at), color: 'orange', shape: 'rect', rarity: 'rare',
+    add('settler', {label: bestSettler.world.toUpperCase().slice(0, 14), caption: 'SETTLER', date: ym(bestSettler.at), color: 'orange', shape: 'rect', rarity: 'rare',
       title: 'Settler', description: `Among the first to join ${bestSettler.world} — an early believer.` });
   }
 
   // ── Events: first stamp + frequent flyer + check-in ────────────────────────
-  if (rsvpRows.length > 0) {
-    const first = rsvpRows[0];
-    add({ label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'cyan', shape: 'circle', rarity: 'common',
+  if (realRsvps.length > 0) {
+    const first = realRsvps[0];
+    add('first-stamp', {label: first.name.toUpperCase().slice(0, 14), caption: 'FIRST STAMP', date: ym(first.dateIso ?? first.at), color: 'cyan', shape: 'circle', rarity: 'common',
       title: 'First Stamp', description: `Your very first RSVP — ${first.name}. Every passport starts somewhere.` });
   }
-  if (rsvpRows.length >= FF_COMMON) {
-    const rarity: StampRarity = rsvpRows.length >= FF_LEGENDARY ? 'legendary' : rsvpRows.length >= FF_RARE ? 'rare' : 'common';
-    add({ label: `${rsvpRows.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'purple', shape: 'circle', rarity,
-      title: 'Frequent Flyer', description: `RSVP'd to ${rsvpRows.length} events. A regular on the circuit.` });
+  if (realRsvps.length >= FF_COMMON) {
+    const rarity: StampRarity = realRsvps.length >= FF_LEGENDARY ? 'legendary' : realRsvps.length >= FF_RARE ? 'rare' : 'common';
+    add('frequent-flyer', {label: `${realRsvps.length} EVENTS`, caption: 'FREQUENT FLYER', date: 'MILES', color: 'purple', shape: 'circle', rarity,
+      title: 'Frequent Flyer', description: `RSVP'd to ${realRsvps.length} events. A regular on the circuit.` });
   }
-  if (checkIns.length > 0) {
-    const latest = checkIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
-    add({ label: checkIns.length > 1 ? `${checkIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
+  if (realCheckIns.length > 0) {
+    const latest = realCheckIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
+    add('check-in', {label: realCheckIns.length > 1 ? `${realCheckIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
       title: 'Checked In', description: 'Showed up and checked in on-site. Presence verified.' });
   }
 
   // ── Connector — invited someone who joined ─────────────────────────────────
   if (invites.length > 0) {
-    add({ label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'rare',
+    add('connector', {label: `${invites.length} BROUGHT`, caption: 'CONNECTOR', date: 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'rare',
       title: 'Connector', description: `Brought ${invites.length} ${invites.length === 1 ? 'person' : 'people'} into TOPIA through an invite.` });
   }
 
   // ── Guestbook — signed at least one guestbook ──────────────────────────────
   if (gbRows.length > 0) {
-    add({ label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'common',
+    add('guestbook', {label: 'SIGNED', caption: 'GUESTBOOK', date: gbRows.length > 1 ? `${gbRows.length}×` : 'TOPIA', color: 'magenta', shape: 'rect', rarity: 'common',
       title: 'Guestbook', description: 'Signed a guestbook and left your mark on someone’s profile.' });
   }
 
   // ── Toolmaker — contributed a tool to Resources ────────────────────────────
   if (toolRows.length > 0) {
-    add({ label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'purple', shape: 'rect', rarity: 'rare',
+    add('toolmaker', {label: toolRows.length > 1 ? `${toolRows.length} TOOLS` : toolRows[0].name.toUpperCase().slice(0, 12), caption: 'TOOLMAKER', date: 'BUILD', color: 'purple', shape: 'rect', rarity: 'rare',
       title: 'Toolmaker', description: 'Contributed a tool to the TOPIA Resources library.' });
   }
 
@@ -197,7 +231,7 @@ export async function computeProfileStamps(opts: {
   // Only mutual follows earn an Orbit stamp. Subtle, mixed colors.
   const ORBIT_COLORS = ['dust', 'slate', 'sage', 'mauveGrey', 'clayGrey'];
   [...conns.values()].filter((p) => p.username && p.iFollow && p.followsMe).slice(0, 12).forEach((p, i) => {
-    add({ label: (p.name || p.username || '').toUpperCase().slice(0, 12), caption: 'ORBIT', date: ym(p.at), color: ORBIT_COLORS[i % ORBIT_COLORS.length], shape: 'rect', rarity: 'common',
+    add('orbit', {label: (p.name || p.username || '').toUpperCase().slice(0, 12), caption: 'ORBIT', date: ym(p.at), color: ORBIT_COLORS[i % ORBIT_COLORS.length], shape: 'rect', rarity: 'common',
       title: p.name || `@${p.username}`, description: `${opts.ownerName || 'They'} and @${p.username} follow each other.`, avatarUrl: p.avatarUrl ?? undefined, href: `/profile/${p.username}` });
   });
 

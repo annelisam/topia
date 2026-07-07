@@ -23,7 +23,7 @@ function describe(n: NotifItem): { verb: string; objectLabel: string | null; obj
   const meta = (n.metadata ?? {}) as Record<string, string | undefined>;
   switch (n.type) {
     case 'follow':
-      return { verb: 'followed you', objectLabel: null, objectHref: null };
+      return { verb: 'connected with you', objectLabel: null, objectHref: null };
     case 'world_member_added':
       return {
         verb: 'added you to',

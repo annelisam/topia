@@ -8,7 +8,7 @@ export default function ContactPage() {
   const [showLinks, setShowLinks] = useState(false);
 
   const handleDone = useCallback(() => {
-    setTimeout(() => setShowLinks(true), 400);
+    setTimeout(() => setShowLinks(true), 150);
   }, []);
 
   return (
@@ -56,7 +56,7 @@ export default function ContactPage() {
               />
               <div className="relative z-10">
                 <div className="font-mono text-[clamp(28px,5vw,56px)] leading-[1.4] text-ink">
-                  <GlitchType text="reach out." onComplete={handleDone} speed={80} />
+                  <GlitchType text="reach out." onComplete={handleDone} speed={35} />
                 </div>
                 <p className="font-mono text-[11px] text-ink mt-6 max-w-sm leading-relaxed">
                   whether you&apos;re building a world, looking for collaborators, or just
@@ -71,7 +71,7 @@ export default function ContactPage() {
                 channels
               </span>
               <div
-                className={`space-y-4 transition-all duration-700 ${
+                className={`space-y-4 transition-all duration-400 ${
                   showLinks ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
               >

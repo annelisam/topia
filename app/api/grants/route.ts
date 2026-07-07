@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { db, grants } from '@/lib/db';
-import { sql } from '@vercel/postgres';
-import { desc, asc, ilike, or } from 'drizzle-orm';
+import { desc, asc, ilike, or, and, eq } from 'drizzle-orm';
 
 // Public, viewer-independent list → CDN-cacheable (see /api/profiles).
 const LIST_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+
+// A grant whose deadline passed keeps its CLOSED badge on the list for this
+// long, then drops off entirely — the list cleans itself as deadlines pass.
+const CLOSED_GRACE_DAYS = 30;
+
+// Hidden from the public list: explicitly Closed grants (discontinued
+// programs — hidden immediately) and grants whose dated deadline passed more
+// than the grace window ago. Rolling / "Varies" deadlines never expire here.
+function isHiddenClosed(g: { status: string | null; deadlineDate: string | null }): boolean {
+  if ((g.status ?? '').toLowerCase().includes('closed')) return true;
+  if (!g.deadlineDate) return false;
+  const d = new Date(g.deadlineDate);
+  if (isNaN(d.getTime())) return false; // "Rolling", "Varies", …
+  return d.getTime() < Date.now() - CLOSED_GRACE_DAYS * 24 * 60 * 60 * 1000;
+}
 
 export async function GET(request: Request) {
   try {
@@ -13,11 +27,8 @@ export async function GET(request: Request) {
     const tag = searchParams.get('tag');
     const sortBy = searchParams.get('sortBy') || 'deadline-asc';
 
-    // Build query
-    let query = db.select().from(grants);
-
-    // Apply filters
-    let conditions = [];
+    // Only published grants are public — user submissions await admin review.
+    const conditions = [eq(grants.published, true)];
 
     if (search) {
       conditions.push(
@@ -26,7 +37,7 @@ export async function GET(request: Request) {
           ilike(grants.shortDescription, `%${search}%`),
           ilike(grants.orgName, `%${search}%`),
           ilike(grants.tags, `%${search}%`)
-        )
+        )!
       );
     }
 
@@ -56,14 +67,17 @@ export async function GET(request: Request) {
         orderByClause = asc(grants.deadlineDate);
     }
 
-    // Execute query
-    const results = await query
-      .where(conditions.length > 0 ? conditions[0] : undefined)
+    const results = await db
+      .select()
+      .from(grants)
+      .where(and(...conditions))
       .orderBy(orderByClause);
 
+    const visible = results.filter((g) => !isHiddenClosed(g));
+
     return NextResponse.json({
-      grants: results,
-      count: results.length,
+      grants: visible,
+      count: visible.length,
     }, { headers: { 'Cache-Control': LIST_CACHE } });
   } catch (error) {
     console.error('Error fetching grants:', error);

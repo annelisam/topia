@@ -49,11 +49,11 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="min-w-0">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/50 block">topia://dashboard</span>
-              <h1 className="font-basement font-black text-[clamp(22px,3.5vw,36px)] uppercase leading-[0.9] text-obsidian mt-0.5 truncate">
+              <h1 className="font-basement font-black text-[clamp(22px,3.5vw,36px)] uppercase leading-[0.9] text-obsidian mt-0.5 break-words">
                 Hello, {firstName}.
               </h1>
               {profile?.username && (
-                <span className="font-mono text-[11px] text-obsidian/70 mt-0.5 block truncate">@{profile.username}</span>
+                <span className="font-mono text-[11px] text-obsidian/70 mt-0.5 block break-all">@{profile.username}</span>
               )}
             </div>
           </div>
@@ -80,8 +80,8 @@ export default function DashboardOverviewPage() {
               { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
               { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events,    href: '/events' },
               { label: 'Builder',   value: builderCount,             delta: undefined,                href: null },
-              { label: 'Followers', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
-              { label: 'Following', value: stats?.following ?? 0,    delta: undefined,                href: null },
+              { label: 'Connects', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
+              { label: 'Connected', value: stats?.following ?? 0,    delta: undefined,                href: null },
             ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
               const inner = (
                 <div className={`flex flex-col px-3 md:px-4 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>

@@ -43,25 +43,32 @@ function dayChip(d: string | null): { day: string; mon: string } {
   return { day: String(dt.getDate()), mon: dt.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() };
 }
 
-// Profile Events tab — events the user hosts (HOST) and ones they've RSVP'd to
-// (GOING), deduped. Gallery view is primary; list view is the secondary toggle.
+// Profile Events tab — events the user hosts (HOSTING) and ones they've
+// RSVP'd to (ATTENDING), deduped, with a filter row so it's explicit which
+// is which. Gallery view is primary; list view is the secondary toggle.
 export default function EventsLayer({ config, hosted, attended }: Props) {
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [filter, setFilter] = useState<'all' | 'HOST' | 'GOING'>('all');
 
   const seen = new Set<string>();
-  const rows: { ev: EventItem; role: 'HOST' | 'GOING' }[] = [];
-  for (const ev of hosted) { if (!seen.has(ev.id)) { seen.add(ev.id); rows.push({ ev, role: 'HOST' }); } }
-  for (const ev of attended) { if (!seen.has(ev.id)) { seen.add(ev.id); rows.push({ ev, role: 'GOING' }); } }
+  const allRows: { ev: EventItem; role: 'HOST' | 'GOING' }[] = [];
+  for (const ev of hosted) { if (!seen.has(ev.id)) { seen.add(ev.id); allRows.push({ ev, role: 'HOST' }); } }
+  for (const ev of attended) { if (!seen.has(ev.id)) { seen.add(ev.id); allRows.push({ ev, role: 'GOING' }); } }
+  const rows = filter === 'all' ? allRows : allRows.filter((r) => r.role === filter);
+  const hostCount = allRows.filter((r) => r.role === 'HOST').length;
+  const goingCount = allRows.length - hostCount;
 
   const roleBadge = (role: 'HOST' | 'GOING') =>
     `font-mono text-[8px] uppercase tracking-wider rounded-sm px-1.5 py-0.5 shrink-0 border ${role === 'HOST' ? 'text-lime border-lime/30' : 'text-ink/40 border-ink/[0.12]'}`;
+  // What the badge says on the card — hosting it vs. attending it.
+  const roleLabel = (role: 'HOST' | 'GOING') => (role === 'HOST' ? 'HOSTING' : 'ATTENDING');
 
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
       <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
         <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Events</span>
         <div className="flex items-center gap-2.5">
-          <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-30`}>{rows.length} events</span>
+          <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-30`}>{allRows.length} events</span>
           {/* Gallery / list toggle — gallery first */}
           <div className={`flex items-center border ${config.textOn === 'text-obsidian' ? 'border-obsidian/20' : 'border-ink/20'} rounded-sm overflow-hidden`}>
             <button
@@ -81,6 +88,23 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Filter — makes hosting vs. attending explicit */}
+      {allRows.length > 0 && (
+        <div className="flex items-center gap-3 px-4 pt-2.5 pb-0.5">
+          {([['all', 'ALL', allRows.length], ['HOST', 'HOSTING', hostCount], ['GOING', 'ATTENDING', goingCount]] as const)
+            .filter(([key, , n]) => key === 'all' || n > 0)
+            .map(([key, label, n]) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`font-mono text-[8px] uppercase tracking-[1.5px] bg-transparent border-none p-0 cursor-pointer transition ${filter === key ? 'text-ink font-bold' : 'text-ink/30 hover:text-ink/60'}`}
+              >
+                {label} [{n}]
+              </button>
+            ))}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
         {rows.length === 0 ? (
@@ -110,7 +134,7 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
                     <h3 className="font-mono text-[clamp(12px,2.6vw,15px)] font-bold uppercase text-ink leading-tight line-clamp-2">{ev.eventName}</h3>
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <span className="font-mono text-[10px] text-ink/40 truncate">{ev.city || fmtDate(ev.date)}</span>
-                      <span className={`${roleBadge(role)} shrink-0`}>{role}</span>
+                      <span className={`${roleBadge(role)} shrink-0`}>{roleLabel(role)}</span>
                     </div>
                   </div>
                 </Link>
@@ -133,7 +157,7 @@ export default function EventsLayer({ config, hosted, attended }: Props) {
                 <span className="font-mono text-[12px] uppercase font-bold text-ink block truncate">{ev.eventName}</span>
                 <span className="font-mono text-[9px] text-ink/30">{[fmtDate(ev.date), ev.city].filter(Boolean).join(' · ')}</span>
               </div>
-              <span className={roleBadge(role)}>{role}</span>
+              <span className={roleBadge(role)}>{roleLabel(role)}</span>
             </Link>
           ))
         )}

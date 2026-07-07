@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const GLITCH_CHARS = '▓▒░█▌▐┃┫╋╳※¤◊⌐¬≡≈';
 
@@ -10,6 +10,7 @@ export default function GlitchType({
   speed = 40,
   className = '',
   flicker = true,
+  skip = false,
 }: {
   text: string;
   onComplete?: () => void;
@@ -17,20 +18,43 @@ export default function GlitchType({
   className?: string;
   // When false, only the characters scramble — no element-level shake/flicker.
   flicker?: boolean;
+  // Flip to true to finish the reveal instantly (e.g. a user skip action).
+  skip?: boolean;
 }) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
   const [glitching, setGlitching] = useState(false);
   const [glitchText, setGlitchText] = useState('');
+  const doneRef = useRef(false);
+
+  const finish = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    setGlitching(false);
+    setDisplayed(text);
+    setDone(true);
+    onComplete?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
 
   useEffect(() => {
+    if (skip) finish();
+  }, [skip, finish]);
+
+  useEffect(() => {
+    // Reduced motion (or an immediate skip) → show the full text right away.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finish();
+      return;
+    }
+
     let i = 0;
     let cancelled = false;
 
     function typeNext() {
-      if (cancelled) return;
+      if (cancelled || doneRef.current) return;
       i++;
-      if (i > text.length) { setDone(true); onComplete?.(); return; }
+      if (i > text.length) { finish(); return; }
       if (Math.random() < 0.1 && i < text.length - 2) {
         setGlitching(true);
         let scramble = text.slice(0, i);
@@ -38,7 +62,7 @@ export default function GlitchType({
           scramble += GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
         setGlitchText(scramble);
         setTimeout(() => {
-          if (cancelled) return;
+          if (cancelled || doneRef.current) return;
           setGlitching(false);
           setDisplayed(text.slice(0, i));
           setTimeout(typeNext, speed);

@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
+import PassportLoop from '../components/home/PassportLoop';
 import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
-import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import { isRealPhoto } from '../../lib/avatar';
 
 interface Episode {
@@ -51,13 +51,6 @@ interface Profile {
   pronouns: string | null;
   isWorldBuilder?: boolean;
   createdAt?: string;
-}
-
-// New if the profile was created within the last 21 days.
-function isNewProfile(createdAt?: string): boolean {
-  if (!createdAt) return false;
-  const t = new Date(createdAt).getTime();
-  return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
 // Fisher-Yates shuffle — returns a new randomly-ordered array.
@@ -342,17 +335,6 @@ function fmtEventDate(e: EventItem): string {
   return (e.date ?? '').toUpperCase();
 }
 
-// Shared badge style — inline-flex + leading-none so every badge renders at the
-// exact same height/baseline regardless of wrapper (keeps the corner badges of a
-// card vertically aligned).
-const BADGE_BASE = 'inline-flex items-center font-mono text-[8px] uppercase tracking-[1.5px] leading-none px-1.5 py-1 rounded-sm font-bold';
-
-function PathBadge({ path }: { path: string | null }) {
-  if (!path || !(path in PATH_CONFIG)) return null;
-  const c = PATH_CONFIG[path as UserPath];
-  return <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} ${c.bg} ${c.textOn}`}>{c.label}</span>;
-}
-
 function SectionHead({ label, title, href, linkText }: { label: string; title: string; href?: string; linkText?: string }) {
   return (
     <div className="flex items-end justify-between mb-5">
@@ -474,24 +456,16 @@ export default function HomePreview() {
     }).catch(() => {});
     // Only completed profiles (photo + name + tags). Shuffle on each visit so
     // the Discover order is fresh every time (the "complete your profile" CTA
-    // card is rendered separately and always stays first).
-    fetch('/api/profiles?complete=1&limit=24').then((r) => r.json()).then((d) => setProfiles(shuffle(d.profiles ?? []))).catch(() => {});
+    // card is rendered separately and always stays first). Only real uploaded
+    // photos make the carousel — generated avatars are filtered server-side,
+    // with a client-side guard for anything cached.
+    fetch('/api/profiles?complete=1&limit=24')
+      .then((r) => r.json())
+      .then((d) => setProfiles(shuffle((d.profiles ?? []).filter((p: Profile) => isRealPhoto(p.avatarUrl)))))
+      .catch(() => {});
   }, []);
 
   const heroRef = useRef<HTMLElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const scrollCarousel = (dir: number) => {
-    const el = carouselRef.current;
-    if (el) el.scrollBy({ left: dir * Math.max(260, el.clientWidth * 0.8), behavior: 'smooth' });
-  };
-
-  // The "complete your profile" CTA is prepended once viewerComplete resolves
-  // (which lands after the profile cards have already rendered). Browser scroll
-  // anchoring keeps the old offset, pushing the new first card off-screen to the
-  // left — so snap the carousel back to the start whenever the lineup changes.
-  useEffect(() => {
-    if (carouselRef.current) carouselRef.current.scrollLeft = 0;
-  }, [viewerComplete, profiles]);
 
   const featuredEp = episodes[0];
   const moreEps = episodes.slice(1, 5);
@@ -546,79 +520,23 @@ export default function HomePreview() {
 
         <div id="explore" className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
 
-          {/* ── DISCOVER PROFILES (carousel) ── */}
+          {/* ── DISCOVER PROFILES — passport cards in a seamless GSAP loop,
+                 links to the /topians directory ── */}
           <section className="mb-16">
             <div className="flex items-end justify-between mb-5">
-              <div>
+              <Link href="/topians" className="no-underline group/disc">
                 <span className="font-mono text-[11px] uppercase tracking-[3px] opacity-40 block mb-1" style={txt}>the community</span>
-                <h2 className="font-basement font-black text-[clamp(26px,4vw,44px)] leading-[0.9] uppercase" style={txt}>Discover</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {[-1, 1].map((dir) => (
-                  <button
-                    key={dir}
-                    onClick={() => scrollCarousel(dir)}
-                    aria-label={dir < 0 ? 'Scroll left' : 'Scroll right'}
-                    className="w-9 h-9 rounded-full border flex items-center justify-center font-mono text-[14px] hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                    style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
-                  >
-                    {dir < 0 ? '←' : '→'}
-                  </button>
-                ))}
-              </div>
+                <h2 className="font-basement font-black text-[clamp(26px,4vw,44px)] leading-[0.9] uppercase group-hover/disc:opacity-80 transition-opacity" style={txt}>Discover</h2>
+              </Link>
+              <Link href="/topians" className="font-mono text-[11px] uppercase tracking-[2px] opacity-60 hover:opacity-100 no-underline border-b pb-0.5 shrink-0 transition-opacity" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                All Topians →
+              </Link>
             </div>
 
             {profiles.length === 0 && viewerComplete !== false ? (
               <div className={emptyBox} style={{ ...txt, borderColor: 'var(--border-color)' }}>Loading profiles…</div>
             ) : (
-              <div ref={carouselRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:-mx-8 md:px-8 pb-2" style={{ scrollbarWidth: 'none', overflowAnchor: 'none' }}>
-                {/* Nudge the viewer to finish their own profile */}
-                {viewerComplete === false && (
-                  <Link href="/onboarding" className="group flex flex-col items-center justify-center text-center gap-3 w-[310px] shrink-0 snap-start rounded-xl border-2 border-dashed p-6 no-underline hover:border-lime transition-colors" style={{ borderColor: 'var(--border-color)' }}>
-                    <span className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center font-mono text-[22px] text-lime" style={{ borderColor: 'var(--border-color)' }}>+</span>
-                    <span className="font-basement font-black text-[16px] uppercase leading-tight" style={txt}>Complete your profile</span>
-                    <span className="font-mono text-[10px] uppercase tracking-[2px] text-lime">Finish onboarding →</span>
-                  </Link>
-                )}
-
-                {profiles.map((p) => {
-                  const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
-                  const initial = (p.name || p.username || '?')[0]?.toUpperCase();
-                  return (
-                    <Link key={p.id} href={`/profile/${p.username}`} className="group block w-[310px] shrink-0 snap-start rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="aspect-[4/3] overflow-hidden bg-obsidian relative">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.avatarUrl} alt={p.name ?? ''} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[48px] text-bone/20">{initial}</div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
-                        {/* One badge: membership-accurate World Builder, else the path badge */}
-                        {p.isWorldBuilder ? (
-                          <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} bg-lime text-obsidian`}>World Builder</span>
-                        ) : (
-                          <PathBadge path={p.path} />
-                        )}
-                        {isNewProfile(p.createdAt) && (
-                          <span className={`absolute top-2.5 right-2.5 ${BADGE_BASE} bg-pink text-obsidian`}>New</span>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-basement font-black text-[16px] uppercase text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
-                        <span className="font-mono text-[10px] text-bone/40 block truncate">@{p.username}</span>
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {tags.map((t) => (
-                              <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm whitespace-nowrap">{t.replace(/-/g, ' ')}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+              <PassportLoop profiles={profiles} showCompleteCta={viewerComplete === false} />
             )}
           </section>
 

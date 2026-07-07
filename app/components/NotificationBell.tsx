@@ -226,7 +226,7 @@ export default function NotificationBell() {
                 const worldName = <span className="font-bold">{n.metadata?.worldTitle}</span>;
                 const eventName = <span className="font-bold">{n.metadata?.eventName}</span>;
 
-                if (n.type === 'follow') return <>{actor} followed you</>;
+                if (n.type === 'follow') return <>{actor} connected with you</>;
                 if (n.type === 'world_member_added') return <>{actor} added you as {roleLabel} in {worldName}</>;
                 if (n.type === 'world_invite') return <>{actor} invited you to join {worldName} as {roleLabel}</>;
                 if (n.type === 'world_invite_accepted') return <>{actor} accepted your invite to {worldName}</>;

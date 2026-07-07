@@ -44,9 +44,12 @@ export default function AvatarMenu() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
-  if (!ready) return null;
+  // While Privy is still initializing, show the cached avatar (if we have
+  // one) instead of a blank spot — the profile hook serves the last-known
+  // profile from sessionStorage and revalidates in the background.
+  if (!ready && !profile) return null;
 
-  if (!authenticated) {
+  if (ready && !authenticated) {
     return (
       <button
         onClick={login}
@@ -120,11 +123,11 @@ export default function AvatarMenu() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-mono text-[13px] font-bold uppercase truncate" style={{ color: 'var(--foreground)' }}>
+                  <div className="font-mono text-[13px] font-bold uppercase break-words" style={{ color: 'var(--foreground)' }}>
                     {displayName}
                   </div>
                   {profile?.username && (
-                    <div className="font-mono text-[11px] opacity-50 truncate" style={{ color: 'var(--foreground)' }}>
+                    <div className="font-mono text-[11px] opacity-50 break-all" style={{ color: 'var(--foreground)' }}>
                       @{profile.username}
                     </div>
                   )}
