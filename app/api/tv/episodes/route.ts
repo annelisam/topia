@@ -1,46 +1,13 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { tvEpisodes } from '@/lib/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { getTvEpisodes } from '@/lib/tv/episodes';
 
 /**
- * GET /api/tv/episodes
- *
- * Returns all published Topia TV episodes ordered by:
- *   series → episode number → part number → createdAt
- *
- * The /tv page hits this once on load; episodes are static-ish so this is
- * cheap. If we grow into hundreds of episodes we can add a series filter
- * via ?series=… without changing the response shape.
+ * GET /api/tv/episodes — all published episodes. Query lives in
+ * lib/tv/episodes.ts (shared with the server-rendered /home page).
  */
 export async function GET() {
   try {
-    const rows = await db
-      .select({
-        id: tvEpisodes.id,
-        slug: tvEpisodes.slug,
-        title: tvEpisodes.title,
-        description: tvEpisodes.description,
-        category: tvEpisodes.category,
-        seriesSlug: tvEpisodes.seriesSlug,
-        seriesTitle: tvEpisodes.seriesTitle,
-        episodeNumber: tvEpisodes.episodeNumber,
-        partNumber: tvEpisodes.partNumber,
-        videoUrl: tvEpisodes.videoUrl,
-        thumbnailUrl: tvEpisodes.thumbnailUrl,
-        durationSeconds: tvEpisodes.durationSeconds,
-        guestName: tvEpisodes.guestName,
-        publishedAt: tvEpisodes.publishedAt,
-      })
-      .from(tvEpisodes)
-      .where(eq(tvEpisodes.published, true))
-      .orderBy(
-        asc(tvEpisodes.seriesSlug),
-        asc(tvEpisodes.episodeNumber),
-        asc(tvEpisodes.partNumber),
-        asc(tvEpisodes.createdAt),
-      );
-
+    const rows = await getTvEpisodes();
     return NextResponse.json({ episodes: rows });
   } catch (error) {
     console.error('tv episodes GET error:', error);
