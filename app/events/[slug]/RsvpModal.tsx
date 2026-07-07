@@ -121,6 +121,34 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const [copied, setCopied] = useState(false);
   const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}` : '';
 
+  // Draft persistence — a failed submit, accidental close, or refresh must not
+  // cost the guest their answers. Restored on reopen (locked profile fields
+  // still win — the profile prefill runs after this), cleared on success.
+  const draftKey = `topia_rsvp_draft:${eventId}`;
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const d = JSON.parse(raw) as Record<string, unknown>;
+        if (typeof d.contactName === 'string' && d.contactName) setContactName((v) => v || (d.contactName as string));
+        if (typeof d.phoneCode === 'string' && d.phoneCode) setPhoneCode(d.phoneCode as string);
+        if (typeof d.phoneNumber === 'string' && d.phoneNumber) setPhoneNumber((v) => v || (d.phoneNumber as string));
+        if (typeof d.username === 'string' && d.username) setUsername((v) => v || (d.username as string));
+        if (d.answers && typeof d.answers === 'object') setAnswers((a) => ({ ...(d.answers as Record<string, AnswerValue>), ...a }));
+        if (d.consent === true) setConsent(true);
+      }
+    } catch { /* corrupt draft — start fresh */ }
+    draftRestored.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!draftRestored.current || step === 3) return;
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ contactName, phoneCode, phoneNumber, username, answers, consent }));
+    } catch { /* storage full/blocked — non-fatal */ }
+  }, [draftKey, contactName, phoneCode, phoneNumber, username, answers, consent, step]);
+
   const copyLink = () => {
     navigator.clipboard.writeText(eventUrl);
     setCopied(true);
@@ -333,6 +361,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       const status = data.status ?? 'going';
       setResultStatus(status);
       onRegistered(status, data.alreadyRegistered === true);
+      try { sessionStorage.removeItem(draftKey); } catch {}
       setStep(3); // advance to the success step (tickets · share · done)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register');
