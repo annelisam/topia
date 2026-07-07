@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { type PickedGif } from '../components/GiphyPicker';
+import { gifDisplayUrl } from '@/lib/giphy';
 
 // Giphy SDK is heavy and only used when the picker opens — load it on demand.
 const GiphyPicker = dynamic(() => import('../components/GiphyPicker'), { ssr: false });
@@ -311,7 +312,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
                   >
                     {m.imageUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={m.imageUrl} alt="" onLoad={() => { if (stickRef.current) scrollToBottom(false); }} className="rounded-xl max-w-full max-h-64 object-cover" />
+                      <img src={gifDisplayUrl(m.giphyId, m.imageUrl)!} alt="" onLoad={() => { if (stickRef.current) scrollToBottom(false); }} className="rounded-xl max-w-full max-h-64 object-cover" />
                     ) : (
                       <p className="font-mono text-[13px] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
                     )}

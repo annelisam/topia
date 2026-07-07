@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import dynamic from 'next/dynamic';
 import { type PickedGif } from './GiphyPicker';
+import { gifDisplayUrl } from '@/lib/giphy';
 import { StarIcon } from './ui/Icons';
 import ReactionBar, { type ReactionSummary } from './ReactionBar';
 
@@ -244,7 +245,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 <video src={c.imageUrl} className="rounded-sm border border-ink/10 max-w-[260px]" controls muted playsInline preload="metadata" />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={c.imageUrl} alt={c.body || 'attachment'} className="rounded-sm border border-ink/10 max-w-[220px]" />
+                <img src={gifDisplayUrl(c.giphyId, c.imageUrl)!} alt={c.body || 'attachment'} loading="lazy" className="rounded-sm border border-ink/10 max-w-[220px]" />
               )}
               {c.giphyId && <span className="block font-mono text-[8px] uppercase tracking-[2px] text-ink/20 mt-0.5">via giphy</span>}
             </div>

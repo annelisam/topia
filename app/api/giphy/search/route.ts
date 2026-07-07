@@ -60,10 +60,11 @@ export async function GET(request: NextRequest) {
       preview: g.images.fixed_width_small?.url || g.images.fixed_width.url,
       previewWidth:  g.images.fixed_width_small?.width || g.images.fixed_width.width,
       previewHeight: g.images.fixed_width_small?.height || g.images.fixed_width.height,
-      // The URL we actually persist when the user picks it
-      url:    g.images.downsized_medium?.url || g.images.fixed_width.url,
-      width:  g.images.downsized_medium?.width  || g.images.fixed_width.width,
-      height: g.images.downsized_medium?.height || g.images.fixed_width.height,
+      // The URL we actually persist when the user picks it. fixed_width (200px)
+      // — every surface renders GIFs at 200-310px; downsized_medium ran to ~5MB.
+      url:    g.images.fixed_width.url,
+      width:  g.images.fixed_width.width,
+      height: g.images.fixed_width.height,
     }));
     return NextResponse.json({ gifs });
   } catch (error) {
