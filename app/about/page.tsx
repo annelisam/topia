@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import PageShell from '../components/PageShell';
 import GlitchType from '../components/ui/GlitchType';
@@ -17,8 +17,8 @@ const TEAM_META: Record<string, { title: string }> = {
   callmelatasha: { title: 'CEO' },
   annelisa: { title: 'Chief Technology Officer' },
   jada: { title: 'Chief Marketing Officer' },
-  artbyjah: { title: 'Creative Director' },
-  d: { title: 'Community Lead' },
+  artbyjah: { title: 'Chief Creative Officer' },
+  d: { title: 'Community Lead / Executive' },
   cxy: { title: 'Executive Producer' },
 };
 
@@ -28,9 +28,23 @@ export default function AboutPage() {
   const [screen, setScreen] = useState(0);
   const [sub, setSub] = useState(0);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  // The timed transitions capture callbacks against a screen the user may
+  // have already skipped past — every timer checks this before firing.
+  const screenRef = useRef(0);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
 
   useEffect(() => {
-    setTimeout(() => setScreen(1), 500);
+    setTimeout(() => setScreen(1), 100);
+  }, []);
+
+  // Click anywhere (or the skip button) to jump to the next screen instead
+  // of waiting out the typewriter — the story stays, the wait doesn't.
+  const advance = useCallback(() => {
+    setScreen((s) => {
+      if (s < 1 || s >= 3) return s;
+      setSub(0);
+      return s + 1;
+    });
   }, []);
 
   useEffect(() => {
@@ -66,25 +80,27 @@ export default function AboutPage() {
   }, []);
 
   const s1Done = useCallback(() => {
-    setTimeout(() => setSub(1), 800);
+    setTimeout(() => { if (screenRef.current === 1) setSub(1); }, 350);
   }, []);
   const s1bDone = useCallback(() => {
     setTimeout(() => {
+      if (screenRef.current !== 1) return;
       setScreen(2);
       setSub(0);
-    }, 1500);
+    }, 700);
   }, []);
   const s2Done = useCallback(() => {
-    setTimeout(() => setSub(1), 400);
+    setTimeout(() => { if (screenRef.current === 2) setSub(1); }, 250);
   }, []);
   const s2bDone = useCallback(() => {
     setTimeout(() => {
+      if (screenRef.current !== 2) return;
       setScreen(3);
       setSub(0);
-    }, 1500);
+    }, 700);
   }, []);
   const s3Done = useCallback(() => {
-    setTimeout(() => setSub(1), 600);
+    setTimeout(() => { if (screenRef.current === 3) setSub(1); }, 300);
   }, []);
 
   const screenBg =
@@ -96,8 +112,18 @@ export default function AboutPage() {
   return (
     <PageShell>
       <section
-        className={`min-h-screen ${screenBg} transition-colors duration-500 flex items-center justify-center px-6 md:px-10 py-20`}
+        onClick={screen < 3 ? advance : undefined}
+        className={`min-h-screen ${screenBg} transition-colors duration-500 flex items-center justify-center px-6 md:px-10 py-20 relative ${screen > 0 && screen < 3 ? 'cursor-pointer' : ''}`}
       >
+        {/* Skip through the writing — click anywhere does the same */}
+        {screen > 0 && screen < 3 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); advance(); }}
+            className={`absolute bottom-8 right-8 z-20 font-mono text-[10px] uppercase tracking-[2px] bg-transparent border rounded-full px-4 py-2 cursor-pointer transition hover:opacity-100 opacity-50 ${text} ${isDark ? 'border-bone/30' : 'border-obsidian/30'}`}
+          >
+            skip →
+          </button>
+        )}
         <div className="max-w-4xl w-full relative">
           <span
             className={`font-mono text-[11px] uppercase tracking-[3px] ${textSub} block mb-6`}
@@ -192,6 +218,7 @@ export default function AboutPage() {
                             <img
                               src={m.avatarUrl}
                               alt={m.name ?? m.username}
+                              loading="lazy"
                               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
