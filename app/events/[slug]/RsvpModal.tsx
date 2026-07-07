@@ -7,6 +7,7 @@ import { ROLE_TAGS, ROLES_MAX } from '../../../lib/events/questions';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 import { useUsernameAvailability, sanitizeUsername } from '../../onboarding/usernameAvailability';
 import { avatarColor, avatarTextColor, avatarInitial, isRealPhoto } from '../../../lib/avatar';
+import { socialHandle } from '../../../lib/socials';
 import { resizeAndUploadAvatar } from '../../../lib/uploadImage';
 import TopiaLoader from '../../components/TopiaLoader';
 import RoleTagPicker from '../../components/RoleTagPicker';
@@ -298,8 +299,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       let changed = false;
       const next = { ...prev };
       for (const q of questions) {
-        if (q.type === 'instagram' && profileSocials.instagram && !prev[q.id]) { next[q.id] = profileSocials.instagram; changed = true; }
-        if (q.type === 'twitter' && profileSocials.twitter && !prev[q.id]) { next[q.id] = profileSocials.twitter; changed = true; }
+        // Stored values are usually full URLs — seed the input with the bare
+        // handle the field asks for.
+        const ig = socialHandle(profileSocials.instagram) || profileSocials.instagram;
+        const tw = socialHandle(profileSocials.twitter) || profileSocials.twitter;
+        if (q.type === 'instagram' && ig && !prev[q.id]) { next[q.id] = ig; changed = true; }
+        if (q.type === 'twitter' && tw && !prev[q.id]) { next[q.id] = tw; changed = true; }
       }
       return changed ? next : prev;
     });
@@ -607,10 +612,10 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                         ))}
                       </div>
                     )}
-                    {(profileSocials.instagram || profileSocials.twitter) && (
+                    {(socialHandle(profileSocials.instagram) || socialHandle(profileSocials.twitter)) && (
                       <div className="flex flex-wrap gap-3 mt-2 font-mono text-[11px] opacity-60" style={{ color: 'var(--foreground)' }}>
-                        {profileSocials.instagram && <span>IG @{profileSocials.instagram}</span>}
-                        {profileSocials.twitter && <span>X @{profileSocials.twitter}</span>}
+                        {socialHandle(profileSocials.instagram) && <span>IG @{socialHandle(profileSocials.instagram)}</span>}
+                        {socialHandle(profileSocials.twitter) && <span>X @{socialHandle(profileSocials.twitter)}</span>}
                       </div>
                     )}
                   </div>
