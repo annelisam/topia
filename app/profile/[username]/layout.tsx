@@ -29,6 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
   return {
     title,
     description,
+    // /@username and /u/username resolve here — one canonical for all three
+    alternates: { canonical: `https://topia.vision/profile/${encodeURIComponent(username)}` },
     openGraph: {
       title,
       description,
