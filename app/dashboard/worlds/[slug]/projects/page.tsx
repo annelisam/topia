@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { ProjectEditor } from '../../../_components/ProjectEditor';
 import { ProjectItem } from '../../../_components/types';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { useWorldDashboard } from '../layout';
 
 export default function WorldProjectsPage() {
   const { world, projects, setProjects, allTools, privyId, isBuilder } = useWorldDashboard();
   const [editingProject, setEditingProject] = useState<ProjectItem | null | 'new'>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const deleteProject = async (id: string) => {
     if (!world || !isBuilder) return;
@@ -82,7 +84,7 @@ export default function WorldProjectsPage() {
                 {isBuilder && (
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => setEditingProject(p)} className="font-mono text-[12px] uppercase tracking-widest px-2.5 py-1 rounded-lg hover:opacity-80 transition" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>Edit</button>
-                    <button onClick={() => { if (confirm('Delete this project?')) deleteProject(p.id); }} className="font-mono text-[12px] uppercase tracking-widest px-2.5 py-1 rounded-lg hover:opacity-80 transition" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Delete</button>
+                    <button onClick={() => setConfirmDeleteId(p.id)} className="font-mono text-[12px] uppercase tracking-widest px-2.5 py-1 rounded-lg hover:opacity-80 transition" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Delete</button>
                   </div>
                 )}
               </div>
@@ -100,6 +102,17 @@ export default function WorldProjectsPage() {
             </button>
           )}
         </div>
+      )}
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="Delete this project?"
+          body="This removes it from the world's globe. This can't be undone."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => { deleteProject(confirmDeleteId); setConfirmDeleteId(null); }}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   );
