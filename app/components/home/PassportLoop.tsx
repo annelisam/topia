@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { PATH_CONFIG, resolvePath, type UserPath } from '../profile/pathConfig';
 import FitText from '../profile/FitText';
+import BlobImage from '../BlobImage';
 
 export interface LoopProfile {
   id: string;
@@ -110,8 +111,8 @@ function PassportCard({ p }: { p: LoopProfile }) {
         <div className="flex-1 flex flex-col items-center justify-center min-h-0">
           <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shrink-0" style={{ border: `3px solid ${accent}`, background: '#161616' }}>
             {p.avatarUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={p.avatarUrl} alt="" loading="lazy" draggable={false} className="w-full h-full object-cover" />
+              // 96px circle → request 192px for retina instead of the full upload
+              <BlobImage src={p.avatarUrl} alt="" width={192} height={192} sizes="96px" draggable={false} className="w-full h-full object-cover" />
             ) : (
               <span className="font-basement font-black text-[40px] text-bone/50">{initial}</span>
             )}
