@@ -218,7 +218,20 @@ export default function GrantsList({ initialGrants = [] }: { initialGrants?: Gra
             </div>
           ) : grants.length === 0 && !loading ? (
             <div className="text-center py-8 sm:py-12">
-              <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>No grants found. Try adjusting your filters.</p>
+              <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>
+                {search || selectedTag !== 'all tags'
+                  ? `No grants${search ? ` matching "${search}"` : ''}${selectedTag !== 'all tags' ? ` tagged ${selectedTag}` : ''}.`
+                  : 'No grants found.'}
+              </p>
+              {(search || selectedTag !== 'all tags') && (
+                <button
+                  onClick={() => { setSearch(''); setSelectedTag('all tags'); }}
+                  className="font-mono text-[12px] uppercase tracking-[2px] px-4 py-2 border rounded-sm cursor-pointer bg-transparent hover:opacity-70 transition"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <div className={`space-y-3 sm:space-y-4 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
