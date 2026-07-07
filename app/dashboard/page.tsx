@@ -119,13 +119,13 @@ export default function DashboardOverviewPage() {
               </Link>
             )}
             <Link
-              href="/dashboard/submit-tool"
+              href="/resources/tools?submit=1"
               className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Tool
             </Link>
             <Link
-              href="/dashboard/submit-grant"
+              href="/resources/grants?submit=1"
               className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-lime/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
             >
               + Grant

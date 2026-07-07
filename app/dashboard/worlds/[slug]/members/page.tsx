@@ -14,6 +14,17 @@ function roleBadge(role: string) {
   return 'Collab';
 }
 
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden mb-5">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">{title}</span>
+      </div>
+      <div className="bg-[var(--page-bg)] p-4 sm:p-5">{children}</div>
+    </div>
+  );
+}
+
 export default function WorldMembersPage() {
   const { user } = usePrivy();
   const router = useRouter();
@@ -122,25 +133,87 @@ export default function WorldMembersPage() {
 
   return (
     <div>
-      <h1 className="text-xl sm:text-2xl font-bold uppercase mb-6" style={{ color: 'var(--foreground)' }}>Members</h1>
-
       {!isBuilder && <ReadOnlyBanner />}
 
-      {memberError && <p className="font-mono text-[11px] mb-4 px-3 py-2 rounded-lg border" style={{ color: '#FF5C34', borderColor: '#FF5C34', backgroundColor: 'color-mix(in srgb, #FF5C34 5%, transparent)' }}>{memberError}</p>}
+      {memberError && (
+        <p className="font-mono text-[11px] text-orange mb-4 px-3 py-2 rounded-lg border border-orange/40 bg-orange/5">{memberError}</p>
+      )}
 
-      {/* Active members card */}
-      <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-        <p className={labelCls} style={{ color: 'var(--foreground)' }}>Active Members</p>
+      {/* Invite — builders+ only, FIRST: it's the page's primary action */}
+      {isBuilder && (
+        <SectionCard title="Invite member">
+          <div className="flex gap-1 mb-3">
+            {(['collaborator', 'world_builder'] as const).map(role => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => setMemberRole(role)}
+                className={`font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1 rounded-sm transition cursor-pointer border ${
+                  memberRole === role
+                    ? 'bg-lime text-obsidian border-lime font-bold'
+                    : 'bg-transparent text-ink/40 border-ink/15 hover:text-ink hover:border-ink/40'
+                }`}
+              >
+                {role === 'world_builder' ? 'Builder' : 'Collaborator'}
+              </button>
+            ))}
+          </div>
+          <p className="font-mono text-[11px] text-ink/40 mb-3">
+            {memberRole === 'world_builder'
+              ? 'Builders can edit the world, its projects, and invite others.'
+              : 'Collaborators are listed on the world but can’t edit it.'}
+          </p>
+          <div className="relative">
+            <input
+              type="text"
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              placeholder="Search by username…"
+              className={inputCls}
+              disabled={addingMember}
+            />
+            {memberSearch.length >= 2 && (memberSearchResults.length > 0 || memberSearching) && (
+              <div className="absolute left-0 right-0 top-full mt-1 border border-ink/15 rounded-sm z-10 max-h-40 overflow-y-auto shadow-lg bg-[var(--page-bg)]">
+                {memberSearching ? (
+                  <div className="px-3 py-2"><span className="font-mono text-[11px] text-ink/30">Searching…</span></div>
+                ) : (
+                  memberSearchResults.filter(u => !members.some(m => m.userId === u.id) && !pendingInvites.some(i => i.inviteeId === u.id)).map(u => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => addMember(u)}
+                      disabled={addingMember}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-ink/[0.04] transition text-left border-b border-ink/[0.06] last:border-b-0 disabled:opacity-40 cursor-pointer bg-transparent"
+                    >
+                      <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center font-mono text-[12px] bg-ink/10 text-ink/60">
+                        {(u.name || u.username)?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <span className="font-mono text-[12px] text-ink truncate">
+                        {u.username ? <strong>@{u.username}</strong> : u.name}
+                        {u.name && u.username && <span className="text-ink/40 ml-1.5">{u.name}</span>}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          {memberSuccess && <p className="font-mono text-[11px] mt-2" style={{ color: 'var(--accent-ink)' }}>{memberSuccess}</p>}
+        </SectionCard>
+      )}
+
+      {/* Active members */}
+      <SectionCard title={`Members · ${sortedMembers.length}`}>
         {sortedMembers.length > 0 ? (
-          <div className="space-y-1.5">
+          <div className="divide-y divide-ink/[0.05]">
             {sortedMembers.map(m => (
-              <div key={m.userId} className="flex items-center gap-3 py-2 px-3 border rounded-lg" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}>
-                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.5 }}>
+              <div key={m.userId} className="flex items-center gap-3 py-2.5">
+                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center font-mono text-[12px] bg-ink/10 text-ink/60">
                   {(m.userName || m.userUsername)?.[0]?.toUpperCase() ?? '?'}
                 </div>
-                <span className="font-mono text-[12px] flex-1 truncate" style={{ color: 'var(--foreground)' }}>
+                <span className="font-mono text-[12px] text-ink flex-1 truncate">
                   {m.userUsername ? `@${m.userUsername}` : m.userName || 'Unknown'}
-                  {m.userId === currentUserId && <span className="opacity-40 ml-1">(you)</span>}
+                  {m.userId === currentUserId && <span className="text-ink/40 ml-1">(you)</span>}
                 </span>
 
                 {/* Role badge / role changer */}
@@ -149,148 +222,118 @@ export default function WorldMembersPage() {
                     value={m.role}
                     onChange={(e) => changeRole(m.userId, e.target.value)}
                     disabled={changingRole === m.userId}
-                    className="font-mono text-[12px] uppercase tracking-widest px-2 py-0.5 border rounded-lg bg-transparent cursor-pointer outline-none"
-                    style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)', opacity: changingRole === m.userId ? 0.4 : 0.7 }}
+                    className={`font-mono text-[11px] uppercase tracking-[1px] px-2 py-1 border border-ink/15 rounded-sm bg-transparent text-ink/70 cursor-pointer outline-none ${changingRole === m.userId ? 'opacity-40' : ''}`}
                   >
                     <option value="world_builder">Builder</option>
                     <option value="collaborator">Collab</option>
                   </select>
                 ) : (
-                  <span className="font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border rounded-lg shrink-0 opacity-50" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
+                  <span className={`font-mono text-[10px] uppercase tracking-[1px] px-2 py-0.5 rounded-sm shrink-0 ${
+                    m.role === 'owner' ? 'bg-lime text-obsidian font-bold' : 'border border-ink/15 text-ink/50'
+                  }`}>
                     {roleBadge(m.role)}
                   </span>
                 )}
 
                 {/* Remove button */}
                 {canRemove(m.role, m.userId) && (
-                  <button onClick={() => removeMember(m.userId)} className="font-mono text-[12px] opacity-30 hover:opacity-100 transition shrink-0" style={{ color: 'var(--foreground)' }} title="Remove member">×</button>
+                  <button
+                    onClick={() => removeMember(m.userId)}
+                    className="font-mono text-[14px] text-ink/30 hover:text-orange transition shrink-0 bg-transparent border-none cursor-pointer leading-none"
+                    title="Remove member"
+                  >
+                    ×
+                  </button>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="font-mono text-[12px] opacity-30" style={{ color: 'var(--foreground)' }}>No members yet.</p>
+          <p className="font-mono text-[12px] text-ink/30">No members yet.</p>
         )}
-      </div>
+      </SectionCard>
 
-      {/* Pending invites card — builders+ only */}
+      {/* Pending invites — builders+ only */}
       {isBuilder && pendingInvites.length > 0 && (
-        <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-          <p className={labelCls} style={{ color: 'var(--foreground)' }}>Pending Invites</p>
-          <div className="space-y-1.5">
+        <SectionCard title={`Pending invites · ${pendingInvites.length}`}>
+          <div className="divide-y divide-ink/[0.05]">
             {pendingInvites.map(inv => (
-              <div key={inv.invitationId} className="flex items-center gap-3 py-2 px-3 border rounded-lg opacity-60" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--background)' }}>
-                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[13px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)', opacity: 0.3 }}>
+              <div key={inv.invitationId} className="flex items-center gap-3 py-2.5 opacity-70">
+                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center font-mono text-[12px] bg-ink/[0.06] text-ink/40">
                   {(inv.inviteeName || inv.inviteeUsername)?.[0]?.toUpperCase() ?? '?'}
                 </div>
-                <span className="font-mono text-[12px] flex-1" style={{ color: 'var(--foreground)' }}>{inv.inviteeUsername ? `@${inv.inviteeUsername}` : inv.inviteeName || 'Unknown'}</span>
-                <span className="font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border rounded-lg" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>Pending</span>
+                <span className="font-mono text-[12px] text-ink flex-1 truncate">{inv.inviteeUsername ? `@${inv.inviteeUsername}` : inv.inviteeName || 'Unknown'}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[1px] px-2 py-0.5 rounded-sm border border-ink/15 text-ink/40">
+                  {inv.role === 'world_builder' ? 'Builder' : 'Collab'} · Pending
+                </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Invite card — builders+ only */}
-      {isBuilder && (
-        <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-          <p className={labelCls} style={{ color: 'var(--foreground)' }}>Invite Member</p>
-          <div className="flex gap-0.5 mb-3">
-            {(['world_builder', 'collaborator'] as const).map(role => (
-              <button key={role} type="button" onClick={() => setMemberRole(role)} className="font-mono text-[12px] uppercase tracking-widest px-2 py-0.5 rounded transition-all cursor-pointer" style={memberRole === role ? { backgroundColor: 'var(--foreground)', color: 'var(--background)' } : { color: 'var(--foreground)', opacity: 0.3 }}>
-                {role === 'world_builder' ? 'Builder' : 'Collaborator'}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <input type="text" value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search by username..." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} disabled={addingMember} />
-            {memberSearch.length >= 2 && (memberSearchResults.length > 0 || memberSearching) && (
-              <div className="absolute left-0 right-0 top-full mt-1 border rounded-lg z-10 max-h-40 overflow-y-auto shadow-lg" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
-                {memberSearching ? (
-                  <div className="px-3 py-2"><span className="font-mono text-[11px] opacity-30" style={{ color: 'var(--foreground)' }}>Searching...</span></div>
-                ) : (
-                  memberSearchResults.filter(u => !members.some(m => m.userId === u.id) && !pendingInvites.some(i => i.inviteeId === u.id)).map(u => (
-                    <button key={u.id} type="button" onClick={() => addMember(u)} disabled={addingMember} className="w-full flex items-center gap-2.5 px-3 py-2 hover:opacity-70 transition text-left border-b last:border-b-0 disabled:opacity-40" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center font-mono text-[12px]" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 12%, transparent)', color: 'var(--foreground)' }}>
-                        {(u.name || u.username)?.[0]?.toUpperCase() ?? '?'}
-                      </div>
-                      <span className="font-mono text-[12px] truncate" style={{ color: 'var(--foreground)' }}>
-                        {u.username ? <strong>@{u.username}</strong> : u.name}
-                        {u.name && u.username && <span className="opacity-40 ml-1.5">{u.name}</span>}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-          {memberSuccess && <p className="font-mono text-[11px] mt-2" style={{ color: '#00AA55' }}>{memberSuccess}</p>}
-        </div>
+        </SectionCard>
       )}
 
       {/* Leave world — builders and collaborators (not owner) */}
       {currentUserRole !== 'owner' && (
-        <div className="border rounded-xl p-5 mb-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-          <p className={labelCls} style={{ color: 'var(--foreground)' }}>Leave World</p>
+        <SectionCard title="Leave world">
           {!confirmLeave ? (
             <button
               onClick={() => setConfirmLeave(true)}
-              className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
-              style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-ink/40 hover:text-ink px-4 py-2 rounded-sm transition cursor-pointer bg-transparent"
             >
               Leave this world
             </button>
           ) : (
-            <div className="flex items-center gap-3">
-              <p className="font-mono text-[11px] opacity-60" style={{ color: 'var(--foreground)' }}>Are you sure?</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="font-mono text-[11px] text-ink/60">Are you sure?</p>
               <button
                 onClick={() => removeMember(currentUserId)}
-                className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-80 transition"
-                style={{ backgroundColor: '#FF5C34', color: '#fff' }}
+                className="font-mono text-[11px] uppercase tracking-[2px] bg-orange text-obsidian font-bold px-4 py-2 rounded-sm hover:opacity-90 transition cursor-pointer border-none"
               >
                 Yes, leave
               </button>
               <button
                 onClick={() => setConfirmLeave(false)}
-                className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg border hover:opacity-70 transition"
-                style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
+                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-ink/40 hover:text-ink px-4 py-2 rounded-sm transition cursor-pointer bg-transparent"
               >
                 Cancel
               </button>
             </div>
           )}
-        </div>
+        </SectionCard>
       )}
 
       {/* Delete world — owner only */}
       {isOwner && (
-        <div className="border rounded-xl p-5" style={{ borderColor: '#FF5C34', backgroundColor: 'color-mix(in srgb, #FF5C34 3%, var(--surface))' }}>
-          <p className="block font-mono text-[12px] uppercase tracking-[0.2em] mb-1.5 font-bold" style={{ color: '#FF5C34' }}>Danger Zone</p>
-          <p className="font-mono text-[11px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>
-            Permanently delete this world and all its projects, members, and invitations. This cannot be undone.
-          </p>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className="font-mono text-[13px] opacity-50 mb-1 block" style={{ color: 'var(--foreground)' }}>
-                Type <strong>DELETE</strong> to confirm
-              </label>
-              <input
-                type="text"
-                value={deleteConfirm}
-                onChange={e => setDeleteConfirm(e.target.value)}
-                placeholder="DELETE"
-                className={inputCls}
-                style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)', maxWidth: '200px' }}
-              />
+        <div className="border border-orange/40 rounded-lg overflow-hidden">
+          <div className="bg-orange/5 border-b border-orange/20 px-4 py-2">
+            <span className="font-mono text-[11px] uppercase tracking-[2px] text-orange font-bold">Danger zone</span>
+          </div>
+          <div className="bg-[var(--page-bg)] p-4 sm:p-5">
+            <p className="font-mono text-[11px] text-ink/60 mb-3">
+              Permanently delete this world and all its projects, members, and invitations. This cannot be undone.
+            </p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className={labelCls}>
+                  Type <strong className="text-ink">DELETE</strong> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={e => setDeleteConfirm(e.target.value)}
+                  placeholder="DELETE"
+                  className={inputCls}
+                  style={{ maxWidth: '200px' }}
+                />
+              </div>
+              <button
+                onClick={deleteWorld}
+                disabled={deleteConfirm !== 'DELETE' || deleting}
+                className="font-mono text-[11px] uppercase tracking-[2px] bg-orange text-obsidian font-bold px-4 py-2 rounded-sm transition disabled:opacity-20 w-fit cursor-pointer border-none"
+              >
+                {deleting ? 'Deleting…' : 'Delete world'}
+              </button>
             </div>
-            <button
-              onClick={deleteWorld}
-              disabled={deleteConfirm !== 'DELETE' || deleting}
-              className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg transition disabled:opacity-20 w-fit"
-              style={{ backgroundColor: '#FF5C34', color: '#fff' }}
-            >
-              {deleting ? 'Deleting...' : 'Delete World'}
-            </button>
           </div>
         </div>
       )}

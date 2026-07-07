@@ -22,11 +22,16 @@ export default function WorldProjectsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold uppercase" style={{ color: 'var(--foreground)' }}>Projects</h1>
+      <div className="flex items-center justify-between mb-5">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">
+          Projects · {projects.length}
+        </span>
         {isBuilder && !editingProject && (
-          <button onClick={() => setEditingProject('new')} className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-80 transition cursor-pointer" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-            + Add Project
+          <button
+            onClick={() => setEditingProject('new')}
+            className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian font-bold px-3 py-1.5 rounded-sm hover:opacity-90 transition cursor-pointer border-none"
+          >
+            + Project
           </button>
         )}
       </div>
@@ -58,33 +63,34 @@ export default function WorldProjectsPage() {
             const pTags = ((p.tags as string[]) || []).filter(t => !t.startsWith('tool:'));
             const pTools = ((p.tags as string[]) || []).filter(t => t.startsWith('tool:')).map(t => t.replace('tool:', ''));
             return (
-              <div key={p.id} className="border rounded-xl overflow-hidden group relative" style={{ borderColor: 'var(--border-color)' }}>
+              <div key={p.id} className="border border-ink/[0.08] rounded-lg overflow-hidden bg-[var(--page-bg)] group relative">
                 {/* Image */}
                 {p.imageUrl ? (
                   <div className="w-full h-32 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-15" style={{ color: 'var(--foreground)' }}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <div className="w-full h-20 flex items-center justify-center bg-ink/[0.03]">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink/15"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                   </div>
                 )}
                 {/* Info */}
                 <div className="p-3">
-                  <h4 className="font-mono text-[13px] font-bold uppercase truncate mb-0.5" style={{ color: 'var(--foreground)' }}>{p.name}</h4>
-                  {p.description && <p className="font-mono text-[13px] opacity-50 truncate mb-2" style={{ color: 'var(--foreground)' }}>{p.description}</p>}
+                  <h4 className="font-mono text-[13px] font-bold uppercase text-ink truncate mb-0.5">{p.name}</h4>
+                  {p.description && <p className="font-mono text-[12px] text-ink/50 truncate mb-2">{p.description}</p>}
                   {(pTags.length > 0 || pTools.length > 0) && (
                     <div className="flex flex-wrap gap-1">
-                      {pTags.map(t => <span key={t} className="font-mono text-[11px] uppercase tracking-widest px-1.5 py-0.5 rounded-full border" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>{t}</span>)}
-                      {pTools.map(t => <span key={t} className="font-mono text-[11px] uppercase tracking-widest px-1.5 py-0.5 rounded-full" style={{ color: 'var(--background)', backgroundColor: 'var(--foreground)', opacity: 0.6 }}>{t}</span>)}
+                      {pTags.map(t => <span key={t} className="font-mono text-[10px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm border border-ink/15 text-ink/55">{t}</span>)}
+                      {pTools.map(t => <span key={t} className="font-mono text-[10px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm bg-lime text-obsidian">{t}</span>)}
                     </div>
                   )}
                 </div>
-                {/* Hover actions — builders only */}
+                {/* Actions — builders only. Always visible on touch; hover-reveal on pointer devices. */}
                 {isBuilder && (
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setEditingProject(p)} className="font-mono text-[12px] uppercase tracking-widest px-2.5 py-1 rounded-lg hover:opacity-80 transition" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>Edit</button>
-                    <button onClick={() => setConfirmDeleteId(p.id)} className="font-mono text-[12px] uppercase tracking-widest px-2.5 py-1 rounded-lg hover:opacity-80 transition" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Delete</button>
+                  <div className="absolute top-2 right-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setEditingProject(p)} className="font-mono text-[10px] uppercase tracking-[1px] px-2.5 py-1 rounded-sm bg-obsidian text-bone hover:opacity-80 transition cursor-pointer border-none">Edit</button>
+                    <button onClick={() => setConfirmDeleteId(p.id)} className="font-mono text-[10px] uppercase tracking-[1px] px-2.5 py-1 rounded-sm bg-orange text-obsidian hover:opacity-80 transition cursor-pointer border-none">Delete</button>
                   </div>
                 )}
               </div>
@@ -94,11 +100,14 @@ export default function WorldProjectsPage() {
       )}
 
       {projects.length === 0 && !editingProject && (
-        <div className="border-2 border-dashed rounded-xl py-12 text-center" style={{ borderColor: 'var(--border-color)' }}>
-          <p className="font-mono text-[12px] opacity-30 mb-3" style={{ color: 'var(--foreground)' }}>No projects yet</p>
+        <div className="border-2 border-dashed border-ink/15 rounded-lg py-12 text-center">
+          <p className="font-mono text-[12px] text-ink/40 mb-3">No projects yet — projects are the pins on your world&apos;s globe.</p>
           {isBuilder && (
-            <button onClick={() => setEditingProject('new')} className="font-mono text-[13px] uppercase tracking-widest px-4 py-2 rounded-lg hover:opacity-80 transition cursor-pointer" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-              + Add Your First Project
+            <button
+              onClick={() => setEditingProject('new')}
+              className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian font-bold px-4 py-2 rounded-sm hover:opacity-90 transition cursor-pointer border-none"
+            >
+              + Add your first project
             </button>
           )}
         </div>

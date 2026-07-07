@@ -7,7 +7,7 @@ import { inputCls, labelCls } from './sharedStyles';
 import { mdComponents } from './mdComponents';
 import { MdToolbar } from './MdToolbar';
 import { WritePrevToggle } from './WritePrevToggle';
-import { compressImage } from './compressImage';
+import { resizeAndUploadImage } from '../../../lib/uploadImage';
 import { ToolPicker } from './ToolPicker';
 import { ToolOption, ProjectItem } from './types';
 
@@ -31,6 +31,7 @@ export function ProjectEditor({
   const [tagInput, setTagInput] = useState('');
   const [links, setLinks] = useState<{ label: string; url: string }[]>((project?.links as { label: string; url: string }[]) || []);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [contentPreview, setContentPreview] = useState(false);
   const [toolSearch, setToolSearch] = useState('');
@@ -50,7 +51,16 @@ export function ProjectEditor({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageUrl(await compressImage(file));
+    setUploading(true);
+    setError('');
+    try {
+      // Blob URL, not base64 — keeps project rows small.
+      setImageUrl(await resizeAndUploadImage(file, 1024));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const addTag = () => {
@@ -90,66 +100,67 @@ export function ProjectEditor({
   };
 
   return (
-    <div className="border rounded-xl p-5" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--surface)' }}>
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="font-mono text-[13px] font-bold uppercase" style={{ color: 'var(--foreground)' }}>
-          {project ? 'Edit Project' : 'New Project'}
-        </h3>
-        <button onClick={onCancel} className="font-mono text-[14px] opacity-30 hover:opacity-100 transition" style={{ color: 'var(--foreground)' }}>×</button>
+    <div className="border border-ink/[0.08] rounded-lg overflow-hidden">
+      <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">
+          {project ? 'Edit project' : 'New project'}
+        </span>
+        <button onClick={onCancel} className="font-mono text-[14px] text-ink/30 hover:text-ink transition bg-transparent border-none cursor-pointer leading-none">×</button>
       </div>
 
-      <div className="space-y-5">
+      <div className="bg-[var(--page-bg)] p-4 sm:p-5 space-y-5">
         {/* Row 1: Name + Description */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Project Name *</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="My Project" className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+            <label className={labelCls}>Project name <span className="text-ink/30">*</span></label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="My Project" className={inputCls} />
           </div>
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Short Description</label>
-            <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="A brief one-liner..." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+            <label className={labelCls}>Short description</label>
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="A brief one-liner..." className={inputCls} />
           </div>
         </div>
 
         {/* Row 2: Image + Video */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Cover Image</label>
+            <label className={labelCls}>Cover image</label>
             {imageUrl && (
               <div className="mb-2 relative inline-block">
-                <img src={imageUrl} alt="" className="max-w-full h-24 object-cover border rounded-lg" style={{ borderColor: 'var(--border-color)' }} />
-                <button onClick={() => setImageUrl('')} className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px]" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>×</button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt="" className="max-w-full h-24 object-cover border border-ink/15 rounded-sm" />
+                <button onClick={() => setImageUrl('')} className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full font-mono text-[12px] bg-obsidian text-bone cursor-pointer border-none leading-none">×</button>
               </div>
             )}
             <div className="flex gap-2 items-center">
-              <label className="shrink-0 px-3 py-2 border font-mono text-[13px] uppercase tracking-widest cursor-pointer rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-                Upload
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              <label className={`shrink-0 font-mono text-[11px] uppercase tracking-[1px] border border-ink/15 rounded-sm px-3 py-2 transition ${uploading ? 'opacity-40' : 'cursor-pointer text-ink/60 hover:border-ink/40 hover:text-ink'}`}>
+                {uploading ? 'Uploading…' : 'Upload'}
+                <input type="file" accept="image/*" disabled={uploading} onChange={handleImageUpload} className="hidden" />
               </label>
-              <input type="url" value={imageUrl.startsWith('data:') ? '' : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="or paste URL" className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+              <input type="url" value={imageUrl.startsWith('data:') ? '' : imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="or paste URL" className={inputCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Video URL</label>
-            <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="YouTube, Vimeo, etc." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-            <p className="font-mono text-[12px] mt-1 opacity-25" style={{ color: 'var(--foreground)' }}>YouTube, Vimeo, Instagram, TikTok</p>
+            <label className={labelCls}>Video URL</label>
+            <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="YouTube, Vimeo, etc." className={inputCls} />
+            <p className="font-mono text-[11px] mt-1 text-ink/25">YouTube, Vimeo, Instagram, TikTok</p>
           </div>
         </div>
 
         {/* Content (Markdown) */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className={labelCls} style={{ color: 'var(--foreground)', marginBottom: 0 }}>Content</label>
+            <label className={labelCls} style={{ marginBottom: 0 }}>Content</label>
             <WritePrevToggle preview={contentPreview} setPreview={setContentPreview} />
           </div>
           {!contentPreview ? (
             <>
               <MdToolbar tid="proj-content" value={content} onChange={setContent} />
-              <textarea id="proj-content" value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Write about this project... Supports **bold**, *italic*, [links](url)" className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)', resize: 'vertical', minHeight: '120px' }} />
+              <textarea id="proj-content" value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Write about this project... Supports **bold**, *italic*, [links](url)" className={inputCls} style={{ resize: 'vertical', minHeight: '120px' }} />
             </>
           ) : (
-            <div className="border px-4 py-3 rounded-lg min-h-[120px]" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
-              {content ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{content}</ReactMarkdown> : <p className="font-mono text-[12px] opacity-25" style={{ color: 'var(--foreground)' }}>Nothing to preview</p>}
+            <div className="border border-ink/10 rounded-sm px-4 py-3 min-h-[120px] bg-ink/[0.02]">
+              {content ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{content}</ReactMarkdown> : <p className="font-mono text-[12px] text-ink/25">Nothing to preview</p>}
             </div>
           )}
         </div>
@@ -157,7 +168,7 @@ export function ProjectEditor({
         {/* Tools used */}
         {allTools.length > 0 && (
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Tools Used</label>
+            <label className={labelCls}>Tools used</label>
             <ToolPicker allTools={allTools} selected={selectedToolNames} onToggle={toggleTool} search={toolSearch} setSearch={setToolSearch} />
           </div>
         )}
@@ -165,47 +176,47 @@ export function ProjectEditor({
         {/* Tags + URL in a row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Tags</label>
+            <label className={labelCls}>Tags</label>
             {regularTags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-1.5">
                 {regularTags.map(t => (
-                  <button key={t} type="button" onClick={() => setTags(tags.filter(x => x !== t))} className="flex items-center gap-0.5 px-2 py-0.5 border font-mono text-[13px] rounded-full transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>
-                    {t}<span className="text-[11px] opacity-40">×</span>
+                  <button key={t} type="button" onClick={() => setTags(tags.filter(x => x !== t))} className="flex items-center gap-0.5 px-2 py-0.5 border border-ink/15 text-ink/60 font-mono text-[11px] rounded-sm transition hover:border-ink/40 hover:text-ink cursor-pointer bg-transparent">
+                    {t}<span className="text-[11px] text-ink/40">×</span>
                   </button>
                 ))}
               </div>
             )}
             <div className="flex gap-1.5">
-              <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }} placeholder="Add tag..." className={inputCls + ' flex-1'} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-              <button type="button" onClick={addTag} className="px-2.5 py-2 border font-mono text-[13px] uppercase rounded-lg transition hover:opacity-70" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>+</button>
+              <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }} placeholder="Add tag..." className={inputCls + ' flex-1'} />
+              <button type="button" onClick={addTag} className="px-3 py-2 border border-ink/15 text-ink/60 font-mono text-[13px] uppercase rounded-sm transition hover:border-ink/40 hover:text-ink cursor-pointer bg-transparent">+</button>
             </div>
           </div>
           <div>
-            <label className={labelCls} style={{ color: 'var(--foreground)' }}>Project URL</label>
-            <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className={inputCls} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
+            <label className={labelCls}>Project URL</label>
+            <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className={inputCls} />
           </div>
         </div>
 
         {/* Additional Links */}
         <div>
-          <label className={labelCls} style={{ color: 'var(--foreground)' }}>Additional Links</label>
+          <label className={labelCls}>Additional links</label>
           {links.map((link, i) => (
             <div key={i} className="flex gap-2 mb-1.5">
-              <input type="text" value={link.label} onChange={e => updateLink(i, 'label', e.target.value)} placeholder="Label" className={inputCls + ' flex-1'} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-              <input type="url" value={link.url} onChange={e => updateLink(i, 'url', e.target.value)} placeholder="https://..." className={inputCls + ' flex-1'} style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)', borderColor: 'var(--border-color)' }} />
-              <button type="button" onClick={() => removeLink(i)} className="font-mono text-[13px] opacity-30 hover:opacity-100 transition px-1" style={{ color: 'var(--foreground)' }}>×</button>
+              <input type="text" value={link.label} onChange={e => updateLink(i, 'label', e.target.value)} placeholder="Label" className={inputCls + ' flex-1'} />
+              <input type="url" value={link.url} onChange={e => updateLink(i, 'url', e.target.value)} placeholder="https://..." className={inputCls + ' flex-1'} />
+              <button type="button" onClick={() => removeLink(i)} className="font-mono text-[13px] text-ink/30 hover:text-ink transition px-1 bg-transparent border-none cursor-pointer">×</button>
             </div>
           ))}
-          <button type="button" onClick={addLink} className="font-mono text-[13px] uppercase tracking-widest opacity-40 hover:opacity-80 transition" style={{ color: 'var(--foreground)' }}>+ Add link</button>
+          <button type="button" onClick={addLink} className="font-mono text-[11px] uppercase tracking-[1px] text-ink/40 hover:text-ink transition bg-transparent border-none cursor-pointer">+ Add link</button>
         </div>
 
         {/* Actions */}
-        {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
+        {error && <p className="font-mono text-[11px] text-orange">{error}</p>}
         <div className="flex gap-2 pt-1">
-          <button onClick={save} disabled={saving} className="px-5 py-2 font-mono text-[11px] uppercase tracking-widest hover:opacity-80 transition disabled:opacity-40 rounded-lg" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
-            {saving ? 'Saving...' : project ? 'Save' : 'Create'}
+          <button onClick={save} disabled={saving || uploading} className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian font-bold px-5 py-2 rounded-sm hover:opacity-90 transition disabled:opacity-40 cursor-pointer border-none">
+            {saving ? 'Saving…' : project ? 'Save' : 'Create'}
           </button>
-          <button onClick={onCancel} className="px-5 py-2 font-mono text-[11px] uppercase tracking-widest border hover:opacity-70 transition rounded-lg" style={{ color: 'var(--foreground)', borderColor: 'var(--border-color)' }}>Cancel</button>
+          <button onClick={onCancel} className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-ink/40 hover:text-ink px-5 py-2 rounded-sm transition cursor-pointer bg-transparent">Cancel</button>
         </div>
       </div>
     </div>
