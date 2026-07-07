@@ -44,13 +44,15 @@ function episodeNo(i: number): string {
   return String(i + 1).padStart(3, '0');
 }
 
-export default function TVPage() {
+// Initial episodes come server-rendered from page.tsx so the player (the LCP
+// element) is in the initial HTML; the client fetch only runs as a fallback.
+export default function TvClient({ initialEpisodes }: { initialEpisodes: Episode[] }) {
   const [tvMode, setTvMode] = useState<'collective' | 'my-channel'>('collective');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [activeEp, setActiveEp] = useState<Episode | null>(null);
+  const [activeEp, setActiveEp] = useState<Episode | null>(initialEpisodes[0] ?? null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [episodes, setEpisodes] = useState<Episode[]>(initialEpisodes);
+  const [loading, setLoading] = useState(initialEpisodes.length === 0);
 
   // Player state. TOPIA TV autoplays MUTED by default (reliable across
   // browsers, and avoids blasting sound at visitors). A "Tap to unmute"
@@ -70,6 +72,9 @@ export default function TVPage() {
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
+    // Server-rendered episodes are already in state; only fetch when SSR gave
+    // us none (DB hiccup) or the viewer explicitly hit retry.
+    if (initialEpisodes.length > 0 && loadAttempt === 0) return;
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
@@ -252,8 +257,11 @@ export default function TVPage() {
                       ref={videoRef}
                       key={activeEp.id}
                       src={activeEp.videoUrl}
+                      poster={activeEp.thumbnailUrl ?? undefined}
                       className="w-full h-full object-cover"
                       preload="metadata"
+                      // LCP element — prioritize its fetch (types lag React 19)
+                      {...({ fetchPriority: 'high' } as unknown as React.VideoHTMLAttributes<HTMLVideoElement>)}
                       playsInline
                       onPlay={() => setPlaying(true)}
                       onPause={() => setPlaying(false)}
