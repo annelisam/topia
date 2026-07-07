@@ -206,6 +206,10 @@ export default function Home() {
               }`}
             />
           </div>
+          {/* One concrete line for cold visitors — what you can actually DO here. */}
+          <span className="block mt-2 font-mono text-[10px] md:text-[11px] text-[#1a1a1a]/60 uppercase tracking-[2px]">
+            events, worlds &amp; passports for the creative underground — join in one tap.
+          </span>
         </button>
       </div>
     </div>

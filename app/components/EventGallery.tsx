@@ -311,8 +311,8 @@ export default function EventGallery({ slug, isHost, privyId }: Props) {
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold opacity-50" style={{ color: 'var(--foreground)' }}>
-          Album{all.length > 0 && <span className="ml-2 opacity-60">{all.length}</span>}
+        <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold" style={{ color: 'var(--text-muted)' }}>
+          Album{all.length > 0 && <span className="ml-2">{all.length}</span>}
         </p>
         <div className="flex items-center gap-2">
           {all.length > 0 && (
@@ -356,7 +356,7 @@ export default function EventGallery({ slug, isHost, privyId }: Props) {
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--background) 80%, transparent)' }}
           >
             <p className="font-mono text-[14px] uppercase tracking-[0.15em] font-bold" style={{ color: 'var(--foreground)' }}>
-              Album <span className="opacity-50 ml-1">{all.length}</span>
+              Album <span className="ml-1" style={{ color: 'var(--text-muted)' }}>{all.length}</span>
             </p>
             <div className="flex items-center gap-3">
               {canContribute && uploadButton}

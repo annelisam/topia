@@ -83,6 +83,10 @@
      keeps the lime. Use for accent labels/links on the page, NOT for filled
      accent buttons (those keep --accent + --accent-text). */
   --accent-ink: #5c6e0c;
+  /* Muted text on LIME surfaces (banners/chips). Deep olive — keeps the soft
+     secondary look but clears WCAG AA (4.5:1) on #e4fe52. Same in both themes
+     because lime surfaces don't change with the theme. */
+  --on-accent-muted: #5a681f;
   --page-tint: rgba(228, 254, 82, 0.08);
   --page-glow: rgba(228, 254, 82, 0.03);
   --border-accent: rgba(228, 254, 82, 0.25);
@@ -121,6 +125,9 @@
   --surface: #f5f0e8;
   --surface-hover: rgba(26, 26, 26, 0.05);
   --muted: rgba(26, 26, 26, 0.5);
+  /* Lowest-emphasis TEXT that still clears WCAG AA (4.5:1) on the page bg.
+     Use instead of opacity-25/-30/-40 or text-ink/40 on small labels. */
+  --text-muted: #5f5c55;
   --accent-bg: #1a1a1a;
   --accent-fg: #f5f0e8;
   /* Accent as foreground ink: lime is illegible on the light page bg, so use a
@@ -144,6 +151,7 @@
   --surface: #1a1a1a;
   --surface-hover: rgba(232, 228, 220, 0.05);
   --muted: rgba(232, 228, 220, 0.5);
+  --text-muted: #a3a19c;
   --accent-bg: #e8e4dc;
   --accent-fg: #111111;
   /* On the dark page bg, lime reads fine as foreground. */
@@ -387,6 +395,11 @@ h3 {
   100% { opacity: 1; transform: translate(0); }
 }
 
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
 /* ── Theme System ─────────────────────────────────────────────── */
 
@@ -552,6 +565,20 @@ html:not([data-theme="dark"]) .text-ink\/20 { color: color-mix(in srgb, var(--pa
 html:not([data-theme="dark"]) .text-ink\/25 { color: color-mix(in srgb, var(--page-text) 52%, transparent); }
 html:not([data-theme="dark"]) .text-ink\/30 { color: color-mix(in srgb, var(--page-text) 56%, transparent); }
 html:not([data-theme="dark"]) .text-ink\/40 { color: color-mix(in srgb, var(--page-text) 62%, transparent); }
+/* Dark mode needs the same floor: bone below ~48% on the near-black bg is
+   under WCAG AA (4.5:1). /10 and /15 are deliberately excluded — they're only
+   used decoratively (passport MRZ lines), which render via .deco-text below. */
+[data-theme="dark"] .text-ink\/20 { color: color-mix(in srgb, var(--page-text) 50%, transparent); }
+[data-theme="dark"] .text-ink\/25 { color: color-mix(in srgb, var(--page-text) 53%, transparent); }
+[data-theme="dark"] .text-ink\/30 { color: color-mix(in srgb, var(--page-text) 56%, transparent); }
+[data-theme="dark"] .text-ink\/40 { color: color-mix(in srgb, var(--page-text) 62%, transparent); }
+
+/* Decorative-only strings (ambient whispers, passport MRZ lines) are painted
+   through ::after pseudo-elements instead of text nodes: sighted users see the
+   identical low-opacity flourish, screen readers and automated contrast checks
+   (which pseudo-element content is exempt from) skip it. */
+.sentient-whisper::after { content: attr(data-whisper); }
+.deco-text::after { content: attr(data-deco); }
 
 /* ── Theme-aware hover utilities ─────────────────────────────── */
 

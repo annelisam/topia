@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useToast } from './Toast';
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -11,6 +12,7 @@ interface FollowButtonProps {
 
 export default function FollowButton({ targetUserId, initialIsFollowing = false, onFollowChange }: FollowButtonProps) {
   const { authenticated, user } = usePrivy();
+  const toast = useToast();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [busy, setBusy] = useState(false);
 
@@ -44,6 +46,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
       }
     } catch (err) {
       console.error('Follow toggle error:', err);
+      toast.error("Couldn't update follow — check your connection and try again.");
     } finally {
       setBusy(false);
     }

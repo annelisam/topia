@@ -394,7 +394,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                       </button>
                     );
                   })}
-                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                  <span className="font-mono text-[9px] text-[var(--text-muted)] ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
                 {/* ═══ ACTIVE SECTION ═══ */}
@@ -410,14 +410,14 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                         <div key={i} className={b.type === 'bar' ? 'bg-ink/10' : ''} style={{ width: `${b.w}px`, height: b.type === 'bar' ? `${12 + (b.w * 2)}px` : '0px', marginRight: b.type === 'gap' ? `${b.w}px` : '0px' }} />
                       ))}
                     </div>
-                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block">{mrzLine1}</span>
-                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block">{mrzLine2}</span>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block deco-text" data-deco={mrzLine1} />
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block deco-text" data-deco={mrzLine2} />
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-4">
-                    <span className="font-mono text-[9px] text-ink/10 hidden md:block">{world.id.slice(0, 6)}···{world.id.slice(-4)}</span>
+                    <span className="font-mono text-[9px] text-ink/10 hidden md:block deco-text" data-deco={`${world.id.slice(0, 6)}···${world.id.slice(-4)}`} />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <span className="font-mono text-[8px] text-ink/10 uppercase">W1</span>
+                    <span className="font-mono text-[8px] text-ink/10 uppercase deco-text" data-deco="W1" />
                   </div>
                 </div>
 

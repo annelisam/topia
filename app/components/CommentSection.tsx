@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import dynamic from 'next/dynamic';
 import { type PickedGif } from './GiphyPicker';
+import { gifDisplayUrl } from '@/lib/giphy';
+import ConfirmDialog from './ConfirmDialog';
 import { StarIcon } from './ui/Icons';
 import ReactionBar, { type ReactionSummary } from './ReactionBar';
 
@@ -70,6 +72,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
   // Per-thread reply state — keyed by parent comment id
   const [replyOpenFor, setReplyOpenFor] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState('');
   const [replyGif, setReplyGif] = useState<PickedGif | null>(null);
   const [replyGifOpen, setReplyGifOpen] = useState(false);
@@ -194,7 +197,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
   async function handleDelete(commentId: string) {
     if (!user?.id) return;
-    if (!window.confirm('Delete this comment?')) return;
+    setConfirmDeleteId(null);
     try {
       const res = await fetch(`${endpoint}?id=${commentId}&privyId=${encodeURIComponent(user.id)}`, { method: 'DELETE' });
       if (res.ok) await load();
@@ -244,7 +247,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 <video src={c.imageUrl} className="rounded-sm border border-ink/10 max-w-[260px]" controls muted playsInline preload="metadata" />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={c.imageUrl} alt={c.body || 'attachment'} className="rounded-sm border border-ink/10 max-w-[220px]" />
+                <img src={gifDisplayUrl(c.giphyId, c.imageUrl)!} alt={c.body || 'attachment'} loading="lazy" className="rounded-sm border border-ink/10 max-w-[220px]" />
               )}
               {c.giphyId && <span className="block font-mono text-[8px] uppercase tracking-[2px] text-ink/20 mt-0.5">via giphy</span>}
             </div>
@@ -276,7 +279,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
           {/* Delete — author (own comment) or event host (any comment) */}
           {canDelete && (
             <button
-              onClick={() => handleDelete(c.id)}
+              onClick={() => setConfirmDeleteId(c.id)}
               className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-[#FF5C34] bg-transparent border-none cursor-pointer mt-1.5 px-0 ml-3"
               title={c.authorId === viewerId ? 'Delete your comment' : 'Delete (host)'}
             >
@@ -469,6 +472,15 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
 
       <GiphyPicker open={gifOpen}     onClose={() => setGifOpen(false)}     onPick={(g) => { setGif(g); setMedia(null); }} />
       <GiphyPicker open={replyGifOpen} onClose={() => setReplyGifOpen(false)} onPick={(g) => { setReplyGif(g); setReplyMedia(null); }} />
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="Delete this comment?"
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </div>
   );
 }

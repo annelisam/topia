@@ -44,7 +44,7 @@ export default function LoadingBar({ text }: LoadingBarProps) {
       </div>
 
       {text && (
-        <div className="mt-3 font-mono text-[11px] uppercase tracking-[2px] opacity-40" style={{ color: 'var(--foreground)' }}>
+        <div className="mt-3 font-mono text-[11px] uppercase tracking-[2px]" style={{ color: 'var(--text-muted)' }}>
           {text}
         </div>
       )}

@@ -4,6 +4,8 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { type PickedGif } from '../components/GiphyPicker';
+import { gifDisplayUrl } from '@/lib/giphy';
+import { useToast } from '../components/Toast';
 
 // Giphy SDK is heavy and only used when the picker opens — load it on demand.
 const GiphyPicker = dynamic(() => import('../components/GiphyPicker'), { ssr: false });
@@ -62,6 +64,7 @@ const IDLE_AFTER = 5; // empty polls (~20s) before slowing down
 const ALLOW_IMAGE_UPLOAD = false;
 
 export default function Thread({ conversationId, privyId, initialOther = null, onBack, onActivity }: Props) {
+  const toast = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [other, setOther] = useState<OtherUser | null>(initialOther);
   const [status, setStatus] = useState<'accepted' | 'pending'>('accepted');
@@ -209,7 +212,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
     onActivity?.();
   }, [onActivity]);
 
-  const send = useCallback(async (payload: { body?: string; imageUrl?: string; giphyId?: string }) => {
+  const send = useCallback(async (payload: { body?: string; imageUrl?: string; giphyId?: string }): Promise<boolean> => {
     setSending(true);
     try {
       const res = await fetch(`/api/messages/${conversationId}`, {
@@ -217,15 +220,22 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
         body: JSON.stringify({ privyId, ...payload }),
       });
       const data = await res.json();
-      if (res.ok && data.message) { pushMessage(data.message); setStatus('accepted'); }
+      if (res.ok && data.message) { pushMessage(data.message); setStatus('accepted'); return true; }
+      toast.error("Message didn't send — try again.");
+      return false;
+    } catch {
+      toast.error("Message didn't send — check your connection.");
+      return false;
     } finally { setSending(false); }
-  }, [conversationId, privyId, pushMessage]);
+  }, [conversationId, privyId, pushMessage, toast]);
 
-  const sendText = () => {
+  const sendText = async () => {
     const t = text.trim();
     if (!t || sending) return;
     setText('');
-    send({ body: t });
+    // Put the draft back in the composer if the send failed.
+    const ok = await send({ body: t });
+    if (!ok) setText(t);
   };
 
   const onPickGif = (gif: PickedGif) => send({ imageUrl: gif.url, giphyId: gif.id });
@@ -311,7 +321,7 @@ export default function Thread({ conversationId, privyId, initialOther = null, o
                   >
                     {m.imageUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={m.imageUrl} alt="" onLoad={() => { if (stickRef.current) scrollToBottom(false); }} className="rounded-xl max-w-full max-h-64 object-cover" />
+                      <img src={gifDisplayUrl(m.giphyId, m.imageUrl)!} alt="" onLoad={() => { if (stickRef.current) scrollToBottom(false); }} className="rounded-xl max-w-full max-h-64 object-cover" />
                     ) : (
                       <p className="font-mono text-[13px] leading-snug whitespace-pre-wrap break-words">{m.body}</p>
                     )}

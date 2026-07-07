@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [],
+  // Covers/avatars live on Vercel Blob AND external hosts (Partiful/Luma
+  // imports, social CDNs), so allow any https source; next/image call sites
+  // still gate to http(s) non-GIF sources (see EventCover).
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    formats: ['image/avif', 'image/webp'],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

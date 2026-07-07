@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState, CSSProperties } from 'react';
+import dynamic from 'next/dynamic';
 import { usePrivy } from '@privy-io/react-auth';
 import { ShareIcon } from './ui/Icons';
 import { shortenPath } from '@/lib/shortlink';
-import ShareModal from './ShareModal';
+
+// Loads only when the share sheet opens.
+const ShareModal = dynamic(() => import('./ShareModal'), { ssr: false });
 
 interface ShareButtonProps {
   /** Internal path to share. Defaults to the current pathname. */

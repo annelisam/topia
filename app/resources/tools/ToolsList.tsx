@@ -59,10 +59,10 @@ interface TrendingTool {
   score?: number;
 }
 
-export default function ToolsList() {
-  const [allTools, setAllTools] = useState<Tool[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+export default function ToolsList({ initialTools = [] }: { initialTools?: Tool[] }) {
+  const [allTools, setAllTools] = useState<Tool[]>(initialTools);
+  const [loading, setLoading] = useState(initialTools.length === 0);
+  const [initialLoad, setInitialLoad] = useState(initialTools.length === 0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
@@ -96,10 +96,12 @@ export default function ToolsList() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy
+  // Single fetch — load everything once, filter & sort client-side for instant feel + fuzzy.
+  // Skipped when the server page already seeded the list.
   useEffect(() => {
     if (initialFetchedRef.current) return;
     initialFetchedRef.current = true;
+    if (initialTools.length > 0) return;
     (async () => {
       try {
         const response = await fetch('/api/tools');
@@ -163,14 +165,14 @@ export default function ToolsList() {
             <div className="bg-lime relative">
               <div className="px-4 md:px-6 py-4 md:py-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                 <div>
-                  <span className="font-mono text-[11px] uppercase tracking-[2px] text-obsidian/50 block">tools // toolkit</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--on-accent-muted)] block">tools // toolkit</span>
                   <h1 className="font-basement font-black text-[clamp(28px,5vw,64px)] uppercase leading-[0.9] text-obsidian mt-1">
                     TOOLS
                   </h1>
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-1">
                   <span className="font-mono text-[12px] text-obsidian/80 leading-snug">software, hardware, platforms.</span>
-                  <span className="font-mono text-[12px] text-obsidian/60 leading-snug">what creators use to build worlds.</span>
+                  <span className="font-mono text-[12px] text-[var(--on-accent-muted)] leading-snug">what creators use to build worlds.</span>
                   <button
                     onClick={() => setSubmitOpen(true)}
                     className="submit-tool-btn mt-2 self-start md:self-end font-mono text-[11px] font-bold uppercase tracking-[2px] text-obsidian border border-obsidian/30 hover:bg-obsidian hover:text-lime px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
@@ -195,7 +197,7 @@ export default function ToolsList() {
                 {search && (
                   <button
                     onClick={() => setSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] text-ink/40 hover:text-ink transition bg-transparent border-none cursor-pointer w-5 h-5 flex items-center justify-center"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[14px] text-[var(--text-muted)] hover:text-ink transition bg-transparent border-none cursor-pointer w-5 h-5 flex items-center justify-center"
                     aria-label="Clear search"
                   >
                     ×
@@ -205,13 +207,14 @@ export default function ToolsList() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
+                aria-label="Sort tools"
                 className="bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[12px] uppercase tracking-[1px] text-ink/70 px-3 py-1.5 rounded-sm outline-none cursor-pointer transition-colors"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value} className="bg-[var(--page-bg)] text-ink">{opt.label}</option>
                 ))}
               </select>
-              <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40 md:ml-auto shrink-0">
+              <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--text-muted)] md:ml-auto shrink-0">
                 {tools.length} tool{tools.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -227,7 +230,7 @@ export default function ToolsList() {
                     className={`font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm whitespace-nowrap transition cursor-pointer ${
                       active
                         ? 'bg-lime text-obsidian font-bold border-transparent'
-                        : 'text-ink/40 hover:text-ink/80 bg-transparent border border-transparent'
+                        : 'text-[var(--text-muted)] hover:text-ink/80 bg-transparent border border-transparent'
                     }`}
                   >
                     {cat}
@@ -255,7 +258,7 @@ export default function ToolsList() {
                           >
                             {fav && (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                              <img src={fav} alt="" width={16} height={16} loading="lazy" className="w-4 h-4 rounded-sm object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             )}
                             <span className="font-mono text-[11px] text-ink">{t.name}</span>
                           </button>
@@ -280,7 +283,7 @@ export default function ToolsList() {
                           >
                             {fav && (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={fav} alt="" className="w-4 h-4 rounded-sm object-contain" />
+                              <img src={fav} alt="" width={16} height={16} loading="lazy" className="w-4 h-4 rounded-sm object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             )}
                             <span className="font-mono text-[11px] text-ink">{t.name}</span>
                           </button>
@@ -309,7 +312,7 @@ export default function ToolsList() {
                 </div>
               ) : tools.length === 0 && !loading ? (
                 <div className="text-center py-16">
-                  <p className="font-mono text-[13px] uppercase tracking-[2px] text-ink/40 mb-4">
+                  <p className="font-mono text-[13px] uppercase tracking-[2px] text-[var(--text-muted)] mb-4">
                     {search
                       ? `no tools matching "${search}"${selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}`
                       : 'no tools found'}
@@ -360,20 +363,20 @@ export default function ToolsList() {
                           <div className="shrink-0 w-10 h-10 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center">
                             {favicon ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={favicon} alt="" className="w-full h-full object-contain" />
+                              <img src={favicon} alt="" width={40} height={40} loading="lazy" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             ) : (
                               <span className="font-basement text-base text-ink/30">{tool.name[0]?.toUpperCase()}</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <h3 className="font-mono text-[13px] uppercase font-bold text-ink truncate">{tool.name}</h3>
+                              <h2 className="font-mono text-[13px] uppercase font-bold text-ink truncate">{tool.name}</h2>
                               {tool.featured && !isNew && (
                                 <span className="font-mono text-[9px] uppercase tracking-wider text-lime/80 shrink-0">★</span>
                               )}
                             </div>
                             {tool.pricing && (
-                              <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40 mt-0.5 block">{tool.pricing}</span>
+                              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] mt-0.5 block">{tool.pricing}</span>
                             )}
                           </div>
                         </div>
@@ -388,7 +391,7 @@ export default function ToolsList() {
                             {categories.slice(0, 2).map((cat) => (
                               <span
                                 key={cat}
-                                className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 border border-ink/10 text-ink/40 rounded-sm"
+                                className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 border border-ink/10 text-[var(--text-muted)] rounded-sm"
                               >
                                 {cat}
                               </span>
@@ -408,7 +411,7 @@ export default function ToolsList() {
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
                                   ) : (
-                                    <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-ink/40">
+                                    <span className="w-full h-full flex items-center justify-center font-basement text-[9px] text-[var(--text-muted)]">
                                       {(u.name || u.username || '?')[0]?.toUpperCase()}
                                     </span>
                                   )}

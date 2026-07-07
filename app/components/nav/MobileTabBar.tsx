@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useMessagesBadge } from '../MessagesNavIcon';
 
 const TAB_LINKS = [
@@ -65,12 +66,35 @@ interface MobileTabBarProps {
   onOpenMessages: () => void;
 }
 
-// Collapsible bottom nav: hidden by default, leaving just a "^ Menu" handle
-// peeking at the bottom edge. Tapping the handle slides the tab bar up; tapping
-// a tab (or navigating) tucks it away again so it never blocks content.
+// Collapsible bottom nav with a "^ Menu" handle at the bottom edge. Expanded
+// by default so first-time visitors can find navigation; the handle remembers
+// an explicit collapse (localStorage) across pages. Tapping a tab still tucks
+// the bar for the current page so it never blocks content.
+const TABBAR_PREF_KEY = 'topia:tabbar';
+
 export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTabBarProps) {
   const [open, setOpen] = useState(false);
   const messagesBadge = useMessagesBadge();
+  const pathname = usePathname();
+
+  // Slide up on mount unless the user explicitly collapsed it before.
+  // (Runs post-hydration — useState can't read localStorage during SSR.)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(TABBAR_PREF_KEY) !== 'collapsed') setOpen(true);
+    } catch {}
+  }, []);
+
+  const toggle = () => {
+    setOpen((o) => {
+      const next = !o;
+      try { localStorage.setItem(TABBAR_PREF_KEY, next ? 'open' : 'collapsed'); } catch {}
+      return next;
+    });
+  };
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' || pathname === '/home' : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <nav
@@ -81,7 +105,7 @@ export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTab
           around the pill never blocks the content behind it. */}
       <div className="flex justify-center pointer-events-none">
         <button
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggle}
           aria-label={open ? 'Hide menu' : 'Show menu'}
           className="pointer-events-auto flex items-center justify-center gap-1.5 px-5 py-2 min-h-[44px] rounded-t-xl backdrop-blur-xl cursor-pointer border-t border-l border-r"
           style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--nav-border)', color: 'var(--page-text)' }}
@@ -131,8 +155,9 @@ export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTab
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
+                aria-current={isActive(link.href) ? 'page' : undefined}
                 className={cls}
-                style={{ color: 'var(--page-text)', opacity: 0.4 }}
+                style={{ color: isActive(link.href) ? 'var(--accent-ink)' : 'var(--page-text)', opacity: isActive(link.href) ? 1 : 0.4 }}
               >
                 {inner}
               </Link>

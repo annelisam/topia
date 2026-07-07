@@ -2,10 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import PrivyProviderWrapper from "./components/PrivyProviderWrapper";
+import { ToastProvider } from "./components/Toast";
 import CookieConsent from "./components/CookieConsent";
 import FeedbackWidget from "./components/FeedbackWidget";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://topia.vision"),
   title: "TOPIA - Culture Before Tech",
   description: "A breathing network for artists, audiences, and communities to create, explore, and sustain collaborative worlds.",
   openGraph: {
@@ -13,11 +15,13 @@ export const metadata: Metadata = {
     description: "A creator engine for artists, by artists.",
     type: "website",
     siteName: "Topia",
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "TOPIA" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "TOPIA — What You Make It",
     description: "A creator engine for artists, by artists.",
+    images: ["/brand/og-image.png"],
   },
 };
 
@@ -58,7 +62,20 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <link rel="stylesheet" href="https://use.typekit.net/gjn0rep.css" />
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/BasementGrotesque-Black.woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/otf"
+          href="/fonts/GTZirkon-Regular.otf"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="antialiased">
         {/* Global texture overlays */}
@@ -66,8 +83,10 @@ export default function RootLayout({
         <div className="scanlines-overlay" />
 
         <PrivyProviderWrapper>
-          {children}
-          <FeedbackWidget />
+          <ToastProvider>
+            {children}
+            <FeedbackWidget />
+          </ToastProvider>
         </PrivyProviderWrapper>
         <CookieConsent />
         <Analytics />

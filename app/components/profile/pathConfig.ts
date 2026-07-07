@@ -11,7 +11,8 @@ export interface PathConfig {
 export const PATH_CONFIG: Record<UserPath, PathConfig> = {
   worldbuilder: { label: 'WORLDBUILDER', color: 'lime',  hex: '#e4fe52', bg: 'bg-lime', textOn: 'text-obsidian' },
   catalyst:     { label: 'CATALYST',     color: 'blue',  hex: '#4F46FF', bg: 'bg-blue', textOn: 'text-bone' },
-  anchor:       { label: 'ANCHOR',       color: 'pink',  hex: '#FF5BD7', bg: 'bg-pink', textOn: 'text-bone' },
+  // Obsidian on pink (6.4:1) — bone on pink fails WCAG AA at 2.4:1.
+  anchor:       { label: 'ANCHOR',       color: 'pink',  hex: '#FF5BD7', bg: 'bg-pink', textOn: 'text-obsidian' },
 };
 
 export const COLOR_HEX: Record<string, string> = {

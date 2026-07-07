@@ -63,7 +63,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-8 pt-6 border-t border-bone/[0.06] flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="font-mono text-[13px] uppercase tracking-wider opacity-30">
+          <span className="font-mono text-[13px] uppercase tracking-wider text-bone/55">
             &copy; {new Date().getFullYear()} TOPIA. All rights reserved.
           </span>
           <div className="flex items-center gap-5 flex-wrap justify-center">

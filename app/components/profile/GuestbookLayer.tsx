@@ -6,7 +6,9 @@ import { usePrivy } from '@privy-io/react-auth';
 import dynamic from 'next/dynamic';
 import { PathConfig } from './pathConfig';
 import { type PickedGif } from '../GiphyPicker';
-import DrawingCanvas from '../DrawingCanvas';
+import { gifDisplayUrl } from '@/lib/giphy';
+// Canvas drawing tool — loads only when the drawing composer opens.
+const DrawingCanvas = dynamic(() => import('../DrawingCanvas'), { ssr: false });
 import ReactionBar, { type ReactionSummary } from '../ReactionBar';
 
 // Giphy SDK loads on demand (only when the picker opens).
@@ -194,7 +196,7 @@ export default function GuestbookLayer({ config, profileUsername }: Props) {
           {e.kind === 'gif' && e.imageUrl && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={e.imageUrl} alt={e.body || 'gif'} className="rounded-sm border border-ink/10 max-w-[240px]" />
+              <img src={gifDisplayUrl(e.giphyId, e.imageUrl)!} alt={e.body || 'gif'} loading="lazy" className="rounded-sm border border-ink/10 max-w-[240px]" />
               <span className="block font-mono text-[8px] uppercase tracking-[2px] text-ink/20 mt-0.5">via giphy</span>
             </>
           )}

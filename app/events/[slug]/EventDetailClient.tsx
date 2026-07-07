@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { usePrivy } from '@privy-io/react-auth';
@@ -9,16 +11,17 @@ import Navigation from '../../components/Navigation';
 import SentientText from '../../components/ui/SentientText';
 import LoadingBar from '../../components/LoadingBar';
 import RsvpConfirmationModal from './RsvpConfirmationModal';
-import RsvpModal from './RsvpModal';
+// Heavy flows — load on demand, not in the event-page bundle.
+const RsvpModal = dynamic(() => import('./RsvpModal'), { ssr: false });
 import WhosGoing from './WhosGoing';
-import TicketPurchase from './TicketPurchase';
+const TicketPurchase = dynamic(() => import('./TicketPurchase'), { ssr: false });
 import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
 import { shortenPath } from '../../../lib/shortlink';
-import ShareModal from '../../components/ShareModal';
+const ShareModal = dynamic(() => import('../../components/ShareModal'), { ssr: false });
 
 interface EventHost {
   userId: string;
@@ -496,8 +499,17 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   // Full poster at its natural aspect ratio — fills the box, no crop.
                   <video src={event.imageUrl} className="w-full h-auto block" autoPlay loop muted playsInline preload="metadata" />
                 ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={event.imageUrl} alt={event.eventName} className="w-full h-auto block" />
+                  /* Sized square (uploads are 1200x1200) so the layout below
+                     doesn't shift while the poster loads; h-auto corrects any
+                     non-square externals on decode. next/image (priority — this
+                     is the LCP element) for https non-GIFs; raw img for
+                     data:/GIF sources it can't proxy. */
+                  event.imageUrl.startsWith('https://') && !/\.gif(\?|#|$)/i.test(event.imageUrl) ? (
+                    <Image src={event.imageUrl} alt={event.eventName} width={1200} height={1200} priority sizes="(max-width: 1024px) 100vw, 50vw" className="w-full h-auto block" />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={event.imageUrl} alt={event.eventName} width={1200} height={1200} fetchPriority="high" className="w-full h-auto block" />
+                  )
                 )
               ) : (
                 <div className="w-full flex items-center justify-center" style={{ aspectRatio: '4 / 5' }}>
@@ -511,7 +523,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             {/* Presented by — the host's world */}
             {world && (
               <div className="mt-6">
-                <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-2.5" style={{ color: 'var(--foreground)' }}>Presented by</p>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] mb-2.5" style={{ color: 'var(--text-muted)' }}>Presented by</p>
                 <Link href={`/worlds/${world.worldSlug}`} className="flex items-center gap-2.5 group no-underline">
                   {world.worldImageUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -529,7 +541,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
             {/* Hosted by — host list (hosts toggled off in manage are hidden) */}
             {visibleHosts.length > 0 && (
               <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
-                <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-40 mb-3" style={{ color: 'var(--foreground)' }}>Hosted by</p>
+                <p className="font-mono text-[10px] uppercase tracking-[2px] mb-3" style={{ color: 'var(--text-muted)' }}>Hosted by</p>
                 <div className="space-y-3">
                   {visibleHosts.map((host) => (
                     <Link key={host.userId} href={host.username ? `/profile/${host.username}` : '#'} className="flex items-center gap-2.5 group no-underline">
@@ -543,7 +555,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                       )}
                       <span className="font-mono text-[13px] group-hover:opacity-70 transition" style={{ color: 'var(--foreground)' }}>
                         {host.name || host.username || 'Host'}
-                        {host.role === 'creator' && <span className="opacity-40"> · Creator</span>}
+                        {host.role === 'creator' && <span style={{ color: 'var(--text-muted)' }}> · Creator</span>}
                       </span>
                     </Link>
                   ))}
@@ -751,14 +763,14 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               </button>
               </div>
               {isPending && (
-                <p className="font-mono text-[11px] opacity-50 mt-1.5 text-center" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[11px] mt-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
                   Awaiting host approval — tap to withdraw.
                 </p>
               )}
               {/* Capacity hint — only when a cap is set and the guest hasn't
                   already locked a spot. */}
               {cap != null && !isGoing && !isPending && !event.rsvpClosed && (
-                <p className="font-mono text-[11px] opacity-50 mt-1.5 text-center" style={{ color: 'var(--foreground)' }}>
+                <p className="font-mono text-[11px] mt-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
                   {isFull ? 'This event is at capacity.'
                     : spotsLeft === 1 ? '1 spot left.'
                     : `${spotsLeft} spots left.`}
@@ -854,7 +866,7 @@ export default function EventDetailClient({ slug }: { slug: string }) {
           {/* Description */}
           {event.description && (
             <section className="mb-10">
-              <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold mb-3 opacity-50" style={{ color: 'var(--foreground)' }}>
+              <p className="font-mono text-[13px] uppercase tracking-[0.15em] font-bold mb-3" style={{ color: 'var(--text-muted)' }}>
                 About
               </p>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>

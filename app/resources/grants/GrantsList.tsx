@@ -31,10 +31,10 @@ const COMMON_TAGS = [
   'public-goods', 'queer', 'residency', 'social', 'trans', 'visual arts', 'women'
 ];
 
-export default function GrantsList() {
-  const [grants, setGrants] = useState<Grant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+export default function GrantsList({ initialGrants = [] }: { initialGrants?: Grant[] }) {
+  const [grants, setGrants] = useState<Grant[]>(initialGrants);
+  const [loading, setLoading] = useState(initialGrants.length === 0);
+  const [initialLoad, setInitialLoad] = useState(initialGrants.length === 0);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('all tags');
@@ -48,7 +48,11 @@ export default function GrantsList() {
     return () => clearTimeout(debounceRef.current);
   }, [search]);
 
+  // Server page seeds the default list — skip the first (mount) fetch and
+  // only hit the API when filters actually change.
+  const skipFirstFetch = useRef(initialGrants.length > 0);
   useEffect(() => {
+    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
     fetchGrants();
   }, [debouncedSearch, selectedTag, sortBy]);
 
@@ -165,8 +169,9 @@ export default function GrantsList() {
 
             {/* Sort By */}
             <div>
-              <label className="block font-mono text-[13px] mb-2 sm:mb-3 uppercase" style={{ color: 'var(--foreground)' }}>SORT BY</label>
+              <label htmlFor="grants-sort" className="block font-mono text-[13px] mb-2 sm:mb-3 uppercase" style={{ color: 'var(--foreground)' }}>SORT BY</label>
               <select
+                id="grants-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 font-mono text-[13px] border focus:outline-none focus:ring-2"
@@ -213,7 +218,20 @@ export default function GrantsList() {
             </div>
           ) : grants.length === 0 && !loading ? (
             <div className="text-center py-8 sm:py-12">
-              <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>No grants found. Try adjusting your filters.</p>
+              <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--foreground)' }}>
+                {search || selectedTag !== 'all tags'
+                  ? `No grants${search ? ` matching "${search}"` : ''}${selectedTag !== 'all tags' ? ` tagged ${selectedTag}` : ''}.`
+                  : 'No grants found.'}
+              </p>
+              {(search || selectedTag !== 'all tags') && (
+                <button
+                  onClick={() => { setSearch(''); setSelectedTag('all tags'); }}
+                  className="font-mono text-[12px] uppercase tracking-[2px] px-4 py-2 border rounded-sm cursor-pointer bg-transparent hover:opacity-70 transition"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <div className={`space-y-3 sm:space-y-4 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>

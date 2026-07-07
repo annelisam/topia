@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { isRealPhoto } from '../../lib/avatar';
 import { uploadToBlob } from '../../lib/uploadImage';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { AdminAuthProvider, useAdminAuth } from './_components/AdminAuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1693,6 +1694,7 @@ function EmailsTab() {
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [results, setResults] = useState<{ sentCount: number; total: number; results: SendResult[] } | null>(null);
 
   useEffect(() => {
@@ -1739,7 +1741,11 @@ function EmailsTab() {
     if (!templateId) { setError('Pick a template'); return; }
     if (needsEvent && !eventId) { setError('Pick an event for this template'); return; }
     if (selected.size === 0) { setError('Select at least one recipient'); return; }
-    if (!window.confirm(`Send "${tpl?.label}" to ${selected.size} recipient(s)?`)) return;
+    setConfirmSendOpen(true);
+  };
+
+  const reallySend = async () => {
+    setConfirmSendOpen(false);
     setBusy(true);
     try {
       const res = await adminFetch('/api/admin/emails', {
@@ -1757,6 +1763,15 @@ function EmailsTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ color: '#1a1a1a' }}>
+      {confirmSendOpen && (
+        <ConfirmDialog
+          title={`Send "${tpl?.label}" to ${selected.size} recipient(s)?`}
+          body="Emails go out immediately via Resend."
+          confirmLabel="Send"
+          onConfirm={reallySend}
+          onCancel={() => setConfirmSendOpen(false)}
+        />
+      )}
       {/* Left: controls */}
       <div>
         <Field label="Template">

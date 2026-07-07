@@ -1,19 +1,26 @@
-'use client';
-
-import { useState } from 'react';
+import type { Metadata } from 'next';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
+import { getToolsList } from '@/lib/tools/list';
 import ToolsList from './ToolsList';
 
-export default function ToolsPage() {
-  const [isLoaded, setIsLoaded] = useState(false);
+export const revalidate = 60;
 
+export const metadata: Metadata = {
+  title: 'Tools | TOPIA',
+  description: 'Software, hardware, platforms — what creators use to build worlds.',
+  alternates: { canonical: 'https://topia.vision/resources/tools' },
+};
+
+export default async function ToolsPage() {
+  const initialTools = await getToolsList();
+
+  // LoadingScreen is an opaque once-per-session overlay — content renders at
+  // full opacity beneath it (no fade wrapper), so first paint isn't gated.
   return (
     <PageShell>
-      <LoadingScreen onComplete={() => setIsLoaded(true)} />
-      <div className={`transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-        <ToolsList />
-      </div>
+      <LoadingScreen />
+      <ToolsList initialTools={initialTools.map((t) => ({ ...t, featured: t.featured ?? false }))} />
     </PageShell>
   );
 }

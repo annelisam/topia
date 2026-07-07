@@ -3,13 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import FollowButton from '../../components/FollowButton';
 import MessageButton from '../../components/MessageButton';
 import ShareButton from '../../components/ShareButton';
-import TopiaCardModal from '../../components/profile/TopiaCardModal';
+
+// 3D card modal — loads only when the passport card opens.
+const TopiaCardModal = dynamic(() => import('../../components/profile/TopiaCardModal'), { ssr: false });
 import { SocialIcon } from '../../components/SocialIcons';
 import { roleSlugToLabel } from '../../../lib/profile/roleTags';
 import FollowListModal from '../../components/profile/FollowListModal';
@@ -253,7 +256,15 @@ export default function PublicProfilePage() {
     <div className="min-h-screen bg-[var(--page-bg)]">
       <LoadingScreen onComplete={() => setIsLoaded(true)} />
       <PageShell>
-        <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
+        {/* Entrance fade: a page-bg overlay fades OUT instead of the content
+            fading in — same visual, but text below keeps full computed
+            contrast the whole time (fading the section itself made automated
+            contrast checks fail when snapshotted mid-transition). */}
+        <div
+          className={`fixed inset-0 z-[70] pointer-events-none bg-[var(--page-bg)] transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-0' : 'opacity-100'}`}
+          aria-hidden="true"
+        />
+        <section className="min-h-screen px-4 md:px-6 py-4 md:py-6">
           <div className="max-w-[var(--content-max)] mx-auto">
             {profile && (
               <div className="relative z-10 grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
@@ -305,7 +316,7 @@ export default function PublicProfilePage() {
                         </div>
                         <span className="font-mono text-[11px] text-ink/40 mt-1">@{username}</span>
                         <span className={`font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1.5`}>{config.label}</span>
-                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/10 mt-2">P1</span>
+                        <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/10 mt-2 deco-text" data-deco="P1" />
                       </div>
                     </div>
 
@@ -518,7 +529,7 @@ export default function PublicProfilePage() {
                   </div>
                   <div className="hidden md:flex items-center gap-3">
                     <div className="w-32 h-[2px] rounded-full" style={{ background: `linear-gradient(90deg, transparent, ${config.hex}30, ${config.hex}60, ${config.hex}30, transparent)` }} />
-                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/15">topia://stats</span>
+                    <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/15 deco-text" data-deco="topia://stats" />
                   </div>
                 </div>
 
@@ -557,13 +568,13 @@ export default function PublicProfilePage() {
                         <div key={i} className={b.type === 'bar' ? 'bg-ink/10' : ''} style={{ width: `${b.w}px`, height: b.type === 'bar' ? `${12 + (b.w * 2)}px` : '0px', marginRight: b.type === 'gap' ? `${b.w}px` : '0px' }} />
                       ))}
                     </div>
-                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block">{mrzLine1}</span>
-                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block">{mrzLine2}</span>
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/15 uppercase truncate block deco-text" data-deco={mrzLine1} />
+                    <span className="font-mono text-[9px] tracking-[2px] text-ink/10 uppercase truncate block deco-text" data-deco={mrzLine2} />
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-4">
-                    <span className="font-mono text-[9px] text-ink/10 hidden md:block">{profile.id.slice(0, 6)}···{profile.id.slice(-4)}</span>
+                    <span className="font-mono text-[9px] text-ink/10 hidden md:block deco-text" data-deco={`${profile.id.slice(0, 6)}···${profile.id.slice(-4)}`} />
                     <img src="/brand/logo-white.png" alt="" className="w-4 h-4 opacity-20" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <span className="font-mono text-[8px] text-ink/10 uppercase">P1</span>
+                    <span className="font-mono text-[8px] text-ink/10 uppercase deco-text" data-deco="P1" />
                   </div>
                 </div>
 

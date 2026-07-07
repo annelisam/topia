@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import PageShell from '../components/PageShell';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 const CATEGORIES = ['All', 'Featured', 'Live', 'Series', 'Replays'];
 const CAT_COLOR: Record<string, { dot: string; text: string; bg: string; textOn: string; border: string }> = {
@@ -64,10 +65,15 @@ export default function TVPage() {
   const [volume, setVolume] = useState(0.85);
 
   /* ── Load episodes + auto-select the first one so the channel
-        starts playing the moment the page is ready ────────────── */
+        starts playing the moment the page is ready. 10s timeout so a hung
+        request shows a retry instead of spinning forever. ────────────── */
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/tv/episodes')
+    setLoading(true);
+    setLoadError(false);
+    fetchWithTimeout('/api/tv/episodes')
       .then((r) => r.json())
       .then((json) => {
         if (cancelled) return;
@@ -75,10 +81,13 @@ export default function TVPage() {
         setEpisodes(eps);
         if (eps.length > 0) setActiveEp(eps[0]);
       })
-      .catch((err) => console.error('tv episodes load failed', err))
+      .catch((err) => {
+        console.error('tv episodes load failed', err);
+        if (!cancelled) setLoadError(true);
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [loadAttempt]);
 
   /* ── Filtering ───────────────────────────────────────── */
   const filtered = useMemo(() => {
@@ -431,6 +440,13 @@ export default function TVPage() {
                 {loading ? (
                   <div className="py-12 text-center">
                     <span className="font-mono text-[12px] uppercase tracking-[2px] text-ink/25">loading…</span>
+                  </div>
+                ) : loadError && episodes.length === 0 ? (
+                  <div className="py-12 px-4 text-center">
+                    <span className="font-mono text-[12px] uppercase tracking-[2px] text-[var(--text-muted)] block">couldn&rsquo;t load the channel</span>
+                    <button onClick={() => setLoadAttempt((n) => n + 1)} className="mt-3 font-mono text-[11px] uppercase tracking-[2px] text-lime hover:opacity-70 bg-transparent border-none cursor-pointer">
+                      retry
+                    </button>
                   </div>
                 ) : filtered.length === 0 ? (
                   <div className="py-12 px-4 text-center">

@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import Link from 'next/link';
 import GlitchType from '../components/ui/GlitchType';
 import { PathConfig } from '../components/profile/pathConfig';
 
@@ -80,6 +81,15 @@ export default function StepShell({
             <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">
               {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
             </span>
+            {/* Escape hatch — every step saves to the DB as it completes, so
+                leaving is safe; /home shows the complete-your-profile card and
+                onboarding resumes at the first incomplete step. */}
+            <Link
+              href="/home"
+              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/30 hover:text-ink/70 transition-colors no-underline"
+            >
+              finish later →
+            </Link>
           </div>
         )}
       </div>
