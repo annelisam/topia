@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Users table - auth via Privy (email, phone, Google, Coinbase wallet)
 export const users = pgTable('users', {
@@ -180,6 +180,20 @@ export const follows = pgTable('follows', {
 }, (t) => [
   index('follows_follower_id_idx').on(t.followerId),
   index('follows_following_id_idx').on(t.followingId),
+]);
+
+// World follows - users following a world as fans (distinct from membership).
+// Powers the follow button on world pages; followers get notified when
+// builders post announcements.
+export const worldFollows = pgTable('world_follows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('world_follows_world_id_idx').on(t.worldId),
+  index('world_follows_user_id_idx').on(t.userId),
+  uniqueIndex('world_follows_world_user_uniq').on(t.worldId, t.userId),
 ]);
 
 // Notifications - in-app notifications (e.g. follow events)
