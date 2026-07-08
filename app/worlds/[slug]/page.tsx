@@ -80,6 +80,9 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const { user, authenticated } = usePrivy();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SectionId>('overview');
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(false);
+  const [followPending, setFollowPending] = useState(false);
 
   useEffect(() => {
     const worldPromise = fetch(`/api/worlds?slug=${slug}`)
@@ -119,6 +122,19 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .catch(console.error);
   }, [world?.id]);
 
+  useEffect(() => {
+    if (!world?.id) return;
+    const qs = new URLSearchParams({ worldId: world.id });
+    if (user?.id) qs.set('privyId', user.id);
+    fetch(`/api/worlds/follow?${qs}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setFollowers(typeof d.followers === 'number' ? d.followers : 0);
+        setFollowing(Boolean(d.following));
+      })
+      .catch(console.error);
+  }, [world?.id, user?.id]);
+
   useRecordWorldView(world ? { slug: world.slug, title: world.title, imageUrl: world.imageUrl } : null);
 
   const config = useMemo(() => getWorldConfig(slug), [slug]);
@@ -126,7 +142,31 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const worldBuilders = useMemo(() => world?.members?.filter((m) => m.role === 'world_builder' || m.role === 'owner') || [], [world]);
   const collaboratorMembers = useMemo(() => world?.members?.filter((m) => m.role === 'collaborator') || [], [world]);
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
+  const isMember = currentUserId && (world?.members ?? []).some((m) => m.userId === currentUserId);
   const hasSocial = world?.socialLinks && Object.values(world.socialLinks).some((v) => v);
+
+  async function toggleWorldFollow() {
+    if (!world || !user?.id || followPending) return;
+    const wasFollowing = following;
+    setFollowPending(true);
+    // optimistic
+    setFollowing(!wasFollowing);
+    setFollowers((c) => Math.max(0, c + (wasFollowing ? -1 : 1)));
+    try {
+      const res = await fetch('/api/worlds/follow', {
+        method: wasFollowing ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, worldId: world.id }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch (err) {
+      console.error('[world] follow toggle failed:', err);
+      setFollowing(wasFollowing);
+      setFollowers((c) => Math.max(0, c + (wasFollowing ? 1 : -1)));
+    } finally {
+      setFollowPending(false);
+    }
+  }
 
   // Tools come from two places: the world's own `tools` field, and any
   // `tool:` tags builders attached to individual projects — merged so a tool
@@ -362,6 +402,24 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                           </div>
                         ) : <div />}
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {authenticated && !isMember && (
+                            <button
+                              onClick={toggleWorldFollow}
+                              disabled={followPending}
+                              className={`inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider rounded-sm px-2 py-0.5 cursor-pointer transition-colors border ${
+                                following
+                                  ? 'bg-ink text-[var(--page-bg)] border-ink'
+                                  : 'bg-transparent border-ink/[0.08] text-ink/50 hover:text-ink/60'
+                              }`}
+                            >
+                              {followPending ? '…' : following ? 'Following' : '+ Follow'}
+                            </button>
+                          )}
+                          {followers > 0 && (
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40">
+                              {followers} follower{followers !== 1 ? 's' : ''}
+                            </span>
+                          )}
                           <ShareButton
                             kind="world"
                             title={world.title}

@@ -214,7 +214,7 @@ export default function NotificationBell() {
                 n.type === 'event_cohost_accepted_self' || n.type === 'event_cohost_declined_self';
 
               const linkHref =
-                (n.type === 'world_member_added' || n.type === 'world_invite_accepted') && n.metadata?.worldSlug
+                (n.type === 'world_member_added' || n.type === 'world_invite_accepted' || n.type === 'world_announcement') && n.metadata?.worldSlug
                   ? `/worlds/${n.metadata.worldSlug}`
                   : (n.type === 'event_cohost_accepted' || n.type === 'event_rsvp') && n.metadata?.eventSlug
                   ? `/events/${n.metadata.eventSlug}`
@@ -227,6 +227,8 @@ export default function NotificationBell() {
                 const eventName = <span className="font-bold">{n.metadata?.eventName}</span>;
 
                 if (n.type === 'follow') return <>{actor} connected with you</>;
+                if (n.type === 'world_follow') return <>{actor} started following {worldName}</>;
+                if (n.type === 'world_announcement') return <>{actor} posted an update in {worldName}</>;
                 if (n.type === 'world_member_added') return <>{actor} added you as {roleLabel} in {worldName}</>;
                 if (n.type === 'world_invite') return <>{actor} invited you to join {worldName} as {roleLabel}</>;
                 if (n.type === 'world_invite_accepted') return <>{actor} accepted your invite to {worldName}</>;

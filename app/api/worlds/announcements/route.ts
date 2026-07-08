@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldAnnouncements, worldMembers, users } from '@/lib/db/schema';
+import { worldAnnouncements, worldMembers, worldFollows, worlds, users, notifications } from '@/lib/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 
 // GET – fetch recent announcements for a world
@@ -75,6 +75,32 @@ export async function POST(request: Request) {
       .from(users)
       .where(eq(users.id, authorId))
       .limit(1);
+
+    // Notify the world's followers (fans, not members) about the update.
+    try {
+      const followerRows = await db
+        .select({ userId: worldFollows.userId })
+        .from(worldFollows)
+        .where(eq(worldFollows.worldId, worldId));
+      if (followerRows.length > 0) {
+        const [worldRow] = await db
+          .select({ title: worlds.title, slug: worlds.slug })
+          .from(worlds)
+          .where(eq(worlds.id, worldId))
+          .limit(1);
+        for (const f of followerRows) {
+          if (f.userId === authorId) continue;
+          await db.insert(notifications).values({
+            recipientId: f.userId,
+            actorId: authorId,
+            type: 'world_announcement',
+            metadata: { worldId, worldTitle: worldRow?.title, worldSlug: worldRow?.slug },
+          });
+        }
+      }
+    } catch (e) {
+      console.error('[world-announcement] follower notifications failed:', e);
+    }
 
     return NextResponse.json({
       announcement: {
