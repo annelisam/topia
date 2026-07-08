@@ -10,6 +10,7 @@ import UsernameStep from './steps/UsernameStep';
 import AvatarStep from './steps/AvatarStep';
 import RoleTagsStep from './steps/RoleTagsStep';
 import BioSocialsStep from './steps/BioSocialsStep';
+import FollowStep from './steps/FollowStep';
 import DoneStep from './steps/DoneStep';
 import { isRealPhoto } from '../../lib/avatar';
 
@@ -86,6 +87,7 @@ const STEPS = [
   'avatar',
   'roles',
   'bio',
+  'follow',
   'done',
 ] as const;
 
@@ -100,7 +102,7 @@ function firstIncompleteStep(data: Partial<WizardData>): number {
   // to the avatar step to upload a real photo.
   if (!isRealPhoto(data.avatarUrl)) return 3;
   if (!data.roleTags || data.roleTags.length === 0) return 4; // roles
-  // bio + socials are optional — jump to done
+  // bio + socials + follow are optional — jump to done
   return STEPS.length - 1;
 }
 
@@ -296,6 +298,16 @@ function OnboardingWizard() {
             dispatch({ type: 'PATCH', patch });
             await saveDiff(patch);
           }}
+        />
+      )}
+      {current === 'follow' && (
+        <FollowStep
+          step={inputStepNumber}
+          total={TOTAL_STEPS}
+          config={config}
+          privyId={user?.id ?? ''}
+          onBack={back}
+          onAdvance={() => dispatch({ type: 'NEXT' })}
         />
       )}
       {current === 'done' && (
