@@ -258,6 +258,8 @@ export const eventRsvps = pgTable('event_rsvps', {
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   // 'going' (confirmed) | 'pending' (awaiting host approval) | 'declined'
+  // | 'waitlisted' (event at capacity — auto-promoted oldest-first when a
+  //   spot opens; see lib/events/waitlist.ts)
   status: text('status').default('going').notNull(),
   // Snapshot of answers to the event's custom questions at RSVP time:
   // [{ questionId, label, type, answer }]. Snapshotting keeps history stable

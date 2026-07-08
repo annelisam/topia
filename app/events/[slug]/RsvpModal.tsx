@@ -801,6 +801,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                     </div>
                   )}
                 </>
+              ) : resultStatus === 'waitlisted' ? (
+                <>
+                  <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>You&apos;re on the waitlist</h3>
+                  <p className="font-mono text-[12px] opacity-60 mb-5 leading-snug" style={{ color: 'var(--foreground)' }}>{eventName} is at capacity right now. Spots are promoted in join order — if one opens, you&apos;re in automatically and we&apos;ll let you know.</p>
+                </>
               ) : (
                 <>
                   <h3 className="font-basement text-[26px] font-black uppercase leading-none mb-1.5" style={{ color: 'var(--foreground)' }}>Request sent</h3>
