@@ -65,6 +65,7 @@ export default function ProfilePage() {
   const [socialFarcaster, setSocialFarcaster] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [stackTitle, setStackTitle] = useState('');
   const [path, setPath] = useState<UserPath | ''>('');
   const [pronouns, setPronouns] = useState('');
   const [customLinks, setCustomLinks] = useState<{ label: string; url: string }[]>([]);
@@ -88,7 +89,7 @@ export default function ProfilePage() {
   const currentSnapshot = JSON.stringify({
     name, username, bio, avatarUrl, pronouns,
     socialWebsite, socialTwitter, socialInstagram, socialSoundcloud, socialSpotify, socialLinkedin, socialSubstack, socialFarcaster,
-    customLinks, path, selectedRoles, selectedTools,
+    customLinks, path, selectedRoles, selectedTools, stackTitle,
   });
   const isDirty = initialSnapshot !== '' && initialSnapshot !== currentSnapshot;
 
@@ -129,6 +130,7 @@ export default function ProfilePage() {
         let loadedCustomLinks: { label: string; url: string }[] = [];
         let loadedRoles: string[] = [];
         let loadedTools: string[] = [];
+        let loadedStackTitle = '';
 
         if (saved) {
           if (saved.name)            loadedName = saved.name;
@@ -148,6 +150,7 @@ export default function ProfilePage() {
           if (Array.isArray(saved.customLinks)) loadedCustomLinks = saved.customLinks;
           if (saved.roleTags)        loadedRoles = saved.roleTags.split(',').map((s: string) => s.trim()).filter(Boolean);
           if (saved.toolSlugs)       loadedTools = saved.toolSlugs.split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (saved.stackTitle)      loadedStackTitle = saved.stackTitle;
         } else {
           // First-time profile: fall back to Google name/avatar if present.
           const googleName = user.google?.name;
@@ -175,6 +178,7 @@ export default function ProfilePage() {
         setCustomLinks(loadedCustomLinks);
         setSelectedRoles(loadedRoles);
         setSelectedTools(loadedTools);
+        setStackTitle(loadedStackTitle);
 
         // Snapshot for dirty tracking — must mirror currentSnapshot exactly
         setInitialSnapshot(JSON.stringify({
@@ -182,7 +186,7 @@ export default function ProfilePage() {
           socialWebsite: loadedWebsite, socialTwitter: loadedTwitter, socialInstagram: loadedInstagram,
           socialSoundcloud: loadedSoundcloud, socialSpotify: loadedSpotify, socialLinkedin: loadedLinkedin,
           socialSubstack: loadedSubstack, socialFarcaster: loadedFarcaster,
-          customLinks: loadedCustomLinks, path: loadedPath, selectedRoles: loadedRoles, selectedTools: loadedTools,
+          customLinks: loadedCustomLinks, path: loadedPath, selectedRoles: loadedRoles, selectedTools: loadedTools, stackTitle: loadedStackTitle,
         }));
       })
       .catch(console.error)
@@ -233,6 +237,7 @@ export default function ProfilePage() {
           path: path || null,
           roleTags: selectedRoles.join(',') || null,
           toolSlugs: selectedTools.join(',') || null,
+          stackTitle,
         }),
       });
       if (!res.ok) {
@@ -477,6 +482,27 @@ export default function ProfilePage() {
 
           {/* ─── 4. TOOLS ─── */}
           <Section label="Tools" sub={selectedTools.length > 0 ? `${selectedTools.length} in your kit` : 'in your kit'}>
+            {/* Stack headline — shown on the shareable /stacks/[username] page */}
+            <div className="mb-4">
+              <label htmlFor="stack-title" className={fieldLabel}>
+                stack title · headlines your shareable stack page{username ? '' : ' (set a username first)'}
+              </label>
+              <input
+                id="stack-title"
+                type="text"
+                value={stackTitle}
+                onChange={(e) => setStackTitle(e.target.value.slice(0, 60))}
+                maxLength={60}
+                placeholder="e.g. my video-art stack"
+                className={fieldInput}
+              />
+              {username && (
+                <span className="font-mono text-[10px] text-ink/30 mt-1 block">
+                  appears on topia.vision/stacks/{username}
+                </span>
+              )}
+            </div>
+
             {/* Selected tools as pills */}
             {selectedTools.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3">

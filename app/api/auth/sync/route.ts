@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
       : undefined;
     const roleTags          = 'roleTags'  in body ? body.roleTags  : undefined;
     const toolSlugs         = 'toolSlugs' in body ? body.toolSlugs : undefined;
+    // Stack headline is display copy on a shared page — cap it at 60 chars.
+    const stackTitleRaw     = norm(body, 'stackTitle');
+    const stackTitle        = typeof stackTitleRaw === 'string' ? stackTitleRaw.slice(0, 60) : stackTitleRaw;
     const path              = norm(body, 'path');
 
     // verifyProvider / unverifyProvider: atomically add/remove a provider from
@@ -99,6 +102,7 @@ export async function POST(request: NextRequest) {
           ...(customLinks !== undefined && { customLinks }),
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
+          ...(stackTitle !== undefined && { stackTitle }),
           path:             path            !== undefined ? path            : prev.path,
           ...((verifyProvider || unverifyProvider) && { verifiedProviders: nextVerifiedProviders(prev.verifiedProviders) }),
           updatedAt: new Date(),
@@ -139,6 +143,7 @@ export async function POST(request: NextRequest) {
         customLinks:      customLinks     ?? null,
         roleTags:         roleTags        ?? null,
         toolSlugs:        toolSlugs       ?? null,
+        stackTitle:       stackTitle      ?? null,
         path:             path            ?? 'catalyst', // default path for all new signups
         verifiedProviders: nextVerifiedProviders(null),
       })
