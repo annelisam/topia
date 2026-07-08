@@ -13,6 +13,7 @@ interface NotificationMetadata {
   eventId?: string;
   eventName?: string;
   eventSlug?: string;
+  kind?: string;
 }
 
 interface Notification {
@@ -213,7 +214,7 @@ export default function NotificationBell() {
                 n.type === 'world_invite_accepted_self' || n.type === 'world_invite_declined_self' ||
                 n.type === 'event_cohost_accepted_self' || n.type === 'event_cohost_declined_self';
 
-              const linkHref =
+              const linkHref = (n.type === 'event_reminder' && n.metadata?.eventSlug) ? `/events/${n.metadata.eventSlug}` :
                 (n.type === 'world_member_added' || n.type === 'world_invite_accepted') && n.metadata?.worldSlug
                   ? `/worlds/${n.metadata.worldSlug}`
                   : (n.type === 'event_cohost_accepted' || n.type === 'event_rsvp') && n.metadata?.eventSlug
@@ -226,6 +227,7 @@ export default function NotificationBell() {
                 const worldName = <span className="font-bold">{n.metadata?.worldTitle}</span>;
                 const eventName = <span className="font-bold">{n.metadata?.eventName}</span>;
 
+                if (n.type === 'event_reminder') return <>{n.metadata?.kind === '2h' ? 'Starting soon' : 'Tomorrow'}: {eventName}</>;
                 if (n.type === 'follow') return <>{actor} connected with you</>;
                 if (n.type === 'world_member_added') return <>{actor} added you as {roleLabel} in {worldName}</>;
                 if (n.type === 'world_invite') return <>{actor} invited you to join {worldName} as {roleLabel}</>;

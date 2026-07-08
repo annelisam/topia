@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // Users table - auth via Privy (email, phone, Google, Coinbase wallet)
 export const users = pgTable('users', {
@@ -291,6 +291,20 @@ export const eventQuestions = pgTable('event_questions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('event_questions_event_id_idx').on(t.eventId),
+]);
+
+// Event reminder ledger — one row per (event, kind) once that reminder batch
+// has been sent, so the cron (/api/cron/event-reminders) is idempotent no
+// matter how often it fires. kind: '24h' | '2h'.
+export const eventReminders = pgTable('event_reminders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  kind: text('kind').notNull(),
+  recipients: integer('recipients').default(0),   // how many guests were emailed
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_reminders_event_id_idx').on(t.eventId),
+  uniqueIndex('event_reminders_event_kind_uniq').on(t.eventId, t.kind),
 ]);
 
 // TOPIA TV content
