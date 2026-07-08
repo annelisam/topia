@@ -19,9 +19,6 @@ export interface TopianProfile {
   createdAt?: string;
 }
 
-const txt = { color: 'var(--foreground)' } as const;
-const BADGE_BASE = 'inline-flex items-center font-mono text-[8px] uppercase tracking-[1.5px] leading-none px-1.5 py-1 rounded-sm font-bold';
-
 // New if the profile was created within the last 21 days.
 function isNewProfile(createdAt?: string): boolean {
   if (!createdAt) return false;
@@ -29,10 +26,98 @@ function isNewProfile(createdAt?: string): boolean {
   return !isNaN(t) && Date.now() - t < 21 * 24 * 60 * 60 * 1000;
 }
 
-function PathBadge({ path }: { path: string | null }) {
-  if (!path || !(path in PATH_CONFIG)) return null;
-  const c = PATH_CONFIG[path as UserPath];
-  return <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} ${c.bg} ${c.textOn}`}>{c.label}</span>;
+// Passport-style machine-readable line for the card footer. Pure decoration —
+// aria-hidden everywhere it renders.
+function mrzLine(p: TopianProfile): string {
+  const name = (p.username || p.name || 'topian').replace(/[^a-z0-9]/gi, '<').toUpperCase();
+  return `T<TOPIA<${name.padEnd(16, '<')}${p.id.slice(0, 6).toUpperCase()}<<`;
+}
+
+/* ── Passport ID card ─────────────────────────────────────────── */
+function TopianCard({ p, eager }: { p: TopianProfile; eager: boolean }) {
+  const config = p.path && p.path in PATH_CONFIG ? PATH_CONFIG[p.path as UserPath] : null;
+  const stripBg = p.isWorldBuilder ? 'bg-lime' : config?.bg ?? 'bg-lime';
+  const stripText = p.isWorldBuilder ? 'text-obsidian' : config?.textOn ?? 'text-obsidian';
+  const stripLabel = p.isWorldBuilder ? 'World Builder' : config?.label ?? 'Topian';
+  const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 3);
+  const initial = (p.name || p.username || '?')[0]?.toUpperCase();
+
+  return (
+    <Link
+      href={`/profile/${p.username}`}
+      className="group block border border-ink/[0.08] hover:border-[var(--accent-ink)]/50 rounded-lg overflow-hidden bg-ink/[0.02] transition-colors no-underline"
+    >
+      {/* Path-colored issue strip */}
+      <div className={`${stripBg} px-2.5 py-1.5 flex items-center justify-between`}>
+        <span className={`font-mono text-[8px] uppercase tracking-[1.5px] font-bold ${stripText}`}>{stripLabel}</span>
+        <span className={`font-mono text-[8px] uppercase tracking-[1.5px] ${stripText} opacity-50`} aria-hidden="true">
+          T-{p.id.slice(0, 4).toUpperCase()}
+        </span>
+      </div>
+
+      {/* Passport photo — framed, corner ticks, scanlines */}
+      <div className="p-2.5 pb-0">
+        <div className="relative">
+          <div className="absolute -top-1 -left-1 w-3 h-3 z-20 pointer-events-none"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/20" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/20" /></div>
+          <div className="absolute -top-1 -right-1 w-3 h-3 z-20 pointer-events-none"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/20" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/20" /></div>
+          <div className="absolute -bottom-1 -left-1 w-3 h-3 z-20 pointer-events-none"><div className="absolute bottom-0 left-0 w-full h-[1px] bg-ink/20" /><div className="absolute bottom-0 left-0 h-full w-[1px] bg-ink/20" /></div>
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 z-20 pointer-events-none"><div className="absolute bottom-0 right-0 w-full h-[1px] bg-ink/20" /><div className="absolute bottom-0 right-0 h-full w-[1px] bg-ink/20" /></div>
+
+          <div className="aspect-square rounded-md overflow-hidden border border-dashed border-ink/15 p-1">
+            <div className="w-full h-full rounded-sm relative overflow-hidden border border-ink/15 bg-ink/[0.04]">
+              {p.avatarUrl ? (
+                <BlobImage
+                  src={p.avatarUrl}
+                  alt={p.name ?? ''}
+                  width={480}
+                  height={480}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
+                  priority={eager}
+                  className="w-full h-full object-cover relative z-10 group-hover:scale-[1.04] transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-basement font-black text-[42px] text-ink/15">{initial}</div>
+              )}
+              {/* Scanline pass */}
+              <div className="absolute inset-0 pointer-events-none z-20" style={{ opacity: 0.09, backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.5) 1px, rgba(0,0,0,0.5) 2px)', backgroundSize: '100% 2px' }} />
+              {isNewProfile(p.createdAt) && (
+                <span className="absolute top-1.5 right-1.5 z-30 inline-flex items-center font-mono text-[8px] uppercase tracking-[1.5px] leading-none px-1.5 py-1 rounded-sm font-bold bg-pink text-obsidian">
+                  New
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Registry fields */}
+      <div className="px-3 pt-2.5">
+        <span className="font-mono text-[8px] font-semibold uppercase tracking-[2px] text-ink/40 block">designation</span>
+        <h3 className="font-basement font-black text-[15px] uppercase text-ink truncate leading-tight mt-0.5">
+          {p.name || `@${p.username}`}
+        </h3>
+        <span className="font-mono text-[10px] text-ink/40 block truncate">
+          @{p.username}{p.pronouns ? ` · ${p.pronouns}` : ''}
+        </span>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {tags.map((t) => (
+              <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-ink/15 text-ink/50 rounded-sm whitespace-nowrap">
+                {t.replace(/-/g, ' ')}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* MRZ footer */}
+      <div className="px-3 py-2 mt-1.5 border-t border-ink/[0.05]">
+        <span className="font-mono text-[8px] tracking-[1.5px] text-ink/15 uppercase truncate block" aria-hidden="true">
+          {mrzLine(p)}
+        </span>
+      </div>
+    </Link>
+  );
 }
 
 // /topians — the full TOPIA directory. Every published profile, searchable
@@ -68,105 +153,90 @@ export default function TopiansClient({ initialProfiles }: { initialProfiles: To
 
   return (
     <PageShell>
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-10 md:py-14">
-          {/* Header */}
-          <div className="mb-8">
-            <span className="font-mono text-[11px] uppercase tracking-[3px] opacity-40 block mb-1" style={txt}>the community</span>
-            <h1 className="font-basement font-black text-[clamp(34px,6vw,64px)] leading-[0.9] uppercase" style={txt}>Topians</h1>
-            <p className="font-mono text-[12px] opacity-50 mt-2 max-w-[520px]" style={txt}>
-              Everyone building, shaping, and moving through TOPIA.
-            </p>
-          </div>
+      <div className="min-h-screen bg-[var(--page-bg)] text-ink">
+        <section className="px-4 md:px-6 py-4 md:py-6">
+          <div className="max-w-[var(--content-max)] mx-auto">
+            <div className="grid grid-cols-1 gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
 
-          {/* Search + filters */}
-          <div className="flex flex-col gap-3 mb-8">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search a name or @handle…"
-              className="w-full max-w-[420px] bg-transparent border font-mono text-[13px] px-4 py-3 rounded-xl outline-none transition focus:border-[var(--foreground)]"
-              style={{ ...txt, borderColor: 'var(--border-color)' }}
-            />
-            {topTags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                {['all', ...topTags].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTag(t)}
-                    className={`font-mono text-[10px] uppercase tracking-[1.5px] px-3 py-1.5 rounded-full border transition cursor-pointer ${
-                      tag === t ? 'bg-lime text-obsidian border-lime font-bold' : 'bg-transparent opacity-60 hover:opacity-100'
-                    }`}
-                    style={tag === t ? undefined : { ...txt, borderColor: 'var(--border-color)' }}
-                  >
-                    {t === 'all' ? 'All' : t.replace(/-/g, ' ')}
-                  </button>
-                ))}
+              {/* ─── ROW 1: Title bar ─── */}
+              <div className="bg-lime relative">
+                <div className="px-4 md:px-6 py-4 md:py-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                  <div>
+                    <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--on-accent-muted)] block">topia://directory</span>
+                    <h1 className="font-basement font-black text-[clamp(28px,5vw,64px)] uppercase leading-[0.9] text-obsidian mt-1">
+                      TOPIANS
+                    </h1>
+                  </div>
+                  <div className="flex flex-col items-start md:items-end gap-1">
+                    <span className="font-mono text-[12px] text-obsidian/80 leading-snug">every passport in the registry.</span>
+                    <span className="font-mono text-[12px] text-[var(--on-accent-muted)] leading-snug">building, shaping, moving through topia.</span>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Directory */}
-          {filtered.length === 0 ? (
-            <div className="border rounded-xl py-16 text-center font-mono text-[12px] uppercase tracking-[2px] opacity-30" style={{ ...txt, borderColor: 'var(--border-color)' }}>
-              No Topians match — try another search
+              {/* ─── ROW 2: Search + count ─── */}
+              <div className="bg-[var(--page-bg)] border-t border-b border-ink/[0.06] px-4 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 sticky top-0 md:top-[var(--nav-height,56px)] z-30">
+                <div className="relative flex-1">
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="search a name or @handle…"
+                    className="w-full bg-transparent border border-ink/15 focus:border-ink/40 font-mono text-[13px] text-ink placeholder:text-ink/25 px-3 py-1.5 rounded-sm outline-none transition-colors"
+                  />
+                </div>
+                <span className="font-mono text-[11px] uppercase tracking-[2px] text-[var(--text-muted)] md:ml-auto shrink-0">
+                  {filtered.length} topian{filtered.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* ─── ROW 3: Role chips ─── */}
+              {topTags.length > 0 && (
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {['all', ...topTags].map((t) => {
+                    const active = tag === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setTag(t)}
+                        className={`font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm whitespace-nowrap transition cursor-pointer ${
+                          active
+                            ? 'bg-lime text-obsidian font-bold border-transparent'
+                            : 'text-[var(--text-muted)] hover:text-ink/80 bg-transparent border border-transparent'
+                        }`}
+                      >
+                        {t === 'all' ? 'all' : t.replace(/-/g, ' ')}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ─── ROW 4: Registry grid ─── */}
+              <div className="bg-[var(--page-bg)] p-4 md:p-6 min-h-[400px]">
+                {filtered.length === 0 ? (
+                  <div className="text-center py-16">
+                    <p className="font-mono text-[13px] uppercase tracking-[2px] text-[var(--text-muted)] mb-4">
+                      no topians match{search ? ` "${search}"` : ''}{tag !== 'all' ? ` in ${tag.replace(/-/g, ' ')}` : ''}
+                    </p>
+                    <button
+                      onClick={() => { setSearch(''); setTag('all'); }}
+                      className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/20 hover:border-ink/60 px-3 py-1.5 rounded-sm bg-transparent cursor-pointer transition"
+                    >
+                      clear filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                    {filtered.map((p, i) => (
+                      <TopianCard key={p.id} p={p} eager={i < 4} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <>
-              <p className="font-mono text-[10px] uppercase tracking-[2px] opacity-30 mb-4" style={txt}>
-                {filtered.length} {filtered.length === 1 ? 'Topian' : 'Topians'}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filtered.map((p, i) => {
-                  const tags = (p.roleTags ?? '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2);
-                  const initial = (p.name || p.username || '?')[0]?.toUpperCase();
-                  return (
-                    <Link key={p.id} href={`/profile/${p.username}`} className="group block rounded-xl overflow-hidden border bg-obsidian hover:border-lime transition-colors no-underline" style={{ borderColor: 'var(--border-color)' }}>
-                      <div className="aspect-[4/3] overflow-hidden bg-obsidian relative">
-                        {p.avatarUrl ? (
-                          // First row is above the fold — the LCP element lives
-                          // here, so those load eagerly with high priority.
-                          <BlobImage
-                            src={p.avatarUrl}
-                            alt={p.name ?? ''}
-                            width={560}
-                            height={420}
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-                            priority={i < 4}
-                            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-basement font-black text-[42px] text-bone/20">{initial}</div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-obsidian to-transparent" />
-                        {p.isWorldBuilder ? (
-                          <span className={`absolute top-2.5 left-2.5 ${BADGE_BASE} bg-lime text-obsidian`}>World Builder</span>
-                        ) : (
-                          <PathBadge path={p.path} />
-                        )}
-                        {isNewProfile(p.createdAt) && (
-                          <span className={`absolute top-2.5 right-2.5 ${BADGE_BASE} bg-pink text-obsidian`}>New</span>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-basement font-black text-[15px] uppercase text-bone truncate leading-tight">{p.name || `@${p.username}`}</h3>
-                        <span className="font-mono text-[10px] text-bone/40 block truncate">@{p.username}</span>
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {tags.map((t) => (
-                              <span key={t} className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 border border-bone/15 text-bone/50 rounded-sm whitespace-nowrap">{t.replace(/-/g, ' ')}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+          </div>
+        </section>
       </div>
     </PageShell>
   );
