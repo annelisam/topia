@@ -216,7 +216,7 @@ export default function NotificationBell() {
               const linkHref =
                 (n.type === 'world_member_added' || n.type === 'world_invite_accepted') && n.metadata?.worldSlug
                   ? `/worlds/${n.metadata.worldSlug}`
-                  : (n.type === 'event_cohost_accepted' || n.type === 'event_rsvp') && n.metadata?.eventSlug
+                  : (n.type === 'event_cohost_accepted' || n.type === 'event_rsvp' || n.type === 'event_rsvp_waitlist' || n.type === 'event_waitlist_promoted' || n.type === 'event_rsvp_approved') && n.metadata?.eventSlug
                   ? `/events/${n.metadata.eventSlug}`
                   : n.actorUsername ? `/profile/${n.actorUsername}` : '#';
 
@@ -239,6 +239,10 @@ export default function NotificationBell() {
                 if (n.type === 'event_cohost_declined_self') return <>You declined the co-host invite for {eventName}</>;
                 if (n.type === 'event_cohost_declined') return <>{actor} declined your co-host invite for {eventName}</>;
                 if (n.type === 'event_rsvp') return <>{actor} RSVP&apos;d to {eventName}</>;
+                if (n.type === 'event_rsvp_waitlist') return <>{actor} joined the waitlist for {eventName}</>;
+                if (n.type === 'event_waitlist_promoted') return <>You&apos;re in! A spot opened up for {eventName}</>;
+                if (n.type === 'event_rsvp_approved') return <>{actor} approved your request for {eventName}</>;
+                if (n.type === 'event_rsvp_declined') return <>{actor} declined your request for {eventName}</>;
                 return <>{actor}</>;
               };
 

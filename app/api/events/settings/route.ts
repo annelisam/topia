@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db, events, eventRsvps } from '@/lib/db';
 import { requireManager } from '@/lib/events/auth';
+import { promoteFromWaitlist } from '@/lib/events/waitlist';
 
 // POST /api/events/settings — manager updates RSVP/registration settings.
 // Body: { privyId, eventId, rsvpCapacity?, rsvpApprovalRequired?, rsvpClosed? }
@@ -48,7 +49,17 @@ export async function POST(request: NextRequest) {
         rsvpClosed: events.rsvpClosed,
       });
 
-    return NextResponse.json({ ok: true, settings: updated, warning });
+    // Raising (or clearing) the capacity opens slots — promote the waitlist.
+    let promoted = 0;
+    if (data.rsvpCapacity !== undefined) {
+      try {
+        promoted = await promoteFromWaitlist(data.eventId, request.nextUrl.origin);
+      } catch (e) {
+        console.error('[settings] waitlist promotion after capacity change failed:', e);
+      }
+    }
+
+    return NextResponse.json({ ok: true, settings: updated, warning, promoted });
   } catch (error) {
     console.error('POST event settings:', error);
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
