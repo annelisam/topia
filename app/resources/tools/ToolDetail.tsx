@@ -21,6 +21,7 @@ export interface ToolDetailData {
   users: { id: string; username: string | null; name: string | null; avatarUrl: string | null }[];
   worlds: { id: string; title: string; slug: string; category: string | null; imageUrl: string | null }[];
   related?: { slug: string; name: string; url: string | null; category: string | null; score: number }[];
+  alternatives?: { slug: string; name: string; url: string | null; category: string | null; pricing: string | null }[];
 }
 
 interface Props {
@@ -39,7 +40,7 @@ function parseCategories(s: string | null): string[] {
 }
 
 export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props) {
-  const { tool, users, worlds, related = [] } = data;
+  const { tool, users, worlds, related = [], alternatives = [] } = data;
   const { authenticated, user } = usePrivy();
   const [saved, setSaved] = useState(false);
   const [using, setUsing] = useState(false);
@@ -316,6 +317,40 @@ export default function ToolDetail({ data, fullPage, onClose, onExpand }: Props)
                     <div className="min-w-0 flex-1">
                       <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{r.name}</div>
                       <div className="font-mono text-[10px] text-ink/30 truncate">{r.score} shared creator{r.score !== 1 ? 's' : ''}</div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Alternatives — same category, complements the usage-based list */}
+        {alternatives.length > 0 && (
+          <div className="md:col-span-3">
+            <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 block mb-3">
+              alternatives to {tool.name}
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {alternatives.map((a) => {
+                const aFavicon = faviconUrl(a.url, 64);
+                return (
+                  <Link
+                    key={a.slug}
+                    href={`/resources/tools/${a.slug}`}
+                    className="flex items-center gap-3 border border-ink/10 hover:border-[var(--accent-ink)]/40 px-3 py-2 rounded-sm transition no-underline"
+                  >
+                    <span className="w-8 h-8 shrink-0 rounded-sm border border-ink/10 bg-ink/[0.04] overflow-hidden flex items-center justify-center">
+                      {aFavicon ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={aFavicon} alt="" width={32} height={32} loading="lazy" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="font-basement text-sm text-ink/30">{a.name[0]?.toUpperCase()}</span>
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[12px] uppercase font-bold text-ink truncate">{a.name}</div>
+                      <div className="font-mono text-[10px] text-ink/30 truncate">{a.pricing || a.category || ''}</div>
                     </div>
                   </Link>
                 );
