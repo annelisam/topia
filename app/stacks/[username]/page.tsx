@@ -28,6 +28,7 @@ async function loadStack(username: string) {
       avatarUrl: users.avatarUrl,
       roleTags: users.roleTags,
       toolSlugs: users.toolSlugs,
+      stackTitle: users.stackTitle,
       published: users.published,
     })
     .from(users)
@@ -54,7 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const stack = await loadStack(username);
     if (!stack) return { title: 'Stack not found · TOPIA' };
     const who = stack.user.name || `@${stack.user.username}`;
-    const title = `${who}'s stack · TOPIA`;
+    const title = `${stack.user.stackTitle || `${who}'s stack`} · TOPIA`;
     const names = stack.kit.slice(0, 6).map((t) => t.name).join(', ');
     const description = stack.kit.length
       ? `The ${stack.kit.length} tools powering ${who}'s practice: ${names}${stack.kit.length > 6 ? '…' : ''}`
@@ -134,8 +135,12 @@ export default async function StackPage({ params }: PageProps) {
                 )}
               </span>
               <div className="min-w-0 flex-1 basis-52">
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">stack of</span>
-                <h1 className="font-basement font-black text-[clamp(22px,3vw,32px)] uppercase leading-[0.95] text-ink break-words">{who}</h1>
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">
+                  {user.stackTitle ? `stack of ${who}` : 'stack of'}
+                </span>
+                <h1 className="font-basement font-black text-[clamp(22px,3vw,32px)] uppercase leading-[0.95] text-ink break-words">
+                  {user.stackTitle || who}
+                </h1>
                 {roleChips.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     {roleChips.map((r) => (
@@ -150,7 +155,7 @@ export default async function StackPage({ params }: PageProps) {
                 <ShareButton
                   kind="stack"
                   path={`/stacks/${user.username}`}
-                  title={`${who}'s stack`}
+                  title={user.stackTitle || `${who}'s stack`}
                   text={`The tools powering ${who}'s practice — on TOPIA`}
                   iconSize={11}
                   className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[2px] px-3 py-1.5 rounded-sm border border-ink/30 text-ink/70 hover:border-ink/70 hover:text-ink transition cursor-pointer bg-transparent"

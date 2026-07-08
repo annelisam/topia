@@ -22,6 +22,7 @@ export const users = pgTable('users', {
   role: text('role').default('user'), // 'user', 'artist', 'admin'
   roleTags: text('role_tags'),        // Comma-separated creative roles e.g. 'music,dj,visual-artist'
   toolSlugs: text('tool_slugs'),      // Comma-separated tool slugs from tools table (tools I USE)
+  stackTitle: text('stack_title'),    // Custom headline for /stacks/[username] e.g. "my video-art stack" (≤60 chars, enforced at the sync route)
   savedToolSlugs: text('saved_tool_slugs'), // Comma-separated tool slugs user has bookmarked
   savedEventSlugs: text('saved_event_slugs'), // Comma-separated event slugs user has bookmarked
   path: text('path'),                 // 'worldbuilder' | 'catalyst' | 'anchor' — null until onboarding
