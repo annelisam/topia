@@ -98,11 +98,39 @@ export async function GET(
       })
       .map(({ id, title, slug, category, imageUrl }) => ({ id, title, slug, category, imageUrl }));
 
+    // 5. Alternatives — other published tools sharing a category token.
+    // Complements the co-occurrence "related" list (which needs usage data):
+    // category overlap works even for tools nobody has kitted yet. Categories
+    // are CSV ("Design, AI"), so match on any shared token.
+    let alternatives: { slug: string; name: string; url: string | null; category: string | null; pricing: string | null }[] = [];
+    const myCategories = new Set(
+      (tool.category ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+    );
+    if (myCategories.size > 0) {
+      const relatedSlugs = new Set(related.map((r) => r.slug));
+      const allTools = await db
+        .select({ slug: tools.slug, name: tools.name, url: tools.url, category: tools.category, pricing: tools.pricing, featured: tools.featured, priority: tools.priority })
+        .from(tools)
+        .where(eq(tools.published, true));
+      alternatives = allTools
+        .filter((t) => {
+          if (t.slug === slug || relatedSlugs.has(t.slug)) return false;
+          return (t.category ?? '')
+            .split(',')
+            .some((c) => myCategories.has(c.trim().toLowerCase()));
+        })
+        // Featured first, then the directory's priority ordering.
+        .sort((a, b) => Number(b.featured) - Number(a.featured) || (a.priority ?? 999) - (b.priority ?? 999))
+        .slice(0, 6)
+        .map(({ slug, name, url, category, pricing }) => ({ slug, name, url, category, pricing }));
+    }
+
     return NextResponse.json({
       tool,
       users: toolUsers,
       worlds: toolWorlds,
       related,
+      alternatives,
     });
   } catch (error) {
     console.error('Tool detail fetch error:', error);
