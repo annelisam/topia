@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users, eventRsvps } from '@/lib/db';
 import { eq, and, count } from 'drizzle-orm';
 import { requireManager } from '@/lib/events/auth';
+import { promoteFromWaitlist } from '@/lib/events/waitlist';
 
 // GET /api/events/rsvps?eventId=X&privyId=Y — RSVP list + counts + answers.
 // Public data (counts, viewer's own status) is always returned. The full RSVP
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     for (const c of counts) byStatus[c.status] = c.value;
     const goingCount = byStatus['going'] || 0;
     const pendingCount = byStatus['pending'] || 0;
+    const waitlistedCount = byStatus['waitlisted'] || 0;
 
     // Viewer's own RSVP status
     let userRsvped = false;
@@ -65,6 +67,7 @@ export async function GET(request: NextRequest) {
       rsvpCount: goingCount,
       goingCount,
       pendingCount,
+      waitlistedCount,
       userRsvped,
       userStatus,
     });
@@ -93,8 +96,17 @@ export async function DELETE(request: NextRequest) {
     const deleted = await db
       .delete(eventRsvps)
       .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, guestUserId)))
-      .returning({ userId: eventRsvps.userId });
+      .returning({ userId: eventRsvps.userId, status: eventRsvps.status });
     if (deleted.length === 0) return NextResponse.json({ error: 'RSVP not found' }, { status: 404 });
+
+    // Removing a confirmed guest frees a slot — hand it to the waitlist.
+    if (deleted.some((d) => d.status === 'going')) {
+      try {
+        await promoteFromWaitlist(eventId, request.nextUrl.origin);
+      } catch (e) {
+        console.error('[rsvps] waitlist promotion after host removal failed:', e);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -256,6 +256,7 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   const [rsvps, setRsvps] = useState<Rsvp[]>([]);
   const [going, setGoing] = useState(0);
   const [pending, setPending] = useState(0);
+  const [waitlisted, setWaitlisted] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [decideMsg, setDecideMsg] = useState('');
@@ -266,7 +267,7 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   const load = useCallback(() => {
     fetch(`/api/events/rsvps?eventId=${eventId}&privyId=${privyId}`)
       .then((r) => r.json())
-      .then((d) => { setRsvps(d.rsvps ?? []); setGoing(d.goingCount ?? 0); setPending(d.pendingCount ?? 0); })
+      .then((d) => { setRsvps(d.rsvps ?? []); setGoing(d.goingCount ?? 0); setPending(d.pendingCount ?? 0); setWaitlisted(d.waitlistedCount ?? 0); })
       .catch(console.error);
   }, [eventId, privyId]);
   useEffect(() => { load(); }, [load]);
@@ -327,6 +328,10 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
 
   const pendingList = rsvps.filter((r) => r.status === 'pending');
   const goingList = rsvps.filter((r) => r.status === 'going');
+  // Waitlist shows in join order — that's the order auto-promotion follows.
+  const waitlistedList = rsvps
+    .filter((r) => r.status === 'waitlisted')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
     <div>
@@ -334,6 +339,7 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
         <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
           <span className="font-bold">{going}</span> going{capacity != null && ` / ${capacity}`}
           {pending > 0 && <span className="opacity-60"> · {pending} pending</span>}
+          {waitlisted > 0 && <span className="opacity-60"> · {waitlisted} waitlisted</span>}
         </p>
         {rsvps.length > 0 && <button onClick={exportCsv} className={btnGhost} style={fieldStyle}>Export CSV</button>}
       </div>
@@ -354,6 +360,25 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
                   <span className="flex gap-2">
                     <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'approve' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#00b36b' }}>Approve</button>
                     <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'decline' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Decline</button>
+                  </span>
+                } />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {waitlistedList.length > 0 && (
+        <div className="mb-6">
+          <p className="font-mono text-[11px] uppercase tracking-widest opacity-50 mb-2" style={{ color: 'var(--foreground)' }}>
+            Waitlist <span className="normal-case tracking-normal">— promoted in this order when spots open</span>
+          </p>
+          <div className="space-y-2">
+            {waitlistedList.map((r, i) => (
+              <GuestRow key={r.userId} r={r} expanded={expanded === r.userId} onToggle={() => setExpanded(expanded === r.userId ? null : r.userId)}
+                actions={
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>#{i + 1}</span>
+                    <button disabled={busyId === r.userId} onClick={() => setConfirmAction({ userId: r.userId, action: 'remove' })} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Remove</button>
                   </span>
                 } />
             ))}

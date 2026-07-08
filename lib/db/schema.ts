@@ -182,6 +182,20 @@ export const follows = pgTable('follows', {
   index('follows_following_id_idx').on(t.followingId),
 ]);
 
+// World follows - users following a world as fans (distinct from membership).
+// Powers the follow button on world pages; followers get notified when
+// builders post announcements.
+export const worldFollows = pgTable('world_follows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('world_follows_world_id_idx').on(t.worldId),
+  index('world_follows_user_id_idx').on(t.userId),
+  uniqueIndex('world_follows_world_user_uniq').on(t.worldId, t.userId),
+]);
+
 // Notifications - in-app notifications (e.g. follow events)
 export const notifications = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -244,6 +258,8 @@ export const eventRsvps = pgTable('event_rsvps', {
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   // 'going' (confirmed) | 'pending' (awaiting host approval) | 'declined'
+  // | 'waitlisted' (event at capacity — auto-promoted oldest-first when a
+  //   spot opens; see lib/events/waitlist.ts)
   status: text('status').default('going').notNull(),
   // Snapshot of answers to the event's custom questions at RSVP time:
   // [{ questionId, label, type, answer }]. Snapshotting keeps history stable

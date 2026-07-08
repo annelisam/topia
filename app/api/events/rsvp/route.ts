@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users, events, eventRsvps, eventHosts, eventQuestions, notifications } from '@/lib/db';
 import { eq, and, count, sql } from 'drizzle-orm';
 import { markInviteAccepted } from '@/lib/events/invites';
+import { promoteFromWaitlist } from '@/lib/events/waitlist';
 import { verifyPrivyEmails } from '@/lib/auth/privyServer';
 import { isEmailConfigured, sendRsvpConfirmation, sendHostRsvpAlert, formatEventSchedule } from '@/lib/notify/email';
 import { roleLabelToSlug } from '@/lib/profile/roleTags';
@@ -192,17 +193,18 @@ export async function POST(request: NextRequest) {
 
     // Capacity — counts confirmed ('going') guests. With approval on, capacity is
     // enforced at approval time, so pending requests are always accepted here.
+    // A full house doesn't reject anymore: the guest joins the waitlist and is
+    // auto-promoted (oldest first) when a spot opens.
+    let isFull = false;
     if (event.rsvpCapacity != null && !event.rsvpApprovalRequired) {
       const [{ value: going }] = await db
         .select({ value: count() })
         .from(eventRsvps)
         .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.status, 'going')));
-      if (going >= event.rsvpCapacity) {
-        return NextResponse.json({ error: 'This event is full' }, { status: 409 });
-      }
+      isFull = going >= event.rsvpCapacity;
     }
 
-    const status = event.rsvpApprovalRequired ? 'pending' : 'going';
+    const status = event.rsvpApprovalRequired ? 'pending' : isFull ? 'waitlisted' : 'going';
     const [rsvp] = await db
       .insert(eventRsvps)
       .values({ eventId, userId, status, responses: responses.length ? responses : null })
@@ -272,14 +274,17 @@ export async function POST(request: NextRequest) {
         await db.insert(notifications).values({
           recipientId: host.userId,
           actorId: userId,
-          type: status === 'pending' ? 'event_rsvp_request' : 'event_rsvp',
+          type: status === 'pending' ? 'event_rsvp_request' : status === 'waitlisted' ? 'event_rsvp_waitlist' : 'event_rsvp',
           metadata: { eventId, eventName: event.eventName, eventSlug: event.slug },
         });
       }
     }
 
     // Transactional emails — best-effort, dormant until RESEND_API_KEY is set.
-    if (isEmailConfigured()) {
+    // Waitlisted joins send nothing here: the confirmation templates all say
+    // "you're in"/"request received", which would be wrong — the guest sees
+    // their waitlist state on the page and gets the email at promotion time.
+    if (isEmailConfigured() && status !== 'waitlisted') {
       const origin = request.nextUrl.origin;
       const { when: eventWhen, where: eventWhere } = formatEventSchedule(event);
       // Guest: confirmation (instant) or "request received" (approval on). The
@@ -334,7 +339,19 @@ export async function DELETE(request: NextRequest) {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId));
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    await db.delete(eventRsvps).where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, user.id)));
+    const deleted = await db
+      .delete(eventRsvps)
+      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, user.id)))
+      .returning({ status: eventRsvps.status });
+
+    // A confirmed guest leaving frees a slot — hand it to the waitlist.
+    if (deleted.some((d) => d.status === 'going')) {
+      try {
+        await promoteFromWaitlist(eventId, request.nextUrl.origin);
+      } catch (e) {
+        console.error('[rsvp] waitlist promotion after withdraw failed:', e);
+      }
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE event RSVP:', error);

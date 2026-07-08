@@ -55,7 +55,7 @@ interface EventDetail {
   hosts: EventHost[];
   rsvpCount: number;
   userRsvped: boolean;
-  userStatus?: string | null;       // 'going' | 'pending' | 'declined' | null
+  userStatus?: string | null;       // 'going' | 'pending' | 'waitlisted' | 'declined' | null
   isHost: boolean;
   isSaved: boolean;
   published?: boolean;
@@ -589,9 +589,14 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   Hosting
                 </span>
               )}
-              {!event.isHost && (event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending')) && (
+              {!event.isHost && (event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending' && event.userStatus !== 'waitlisted')) && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
                   <CheckIcon size={9} strokeWidth={2} /> Going
+                </span>
+              )}
+              {!event.isHost && event.userStatus === 'waitlisted' && (
+                <span className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}>
+                  Waitlisted
                 </span>
               )}
               {isPast && (
@@ -682,8 +687,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>RSVPs for this event are handled on {event.externalSource}.</p>
               ) : (
                 <p className="font-mono text-[13px] opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>
-                  {(event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending')) ? 'You’re in! See you there.'
+                  {(event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending' && event.userStatus !== 'waitlisted')) ? 'You’re in! See you there.'
                     : event.userStatus === 'pending' ? 'Your request is awaiting the host’s approval.'
+                    : event.userStatus === 'waitlisted' ? 'You’re on the waitlist — we’ll move you in automatically when a spot opens.'
                     : event.rsvpApprovalRequired ? 'Approval required — request to join below.'
                     : 'Welcome! To join the event, please register below.'}
                 </p>
@@ -723,16 +729,19 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               events render the platform-specific CTA further down instead. */}
           {!isPast && !event.isHost && !(event.externalSource && event.link) && (() => {
             // Capacity math — only meaningful when a cap is set. A guest who's
-            // already going/pending is never blocked by a full house.
+            // already going/pending/waitlisted is never blocked by a full house.
+            // A full event isn't a dead end anymore: the button becomes "Join
+            // waitlist" (auto-promoted oldest-first when a spot opens).
             const isGoing = event.userStatus === 'going' || (!event.userStatus && event.userRsvped);
             const isPending = event.userStatus === 'pending';
+            const isWaitlisted = event.userStatus === 'waitlisted';
             const cap = event.rsvpCapacity ?? null;
             const spotsLeft = cap != null ? Math.max(0, cap - event.rsvpCount) : null;
-            const isFull = spotsLeft === 0 && !isGoing && !isPending;
-            const blocked = (event.rsvpClosed && !isGoing && !isPending) || isFull;
+            const isFull = spotsLeft === 0 && !isGoing && !isPending && !isWaitlisted;
+            const blocked = event.rsvpClosed && !isGoing && !isPending && !isWaitlisted;
             // Site-wide lime accent for the RSVP / Going actions; muted only
-            // when the action is blocked (pending / closed / full).
-            const btnStyle: React.CSSProperties = (isPending || event.rsvpClosed || isFull) && !isGoing
+            // when the action is secondary (pending / waitlist states / closed).
+            const btnStyle: React.CSSProperties = (isPending || isWaitlisted || event.rsvpClosed || isFull) && !isGoing
               ? { backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }
               : { backgroundColor: 'var(--accent)', color: 'var(--accent-text)' };
             return (
@@ -747,8 +756,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                 {rsvpLoading ? '...'
                   : isGoing ? (<><CheckIcon size={11} strokeWidth={2} /> Going</>)
                   : isPending ? 'Request sent'
+                  : isWaitlisted ? 'On the waitlist'
                   : event.rsvpClosed ? 'Registration closed'
-                  : isFull ? 'Full'
+                  : isFull ? 'Join waitlist'
                   : event.rsvpApprovalRequired ? 'Request to join'
                   : 'RSVP'}
               </button>
@@ -767,11 +777,16 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   Awaiting host approval — tap to withdraw.
                 </p>
               )}
+              {isWaitlisted && (
+                <p className="font-mono text-[11px] mt-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
+                  You&apos;ll be moved in automatically when a spot opens — tap to leave the waitlist.
+                </p>
+              )}
               {/* Capacity hint — only when a cap is set and the guest hasn't
                   already locked a spot. */}
-              {cap != null && !isGoing && !isPending && !event.rsvpClosed && (
+              {cap != null && !isGoing && !isPending && !isWaitlisted && !event.rsvpClosed && (
                 <p className="font-mono text-[11px] mt-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
-                  {isFull ? 'This event is at capacity.'
+                  {isFull ? 'At capacity — waitlist spots are promoted in join order.'
                     : spotsLeft === 1 ? '1 spot left.'
                     : `${spotsLeft} spots left.`}
                 </p>
@@ -921,9 +936,13 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       {pendingNotice && event && (
         <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }}>
-            <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>Request sent ✓</p>
+            <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+              {event.userStatus === 'waitlisted' ? 'You’re on the waitlist ✓' : 'Request sent ✓'}
+            </p>
             <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
-              The host reviews requests for {event.eventName}. You&apos;ll be notified once you&apos;re approved.
+              {event.userStatus === 'waitlisted'
+                ? `${event.eventName} is at capacity right now. If a spot opens you'll be moved in automatically and notified.`
+                : `The host reviews requests for ${event.eventName}. You'll be notified once you're approved.`}
             </p>
             <button onClick={() => setPendingNotice(false)} className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold" style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
               Got it
@@ -937,11 +956,15 @@ export default function EventDetailClient({ slug }: { slug: string }) {
         <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => !rsvpLoading && setConfirmWithdraw(false)}>
           <div className="w-full max-w-sm rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
             <p className="font-mono text-[15px] font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-              {event.userStatus === 'pending' ? 'Withdraw your request?' : 'Remove your RSVP?'}
+              {event.userStatus === 'pending' ? 'Withdraw your request?'
+                : event.userStatus === 'waitlisted' ? 'Leave the waitlist?'
+                : 'Remove your RSVP?'}
             </p>
             <p className="font-mono text-[13px] opacity-70 mb-6" style={{ color: 'var(--foreground)' }}>
               {event.userStatus === 'pending'
                 ? `You'll lose your place in the approval queue for ${event.eventName}.`
+                : event.userStatus === 'waitlisted'
+                ? `You'll lose your place in line for ${event.eventName}. Rejoining puts you at the back of the waitlist.`
                 : `You'll give up your spot for ${event.eventName}${event.rsvpCapacity != null ? ' and may not get it back if it fills up' : ''}. You can always RSVP again.`}
             </p>
             <div className="flex gap-2">
