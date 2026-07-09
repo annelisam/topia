@@ -356,6 +356,26 @@ export const userConnectCodes = pgTable('user_connect_codes', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Attendee-to-attendee connections made by scanning Topia codes — the "met
+// at" ledger. The pair is stored sorted (userAId < userBId lexicographically)
+// so one row represents the pair per event; eventId is where they met (null =
+// scanned outside any event). The social edge itself is the mutual follow the
+// connect creates (which unlocks DMs + the orbit stamp); these rows add the
+// who/where/when context for People screens and mutual-event surfaces.
+// Uniqueness is an expression index in the apply script:
+// (user_a_id, user_b_id, COALESCE(event_id, zero-uuid)).
+export const eventConnections = pgTable('event_connections', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
+  userAId: uuid('user_a_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  userBId: uuid('user_b_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_connections_event_id_idx').on(t.eventId),
+  index('event_connections_user_a_idx').on(t.userAId),
+  index('event_connections_user_b_idx').on(t.userBId),
+]);
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

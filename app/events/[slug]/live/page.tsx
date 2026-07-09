@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import QRCode from 'qrcode';
+import QrScannerOverlay from '../../../components/QrScannerOverlay';
 
 /* Event Mode — the in-the-room hub for a live event. Deliberately committed
  * to a single dark look (obsidian ground, lime accents) regardless of the
@@ -29,6 +30,7 @@ interface LiveEvent {
 }
 interface Guest { name: string | null; username: string | null; avatarUrl: string | null; }
 interface MyDoorState { onList: boolean; rsvpStatus: string | null; checkedIn: boolean; checkedInAt: string | null; }
+interface Connection { id: string; name: string | null; username: string | null; avatarUrl: string | null; connectedAt: string; }
 
 const INK = '#f5f0e8';
 const LIME = '#e4fe52';
@@ -59,6 +61,9 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const [installDismissed, setInstallDismissed] = useState(true);
   const [standalone, setStandalone] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanStatus, setScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
+  const [people, setPeople] = useState<Connection[]>([]);
 
   // The viewer's personal connect QR — a host scans it at the door to check
   // them in (and in P3 other guests scan it to connect).
@@ -118,6 +123,39 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
     const t = setInterval(loadMe, 15000);
     return () => clearInterval(t);
   }, [loadMe]);
+
+  // People met at this event (via QR connects).
+  const loadPeople = useCallback(() => {
+    if (!privyId || !event?.id) return;
+    fetch(`/api/connect?privyId=${encodeURIComponent(privyId)}&eventId=${event.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.connections) setPeople(d.connections); })
+      .catch(() => {});
+  }, [privyId, event?.id]);
+  useEffect(() => { loadPeople(); }, [loadPeople]);
+
+  // A scanned Topia code → instant mutual connection with event context.
+  const handleConnectScan = useCallback(async (value: string) => {
+    if (!privyId || !event?.id) return;
+    try {
+      const res = await fetch('/api/connect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, code: value, eventId: event.id }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setScanStatus({ kind: 'err', text: d.error || 'Scan failed — try again.' });
+        return;
+      }
+      const who = d.target?.name || d.target?.username || 'them';
+      setScanStatus(d.already
+        ? { kind: 'warn', text: `Already connected with ${who}` }
+        : { kind: 'ok', text: `✦ Connected with ${who}` });
+      loadPeople();
+    } catch {
+      setScanStatus({ kind: 'err', text: 'Scan failed — try again.' });
+    }
+  }, [privyId, event?.id, loadPeople]);
 
   const live = isToday(event?.dateIso ?? null);
 
@@ -181,16 +219,55 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </div>
             )}
 
-            {/* Personal QR — scanned by a host at the door for check-in */}
-            {authenticated && qrDataUrl && !me?.checkedIn && (
+            {/* Personal QR — the door scans it to check you in; other guests
+                scan it to connect with you */}
+            {authenticated && qrDataUrl && (
               <div style={card}>
-                <p style={meta}>Your Topia code</p>
+                <div className="flex items-center justify-between">
+                  <p style={meta}>Your Topia code</p>
+                  <button
+                    onClick={() => { setScanStatus(null); setScanOpen(true); }}
+                    className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
+                    style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                  >
+                    ◎ Scan to connect
+                  </button>
+                </div>
                 <div className="flex items-center gap-4 mt-2.5">
                   <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
                   <p className="text-[12px] flex-1" style={{ color: DIM }}>
-                    Show this at the door — a host scans it to check you in instantly.
+                    {me?.checkedIn
+                      ? 'Trade scans with people you meet — an instant mutual connection, recorded from tonight.'
+                      : 'Show this at the door to get checked in — then trade scans with people you meet to connect.'}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* People you met at this event */}
+            {authenticated && (people.length > 0 || me?.checkedIn) && (
+              <div style={card}>
+                <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
+                {people.length === 0 ? (
+                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No connections yet — scan someone's Topia code to start your list.</p>
+                ) : (
+                  <div className="mt-2 flex flex-col gap-0.5">
+                    {people.slice(0, 12).map((p) => (
+                      <Link key={p.id} href={p.username ? `/profile/${p.username}` : '#'} className="flex items-center gap-3 py-2 no-underline" style={{ borderBottom: `1px solid ${LINE}` }}>
+                        {p.avatarUrl
+                          ? <img src={p.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(p.name || p.username || '?')[0].toUpperCase()}</div>}
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{p.name || p.username}</span>
+                          {p.username && <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{p.username}</span>}
+                        </span>
+                        <span className="font-mono text-[10px]" style={{ color: DIM }}>
+                          {new Date(p.connectedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -252,6 +329,15 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           </>
         )}
       </div>
+
+      {scanOpen && (
+        <QrScannerOverlay
+          hint="Scan a Topia code to connect"
+          status={scanStatus}
+          onCode={handleConnectScan}
+          onClose={() => setScanOpen(false)}
+        />
+      )}
     </div>
   );
 }
