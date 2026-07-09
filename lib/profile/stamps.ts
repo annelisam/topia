@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { eventRsvps, events, tickets, guestbookEntries, tools, eventInvites, worldMembers, follows, users } from '@/lib/db/schema';
-import { and, eq, inArray, asc, isNotNull } from 'drizzle-orm';
+import { eventRsvps, events, eventCheckins, guestbookEntries, tools, eventInvites, worldMembers, follows, users } from '@/lib/db/schema';
+import { and, eq, inArray, asc } from 'drizzle-orm';
 import { resolvePath, PATH_CONFIG } from '@/app/components/profile/pathConfig';
 
 export type StampRarity = 'common' | 'rare' | 'legendary';
@@ -92,9 +92,11 @@ export async function computeProfileStamps(opts: {
       .from(eventRsvps).innerJoin(events, eq(eventRsvps.eventId, events.id))
       .where(and(eq(eventRsvps.userId, userId), eq(eventRsvps.status, 'going')))
       .orderBy(asc(eventRsvps.createdAt)),
-    db.select({ name: events.eventName, at: tickets.checkedInAt })
-      .from(tickets).innerJoin(events, eq(tickets.eventId, events.id))
-      .where(and(eq(tickets.ownerId, userId), isNotNull(tickets.checkedInAt))),
+    // Door check-ins (event_checkins is the source of truth for presence —
+    // written by the manage console's Check-in tab for free AND paid guests).
+    db.select({ name: events.eventName, at: eventCheckins.createdAt })
+      .from(eventCheckins).innerJoin(events, eq(eventCheckins.eventId, events.id))
+      .where(eq(eventCheckins.userId, userId)),
     db.select({ id: guestbookEntries.id }).from(guestbookEntries).where(eq(guestbookEntries.authorUserId, userId)),
     db.select({ name: tools.name }).from(tools).where(eq(tools.submittedBy, userId)),
     db.select({ id: eventInvites.id }).from(eventInvites)

@@ -324,6 +324,24 @@ export const eventReminders = pgTable('event_reminders', {
   uniqueIndex('event_reminders_event_kind_uniq').on(t.eventId, t.kind),
 ]);
 
+// Door check-in ledger — one row per guest per event, written when a manager
+// marks the guest checked in from the manage console's Check-in tab (search
+// the roster, tap to check in; no attendee-side QR pass). Source of truth for
+// "was in the room" for BOTH free (RSVP) and paid (ticketed) guests; paid
+// check-ins also stamp tickets.checkedInAt so ticket reporting stays coherent.
+// Checking in is what unlocks quest participation for the guest.
+export const eventCheckins = pgTable('event_checkins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  checkedInBy: uuid('checked_in_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_checkins_event_id_idx').on(t.eventId),
+  index('event_checkins_user_id_idx').on(t.userId),
+  uniqueIndex('event_checkins_event_user_uniq').on(t.eventId, t.userId),
+]);
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),
