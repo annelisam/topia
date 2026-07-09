@@ -9,6 +9,7 @@ import { QUESTION_TYPES, SELECT_TYPES, answerToText, DEFAULT_LABELS, ROLE_TAGS }
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import { PAYMENTS_ENABLED } from '../../../../lib/featureFlags';
 import TicketManager from '../TicketManager';
+import QrScannerOverlay from '../../../components/QrScannerOverlay';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface EventLite {
@@ -262,6 +263,8 @@ function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/events/checkin?eventId=${eventId}&privyId=${encodeURIComponent(privyId)}`)
@@ -302,6 +305,32 @@ function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) 
     }
   };
 
+  // A scanned QR from the door camera → check the guest in by connect code.
+  // The overlay stays open so the host can keep scanning the line.
+  const handleScan = useCallback(async (value: string) => {
+    try {
+      const res = await fetch('/api/events/checkin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, code: value }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setScanStatus({ kind: 'err', text: d.error || 'Scan failed — try again.' });
+        return;
+      }
+      const who = d.guest?.name || d.guest?.username || 'Guest';
+      if (d.already) {
+        const at = d.checkedInAt ? new Date(d.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+        setScanStatus({ kind: 'warn', text: `⚠ ${who} already checked in${at ? ` at ${at}` : ''}` });
+      } else {
+        setScanStatus({ kind: 'ok', text: `✓ ${who} checked in` });
+      }
+      load();
+    } catch {
+      setScanStatus({ kind: 'err', text: 'Scan failed — try again.' });
+    }
+  }, [privyId, eventId, load]);
+
   const checkedInCount = guests.filter((g) => g.checkedInAt).length;
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -319,6 +348,10 @@ function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) 
           <span className="text-[22px] font-bold">{checkedInCount}</span>
           <span className="opacity-60"> / {guests.length} checked in</span>
         </p>
+        <button onClick={() => { setScanStatus(null); setScanning(true); }}
+          className={btnPrimary} style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+          ▣ Scan QR
+        </button>
       </div>
       <div className="h-1.5 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: 'var(--border-color)' }}>
         <div className="h-full rounded-full transition-all" style={{ width: guests.length ? `${(checkedInCount / guests.length) * 100}%` : '0%', backgroundColor: 'var(--accent)' }} />
@@ -370,6 +403,15 @@ function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) 
             </div>
           ))}
         </div>
+      )}
+
+      {scanning && (
+        <QrScannerOverlay
+          hint="Scan a guest's Topia code"
+          status={scanStatus}
+          onCode={handleScan}
+          onClose={() => setScanning(false)}
+        />
       )}
     </div>
   );

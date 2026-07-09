@@ -24,7 +24,7 @@ live counts, and quest tracking.
 
 ## Product pillars
 
-1. **Check-in (manual)** — hosts search the guest list at the door and mark attendees checked in (no attendee QR pass). Live counter; check-in unlocks quest participation and feeds the existing (dead) `check-in` stamp back to life.
+1. **Check-in (manual + QR)** — hosts search the guest list at the door and tap to check attendees in, or scan the guest's personal Topia QR code for instant check-in. Live counter; check-in unlocks quest participation and feeds the existing (dead) `check-in` stamp back to life.
 2. **Connect** — profile QR → scan → instant mutual connection, recorded with event context ("met at Neon Garden"). Rides on follows, so it automatically unlocks the `orbit` stamp and Primary DMs.
 3. **Quests (dynamic)** — host-authored challenges with pluggable verification: scan a QR code hidden at the venue, host verifies in person, or auto-rules evaluated server-side (make N connections, check in, etc.) driven by a jsonb rule config so new rule types don't need schema changes. No points system: completing **all** of an event's quests unlocks prize eligibility and enters the attendee into that event's raffle. Progress bar, attendee progress board, quest stamp, prizes display. Quests unlock once the attendee is checked in.
 4. **Event Mode PWA** — installable, dark-first, full-screen hub per live event tying it all together.
@@ -33,7 +33,7 @@ live counts, and quest tracking.
 
 - **PWA, not a separate app.** Same Next.js codebase, `app/manifest.ts` + icons + (later) a minimal service worker. Event Mode is a route (`/events/[slug]/live`), so links/shares/auth all keep working. No app-store detour.
 - **Presence gets its own table.** `event_checkins` is the source of truth for "was in the room" — works identically for free RSVP and paid tickets. When a ticket exists we ALSO stamp `tickets.checkedInAt` so the existing stamp logic and any ticket reporting stay coherent.
-- **Check-in is manual, not scanned.** No attendee QR pass: the host searches the roster in the Check-in tab and taps to check a guest in (undo supported). Simpler door flow, nothing for attendees to pull up.
+- **Check-in is manual OR scanned — one personal code, not per-event passes.** The host can search the roster and tap, or scan the guest's **Topia code** (a permanent per-user QR at `/connect/<code>`, lazy-minted in `user_connect_codes`). The SAME code powers P3 attendee-to-attendee connections — no per-event pass minting, and scanning with a plain camera app resolves to the person's profile.
 - **Connection = mutual follow + context row.** Scanning a profile QR creates follows both ways plus an `event_connections` row (who, who, which event). Everything downstream (orbit stamp, DM unlock) is free. The context row powers "people you met" and mutual-event social graphing.
 - **Stamps stay computed.** Quest completions and check-ins are stored facts; `computeProfileStamps` derives new `quest` stamps from them. No stamps table, no migration for stamp changes — matches the existing retirement/addition mechanism.
 - **QR security.** All scannable codes are unguessable server-minted tokens (Crockford base32, same alphabet as tickets). Profile connect codes are stable but revocable (`users.connectCode`, regen endpoint). Quest codes are per-quest secrets. Check-in and quest endpoints validate event membership + event window; host actions go through `requireManager` + Bearer verification per repo convention.
@@ -44,7 +44,9 @@ live counts, and quest tracking.
 ```
 event_checkins            id, eventId, userId, checkedInBy, createdAt ·
                           unique(eventId, userId) · FKs indexed
-users.connect_code        text unique — profile QR token (lazy-minted, revocable)
+user_connect_codes        id, userId (unique), code (unique), createdAt, updatedAt —
+                          permanent per-user QR token (lazy-minted, revocable via
+                          regen). Own table so the hot users table stays untouched.
 event_quests              id, eventId, title, description, icon,
                           verifyMethod('qr'|'host'|'auto'), code (unique, for qr),
                           rule jsonb (auto rules, e.g. {kind:'connections',count:3}
@@ -63,7 +65,9 @@ event_prizes (P4)         id, eventId, title, description, imageUrl, sortOrder,
 
 | Route | Method | Auth | Purpose |
 |---|---|---|---|
-| `/api/events/checkin` | POST | `requireManager` + Bearer | Mark a guest checked in by userId (idempotent); DELETE to undo |
+| `/api/events/checkin` | POST | `requireManager` + Bearer | Mark a guest checked in by userId (manual) or by scanned connect code (idempotent); DELETE to undo |
+| `/api/connect/code` | GET | self | The viewer's own connect code, lazy-minted |
+| `/connect/[token]` | GET | public | Where the QR lands in a plain camera app: redirects to the profile (P3 upgrades to a connect page) |
 | `/api/events/checkin` | GET | `requireManager` | Roster with check-in state + live counts for the door screen |
 | `/api/connect` | POST | attendee | Redeem a profile connect code → mutual follow + `event_connections` row; returns the other profile |
 | `/api/connect/code` | GET/POST | self | Get / regenerate my connect QR token |
@@ -117,8 +121,9 @@ door entry.
 |---|---|---|---|
 | **P0 — Manage console** | Tab restructure, Overview stats, move Tickets tab, mobile polish | none | S |
 | **P1 — Check-in** | `event_checkins` table, Check-in manage tab (search roster, tap to check in/undo, live counter), revive check-in stamp | apply-event-checkins.mjs | S/M |
+| **P1.5 — QR check-in** | `user_connect_codes`, personal QR card in Event Mode, door scanner in Check-in tab (`qr-scanner`), `/connect/<code>` redirect | apply-connect-codes.mjs | S |
 | **P2 — PWA + Event Mode shell** | manifest/icons/install card, `/live` hub (check-in state, quests placeholder) | none | M |
-| **P3 — Connections** | `users.connect_code`, profile QR on TopiaCard, `/connect/[token]`, scanner connect mode, `event_connections`, People screen, mutual-events surfaces, orbit-stamp context | apply-connections.mjs | M |
+| **P3 — Connections** | reuses `user_connect_codes` from P1.5; profile QR on TopiaCard, real `/connect/[token]` page (one-tap mutual follow), scanner connect mode, `event_connections`, People screen, mutual-events surfaces | apply-connections.mjs | M |
 | **P4 — Quests + prizes** | quest tables, builder tab, printable QR sheets, completion flows (qr/host/auto), progress board, raffle entry + host draw, quest stamp + reveal animation, prizes | apply-quests.mjs | L |
 | **P5 — Polish** | post-event recap, notifications, printable quest-code kit, offline shell (service worker) | none | S/M |
 

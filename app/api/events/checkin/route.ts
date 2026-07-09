@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users, eventRsvps, eventCheckins, tickets } from '@/lib/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireManager } from '@/lib/events/auth';
+import { resolveConnectCode, extractConnectCode } from '@/lib/connect/code';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 
@@ -71,23 +72,34 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/events/checkin — { privyId, eventId, guestUserId }
-// Manager marks a guest checked in. Idempotent: a second call reports the
-// original check-in time instead of failing. Ticket holders also get their
-// tickets stamped (status 'checked_in' + checkedInAt) so ticket reporting
-// and the passport check-in stamp stay coherent.
+// POST /api/events/checkin — { privyId, eventId, guestUserId } for manual
+// check-in from the roster, or { privyId, eventId, code } when the host
+// scans a guest's connect QR at the door. Idempotent: a second call reports
+// the original check-in time instead of failing. Ticket holders also get
+// their tickets stamped (status 'checked_in' + checkedInAt) so ticket
+// reporting and the passport check-in stamp stay coherent.
 export async function POST(request: NextRequest) {
   try {
-    const { privyId, eventId, guestUserId } = await request.json();
-    if (!eventId || !guestUserId) {
-      return NextResponse.json({ error: 'eventId and guestUserId are required' }, { status: 400 });
+    const { privyId, eventId, guestUserId: bodyGuestUserId, code } = await request.json();
+    if (!eventId || (!bodyGuestUserId && !code)) {
+      return NextResponse.json({ error: 'eventId and guestUserId or code are required' }, { status: 400 });
     }
 
     const auth = await requireManager(privyId, eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+    let guestUserId: string | null = bodyGuestUserId ?? null;
+    if (!guestUserId && code) {
+      const parsed = extractConnectCode(String(code));
+      guestUserId = parsed ? await resolveConnectCode(parsed) : null;
+      if (!guestUserId) {
+        return NextResponse.json({ error: "That QR isn't a Topia code" }, { status: 404 });
+      }
+    }
+
     const roster = await loadRoster(eventId);
-    if (!roster.has(guestUserId)) {
+    const guest = guestUserId ? roster.get(guestUserId) : undefined;
+    if (!guestUserId || !guest) {
       return NextResponse.json({ error: 'Guest is not on the list for this event' }, { status: 404 });
     }
 
@@ -104,7 +116,7 @@ export async function POST(request: NextRequest) {
         .where(and(eq(eventCheckins.eventId, eventId), eq(eventCheckins.userId, guestUserId)))
         .limit(1);
       return NextResponse.json(
-        { ok: true, already: true, checkedInAt: existing?.createdAt ?? null },
+        { ok: true, already: true, checkedInAt: existing?.createdAt ?? null, guest: { userId: guest.userId, name: guest.name, username: guest.username } },
         { headers: NO_STORE },
       );
     }
@@ -115,7 +127,7 @@ export async function POST(request: NextRequest) {
       .where(and(eq(tickets.eventId, eventId), eq(tickets.ownerId, guestUserId), eq(tickets.status, 'valid')));
 
     return NextResponse.json(
-      { ok: true, already: false, checkedInAt: inserted[0].createdAt },
+      { ok: true, already: false, checkedInAt: inserted[0].createdAt, guest: { userId: guest.userId, name: guest.name, username: guest.username } },
       { headers: NO_STORE },
     );
   } catch (error) {
