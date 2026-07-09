@@ -342,6 +342,20 @@ export const eventCheckins = pgTable('event_checkins', {
   uniqueIndex('event_checkins_event_user_uniq').on(t.eventId, t.userId),
 ]);
 
+// Personal connect codes — one stable, unguessable token per user, encoded
+// into their QR (topia.vision/connect/<code>). Scanned by a host in the
+// Check-in tab it checks the guest in; scanned by another guest (P3) it
+// creates a mutual connection. Lazy-minted on first request; lives in its
+// own table (not a users column) so the hot users table stays untouched.
+// updatedAt tracks regeneration (revoking a leaked code).
+export const userConnectCodes = pgTable('user_connect_codes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
+  code: text('code').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

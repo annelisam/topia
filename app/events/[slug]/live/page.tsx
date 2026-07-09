@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import QRCode from 'qrcode';
 
 /* Event Mode — the in-the-room hub for a live event. Deliberately committed
  * to a single dark look (obsidian ground, lime accents) regardless of the
@@ -57,6 +58,26 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const [loading, setLoading] = useState(true);
   const [installDismissed, setInstallDismissed] = useState(true);
   const [standalone, setStandalone] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  // The viewer's personal connect QR — a host scans it at the door to check
+  // them in (and in P3 other guests scan it to connect).
+  useEffect(() => {
+    if (!authenticated || !privyId) return;
+    fetch(`/api/connect/code?privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(async (d) => {
+        if (!d?.path) return;
+        const url = `${window.location.origin}${d.path}`;
+        const dataUrl = await QRCode.toDataURL(url, {
+          width: 480,
+          margin: 1,
+          color: { dark: '#1a1a1a', light: '#ffffff' },
+        });
+        setQrDataUrl(dataUrl);
+      })
+      .catch(() => {});
+  }, [authenticated, privyId]);
 
   useEffect(() => {
     setInstallDismissed(localStorage.getItem('topia:install-hint') === 'dismissed');
@@ -157,6 +178,19 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
                   RSVP on the <Link href={`/events/${slug}`} className="underline" style={{ color: LIME }}>event page</Link> to join.
                 </p>
+              </div>
+            )}
+
+            {/* Personal QR — scanned by a host at the door for check-in */}
+            {authenticated && qrDataUrl && !me?.checkedIn && (
+              <div style={card}>
+                <p style={meta}>Your Topia code</p>
+                <div className="flex items-center gap-4 mt-2.5">
+                  <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
+                  <p className="text-[12px] flex-1" style={{ color: DIM }}>
+                    Show this at the door — a host scans it to check you in instantly.
+                  </p>
+                </div>
               </div>
             )}
 
