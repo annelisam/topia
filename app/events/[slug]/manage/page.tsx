@@ -7,6 +7,8 @@ import Navigation from '../../../components/Navigation';
 import LoadingBar from '../../../components/LoadingBar';
 import { QUESTION_TYPES, SELECT_TYPES, answerToText, DEFAULT_LABELS, ROLE_TAGS } from '../../../../lib/events/questions';
 import { useUserProfile } from '../../../hooks/useUserProfile';
+import { PAYMENTS_ENABLED } from '../../../../lib/featureFlags';
+import TicketManager from '../TicketManager';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface EventLite {
@@ -31,7 +33,7 @@ const labelCls = 'block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5
 const btnPrimary = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40';
 const btnGhost = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border bg-transparent disabled:opacity-40';
 
-type Tab = 'guests' | 'registration' | 'hosts';
+type Tab = 'overview' | 'guests' | 'registration' | 'tickets' | 'hosts';
 
 export default function ManageEventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -42,7 +44,22 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   const [hosts, setHosts] = useState<Host[]>([]);
   const [loading, setLoading] = useState(true);
   const [notHost, setNotHost] = useState(false);
-  const [tab, setTab] = useState<Tab>('guests');
+  const [tab, setTab] = useState<Tab>('overview');
+
+  // Deep-link a tab via #hash (e.g. /manage#guests) so other surfaces can
+  // link straight to a section.
+  useEffect(() => {
+    const h = window.location.hash.replace('#', '') as Tab;
+    if (['overview', 'guests', 'registration', 'tickets', 'hosts'].includes(h)) {
+      if (h === 'tickets' && !PAYMENTS_ENABLED) return;
+      setTab(h);
+    }
+  }, []);
+
+  const goTo = useCallback((t: Tab) => {
+    setTab(t);
+    history.replaceState(null, '', `#${t}`);
+  }, []);
 
   // Re-pull the host roster after add/update/remove (no loading flicker).
   const reloadHosts = useCallback(() => {
@@ -99,8 +116,10 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   }
 
   const TABS: { id: Tab; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
     { id: 'guests', label: 'Guests' },
     { id: 'registration', label: 'Registration' },
+    ...(PAYMENTS_ENABLED ? [{ id: 'tickets' as Tab, label: 'Tickets' }] : []),
     { id: 'hosts', label: 'Hosts' },
   ];
 
@@ -114,11 +133,11 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
         <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tight mb-1" style={{ color: 'var(--foreground)' }}>{event.eventName}</h1>
         <p className="font-mono text-[12px] uppercase tracking-widest opacity-40 mb-6" style={{ color: 'var(--foreground)' }}>Manage event</p>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b" style={{ borderColor: 'var(--border-color)' }}>
+        {/* Tabs — horizontally scrollable so all five fit at 375px */}
+        <div className="flex gap-1 mb-6 border-b overflow-x-auto" style={{ borderColor: 'var(--border-color)', scrollbarWidth: 'none' }}>
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest transition-all -mb-px border-b-2"
+            <button key={t.id} onClick={() => goTo(t.id)}
+              className="px-4 py-2.5 font-mono text-[12px] uppercase tracking-widest transition-all -mb-px border-b-2 whitespace-nowrap shrink-0"
               style={tab === t.id
                 ? { color: 'var(--foreground)', borderColor: 'var(--foreground)' }
                 : { color: 'var(--foreground)', borderColor: 'transparent', opacity: 0.45 }}>
@@ -127,9 +146,105 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
           ))}
         </div>
 
+        {tab === 'overview' && <OverviewTab event={event} slug={slug} privyId={privyId!} goTo={goTo} />}
         {tab === 'guests' && <GuestsTab eventId={event.id} eventName={event.eventName} privyId={privyId!} capacity={event.rsvpCapacity} />}
         {tab === 'registration' && <RegistrationTab event={event} slug={slug} privyId={privyId!} onSettings={(s) => setEvent({ ...event, ...s })} />}
+        {tab === 'tickets' && PAYMENTS_ENABLED && <TicketManager eventId={event.id} slug={slug} privyId={privyId!} />}
         {tab === 'hosts' && <HostsTab eventId={event.id} privyId={privyId!} hosts={hosts} isCreator={event.isCreator} reload={reloadHosts} />}
+      </div>
+    </div>
+  );
+}
+
+/* ── Overview tab (stats + quick actions) ──────────────────────────── */
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)' }}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.12em] opacity-50 mb-0.5" style={{ color: 'var(--foreground)' }}>{label}</p>
+      <p className="font-mono text-[20px] font-bold leading-none" style={{ color: 'var(--foreground)' }}>{value}</p>
+      {sub && <p className="font-mono text-[10px] opacity-40 mt-1" style={{ color: 'var(--foreground)' }}>{sub}</p>}
+    </div>
+  );
+}
+
+function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: string; privyId: string; goTo: (t: Tab) => void }) {
+  const [going, setGoing] = useState<number | null>(null);
+  const [pending, setPending] = useState(0);
+  const [waitlisted, setWaitlisted] = useState(0);
+  const [invites, setInvites] = useState<{ accepted: number; total: number } | null>(null);
+  const [tickets, setTickets] = useState<{ sold: number; revenueCents: number } | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/events/rsvps?eventId=${event.id}&privyId=${privyId}`)
+      .then((r) => r.json())
+      .then((d) => { setGoing(d.goingCount ?? 0); setPending(d.pendingCount ?? 0); setWaitlisted(d.waitlistedCount ?? 0); })
+      .catch(console.error);
+    fetch(`/api/events/invites?eventId=${event.id}&privyId=${privyId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Invite[] = d.invites ?? [];
+        setInvites({ accepted: list.filter((i) => i.status === 'accepted').length, total: list.length });
+      })
+      .catch(() => {});
+    if (PAYMENTS_ENABLED) {
+      fetch(`/api/events/ticket-types?slug=${slug}&includeInactive=1`)
+        .then((r) => r.json())
+        .then((d) => {
+          const tiers: { quantitySold: number; priceCents: number }[] = d.ticketTypes ?? [];
+          setTickets({
+            sold: tiers.reduce((n, t) => n + t.quantitySold, 0),
+            revenueCents: tiers.reduce((n, t) => n + t.quantitySold * t.priceCents, 0),
+          });
+        })
+        .catch(() => {});
+    }
+  }, [event.id, slug, privyId]);
+
+  const quickLinks: { label: string; onClick?: () => void; href?: string }[] = [
+    { label: 'Invite guests', onClick: () => goTo('guests') },
+    { label: 'Registration settings', onClick: () => goTo('registration') },
+    ...(PAYMENTS_ENABLED ? [{ label: 'Ticket tiers', onClick: () => goTo('tickets' as Tab) }] : []),
+    { label: 'Edit event details', href: `/events/${slug}/edit` },
+    { label: 'View event page', href: `/events/${slug}` },
+  ];
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+        <StatCard label="Going" value={going == null ? '—' : String(going)} sub={event.rsvpCapacity != null ? `of ${event.rsvpCapacity} capacity` : 'no capacity limit'} />
+        <StatCard label="Requests" value={going == null ? '—' : String(pending)} sub={event.rsvpApprovalRequired ? 'approval required' : 'auto-approved'} />
+        <StatCard label="Waitlist" value={going == null ? '—' : String(waitlisted)} />
+        {PAYMENTS_ENABLED && tickets
+          ? <StatCard label="Tickets sold" value={String(tickets.sold)} sub={`$${(tickets.revenueCents / 100).toFixed(2)} gross`} />
+          : <StatCard label="Invites" value={invites == null ? '—' : `${invites.accepted}/${invites.total}`} sub="accepted" />}
+      </div>
+
+      {pending > 0 && (
+        <button onClick={() => goTo('guests')}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-lg border mb-6 cursor-pointer bg-transparent"
+          style={{ borderColor: '#FF9F1C', color: 'var(--foreground)' }}>
+          <span className="font-mono text-[12px] uppercase tracking-widest font-bold">{pending} request{pending > 1 ? 's' : ''} waiting for review</span>
+          <span className="font-mono text-[13px]">→</span>
+        </button>
+      )}
+
+      <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-2" style={{ color: 'var(--foreground)' }}>Quick actions</p>
+      <div className="space-y-2">
+        {quickLinks.map((l) => l.href ? (
+          <Link key={l.label} href={l.href}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border hover:opacity-70 transition"
+            style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+            <span className="font-mono text-[12px] uppercase tracking-widest">{l.label}</span>
+            <span className="font-mono text-[13px] opacity-40">→</span>
+          </Link>
+        ) : (
+          <button key={l.label} onClick={l.onClick}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border hover:opacity-70 transition cursor-pointer bg-transparent"
+            style={{ borderColor: 'var(--border-color)', color: 'var(--foreground)' }}>
+            <span className="font-mono text-[12px] uppercase tracking-widest">{l.label}</span>
+            <span className="font-mono text-[13px] opacity-40">→</span>
+          </button>
+        ))}
       </div>
     </div>
   );
