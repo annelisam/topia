@@ -23,6 +23,15 @@ export const metadata: Metadata = {
     description: "A creator engine for artists, by artists.",
     images: ["/brand/og-image.png"],
   },
+  // PWA install identity (manifest itself is app/manifest.ts).
+  appleWebApp: {
+    capable: true,
+    title: "TOPIA",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 // `interactive-widget=overlays-content` (the browser default): the on-screen
@@ -37,6 +46,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   interactiveWidget: "overlays-content",
+  themeColor: "#1a1a1a",
 };
 
 // Prevent flash of wrong theme on load. Accent is fixed site-wide to lime —

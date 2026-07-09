@@ -33,7 +33,7 @@ const labelCls = 'block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5
 const btnPrimary = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40';
 const btnGhost = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border bg-transparent disabled:opacity-40';
 
-type Tab = 'overview' | 'guests' | 'registration' | 'tickets' | 'hosts';
+type Tab = 'overview' | 'guests' | 'checkin' | 'registration' | 'tickets' | 'hosts';
 
 export default function ManageEventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -50,7 +50,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   // link straight to a section.
   useEffect(() => {
     const h = window.location.hash.replace('#', '') as Tab;
-    if (['overview', 'guests', 'registration', 'tickets', 'hosts'].includes(h)) {
+    if (['overview', 'guests', 'checkin', 'registration', 'tickets', 'hosts'].includes(h)) {
       if (h === 'tickets' && !PAYMENTS_ENABLED) return;
       setTab(h);
     }
@@ -118,6 +118,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   const TABS: { id: Tab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'guests', label: 'Guests' },
+    { id: 'checkin', label: 'Check-in' },
     { id: 'registration', label: 'Registration' },
     ...(PAYMENTS_ENABLED ? [{ id: 'tickets' as Tab, label: 'Tickets' }] : []),
     { id: 'hosts', label: 'Hosts' },
@@ -148,6 +149,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
 
         {tab === 'overview' && <OverviewTab event={event} slug={slug} privyId={privyId!} goTo={goTo} />}
         {tab === 'guests' && <GuestsTab eventId={event.id} eventName={event.eventName} privyId={privyId!} capacity={event.rsvpCapacity} />}
+        {tab === 'checkin' && <CheckinTab eventId={event.id} privyId={privyId!} />}
         {tab === 'registration' && <RegistrationTab event={event} slug={slug} privyId={privyId!} onSettings={(s) => setEvent({ ...event, ...s })} />}
         {tab === 'tickets' && PAYMENTS_ENABLED && <TicketManager eventId={event.id} slug={slug} privyId={privyId!} />}
         {tab === 'hosts' && <HostsTab eventId={event.id} privyId={privyId!} hosts={hosts} isCreator={event.isCreator} reload={reloadHosts} />}
@@ -201,6 +203,7 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
   }, [event.id, slug, privyId]);
 
   const quickLinks: { label: string; onClick?: () => void; href?: string }[] = [
+    { label: 'Door check-in', onClick: () => goTo('checkin') },
     { label: 'Invite guests', onClick: () => goTo('guests') },
     { label: 'Registration settings', onClick: () => goTo('registration') },
     ...(PAYMENTS_ENABLED ? [{ label: 'Ticket tiers', onClick: () => goTo('tickets' as Tab) }] : []),
@@ -246,6 +249,128 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── Check-in tab (door roster: search + one-tap check-in) ─────────── */
+interface CheckinGuest { userId: string; name: string | null; username: string | null; avatarUrl: string | null; checkedInAt: string | null; }
+
+function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) {
+  const [guests, setGuests] = useState<CheckinGuest[]>([]);
+  const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(() => {
+    fetch(`/api/events/checkin?eventId=${eventId}&privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.guests) setGuests(d.guests); })
+      .catch(console.error)
+      .finally(() => setLoaded(true));
+  }, [eventId, privyId]);
+
+  // Multiple hosts may be working the door at once — refresh periodically so
+  // everyone's counter stays roughly live.
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 20000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const setCheckedIn = async (guest: CheckinGuest, on: boolean) => {
+    setBusyId(guest.userId); setError('');
+    // Optimistic flip; reload reconciles.
+    setGuests((gs) => gs.map((g) => g.userId === guest.userId ? { ...g, checkedInAt: on ? new Date().toISOString() : null } : g));
+    try {
+      const res = on
+        ? await fetch('/api/events/checkin', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ privyId, eventId, guestUserId: guest.userId }),
+          })
+        : await fetch(`/api/events/checkin?eventId=${eventId}&guestUserId=${guest.userId}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || 'Could not update check-in.');
+      }
+    } catch {
+      setError('Could not update check-in.');
+    } finally {
+      setBusyId(null);
+      load();
+    }
+  };
+
+  const checkedInCount = guests.filter((g) => g.checkedInAt).length;
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? guests.filter((g) => (g.name ?? '').toLowerCase().includes(q) || (g.username ?? '').toLowerCase().includes(q))
+    : guests;
+  // Not-yet-checked-in first — that's who the door is looking for.
+  const ordered = [...filtered].sort((a, b) => Number(!!a.checkedInAt) - Number(!!b.checkedInAt));
+
+  const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="font-mono text-[13px]" style={{ color: 'var(--foreground)' }}>
+          <span className="text-[22px] font-bold">{checkedInCount}</span>
+          <span className="opacity-60"> / {guests.length} checked in</span>
+        </p>
+      </div>
+      <div className="h-1.5 rounded-full mb-5 overflow-hidden" style={{ backgroundColor: 'var(--border-color)' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: guests.length ? `${(checkedInCount / guests.length) * 100}%` : '0%', backgroundColor: 'var(--accent)' }} />
+      </div>
+
+      {/* 16px font so iOS doesn't zoom the door search */}
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search guests…"
+        className="w-full border px-3 py-2.5 font-mono text-[16px] rounded-lg outline-none mb-4"
+        style={fieldStyle}
+      />
+
+      {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+
+      {!loaded ? (
+        <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>Loading guest list…</p>
+      ) : guests.length === 0 ? (
+        <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>No confirmed guests yet — check-in opens once people RSVP.</p>
+      ) : ordered.length === 0 ? (
+        <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>No guests match “{query}”.</p>
+      ) : (
+        <div className="space-y-2">
+          {ordered.map((g) => (
+            <div key={g.userId} className="flex items-center gap-3 border rounded-lg px-3 py-2.5" style={{ borderColor: g.checkedInAt ? 'var(--accent)' : 'var(--border-color)' }}>
+              {g.avatarUrl
+                ? <img src={g.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[12px] font-bold shrink-0" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--foreground)' }}>{(g.name || g.username || '?')[0].toUpperCase()}</div>}
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{g.name || g.username || 'Guest'}</p>
+                <p className="font-mono text-[11px] opacity-40 truncate" style={{ color: 'var(--foreground)' }}>
+                  {g.checkedInAt ? `✓ checked in ${fmtTime(g.checkedInAt)}` : g.username ? `@${g.username}` : 'not checked in'}
+                </p>
+              </div>
+              {g.checkedInAt ? (
+                <button disabled={busyId === g.userId} onClick={() => setCheckedIn(g, false)}
+                  className="font-mono text-[11px] uppercase tracking-widest underline cursor-pointer bg-transparent border-none opacity-50 hover:opacity-100 disabled:opacity-20"
+                  style={{ color: 'var(--foreground)' }}>
+                  Undo
+                </button>
+              ) : (
+                <button disabled={busyId === g.userId} onClick={() => setCheckedIn(g, true)}
+                  className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40"
+                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                  Check in
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
