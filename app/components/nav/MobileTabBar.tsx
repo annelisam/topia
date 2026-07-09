@@ -16,16 +16,8 @@ const TAB_LINKS = [
       </svg>
     ),
   },
-  {
-    href: '/tv',
-    label: 'Topia TV',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="7" width="20" height="13" rx="2" ry="2" />
-        <polyline points="17 2 12 7 7 2" />
-      </svg>
-    ),
-  },
+  // Topia TV intentionally lives in the "More" menu (MobileMenu), not here —
+  // the bar stays at four destinations + More so each target stays roomy.
   {
     href: '/events',
     label: 'Events',
