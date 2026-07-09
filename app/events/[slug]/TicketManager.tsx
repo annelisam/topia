@@ -13,8 +13,8 @@ interface TicketType {
   isActive: boolean;
 }
 
-// Host-only editor for an event's ticket tiers. Sits under "Edit Event" on the
-// detail page. Talks to /api/events/ticket-types (host-gated server-side).
+// Host-only editor for an event's ticket tiers. Rendered as the Tickets tab of
+// the manage console. Talks to /api/events/ticket-types (host-gated server-side).
 export default function TicketManager({
   eventId,
   slug,

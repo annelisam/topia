@@ -15,7 +15,6 @@ import RsvpConfirmationModal from './RsvpConfirmationModal';
 const RsvpModal = dynamic(() => import('./RsvpModal'), { ssr: false });
 import WhosGoing from './WhosGoing';
 const TicketPurchase = dynamic(() => import('./TicketPurchase'), { ssr: false });
-import TicketManager from './TicketManager';
 import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
@@ -865,12 +864,6 @@ export default function EventDetailClient({ slug }: { slug: string }) {
               <span className="flex-1">{composerNotice}</span>
               <button onClick={() => setComposerNotice(null)} className="bg-transparent border-none cursor-pointer opacity-60 hover:opacity-100" style={{ color: 'var(--foreground)' }} aria-label="Dismiss">×</button>
             </div>
-          )}
-
-          {/* Host ticket management — create/edit paid tiers.
-              Hidden behind PAYMENTS_ENABLED until we're ready to sell. */}
-          {PAYMENTS_ENABLED && event.isHost && privyUser?.id && (
-            <TicketManager eventId={event.id} slug={event.slug} privyId={privyUser.id} />
           )}
 
           {/* Divider */}
