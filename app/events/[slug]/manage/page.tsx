@@ -10,6 +10,7 @@ import { useUserProfile } from '../../../hooks/useUserProfile';
 import { PAYMENTS_ENABLED } from '../../../../lib/featureFlags';
 import TicketManager from '../TicketManager';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
+import QRCode from 'qrcode';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface EventLite {
@@ -34,7 +35,7 @@ const labelCls = 'block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5
 const btnPrimary = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40';
 const btnGhost = 'px-4 py-2 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border bg-transparent disabled:opacity-40';
 
-type Tab = 'overview' | 'guests' | 'checkin' | 'registration' | 'tickets' | 'hosts';
+type Tab = 'overview' | 'guests' | 'checkin' | 'quests' | 'registration' | 'tickets' | 'hosts';
 
 export default function ManageEventPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -51,7 +52,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   // link straight to a section.
   useEffect(() => {
     const h = window.location.hash.replace('#', '') as Tab;
-    if (['overview', 'guests', 'checkin', 'registration', 'tickets', 'hosts'].includes(h)) {
+    if (['overview', 'guests', 'checkin', 'quests', 'registration', 'tickets', 'hosts'].includes(h)) {
       if (h === 'tickets' && !PAYMENTS_ENABLED) return;
       setTab(h);
     }
@@ -120,6 +121,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
     { id: 'overview', label: 'Overview' },
     { id: 'guests', label: 'Guests' },
     { id: 'checkin', label: 'Check-in' },
+    { id: 'quests', label: 'Quests' },
     { id: 'registration', label: 'Registration' },
     ...(PAYMENTS_ENABLED ? [{ id: 'tickets' as Tab, label: 'Tickets' }] : []),
     { id: 'hosts', label: 'Hosts' },
@@ -151,6 +153,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
         {tab === 'overview' && <OverviewTab event={event} slug={slug} privyId={privyId!} goTo={goTo} />}
         {tab === 'guests' && <GuestsTab eventId={event.id} eventName={event.eventName} privyId={privyId!} capacity={event.rsvpCapacity} />}
         {tab === 'checkin' && <CheckinTab eventId={event.id} privyId={privyId!} />}
+        {tab === 'quests' && <QuestsTab eventId={event.id} slug={slug} privyId={privyId!} />}
         {tab === 'registration' && <RegistrationTab event={event} slug={slug} privyId={privyId!} onSettings={(s) => setEvent({ ...event, ...s })} />}
         {tab === 'tickets' && PAYMENTS_ENABLED && <TicketManager eventId={event.id} slug={slug} privyId={privyId!} />}
         {tab === 'hosts' && <HostsTab eventId={event.id} privyId={privyId!} hosts={hosts} isCreator={event.isCreator} reload={reloadHosts} />}
@@ -205,6 +208,7 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
 
   const quickLinks: { label: string; onClick?: () => void; href?: string }[] = [
     { label: 'Door check-in', onClick: () => goTo('checkin') },
+    { label: 'Quests & prizes', onClick: () => goTo('quests') },
     { label: 'Invite guests', onClick: () => goTo('guests') },
     { label: 'Registration settings', onClick: () => goTo('registration') },
     ...(PAYMENTS_ENABLED ? [{ label: 'Ticket tiers', onClick: () => goTo('tickets' as Tab) }] : []),
@@ -250,6 +254,250 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── Quests tab (builder + completions + prizes + raffle) ──────────── */
+interface Quest { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; code: string | null; rule: { kind: string; count?: number } | null; isActive: boolean; completions: number; }
+interface Prize { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
+
+const VERIFY_OPTIONS = [
+  { value: 'qr', label: 'QR code — guests scan a code you post at the venue' },
+  { value: 'host', label: 'Host verified — you mark it done in person' },
+  { value: 'auto_connections', label: 'Auto — connect with N people at this event' },
+  { value: 'auto_checkin', label: 'Auto — completes at door check-in' },
+];
+
+function methodTag(q: Quest): { text: string; color: string } {
+  if (q.verifyMethod === 'qr') return { text: 'QR', color: '#4F46FF' };
+  if (q.verifyMethod === 'host') return { text: 'HOST', color: '#FF9F1C' };
+  return { text: 'AUTO', color: '#FF5BD7' };
+}
+
+function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; privyId: string }) {
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [raffleCount, setRaffleCount] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+
+  // Add-quest form
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [icon, setIcon] = useState('');
+  const [verify, setVerify] = useState('qr');
+  const [connCount, setConnCount] = useState('3');
+  const [busy, setBusy] = useState(false);
+
+  // QR sheet modal
+  const [qrQuest, setQrQuest] = useState<Quest | null>(null);
+  const [qrImg, setQrImg] = useState<string | null>(null);
+
+  // Prizes form
+  const [prizeTitle, setPrizeTitle] = useState('');
+  const [drawing, setDrawing] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    fetch(`/api/events/quests?eventId=${eventId}&privyId=${encodeURIComponent(privyId)}&manage=1`)
+      .then((r) => r.json())
+      .then((d) => { if (d.quests) setQuests(d.quests); })
+      .catch(console.error)
+      .finally(() => setLoaded(true));
+    fetch(`/api/events/prizes?eventId=${eventId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.prizes) setPrizes(d.prizes); })
+      .catch(() => {});
+    fetch(`/api/events/quests/progress?eventId=${eventId}&privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.entries) setRaffleCount(d.entries.filter((e: { inRaffle: boolean }) => e.inRaffle).length); })
+      .catch(() => {});
+  }, [eventId, privyId]);
+  useEffect(() => { load(); }, [load]);
+
+  const addQuest = async () => {
+    if (!title.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const verifyMethod = verify.startsWith('auto') ? 'auto' : verify;
+      const rule = verify === 'auto_connections'
+        ? { kind: 'connections', count: Math.max(1, parseInt(connCount, 10) || 1) }
+        : verify === 'auto_checkin' ? { kind: 'checkin' } : undefined;
+      const res = await fetch('/api/events/quests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, title: title.trim(), description: desc.trim() || undefined, icon: icon.trim() || undefined, verifyMethod, rule }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || 'Could not add quest.'); return; }
+      setTitle(''); setDesc(''); setIcon(''); setVerify('qr'); setAdding(false);
+      load();
+    } finally { setBusy(false); }
+  };
+
+  const toggleActive = async (q: Quest) => {
+    await fetch('/api/events/quests', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, id: q.id, isActive: !q.isActive }),
+    });
+    load();
+  };
+
+  const removeQuest = async (q: Quest) => {
+    await fetch(`/api/events/quests?id=${q.id}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    load();
+  };
+
+  const showQr = async (q: Quest) => {
+    if (!q.code) return;
+    setQrQuest(q);
+    const url = `${window.location.origin}/events/${slug}/live?quest=${q.code}`;
+    setQrImg(await QRCode.toDataURL(url, { width: 720, margin: 2, color: { dark: '#1a1a1a', light: '#ffffff' } }));
+  };
+
+  const addPrize = async () => {
+    if (!prizeTitle.trim()) return;
+    const res = await fetch('/api/events/prizes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, eventId, title: prizeTitle.trim() }),
+    });
+    if (res.ok) { setPrizeTitle(''); load(); }
+  };
+
+  const removePrize = async (id: string) => {
+    await fetch(`/api/events/prizes?id=${id}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    load();
+  };
+
+  const draw = async (prize: Prize) => {
+    setDrawing(prize.id); setError('');
+    try {
+      const res = await fetch('/api/events/raffle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, prizeId: prize.id }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || 'Could not draw.'); return; }
+      load();
+    } finally { setDrawing(null); }
+  };
+
+  const describeRule = (q: Quest) =>
+    q.verifyMethod === 'auto'
+      ? q.rule?.kind === 'connections' ? `Auto: ${q.rule.count ?? 1} connections` : 'Auto: on check-in'
+      : q.verifyMethod === 'host' ? 'You verify in person' : 'Scan at venue';
+
+  return (
+    <div>
+      <p className="font-mono text-[12px] opacity-60 mb-4" style={{ color: 'var(--foreground)' }}>
+        Guests who complete <b>every</b> active quest are entered into this event's raffle.
+        {raffleCount != null && <> <b>{raffleCount}</b> in the raffle so far.</>} Quests unlock once a guest is checked in.
+      </p>
+
+      {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+
+      {/* Quest list */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Quests</p>
+        <button onClick={() => setAdding((a) => !a)} className={btnGhost} style={fieldStyle}>{adding ? 'Cancel' : '+ Add quest'}</button>
+      </div>
+
+      {adding && (
+        <div className="rounded-lg border p-4 space-y-2 mb-4" style={{ borderColor: 'var(--border-color)' }}>
+          <div className="flex gap-2">
+            <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🎯" className={`${inputCls} !w-16 text-center`} style={fieldStyle} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Quest title (e.g. Find the golden koi)" className={inputCls} style={fieldStyle} />
+          </div>
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Hint shown to guests (optional)" className={inputCls} style={fieldStyle} />
+          <select value={verify} onChange={(e) => setVerify(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
+            {VERIFY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          {verify === 'auto_connections' && (
+            <input value={connCount} onChange={(e) => setConnCount(e.target.value)} inputMode="numeric" placeholder="How many connections?" className={inputCls} style={fieldStyle} />
+          )}
+          <button onClick={addQuest} disabled={busy || !title.trim()} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+            {busy ? 'Adding…' : 'Add quest'}
+          </button>
+        </div>
+      )}
+
+      {!loaded ? (
+        <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>Loading quests…</p>
+      ) : quests.length === 0 ? (
+        <p className="font-mono text-[12px] opacity-40 mb-6" style={{ color: 'var(--foreground)' }}>No quests yet — add one to turn the event into a game.</p>
+      ) : (
+        <div className="space-y-2 mb-8">
+          {quests.map((q) => {
+            const tag = methodTag(q);
+            return (
+              <div key={q.id} className="border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)', opacity: q.isActive ? 1 : 0.5 }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[16px] w-6 text-center shrink-0">{q.icon || '✦'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>
+                      {q.title}{!q.isActive && <span className="font-normal opacity-50"> · hidden</span>}
+                    </p>
+                    <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>
+                      {describeRule(q)} · {q.completions} completed
+                    </p>
+                  </div>
+                  <span className="font-mono text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: tag.color, color: '#fff' }}>{tag.text}</span>
+                  <span className="flex gap-2 shrink-0">
+                    {q.verifyMethod === 'qr' && (
+                      <button onClick={() => showQr(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>QR</button>
+                    )}
+                    <button onClick={() => toggleActive(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none opacity-60" style={{ color: 'var(--foreground)' }}>
+                      {q.isActive ? 'Hide' : 'Show'}
+                    </button>
+                    <button onClick={() => removeQuest(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Del</button>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Prizes + raffle */}
+      <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60 mb-3" style={{ color: 'var(--foreground)' }}>Prizes & raffle</p>
+      <div className="space-y-2 mb-3">
+        {prizes.length === 0 && <p className="font-mono text-[12px] opacity-40" style={{ color: 'var(--foreground)' }}>No prizes yet — add what raffle winners get.</p>}
+        {prizes.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{p.title}</p>
+              {p.drawnAt ? (
+                <p className="font-mono text-[11px]" style={{ color: 'var(--accent-ink, var(--foreground))' }}>
+                  🎉 Winner: {p.winnerName || p.winnerUsername || 'guest'}{p.winnerUsername ? ` (@${p.winnerUsername})` : ''}
+                </p>
+              ) : (
+                <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>Not drawn yet</p>
+              )}
+            </div>
+            <button onClick={() => draw(p)} disabled={drawing === p.id} className={btnGhost} style={fieldStyle}>
+              {drawing === p.id ? 'Drawing…' : p.drawnAt ? 'Redraw' : '🎲 Draw'}
+            </button>
+            <button onClick={() => removePrize(p.id)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Del</button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input value={prizeTitle} onChange={(e) => setPrizeTitle(e.target.value)} placeholder="Prize (e.g. Limited stamp + tee)" className={inputCls} style={fieldStyle} />
+        <button onClick={addPrize} disabled={!prizeTitle.trim()} className={`${btnPrimary} shrink-0`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>Add</button>
+      </div>
+
+      {/* QR sheet modal — screenshot/print and post at the venue */}
+      {qrQuest && (
+        <div className="fixed inset-0 z-[2100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => { setQrQuest(null); setQrImg(null); }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 text-center" style={{ backgroundColor: '#ffffff' }} onClick={(e) => e.stopPropagation()}>
+            <p className="font-mono text-[11px] uppercase tracking-[0.15em] mb-1" style={{ color: '#1a1a1a', opacity: 0.5 }}>Quest code · post at the venue</p>
+            <p className="font-mono text-[15px] font-bold mb-3" style={{ color: '#1a1a1a' }}>{qrQuest.icon || '✦'} {qrQuest.title}</p>
+            {qrImg && <img src={qrImg} alt={`QR code for ${qrQuest.title}`} className="w-full rounded-lg" />}
+            <p className="font-mono text-[12px] tracking-[0.15em] mt-2" style={{ color: '#1a1a1a' }}>{qrQuest.code}</p>
+            <p className="font-mono text-[10px] mt-2" style={{ color: '#1a1a1a', opacity: 0.5 }}>Screenshot or print this. Scanning it in Event Mode completes the quest.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

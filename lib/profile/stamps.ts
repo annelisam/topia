@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { eventRsvps, events, eventCheckins, guestbookEntries, tools, eventInvites, worldMembers, follows, users } from '@/lib/db/schema';
+import { eventRsvps, events, eventCheckins, eventQuestCompletions, guestbookEntries, tools, eventInvites, worldMembers, follows, users } from '@/lib/db/schema';
 import { and, eq, inArray, asc } from 'drizzle-orm';
 import { resolvePath, PATH_CONFIG } from '@/app/components/profile/pathConfig';
 
@@ -9,13 +9,13 @@ export type StampRarity = 'common' | 'rare' | 'legendary';
 export type StampKind =
   | 'topia-member' | 'like-minds' | 'path-seal' | 'early-citizen' | 'certified'
   | 'founder' | 'settler' | 'first-stamp' | 'frequent-flyer' | 'check-in'
-  | 'connector' | 'guestbook' | 'toolmaker' | 'orbit';
+  | 'quest' | 'connector' | 'guestbook' | 'toolmaker' | 'orbit';
 
 /** Passport filter buckets: event stamps, connection stamps, everything else. */
 export type StampCategory = 'event' | 'connect' | 'core';
 
 const STAMP_CATEGORY: Record<StampKind, StampCategory> = {
-  'like-minds': 'event', 'first-stamp': 'event', 'frequent-flyer': 'event', 'check-in': 'event',
+  'like-minds': 'event', 'first-stamp': 'event', 'frequent-flyer': 'event', 'check-in': 'event', 'quest': 'event',
   'orbit': 'connect', 'connector': 'connect',
   'topia-member': 'core', 'path-seal': 'core', 'early-citizen': 'core', 'certified': 'core',
   'founder': 'core', 'settler': 'core', 'guestbook': 'core', 'toolmaker': 'core',
@@ -87,7 +87,7 @@ export async function computeProfileStamps(opts: {
   const roleTagList = (opts.roleTags ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   const hasOwnedWorlds = worldMemberships.some((w) => w.role === 'owner' || w.role === 'world_builder');
 
-  const [rsvpRows, checkIns, gbRows, toolRows, invites, worldMemberRows, followingRows, followerRows] = await Promise.all([
+  const [rsvpRows, checkIns, questRows, gbRows, toolRows, invites, worldMemberRows, followingRows, followerRows] = await Promise.all([
     db.select({ name: events.eventName, dateIso: events.dateIso, at: eventRsvps.createdAt })
       .from(eventRsvps).innerJoin(events, eq(eventRsvps.eventId, events.id))
       .where(and(eq(eventRsvps.userId, userId), eq(eventRsvps.status, 'going')))
@@ -97,6 +97,10 @@ export async function computeProfileStamps(opts: {
     db.select({ name: events.eventName, at: eventCheckins.createdAt })
       .from(eventCheckins).innerJoin(events, eq(eventCheckins.eventId, events.id))
       .where(eq(eventCheckins.userId, userId)),
+    // Quest completions — one row per completed quest (qr/host/auto alike).
+    db.select({ name: events.eventName, eventId: eventQuestCompletions.eventId, at: eventQuestCompletions.createdAt })
+      .from(eventQuestCompletions).innerJoin(events, eq(eventQuestCompletions.eventId, events.id))
+      .where(eq(eventQuestCompletions.userId, userId)),
     db.select({ id: guestbookEntries.id }).from(guestbookEntries).where(eq(guestbookEntries.authorUserId, userId)),
     db.select({ name: tools.name }).from(tools).where(eq(tools.submittedBy, userId)),
     db.select({ id: eventInvites.id }).from(eventInvites)
@@ -198,6 +202,16 @@ export async function computeProfileStamps(opts: {
     const latest = realCheckIns.reduce((a, b) => (new Date(b.at!) > new Date(a.at!) ? b : a));
     add('check-in', {label: realCheckIns.length > 1 ? `${realCheckIns.length}× ON-SITE` : latest.name.toUpperCase().slice(0, 12), caption: 'CHECK-IN', date: ym(latest.at), color: 'cyan', shape: 'rect', rarity: 'rare',
       title: 'Checked In', description: 'Showed up and checked in on-site. Presence verified.' });
+  }
+
+  // ── Quest stamp — completed quests at live events ──────────────────────────
+  const realQuests = questRows.filter((q) => !isTestEvent(q.name));
+  if (realQuests.length > 0) {
+    const questEvents = new Set(realQuests.map((q) => q.eventId));
+    const latest = realQuests.reduce((a, b) => (new Date(b.at) > new Date(a.at) ? b : a));
+    const rarity: StampRarity = questEvents.size >= 3 ? 'legendary' : realQuests.length >= 3 ? 'rare' : 'common';
+    add('quest', {label: realQuests.length > 1 ? `${realQuests.length} QUESTS` : latest.name.toUpperCase().slice(0, 12), caption: 'QUEST', date: ym(latest.at), color: 'magenta', shape: 'circle', rarity,
+      title: 'Quester', description: `Completed ${realQuests.length} quest${realQuests.length === 1 ? '' : 's'} at live events. Played the room.` });
   }
 
   // ── Connector — invited someone who joined ─────────────────────────────────
