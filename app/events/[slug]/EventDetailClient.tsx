@@ -598,6 +598,12 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   Waitlisted
                 </span>
               )}
+              {/* Event Mode — the in-the-room hub (check-in state, quests) */}
+              {!isPast && (event.isHost || event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending' && event.userStatus !== 'waitlisted')) && (
+                <Link href={`/events/${event.slug}/live`} className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold border no-underline hover:opacity-70 transition" style={{ color: 'var(--accent-ink)', borderColor: 'var(--accent-ink)' }}>
+                  ● Event Mode
+                </Link>
+              )}
               {isPast && (
                 <span className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold" style={{ backgroundColor: '#FF5C34', color: '#0a0a0a' }}>
                   Past Event
