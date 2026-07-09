@@ -376,6 +376,72 @@ export const eventConnections = pgTable('event_connections', {
   index('event_connections_user_b_idx').on(t.userBId),
 ]);
 
+/* ════════════════════════════════════════════════════════════════════
+ * EVENT QUESTS — the live-layer game. No points: completing ALL of an
+ * event's active quests makes the guest prize-eligible and enters them
+ * into that event's raffle. Check-in (event_checkins) gates participation.
+ * ════════════════════════════════════════════════════════════════════ */
+
+// Host-authored quests. verifyMethod:
+//   'qr'   — guest scans a printed code at the venue (quest `code`, minted
+//            server-side, encoded as /events/<slug>/live?quest=<code>)
+//   'host' — a host verifies in person (grants from the manage console)
+//   'auto' — evaluated server-side from `rule` jsonb, e.g.
+//            {kind:'connections', count:3} or {kind:'checkin'} — new rule
+//            kinds need no schema change. Auto completions are materialized
+//            into event_quest_completions when observed (lazy), so raffle,
+//            progress, and stamps all read one table.
+export const eventQuests = pgTable('event_quests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  icon: text('icon'),                                     // emoji shown in lists
+  verifyMethod: text('verify_method').notNull().default('qr'), // 'qr' | 'host' | 'auto'
+  code: text('code').unique(),                            // set for 'qr' quests
+  rule: jsonb('rule'),                                    // set for 'auto' quests
+  isActive: boolean('is_active').notNull().default(true),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_quests_event_id_idx').on(t.eventId),
+]);
+
+// One row per guest per completed quest. verifiedBy: the host who granted
+// it ('host' method) — null for self-scanned 'qr' and materialized 'auto'.
+export const eventQuestCompletions = pgTable('event_quest_completions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  questId: uuid('quest_id').references(() => eventQuests.id, { onDelete: 'cascade' }).notNull(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  verifiedBy: uuid('verified_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_quest_completions_quest_id_idx').on(t.questId),
+  index('event_quest_completions_event_id_idx').on(t.eventId),
+  index('event_quest_completions_user_id_idx').on(t.userId),
+  uniqueIndex('event_quest_completions_quest_user_uniq').on(t.questId, t.userId),
+]);
+
+// Prizes shown in Event Mode. The host draws the raffle per prize — a random
+// pick from guests who completed every active quest; redrawing overwrites
+// (e.g. winner already left).
+export const eventPrizes = pgTable('event_prizes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  sortOrder: integer('sort_order').default(0),
+  raffleWinnerUserId: uuid('raffle_winner_user_id').references(() => users.id),
+  drawnAt: timestamp('drawn_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('event_prizes_event_id_idx').on(t.eventId),
+]);
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -119,12 +119,12 @@ door entry.
 
 | Phase | Scope | Schema | Est. |
 |---|---|---|---|
-| **P0 — Manage console** | Tab restructure, Overview stats, move Tickets tab, mobile polish | none | S |
-| **P1 — Check-in** | `event_checkins` table, Check-in manage tab (search roster, tap to check in/undo, live counter), revive check-in stamp | apply-event-checkins.mjs | S/M |
-| **P1.5 — QR check-in** | `user_connect_codes`, personal QR card in Event Mode, door scanner in Check-in tab (`qr-scanner`), `/connect/<code>` redirect | apply-connect-codes.mjs | S |
-| **P2 — PWA + Event Mode shell** | manifest/icons/install card, `/live` hub (check-in state, quests placeholder) | none | M |
-| **P3 — Connections** | reuses `user_connect_codes` from P1.5; profile QR on TopiaCard, real `/connect/[token]` page (one-tap mutual follow), scanner connect mode, `event_connections`, People screen, mutual-events surfaces | apply-connections.mjs | M |
-| **P4 — Quests + prizes** | quest tables, builder tab, printable QR sheets, completion flows (qr/host/auto), progress board, raffle entry + host draw, quest stamp + reveal animation, prizes | apply-quests.mjs | L |
+| **P0 — Manage console** ✓ shipped | Tab restructure, Overview stats, move Tickets tab, mobile polish | none | S |
+| **P1 — Check-in** ✓ shipped | `event_checkins` table, Check-in manage tab (search roster, tap to check in/undo, live counter), revive check-in stamp | apply-event-checkins.mjs | S/M |
+| **P1.5 — QR check-in** ✓ shipped | `user_connect_codes`, personal QR card in Event Mode, door scanner in Check-in tab (`qr-scanner`), `/connect/<code>` redirect | apply-connect-codes.mjs | S |
+| **P2 — PWA + Event Mode shell** ✓ shipped | manifest/icons/install card, `/live` hub (check-in state, quests placeholder) | none | M |
+| **P3 — Connections** ✓ shipped | reuses `user_connect_codes` from P1.5; profile QR on TopiaCard, real `/connect/[token]` page (one-tap mutual follow), scanner connect mode, `event_connections`, People screen, mutual-events surfaces | apply-connections.mjs | M |
+| **P4 — Quests + prizes** ✓ shipped | quest tables, builder tab, printable QR sheets, completion flows (qr/host/auto), progress board, raffle entry + host draw, quest stamp + reveal animation, prizes | apply-quests.mjs | L |
 | **P5 — Polish** | post-event recap, notifications, printable quest-code kit, offline shell (service worker) | none | S/M |
 
 Every schema phase ships with its idempotent apply script and a reminder to run it

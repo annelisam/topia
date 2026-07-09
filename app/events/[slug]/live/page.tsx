@@ -31,6 +31,10 @@ interface LiveEvent {
 interface Guest { name: string | null; username: string | null; avatarUrl: string | null; }
 interface MyDoorState { onList: boolean; rsvpStatus: string | null; checkedIn: boolean; checkedInAt: string | null; }
 interface Connection { id: string; name: string | null; username: string | null; avatarUrl: string | null; connectedAt: string; }
+interface QuestItem { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; rule: { kind: string; count?: number } | null; completed: boolean; }
+interface QuestState { quests: QuestItem[]; total: number; completedCount: number; inRaffle: boolean; }
+interface PrizeItem { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
+interface BoardEntry { userId: string; name: string | null; username: string | null; avatarUrl: string | null; completedCount: number; inRaffle: boolean; }
 
 const INK = '#f5f0e8';
 const LIME = '#e4fe52';
@@ -64,6 +68,12 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const [scanOpen, setScanOpen] = useState(false);
   const [scanStatus, setScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
   const [people, setPeople] = useState<Connection[]>([]);
+  const [questState, setQuestState] = useState<QuestState | null>(null);
+  const [prizes, setPrizes] = useState<PrizeItem[]>([]);
+  const [board, setBoard] = useState<BoardEntry[]>([]);
+  const [questScanOpen, setQuestScanOpen] = useState(false);
+  const [questScanStatus, setQuestScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
+  const [questToast, setQuestToast] = useState<string | null>(null);
 
   // The viewer's personal connect QR — a host scans it at the door to check
   // them in (and in P3 other guests scan it to connect).
@@ -133,6 +143,59 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
       .catch(() => {});
   }, [privyId, event?.id]);
   useEffect(() => { loadPeople(); }, [loadPeople]);
+
+  // Quests: my state, prizes, and the progress board.
+  const loadQuests = useCallback(() => {
+    if (!event?.id) return;
+    if (privyId) {
+      fetch(`/api/events/quests?eventId=${event.id}&privyId=${encodeURIComponent(privyId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.quests) setQuestState(d); })
+        .catch(() => {});
+      fetch(`/api/events/quests/progress?eventId=${event.id}&privyId=${encodeURIComponent(privyId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.entries) setBoard(d.entries); })
+        .catch(() => {});
+    }
+    fetch(`/api/events/prizes?eventId=${event.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.prizes) setPrizes(d.prizes); })
+      .catch(() => {});
+  }, [event?.id, privyId]);
+  useEffect(() => { loadQuests(); }, [loadQuests]);
+
+  const completeQuestCode = useCallback(async (value: string): Promise<{ kind: 'ok' | 'warn' | 'err'; text: string }> => {
+    if (!privyId || !event?.id) return { kind: 'err', text: 'Log in first.' };
+    try {
+      const res = await fetch('/api/events/quests/complete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId: event.id, code: value }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) return { kind: 'err', text: d.error || 'Scan failed — try again.' };
+      loadQuests();
+      const title = d.quest?.title ?? 'Quest';
+      if (d.already) return { kind: 'warn', text: `Already completed: ${title}` };
+      if (d.progress?.inRaffle) return { kind: 'ok', text: `✦ ${title} complete — that's ALL of them. You're in the raffle! 🎉` };
+      return { kind: 'ok', text: `✦ ${title} complete (${d.progress?.completedCount}/${d.progress?.total})` };
+    } catch {
+      return { kind: 'err', text: 'Scan failed — try again.' };
+    }
+  }, [privyId, event?.id, loadQuests]);
+
+  const handleQuestScan = useCallback(async (value: string) => {
+    setQuestScanStatus(await completeQuestCode(value));
+  }, [completeQuestCode]);
+
+  // A printed quest QR encodes /events/<slug>/live?quest=<code> — when the
+  // page opens with that param (plain camera app scan), redeem it directly.
+  useEffect(() => {
+    if (!privyId || !event?.id || !me?.checkedIn) return;
+    const param = new URLSearchParams(window.location.search).get('quest');
+    if (!param) return;
+    history.replaceState(null, '', window.location.pathname);
+    completeQuestCode(`?quest=${param}`).then((s) => setQuestToast(s.text));
+  }, [privyId, event?.id, me?.checkedIn, completeQuestCode]);
 
   // A scanned Topia code → instant mutual connection with event context.
   const handleConnectScan = useCallback(async (value: string) => {
@@ -279,16 +342,100 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </Link>
             )}
 
-            {/* Quests — placeholder until P4 plugs in */}
-            <div style={{ ...card, opacity: 0.75 }}>
-              <div className="flex items-center justify-between">
-                <p style={meta}>Quests</p>
-                <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded" style={{ backgroundColor: LINE, color: DIM }}>Coming soon</span>
+            {/* Quests */}
+            {questToast && (
+              <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
+                <p className="text-[13px] font-bold" style={{ color: LIME }}>{questToast}</p>
               </div>
-              <p className="text-[13px] mt-1.5" style={{ color: DIM }}>
-                Complete every quest at this event to enter its raffle. Scanning, connections, and prizes land here next.
-              </p>
-            </div>
+            )}
+            {authenticated && questState && questState.total > 0 && (
+              <div style={card}>
+                <div className="flex items-center justify-between">
+                  <p style={meta}>Quests · {questState.completedCount}/{questState.total}</p>
+                  {me?.checkedIn && (
+                    <button
+                      onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }}
+                      className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
+                      style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                    >
+                      ✦ Scan quest code
+                    </button>
+                  )}
+                </div>
+                <div className="h-1.5 rounded-full mt-2.5 mb-1 overflow-hidden" style={{ backgroundColor: 'rgba(245,240,232,0.12)' }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${(questState.completedCount / questState.total) * 100}%`, backgroundColor: LIME }} />
+                </div>
+                {questState.inRaffle ? (
+                  <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>🎉 All quests complete — you're in the raffle</p>
+                ) : !me?.checkedIn ? (
+                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>Check in at the door to unlock quests</p>
+                ) : (
+                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>Complete all {questState.total} to enter the raffle</p>
+                )}
+                <div className="mt-3 flex flex-col gap-2">
+                  {questState.quests.map((q) => (
+                    <div key={q.id} className="flex items-start gap-2.5 rounded-xl px-3 py-2.5"
+                      style={{ border: `1px solid ${q.completed ? LIME : LINE}`, opacity: me?.checkedIn || q.completed ? 1 : 0.5 }}>
+                      <span className="text-[15px] leading-tight">{me?.checkedIn || q.completed ? (q.icon || '✦') : '🔒'}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] font-bold" style={{ color: INK }}>{q.title}</span>
+                        {q.description && <span className="block text-[11px] mt-0.5" style={{ color: DIM }}>{q.description}</span>}
+                        {q.verifyMethod === 'auto' && !q.completed && (
+                          <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>
+                            {q.rule?.kind === 'connections' ? `Auto — connect with ${q.rule.count ?? 1} people` : 'Auto — completes at check-in'}
+                          </span>
+                        )}
+                        {q.verifyMethod === 'host' && !q.completed && (
+                          <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>A host verifies this one</span>
+                        )}
+                      </span>
+                      <span className="font-mono text-[13px] font-bold" style={{ color: q.completed ? LIME : DIM }}>{q.completed ? '✓' : '○'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prizes */}
+            {prizes.length > 0 && (
+              <div style={{ ...card, borderColor: 'rgba(228,254,82,0.35)' }}>
+                <p style={{ ...meta, color: LIME }}>Prizes · raffle</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {prizes.map((p) => (
+                    <div key={p.id}>
+                      <p className="text-[13px] font-bold" style={{ color: INK }}>✶ {p.title}</p>
+                      {p.description && <p className="text-[11px]" style={{ color: DIM }}>{p.description}</p>}
+                      {p.drawnAt && (
+                        <p className="font-mono text-[11px] mt-0.5" style={{ color: LIME }}>
+                          Winner: {p.winnerName || p.winnerUsername || 'drawn'}{p.winnerUsername ? ` (@${p.winnerUsername})` : ''}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="font-mono text-[10px] mt-2.5" style={{ color: DIM }}>Complete every quest to be in the draw.</p>
+              </div>
+            )}
+
+            {/* Progress board */}
+            {authenticated && board.length > 0 && questState && questState.total > 0 && (
+              <div style={card}>
+                <p style={meta}>Progress board</p>
+                <div className="mt-2 flex flex-col">
+                  {board.slice(0, 8).map((b) => (
+                    <div key={b.userId} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${LINE}` }}>
+                      {b.avatarUrl
+                        ? <img src={b.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        : <div className="w-7 h-7 rounded-full flex items-center justify-center font-mono text-[10px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(b.name || b.username || '?')[0].toUpperCase()}</div>}
+                      <span className="flex-1 text-[13px] truncate" style={{ color: INK }}>{b.name || b.username || 'Guest'}</span>
+                      <span className="font-mono text-[11px]" style={{ color: b.inRaffle ? LIME : DIM }}>
+                        {b.completedCount}/{questState.total}{b.inRaffle ? ' · in raffle' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Who's here */}
             <div style={card}>
@@ -336,6 +483,14 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           status={scanStatus}
           onCode={handleConnectScan}
           onClose={() => setScanOpen(false)}
+        />
+      )}
+      {questScanOpen && (
+        <QrScannerOverlay
+          hint="Scan a quest code"
+          status={questScanStatus}
+          onCode={handleQuestScan}
+          onClose={() => setQuestScanOpen(false)}
         />
       )}
     </div>
