@@ -130,7 +130,7 @@ export default function ManageEventPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-28 pb-16 max-w-2xl">
+      <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-28 pb-[var(--mobile-nav-clearance)] md:pb-16 max-w-2xl">
         <div className="flex items-center justify-between mb-6">
           <Link href={`/events/${slug}`} className="font-mono text-[12px] uppercase tracking-widest hover:opacity-60 transition" style={{ color: 'var(--foreground)' }}>← Back to event</Link>
         </div>

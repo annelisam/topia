@@ -71,7 +71,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation />
-      <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-28 pb-32 max-w-2xl">
+      <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-28 pb-[var(--mobile-nav-clearance)] md:pb-32 max-w-2xl">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-50 mb-1" style={{ color: 'var(--foreground)' }}>
           Search // the network
         </p>
