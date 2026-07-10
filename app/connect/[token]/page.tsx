@@ -56,7 +56,7 @@ export default function ConnectPage({ params }: { params: Promise<{ token: strin
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--background)' }}>
       <Navigation />
-      <div className="flex-1 flex items-center justify-center px-5 py-24">
+      <div className="flex-1 flex items-center justify-center px-5 pt-24 pb-[var(--mobile-nav-clearance)] md:pb-24">
         <div className="w-full max-w-sm rounded-2xl border p-8 text-center" style={{ borderColor: 'var(--border-color)' }}>
           {notFound ? (
             <>

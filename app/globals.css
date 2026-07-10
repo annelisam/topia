@@ -98,6 +98,10 @@
 
   /* Layout */
   --nav-height: 56px;
+  /* Bottom clearance for the mobile FrostedPill: 14px float offset + ~74px pill
+     + breathing room, plus the iOS home-indicator inset. Any page surface that
+     can scroll to its end on mobile must pad its bottom with this. */
+  --mobile-nav-clearance: calc(env(safe-area-inset-bottom, 0px) + 104px);
   --page-pad: clamp(20px, 4vw, 60px);
   --content-max: 1800px;
 

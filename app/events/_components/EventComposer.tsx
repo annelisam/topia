@@ -686,7 +686,7 @@ export default function EventComposer({ mode, initial }: { mode: 'create' | 'edi
       </div>
 
       {/* Body */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-32">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-[var(--mobile-nav-clearance)] md:pb-32">
         {/* Import from link — create only. Paste a Partiful/Luma/Posh URL to
             autofill the fields, then review + publish. */}
         {mode === 'create' && (

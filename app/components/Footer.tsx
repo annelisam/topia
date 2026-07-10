@@ -27,7 +27,10 @@ export default function Footer() {
   if (pathname.startsWith('/dashboard')) return null;
 
   return (
-    <footer className="topia-footer bg-obsidian text-bone border-t border-bone/[0.06]">
+    // Mobile: extend the footer past its content so the floating pill nav hovers
+    // over obsidian instead of covering the links — this is the bottom edge of
+    // every PageShell page.
+    <footer className="topia-footer bg-obsidian text-bone border-t border-bone/[0.06] pb-[var(--mobile-nav-clearance)] md:pb-0">
       <div className="max-w-[var(--content-max)] mx-auto px-[var(--page-pad)] py-6">
         {/* Single row — wordmark + inline nav on the left, socials + toggle on the right */}
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
