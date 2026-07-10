@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import TopNav from './nav/TopNav';
-import MobileTabBar from './nav/MobileTabBar';
+import FrostedPill from './nav/FrostedPill';
 import MobileMenu from './nav/MobileMenu';
 import dynamic from 'next/dynamic';
 
@@ -33,9 +33,9 @@ export default function Navigation() {
   return (
     <BadgesProvider>
       <TopNav onOpenMessages={() => openMessages()} />
-      {/* Hide the mobile tab bar while the Messages modal is open so the keyboard
+      {/* Hide the mobile pill while the Messages modal is open so the keyboard
           can't reveal it behind the sheet. */}
-      {!msgOpen && <MobileTabBar onMenuToggle={() => setMenuOpen(true)} onOpenMessages={() => openMessages()} />}
+      {!msgOpen && <FrostedPill onMenuToggle={() => setMenuOpen(true)} onOpenMessages={() => openMessages()} />}
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       {msgOpen && <MessagesModal key={openKey} initialConversationId={initialConv} onClose={() => setMsgOpen(false)} />}
     </BadgesProvider>
