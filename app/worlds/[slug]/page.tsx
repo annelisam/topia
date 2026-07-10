@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
@@ -83,6 +83,38 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(false);
   const [followPending, setFollowPending] = useState(false);
+
+  // Desktop-only adjustable split: the dossier rail's width, dragged via the
+  // divider gutter, clamped and remembered per person. Mobile never drags —
+  // the rail simply stacks above the content there.
+  const RAIL_MIN = 280, RAIL_MAX = 480, RAIL_DEFAULT = 340;
+  const [railW, setRailW] = useState(RAIL_DEFAULT);
+  const railWRef = useRef(RAIL_DEFAULT);
+  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('topia:world-rail-w'));
+    if (saved >= RAIL_MIN && saved <= RAIL_MAX) { setRailW(saved); railWRef.current = saved; }
+  }, []);
+  const onDividerDown = useCallback((e: React.PointerEvent) => {
+    dragRef.current = { startX: e.clientX, startW: railWRef.current };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+  const onDividerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const w = Math.min(RAIL_MAX, Math.max(RAIL_MIN, dragRef.current.startW + (e.clientX - dragRef.current.startX)));
+    railWRef.current = w;
+    setRailW(w);
+  }, []);
+  const onDividerUp = useCallback(() => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    try { localStorage.setItem('topia:world-rail-w', String(railWRef.current)); } catch {}
+  }, []);
+  const onDividerReset = useCallback(() => {
+    railWRef.current = RAIL_DEFAULT;
+    setRailW(RAIL_DEFAULT);
+    try { localStorage.setItem('topia:world-rail-w', String(RAIL_DEFAULT)); } catch {}
+  }, []);
 
   useEffect(() => {
     const worldPromise = fetch(`/api/worlds?slug=${slug}`)
@@ -307,10 +339,14 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
         <section className={`min-h-screen px-4 md:px-6 py-4 md:py-6 transition-opacity duration-500 ${isLoaded && !loading ? 'opacity-100' : 'opacity-0'}`}>
           <div className="max-w-[var(--content-max)] mx-auto">
             {world && (
-              <div className="relative z-10 max-w-[1320px] mx-auto flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-hidden">
+              <div
+                className="relative z-10 max-w-[1320px] mx-auto flex flex-col gap-[3px] border border-ink/[0.08] rounded-lg overflow-visible md:overflow-hidden md:grid md:grid-cols-[var(--rail-w)_7px_minmax(0,1fr)] md:grid-rows-[auto_1fr_auto] md:items-stretch"
+                style={{ '--rail-w': `${railW}px` } as React.CSSProperties}
+              >
 
-                {/* ═══ TOP — ABOUT (full width, horizontal) ═══ */}
-                <div className="bg-[var(--page-bg)] relative overflow-hidden">
+                {/* ═══ RAIL — the dossier (stacks above content on mobile;
+                    a fixed-width left column with a drag handle on desktop) ═══ */}
+                <div className="bg-[var(--page-bg)] relative overflow-hidden rounded-t-lg md:rounded-none md:row-span-2">
                   {/* Category-colored accent strip */}
                   <div className={`${config.bg} px-4 py-2 flex items-center justify-between relative`}>
                     <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px), repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(26,26,26,0.6) 4px, rgba(26,26,26,0.6) 5px)' }} />
@@ -318,15 +354,15 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                     <span className={`font-mono text-[11px] uppercase tracking-wider ${config.textOn} opacity-55 relative z-10`}>WORLD-{world.id.slice(0, 4).toUpperCase()}</span>
                   </div>
 
-                  {/* Image + Fields — horizontal on desktop, stacked on mobile */}
-                  <div className="flex flex-col md:flex-row relative">
+                  {/* Image + Fields — stacked (the rail is a column on desktop too) */}
+                  <div className="flex flex-col relative">
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/brand/logo-white.png" alt="" className="w-32 md:w-40 opacity-[0.012] select-none" draggable={false} />
                     </div>
 
                     {/* World image */}
-                    <div className="flex items-center justify-center pt-5 pb-2 px-4 md:p-5 relative z-10 md:w-[180px] shrink-0">
+                    <div className="flex items-center justify-center pt-5 pb-2 px-4 relative z-10 shrink-0">
                       <div className="relative">
                         <div className="absolute -top-2 -left-2 w-4 h-4 z-30"><div className="absolute top-0 left-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 left-0 h-full w-[1px] bg-ink/15" /></div>
                         <div className="absolute -top-2 -right-2 w-4 h-4 z-30"><div className="absolute top-0 right-0 w-full h-[1px] bg-ink/15" /><div className="absolute top-0 right-0 h-full w-[1px] bg-ink/15" /></div>
@@ -438,8 +474,22 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </div>
                 </div>
 
-                {/* ═══ SECTION TAB NAV — full width, above the active section ═══ */}
-                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {/* ═══ DIVIDER — desktop-only drag handle for the split ═══ */}
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize panel (double-click to reset)"
+                  onPointerDown={onDividerDown}
+                  onPointerMove={onDividerMove}
+                  onPointerUp={onDividerUp}
+                  onDoubleClick={onDividerReset}
+                  className="hidden md:flex md:row-span-2 items-center justify-center cursor-col-resize select-none touch-none group"
+                >
+                  <div className="w-[3px] h-12 rounded-full bg-ink/15 group-hover:bg-ink/40 group-active:bg-ink/60 transition-colors" />
+                </div>
+
+                {/* ═══ SECTION TAB NAV — sticky on mobile so sections stay reachable ═══ */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto sticky top-0 z-20 md:static" style={{ scrollbarWidth: 'none' }}>
                   {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
                     return (
@@ -461,7 +511,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                 </div>
 
                 {/* ═══ MRZ STRIP ═══ */}
-                <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04]">
+                <div className="bg-[var(--page-bg)] px-4 py-3 flex items-center justify-between border-t border-ink/[0.04] rounded-b-lg md:rounded-none md:col-span-3">
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-end gap-0 h-4">
                       {bars.map((b, i) => (
