@@ -357,7 +357,9 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
         aria-hidden
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
         style={{
-          width: CARD_W * 2.4,
+          // Capped at the viewport width — an unclipped 720px glow was
+          // widening the iOS layout viewport and shrinking the whole page.
+          width: `min(${CARD_W * 2.4}px, 100vw)`,
           height: CARD_H * 0.9,
           backgroundColor: '#e4fe52',
           opacity: 0.1,

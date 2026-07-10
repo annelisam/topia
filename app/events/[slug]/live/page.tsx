@@ -224,7 +224,15 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1a1a', color: INK }}>
-      <div className="mx-auto max-w-md px-5 pt-6 pb-16 flex flex-col gap-4">
+      {/* Safe-area padding: the installed PWA draws under the iOS status bar
+          and home indicator (viewport-fit=cover), so pad past both. */}
+      <div
+        className="mx-auto max-w-md px-5 flex flex-col gap-4"
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+        }}
+      >
 
         <div className="flex items-center justify-between">
           <Link href={`/events/${slug}`} className="font-mono text-[11px] uppercase tracking-widest no-underline" style={{ color: DIM }}>
@@ -245,7 +253,18 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           <>
             <div>
               <p style={meta}>Event mode</p>
-              <h1 className="heading-display text-[34px] leading-[0.95] uppercase mt-1" style={{ color: INK }}>
+              {/* .heading-display's -4px tracking is tuned for hero sizes —
+                  at this scale it mashes glyphs together, so override it. */}
+              <h1
+                className="heading-display uppercase mt-1"
+                style={{
+                  color: INK,
+                  fontSize: 'clamp(24px, 8vw, 34px)',
+                  lineHeight: 1.04,
+                  letterSpacing: '-0.02em',
+                  textWrap: 'balance',
+                }}
+              >
                 {event.eventName}
               </h1>
               <p className="font-mono text-[11px] uppercase tracking-widest mt-2" style={{ color: DIM }}>

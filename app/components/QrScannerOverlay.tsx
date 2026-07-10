@@ -46,7 +46,7 @@ export default function QrScannerOverlay({
 
   return createPortal(
     <div className="fixed inset-0 z-[2200] flex flex-col" style={{ backgroundColor: '#1a1a1a' }}>
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex items-center justify-between px-5 pb-4" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
         <span className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'rgba(245,240,232,0.55)' }}>{hint}</span>
         <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-[24px] leading-none p-1" style={{ color: '#f5f0e8' }} aria-label="Close scanner">×</button>
       </div>
@@ -60,7 +60,7 @@ export default function QrScannerOverlay({
           </div>
         )}
       </div>
-      <div className="px-5 py-5 min-h-[64px]">
+      <div className="px-5 pt-5 min-h-[64px]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
         {status && (
           <p className="font-mono text-[13px] font-bold" style={{ color: statusColor }}>{status.text}</p>
         )}

@@ -91,7 +91,9 @@ export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTab
   return (
     <nav
       className="fixed bottom-0 left-0 w-full z-[1000] md:hidden transition-transform duration-300 ease-out"
-      style={{ transform: open ? 'translateY(0)' : 'translateY(var(--nav-height))' }}
+      // Collapse offset includes the safe-area padding (viewport-fit=cover),
+      // otherwise the home-indicator strip stays visible when tucked.
+      style={{ transform: open ? 'translateY(0)' : 'translateY(calc(var(--nav-height) + env(safe-area-inset-bottom, 0px)))' }}
     >
       {/* Pull handle — always visible. The wrapper is click-through so the area
           around the pill never blocks the content behind it. */}
@@ -113,8 +115,9 @@ export default function MobileTabBar({ onMenuToggle, onOpenMessages }: MobileTab
         </button>
       </div>
 
-      {/* The tab bar — slides off-screen when collapsed */}
-      <div className="backdrop-blur-xl" style={{ backgroundColor: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)' }}>
+      {/* The tab bar — slides off-screen when collapsed. Bottom padding keeps
+          the tabs above the iPhone home indicator in the installed PWA. */}
+      <div className="backdrop-blur-xl" style={{ backgroundColor: 'var(--nav-bg)', borderTop: '1px solid var(--nav-border)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex items-center justify-around h-[var(--nav-height)] px-2">
           {TAB_LINKS.map((link) => {
             const isMessages = link.href === '/messages';

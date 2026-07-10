@@ -222,6 +222,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
   transition: background-color 0.3s ease, color 0.3s ease;
+  /* `hidden` on html alone doesn't stop iOS (esp. the installed PWA) from
+     widening the LAYOUT viewport to fit overflowing decor — the page then
+     renders shrunken with a dead zone on the right. `clip` forbids the
+     overflow without creating a scroll container (keeps sticky working). */
+  overflow-x: clip;
 }
 
 /* iOS Safari auto-zooms (and distorts the layout) when an input with text
