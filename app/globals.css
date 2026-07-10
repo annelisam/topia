@@ -227,6 +227,11 @@ body {
      renders shrunken with a dead zone on the right. `clip` forbids the
      overflow without creating a scroll container (keeps sticky working). */
   overflow-x: clip;
+  /* Installed-PWA (black-translucent status bar, viewport-fit=cover): page
+     content must clear the clock/notch. 0 in regular browsing, so this only
+     bites in standalone. Fixed-position surfaces don't inherit body padding —
+     they pad themselves (scanner overlay, takeover menu). */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* iOS Safari auto-zooms (and distorts the layout) when an input with text
