@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PageShell from '../components/PageShell';
+import { getWorldConfig } from '../components/world/worldConfig';
 
 interface WorldCard {
   id: string;
@@ -34,7 +35,8 @@ interface World {
 
 interface Point3D { x: number; y: number; z: number; }
 
-const COLOR_CYCLE = ['lime', 'blue', 'pink', 'orange', 'green'];
+// Colors come from getWorldConfig (slug hash) so a world's accent here always
+// matches its own detail page — the old index-based cycle didn't.
 const COLOR_DOT: Record<string, string> = { lime: 'bg-lime', blue: 'bg-blue', pink: 'bg-pink', orange: 'bg-orange', green: 'bg-green' };
 const COLOR_TEXT: Record<string, string> = { lime: 'text-[var(--accent-ink)]', blue: 'text-blue', pink: 'text-pink', orange: 'text-orange', green: 'text-green' };
 const GIF_MAP: Record<string, string> = { lime: '/gif/spiral.gif', blue: '/gif/surreal.gif', pink: '/gif/Topian-Gif.gif', orange: '/gif/spiral.gif', green: '/gif/surreal.gif' };
@@ -372,7 +374,7 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
   const [lastActive, setLastActive] = useState<{ data: WorldCard; color: string } | null>(null);
   const [search, setSearch] = useState('');
   const [mapFullscreen, setMapFullscreen] = useState(false);
-  const loading = false;
+  const [catFilter, setCatFilter] = useState<string | null>(null);
 
   // Detect current theme for canvas colors
   const [isDark, setIsDark] = useState(true);
@@ -388,10 +390,12 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
   const handleSelect = useCallback((slug: string) => router.push(`/worlds/${slug}`), [router]);
 
   const active = allWorlds.find(w => w.slug === activeWorld);
-  const activeColor = active ? COLOR_CYCLE[allWorlds.indexOf(active) % COLOR_CYCLE.length] : 'lime';
+  const activeColor = active ? getWorldConfig(active.slug).color : 'lime';
   const filteredWorlds = search
     ? allWorlds.filter(w => w.title.toLowerCase().includes(search.toLowerCase()))
     : allWorlds;
+  const categories = Array.from(new Set(allWorlds.map(w => w.category).filter((c): c is string => !!c)));
+  const mobileWorlds = filteredWorlds.filter(w => !catFilter || w.category === catFilter);
 
   useEffect(() => {
     if (active) setLastActive({ data: active, color: activeColor });
@@ -402,7 +406,109 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
       <PageShell>
         <section className="min-h-screen px-3 sm:px-4 md:px-6 py-3 md:py-6" style={{ backgroundColor: 'var(--page-bg)' }}>
           <div className="max-w-[var(--content-max)] mx-auto md:h-[calc(100vh-var(--nav-height,80px)-48px)]">
-            <div className="h-full grid grid-rows-[auto_auto_1fr] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
+
+            {/* ── Mobile explore — search + cards. The constellation is a
+                hover instrument, so it stays desktop-only; touch gets a
+                first-class card list in the same registry language. ── */}
+            <div className="md:hidden pb-24">
+              <div className="rounded-lg overflow-hidden mb-3" style={{ border: '1px solid var(--border-color)' }}>
+                <div className="p-5" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
+                  <span className="font-mono text-[11px] uppercase tracking-[2px]" style={{ color: 'var(--on-accent-muted)' }}>
+                    worlds // constellation
+                  </span>
+                  <h1 className="font-basement font-black text-[40px] leading-[0.85] uppercase mt-2" style={{ color: 'var(--accent-text, #1a1a1a)' }}>
+                    WORLDS
+                  </h1>
+                </div>
+                <div className="px-4 py-3" style={{ backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border-color)' }}>
+                  <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)', opacity: 0.7 }}>
+                    every world is an ecosystem — built by creators, for their communities.
+                  </span>
+                </div>
+              </div>
+
+              {/* 16px font so iOS doesn't zoom on focus */}
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="search worlds…"
+                className="w-full font-mono text-[16px] bg-transparent rounded-lg outline-none px-4 py-3 mb-3"
+                style={{ color: 'var(--foreground)', border: '1px solid var(--border-color)' }}
+              />
+
+              {categories.length > 1 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3" style={{ scrollbarWidth: 'none' }}>
+                  <button
+                    onClick={() => setCatFilter(null)}
+                    className="font-mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full whitespace-nowrap cursor-pointer transition-colors"
+                    style={catFilter === null
+                      ? { backgroundColor: 'var(--accent, #e4fe52)', color: 'var(--accent-text, #1a1a1a)', border: '1px solid transparent' }
+                      : { color: 'var(--text-muted)', border: '1px solid var(--border-color)', background: 'transparent' }}
+                  >
+                    All
+                  </button>
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setCatFilter(catFilter === cat ? null : cat)}
+                      className="font-mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full whitespace-nowrap cursor-pointer transition-colors"
+                      style={catFilter === cat
+                        ? { backgroundColor: 'var(--accent, #e4fe52)', color: 'var(--accent-text, #1a1a1a)', border: '1px solid transparent' }
+                        : { color: 'var(--text-muted)', border: '1px solid var(--border-color)', background: 'transparent' }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {mobileWorlds.length === 0 && (
+                  <p className="font-mono text-[12px] py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                    no worlds match{search ? ` “${search}”` : ''} yet.
+                  </p>
+                )}
+                {mobileWorlds.map(world => {
+                  const cfg = getWorldConfig(world.slug);
+                  return (
+                    <Link
+                      key={world.slug}
+                      href={`/worlds/${world.slug}`}
+                      className="block rounded-lg overflow-hidden no-underline"
+                      style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--surface)' }}
+                    >
+                      {world.imageUrl ? (
+                        <img src={world.imageUrl} alt="" className="w-full h-36 object-cover" />
+                      ) : (
+                        <div className={`w-full h-20 ${cfg.bg} opacity-80`} />
+                      )}
+                      <div className="p-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.bg}`} />
+                            <h2 className="font-basement font-black text-[17px] uppercase leading-none truncate" style={{ color: 'var(--foreground)' }}>
+                              {world.title}
+                            </h2>
+                          </div>
+                          <p className="font-mono text-[11px] uppercase tracking-wider mt-1.5 truncate" style={{ color: 'var(--text-muted)' }}>
+                            {[world.category, world.creatorName].filter(Boolean).join(' · ')}
+                          </p>
+                          {world.description && (
+                            <p className="font-mono text-[12px] mt-1.5 line-clamp-2" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
+                              {world.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-mono text-[14px] shrink-0" style={{ color: 'var(--text-muted)' }}>→</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="h-full hidden md:grid grid-rows-[auto_auto_1fr] grid-cols-1 md:grid-cols-[1fr_1fr] gap-[3px] rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
 
               {/* ROW 1 — Title bar */}
               <div className="p-3 sm:p-5 md:p-6 flex flex-col justify-between transition-colors duration-300" style={{ backgroundColor: 'var(--accent, #e4fe52)' }}>
@@ -445,8 +551,8 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
                   <span className="font-mono text-[12px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>→</span>
                 </div>
                 <div className="flex gap-1.5">
-                  {allWorlds.slice(0, 7).map((w, i) => (
-                    <div key={w.slug} className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[COLOR_CYCLE[i % COLOR_CYCLE.length]]} ${activeWorld === w.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} />
+                  {allWorlds.slice(0, 7).map((w) => (
+                    <div key={w.slug} className={`w-1.5 h-1.5 rounded-full ${COLOR_DOT[getWorldConfig(w.slug).color]} ${activeWorld === w.slug ? 'scale-[2]' : 'opacity-40'} transition-all`} />
                   ))}
                   {allWorlds.length > 7 && <span className="font-mono text-[13px] ml-1" style={{ color: 'var(--text-muted)' }}>+{allWorlds.length - 7}</span>}
                 </div>
@@ -457,22 +563,16 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
               <div className={`${mapFullscreen ? 'md:col-span-2' : ''} grid ${mapFullscreen ? 'grid-rows-[1fr]' : 'grid-rows-[2fr_1fr]'} gap-[3px] overflow-hidden transition-all duration-500`}>
                 {/* Galaxy Map */}
                 <div className="relative h-[250px] sm:h-[300px] md:h-auto md:min-h-[200px]" style={{ backgroundColor: 'var(--surface)' }}>
-                  {loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-mono text-[13px] uppercase tracking-wider animate-pulse" style={{ color: 'var(--foreground)', opacity: 0.3 }}>Loading constellation...</span>
-                    </div>
-                  ) : (
-                    <GalaxyMap
-                      worlds={orbitWorlds}
-                      activeWorld={activeWorld}
-                      activeData={lastActive?.data ?? null}
-                      activeColor={lastActive?.color ?? 'lime'}
-                      onHover={handleHover}
-                      onSelect={handleSelect}
-                      expanded={mapFullscreen}
-                      isDark={isDark}
-                    />
-                  )}
+                  <GalaxyMap
+                    worlds={orbitWorlds}
+                    activeWorld={activeWorld}
+                    activeData={lastActive?.data ?? null}
+                    activeColor={lastActive?.color ?? 'lime'}
+                    onHover={handleHover}
+                    onSelect={handleSelect}
+                    expanded={mapFullscreen}
+                    isDark={isDark}
+                  />
                   <div className="absolute bottom-2 left-3">
                     <span className="font-mono text-[13px] uppercase tracking-wider deco-text" style={{ color: 'var(--foreground)', opacity: 0.15 }} data-deco="topia://constellation" />
                   </div>
@@ -499,7 +599,7 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
 
                   <div className="relative z-10">
                     {filteredWorlds.map((world, i) => {
-                      const color = COLOR_CYCLE[i % COLOR_CYCLE.length];
+                      const color = getWorldConfig(world.slug).color;
                       const isActive = activeWorld === world.slug;
                       return (
                         <Link
@@ -570,10 +670,9 @@ export default function WorldsPageClient({ initialWorlds }: { initialWorlds: Wor
                       </div>
                       <Link
                         href={`/worlds/${active.slug}`}
-                        className="flex items-center justify-center px-6 no-underline transition-opacity hover:opacity-80"
-                        style={{ backgroundColor: `var(--${activeColor === 'lime' ? 'lime' : activeColor})` }}
+                        className={`flex items-center justify-center px-6 no-underline transition-opacity hover:opacity-80 ${getWorldConfig(active.slug).bg}`}
                       >
-                        <span className="font-mono text-[12px] uppercase tracking-wider font-bold" style={{ color: activeColor === 'lime' || activeColor === 'green' ? '#1a1a1a' : '#f5f0e8' }}>
+                        <span className={`font-mono text-[12px] uppercase tracking-wider font-bold ${getWorldConfig(active.slug).textOn}`}>
                           enter →
                         </span>
                       </Link>
