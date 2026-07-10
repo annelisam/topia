@@ -192,7 +192,9 @@ export default function WorldDashboardLayout({
             )}
             <div className="min-w-0">
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-obsidian/50 block">topia://world-manage</span>
-              <h1 className="font-basement font-black text-[clamp(20px,3vw,28px)] uppercase leading-[0.9] text-obsidian mt-0.5 truncate">
+              {/* Wraps instead of truncating — long titles get smaller on
+                  phones and break across lines, never "TEST WI." */}
+              <h1 className="font-basement font-black text-[clamp(16px,4.5vw,28px)] uppercase leading-[1] text-obsidian mt-0.5 break-words [text-wrap:balance]">
                 {world.title}
               </h1>
             </div>

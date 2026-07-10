@@ -60,7 +60,7 @@ export default function ProfilePreviewCard({ name, username, bio, avatarUrl, pat
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <div className="font-basement text-[18px] uppercase leading-none text-ink truncate">
+            <div className="font-basement text-[clamp(15px,4vw,18px)] uppercase leading-tight text-ink break-words">
               {name || (username ? `@${username}` : 'YOUR NAME')}
             </div>
             {pronouns && (
