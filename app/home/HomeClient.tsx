@@ -418,7 +418,7 @@ function HomeTVPlayer({ episode }: { episode: Episode }) {
       {/* Title + open-TV link */}
       <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-basement font-black text-[clamp(18px,2.5vw,28px)] uppercase text-bone leading-tight truncate">{episode.title}</h3>
+          <h3 className="font-basement font-black text-[clamp(16px,2.5vw,28px)] uppercase text-bone leading-tight break-words line-clamp-2">{episode.title}</h3>
           {(episode.seriesTitle || episode.guestName) && (
             <span className="font-mono text-[11px] text-bone/60">{[episode.seriesTitle, episode.guestName].filter(Boolean).join(' · ')}</span>
           )}
