@@ -47,6 +47,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   interactiveWidget: "overlays-content",
   themeColor: "#1a1a1a",
+  // Required for env(safe-area-inset-*) to be non-zero on iOS — the installed
+  // PWA draws edge-to-edge (black-translucent status bar), so surfaces pad
+  // themselves with the safe-area insets instead.
+  viewportFit: "cover",
 };
 
 // Prevent flash of wrong theme on load. Accent is fixed site-wide to lime —
