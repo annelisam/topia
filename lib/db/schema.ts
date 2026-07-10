@@ -211,12 +211,20 @@ export const notifications = pgTable('notifications', {
   index('notifications_recipient_id_created_at_idx').on(t.recipientId, t.createdAt),
 ]);
 
-// World invitations - pending invites for world membership
+// World invitations - pending invites for world membership. Two shapes:
+//  - platform user: inviteeId set (accepted via notifications, as before)
+//  - "ghost" collaborator not on Topia yet: inviteeId null + email/name/token.
+//    Their NAME shows on the world immediately as a pending credit; the email
+//    carries a claim link (/invite/world/<token>); accepting resolves-or-
+//    creates the user, sets inviteeId, and adds the membership.
 export const worldInvitations = pgTable('world_invitations', {
   id: uuid('id').defaultRandom().primaryKey(),
   worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
   inviterId: uuid('inviter_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  inviteeId: uuid('invitee_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  inviteeId: uuid('invitee_id').references(() => users.id, { onDelete: 'cascade' }), // null for email ghosts until claimed
+  email: text('email'),                                  // ghost invites only
+  name: text('name'),                                    // display credit before claim
+  token: text('token').unique(),                         // claim-link token (ghosts only)
   role: text('role').notNull(), // 'world_builder' | 'collaborator'
   status: text('status').default('pending').notNull(), // 'pending' | 'accepted' | 'declined'
   createdAt: timestamp('created_at').defaultNow().notNull(),
