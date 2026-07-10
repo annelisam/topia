@@ -25,6 +25,8 @@ export interface CommentItem {
   authorUsername: string | null;
   authorAvatarUrl: string | null;
   isHost?: boolean;
+  category?: string | null;
+  pinned?: boolean;
   reactions?: ReactionSummary[];
   replies?: CommentItem[];
 }
@@ -32,9 +34,12 @@ export interface CommentItem {
 interface Props {
   endpoint: string;
   slug: string;
-  kind: 'tool' | 'event';
+  kind: 'tool' | 'event' | 'world';
   gateHint: string;
   title?: string;
+  /** When set (world forums): category chips filter the feed and the composer
+   * tags new top-level posts. Values are sent as `category` in the POST. */
+  categories?: readonly { value: string; label: string }[];
 }
 
 function timeAgo(iso: string): string {
@@ -49,7 +54,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function CommentSection({ endpoint, slug, kind, gateHint, title }: Props) {
+export default function CommentSection({ endpoint, slug, kind, gateHint, title, categories }: Props) {
   const { user, authenticated } = usePrivy();
   const [items, setItems] = useState<CommentItem[]>([]);
   const [canPost, setCanPost] = useState(false);
@@ -70,6 +75,10 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Category state (world forums): composer tag + feed filter
+  const [category, setCategory] = useState<string>(categories?.[0]?.value ?? '');
+  const [filterCat, setFilterCat] = useState<string | null>(null);
+
   // Per-thread reply state — keyed by parent comment id
   const [replyOpenFor, setReplyOpenFor] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -80,7 +89,8 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
   const [replyUploading, setReplyUploading] = useState(false);
   const [replySubmitting, setReplySubmitting] = useState(false);
 
-  const targetType = kind === 'tool' ? 'tool_comment' : 'event_comment';
+  const targetType = kind === 'tool' ? 'tool_comment' : kind === 'world' ? 'world_post' : 'event_comment';
+  const hostLabel = kind === 'world' ? 'Builder' : 'Host';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,12 +143,13 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       const payload: Record<string, unknown> = { privyId: user.id, slug };
       if (body.trim()) payload.body = body.trim();
       if (kind === 'tool' && rating > 0) payload.rating = rating;
-      if (kind === 'event' && media) {
+      if (kind !== 'tool' && media) {
         payload.imageUrl = media.url;
-      } else if (kind === 'event' && gif) {
+      } else if (kind !== 'tool' && gif) {
         payload.imageUrl = gif.url;
         payload.giphyId = gif.id;
       }
+      if (categories && category) payload.category = category;
       const res = await fetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -176,9 +187,9 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
     try {
       const payload: Record<string, unknown> = { privyId: user.id, slug, parentId };
       if (replyBody.trim()) payload.body = replyBody.trim();
-      if (kind === 'event' && replyMedia) {
+      if (kind !== 'tool' && replyMedia) {
         payload.imageUrl = replyMedia.url;
-      } else if (kind === 'event' && replyGif) {
+      } else if (kind !== 'tool' && replyGif) {
         payload.imageUrl = replyGif.url;
         payload.giphyId = replyGif.id;
       }
@@ -192,6 +203,20 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
       await load();
     } finally {
       setReplySubmitting(false);
+    }
+  }
+
+  // Builders pin/unpin top-level world posts — server re-orders pinned first.
+  async function togglePin(c: CommentItem) {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId: user.id, id: c.id, pinned: !c.pinned }),
+      });
+      if (res.ok) await load();
+    } catch (err) {
+      console.error('pin toggle failed', err);
     }
   }
 
@@ -227,7 +252,15 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
               <span className="font-mono text-[11px] text-ink/60 font-bold">{c.authorName || 'anon'}</span>
             )}
             {c.isHost && (
-              <span className="font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold leading-none">Host</span>
+              <span className="font-mono text-[8px] uppercase tracking-[2px] bg-lime text-obsidian px-1.5 py-0.5 rounded-sm font-bold leading-none">{hostLabel}</span>
+            )}
+            {c.pinned && !isReply && (
+              <span className="font-mono text-[8px] uppercase tracking-[2px] border border-ink/20 text-ink/50 px-1.5 py-0.5 rounded-sm leading-none">📌 pinned</span>
+            )}
+            {categories && c.category && !isReply && (
+              <span className="font-mono text-[8px] uppercase tracking-[2px] text-ink/35 leading-none">
+                #{categories.find((x) => x.value === c.category)?.label ?? c.category}
+              </span>
             )}
             {kind === 'tool' && c.rating != null && !isReply && (
               <span className="flex items-center gap-0.5 text-[var(--accent-ink)]">
@@ -276,6 +309,16 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             </button>
           )}
 
+          {/* Pin — builders on top-level world posts */}
+          {!isReply && kind === 'world' && viewerIsHost && (
+            <button
+              onClick={() => togglePin(c)}
+              className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30 hover:text-ink bg-transparent border-none cursor-pointer mt-1.5 px-0 ml-3"
+            >
+              {c.pinned ? 'unpin' : '📌 pin'}
+            </button>
+          )}
+
           {/* Delete — author (own comment) or event host (any comment) */}
           {canDelete && (
             <button
@@ -317,7 +360,7 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
                 </div>
               )}
               <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-ink/[0.05]">
-                {kind === 'event' && (
+                {kind !== 'tool' && (
                   <>
                     <label className={`font-mono text-[9px] uppercase tracking-[2px] px-1.5 py-0.5 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition ${replyUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                       {replyUploading ? '…' : '+ photo / video'}
@@ -431,8 +474,28 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
             </div>
           )}
 
+          {/* Category picker — tags the post (world forums) */}
+          {categories && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {categories.map((cat) => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setCategory(cat.value)}
+                  className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-sm border transition cursor-pointer ${
+                    category === cat.value
+                      ? 'bg-lime text-obsidian border-lime font-bold'
+                      : 'bg-transparent text-ink/45 border-ink/15 hover:text-ink hover:border-ink/40'
+                  }`}
+                >
+                  #{cat.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-ink/[0.05]">
-            {kind === 'event' && (
+            {kind !== 'tool' && (
               <>
                 <label className={`font-mono text-[10px] uppercase tracking-[2px] px-2 py-1 bg-transparent border border-ink/15 text-ink/60 hover:text-ink hover:border-[var(--accent-ink)]/40 rounded-sm transition ${uploadingMedia ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}>
                   {uploadingMedia ? 'uploading…' : '+ photo / video'}
@@ -459,14 +522,43 @@ export default function CommentSection({ endpoint, slug, kind, gateHint, title }
         </div>
       )}
 
+      {/* Category filter — world forums */}
+      {categories && items.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setFilterCat(null)}
+            className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-full border transition cursor-pointer ${
+              filterCat === null ? 'bg-lime text-obsidian border-lime font-bold' : 'bg-transparent text-ink/45 border-ink/15 hover:text-ink'
+            }`}
+          >
+            All
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.value}
+              type="button"
+              onClick={() => setFilterCat(filterCat === cat.value ? null : cat.value)}
+              className={`font-mono text-[9px] uppercase tracking-[2px] px-2 py-1 rounded-full border transition cursor-pointer ${
+                filterCat === cat.value ? 'bg-lime text-obsidian border-lime font-bold' : 'bg-transparent text-ink/45 border-ink/15 hover:text-ink'
+              }`}
+            >
+              #{cat.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Comments list */}
       {loading ? (
         <p className="font-mono text-[11px] text-ink/30 py-4 text-center">loading…</p>
       ) : items.length === 0 ? (
-        <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/25 py-4 text-center">no comments yet</p>
+        <p className="font-mono text-[11px] uppercase tracking-[2px] text-ink/25 py-4 text-center">
+          {kind === 'world' ? 'nothing here yet — start the flow' : 'no comments yet'}
+        </p>
       ) : (
         <div className="space-y-3">
-          {items.map((c) => <CommentRow key={c.id} c={c} />)}
+          {(filterCat ? items.filter((c) => c.category === filterCat) : items).map((c) => <CommentRow key={c.id} c={c} />)}
         </div>
       )}
 

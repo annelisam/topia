@@ -13,6 +13,7 @@ import ProjectsLayer, { type ProjectItem } from '../../components/world/Projects
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
 import ToolsLayer from '../../components/world/ToolsLayer';
 import ArchitectsLayer from '../../components/world/ArchitectsLayer';
+import ForumLayer from '../../components/world/ForumLayer';
 import { type ToolMiniData } from '../../resources/tools/ToolMiniCard';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
 
@@ -59,6 +60,7 @@ interface WorldDetail {
 
 const SECTIONS = [
   { id: 'overview',   label: 'OVERVIEW' },
+  { id: 'forum',      label: 'FORUM' },
   { id: 'projects',   label: 'PROJECTS' },
   { id: 'architects', label: 'ARCHITECTS' },
   { id: 'events',     label: 'EVENTS' },
@@ -301,6 +303,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
   function renderSection() {
     switch (activeSection) {
+      case 'forum':      return <ForumLayer slug={slug} worldTitle={world?.title ?? ''} />;
       case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} />;
       case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;

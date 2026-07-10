@@ -16,7 +16,7 @@ export interface ReactionSummary {
  * round-trip.
  */
 export async function getReactionsForTargets(
-  targetType: 'guestbook' | 'tool_comment' | 'event_comment' | 'event_photo',
+  targetType: 'guestbook' | 'tool_comment' | 'event_comment' | 'event_photo' | 'world_post',
   targetIds: string[],
   viewerId: string | null,
 ): Promise<Record<string, ReactionSummary[]>> {
