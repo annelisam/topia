@@ -318,7 +318,7 @@ export default function EventsPageClient({
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="search events, cities, descriptions…  press /"
+                    placeholder="search events, cities…"
                     className="w-full bg-transparent border border-[var(--border-color)] focus:border-[var(--border-color)] font-mono text-[13px] text-[var(--foreground)] placeholder:text-[var(--foreground)]/25 px-3 py-1.5 pr-10 rounded-sm outline-none transition-colors"
                   />
                   {search && (

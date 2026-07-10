@@ -265,13 +265,16 @@ body {
 
 /* WCAG 2.5.8 minimum target size: the many tiny text buttons (approve /
    delete / copy / pin links) keep their visual size but get a ≥24px hit
-   area on touch screens. Links are left alone — inline anchors can't take
-   a min-height without breaking text flow. */
+   area on touch screens. HEIGHT ONLY — setting min-width here replaces the
+   default `min-width: auto` that stops flex items shrinking below their
+   content, which crushed button rows (events filter chips) into each other
+   on real touch devices. Text buttons exceed 24px wide naturally. Links are
+   left alone — inline anchors can't take a min-height without breaking
+   text flow. */
 @media (pointer: coarse) {
   button,
   [role='button'] {
     min-height: 24px;
-    min-width: 24px;
   }
 }
 
