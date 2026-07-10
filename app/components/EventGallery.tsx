@@ -350,10 +350,10 @@ export default function EventGallery({ slug, isHost, privyId }: Props) {
 
       {/* Immersive full-screen album */}
       {albumOpen && (
-        <div className="fixed inset-0 z-[2150] overflow-y-auto" style={{ backgroundColor: 'var(--background)' }}>
+        <div className="fixed inset-0 z-[2150] overflow-y-auto" style={{ backgroundColor: 'var(--background)', paddingTop: 'var(--safe-top, 0px)' }}>
           <div
-            className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8 py-4 border-b backdrop-blur-md"
-            style={{ borderColor: 'var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--background) 80%, transparent)' }}
+            className="sticky z-10 flex items-center justify-between px-4 sm:px-8 py-4 border-b backdrop-blur-md"
+            style={{ top: 'var(--safe-top, 0px)', borderColor: 'var(--border-color)', backgroundColor: 'color-mix(in srgb, var(--background) 80%, transparent)' }}
           >
             <p className="font-mono text-[14px] uppercase tracking-[0.15em] font-bold" style={{ color: 'var(--foreground)' }}>
               Album <span className="ml-1" style={{ color: 'var(--text-muted)' }}>{all.length}</span>
