@@ -74,8 +74,9 @@ export default function DashboardOverviewPage() {
 
         {/* Stats strip + quick actions */}
         <div className="bg-[var(--page-bg)] border-t border-ink/[0.04] flex flex-col lg:flex-row lg:items-stretch lg:divide-x divide-ink/[0.06]">
-          {/* Stats */}
-          <div className="px-5 py-3 flex items-center gap-0 overflow-x-auto lg:flex-1">
+          {/* Stats — wrap into a 3-up grid on mobile (a sideways-scrolling
+              strip clipped the tail stats); divider-separated row from sm up. */}
+          <div className="px-5 py-3 grid grid-cols-3 gap-y-3 sm:flex sm:items-center sm:gap-0 sm:overflow-x-auto lg:flex-1">
             {([
               { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
               { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events,    href: '/events' },
@@ -84,7 +85,7 @@ export default function DashboardOverviewPage() {
               { label: 'Connected', value: stats?.following ?? 0,    delta: undefined,                href: null },
             ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
               const inner = (
-                <div className={`flex flex-col px-3 md:px-4 ${i < arr.length - 1 ? 'border-r border-ink/[0.06]' : ''} ${i === 0 ? 'pl-0' : ''}`}>
+                <div className={`flex flex-col sm:px-4 ${i < arr.length - 1 ? 'sm:border-r sm:border-ink/[0.06]' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}>
                   <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">{stat.label}</span>
                   <span className="font-mono text-[20px] md:text-[24px] text-ink font-bold leading-none mt-1 flex items-baseline">
                     {stat.value}
@@ -100,12 +101,14 @@ export default function DashboardOverviewPage() {
             })}
           </div>
 
-          {/* Quick actions in the same band — primary CTA + secondaries */}
-          <div className="px-5 py-3 flex flex-wrap items-center gap-2 lg:shrink-0">
+          {/* Quick actions in the same band — primary CTA + secondaries.
+              2×2 grid on mobile (free-wrapping left a lone chip on row two);
+              inline row from sm up. */}
+          <div className="px-5 py-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:shrink-0">
             {!isCatalyst && (
               <Link
                 href="/dashboard/create-world"
-                className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-3 py-1.5 rounded-sm hover:opacity-90 transition no-underline"
+                className="text-center font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian px-3 py-2 rounded-sm hover:opacity-90 transition no-underline"
               >
                 + World
               </Link>
@@ -113,20 +116,20 @@ export default function DashboardOverviewPage() {
             {!isCatalyst && (
               <Link
                 href="/events/create"
-                className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+                className="text-center font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-2 rounded-sm transition no-underline"
               >
                 + Event
               </Link>
             )}
             <Link
               href="/resources/tools?submit=1"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+              className="text-center font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-2 rounded-sm transition no-underline"
             >
               + Tool
             </Link>
             <Link
               href="/resources/grants?submit=1"
-              className="font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-1.5 rounded-sm transition no-underline"
+              className="text-center font-mono text-[11px] uppercase tracking-[2px] text-ink/60 border border-ink/15 hover:border-[var(--accent-ink)]/50 hover:text-ink px-3 py-2 rounded-sm transition no-underline"
             >
               + Grant
             </Link>
