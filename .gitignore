@@ -43,3 +43,4 @@ next-env.d.ts
 .env*.local
 scripts/avatar-backup-*.json
 scripts/world-image-backup-*.json
+/.next-alt/
