@@ -78,7 +78,10 @@ export default function MessagesModal({
       <div
         ref={mobileLayerRef}
         className={`fixed inset-0 z-[2101] flex flex-col text-ink sm:hidden transition-opacity duration-200 ${shown ? 'opacity-100' : 'opacity-0'}`}
-        style={{ height: '100dvh', overflow: 'hidden' }}
+        // Fixed overlays don't inherit the body's status-bar padding — take
+        // the same --safe-top so the MESSAGES bar clears the clock in the
+        // installed PWA. Keyboard/composer logic untouched (border-box).
+        style={{ height: '100dvh', overflow: 'hidden', paddingTop: 'var(--safe-top, 0px)' }}
       >
         {topBar}
         <MessagesClient initialConversationId={initialConversationId} />

@@ -279,17 +279,22 @@ export default function TypographicSphere({
       className="relative"
       style={{
         backgroundColor: bgColor,
-        width: 'min(100vw, 100vh, 900px)',
-        height: 'min(100vw, 100vh, 900px)',
+        // 100% (not 100vw) so a padded parent doesn't push the sphere past
+        // the viewport edge on phones.
+        width: 'min(100%, 100vh, 900px)',
+        aspectRatio: '1 / 1',
+        maxHeight: 'min(100vh, 900px)',
       }}
     >
       {/* Loader */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center font-mono text-sm transition-opacity duration-300 ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full px-4 text-center font-mono text-sm transition-opacity duration-300 ${isLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         style={{ color }}
       >
         <div>LOADING</div>
-        <div className="mt-3 tracking-widest">{loaderBar}</div>
+        {/* Block-glyph bar is wider than small phones — clip inside the
+            sphere instead of bleeding past the viewport. */}
+        <div className="mt-3 tracking-widest max-w-full overflow-hidden whitespace-nowrap">{loaderBar}</div>
       </div>
 
       {/* Canvas */}

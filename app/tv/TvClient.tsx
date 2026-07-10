@@ -212,9 +212,10 @@ export default function TvClient({ initialEpisodes }: { initialEpisodes: Episode
               </span>
             </div>
 
-            {/* ROW 2 — Category tabs + Search */}
-            <div className="md:col-span-2 bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
+            {/* ROW 2 — Category tabs + Search. Wraps on mobile so no chip or
+                the search field ever pushes past the viewport. */}
+            <div className="md:col-span-2 bg-[var(--page-bg)] border-t border-b border-ink/[0.04] px-4 py-2 flex items-center justify-between gap-2 flex-wrap md:flex-nowrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {CATEGORIES.map((cat) => {
                   const cc = cat !== 'All' ? CAT_COLOR[cat] : null;
                   const isActive = activeCategory === cat;
