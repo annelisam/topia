@@ -10,7 +10,7 @@ export interface ReactionSummary {
 }
 
 interface Props {
-  targetType: 'guestbook' | 'tool_comment' | 'event_comment';
+  targetType: 'guestbook' | 'tool_comment' | 'event_comment' | 'world_post';
   targetId: string;
   initial: ReactionSummary[];
   /** Force compact density (smaller pills) for tight contexts like replies. */

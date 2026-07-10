@@ -442,6 +442,27 @@ export const eventPrizes = pgTable('event_prizes', {
   index('event_prizes_event_id_idx').on(t.eventId),
 ]);
 
+// World forum — chatroom-flow posts scoped to a world. Same shape as
+// eventComments (so the shared CommentSection component drives it) plus
+// category chips and builder pins. One-level replies via parentId (null =
+// top-level; replies carry no category). Posting is gated to world members
+// (any role); builders can pin and moderate.
+export const worldPosts = pgTable('world_posts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  body: text('body'),
+  imageUrl: text('image_url'),
+  giphyId: text('giphy_id'),
+  category: text('category'),                    // 'general' | 'drops' | 'questions' | 'show'
+  pinned: boolean('pinned').notNull().default(false),
+  parentId: uuid('parent_id'),                   // top-level when null
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('world_posts_world_id_idx').on(t.worldId),
+  index('world_posts_parent_id_idx').on(t.parentId),
+]);
+
 // TOPIA TV content
 export const tvContent = pgTable('tv_content', {
   id: uuid('id').defaultRandom().primaryKey(),

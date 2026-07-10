@@ -13,7 +13,7 @@ import { and, eq } from 'drizzle-orm';
  * GET is not exposed here; reactions are fetched alongside the parent
  * via the comments / guestbook endpoints (one round-trip).
  */
-const ALLOWED_TARGET_TYPES = new Set(['guestbook', 'tool_comment', 'event_comment', 'event_photo']);
+const ALLOWED_TARGET_TYPES = new Set(['guestbook', 'tool_comment', 'event_comment', 'event_photo', 'world_post']);
 // Curated quick reactions — keep this list short so the bar stays compact.
 const ALLOWED_EMOJI = new Set(['❤️', '🔥', '👍', '😂', '👀', '🎉']);
 
