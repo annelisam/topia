@@ -328,21 +328,32 @@ export default function DashboardSidebar() {
   );
 
   /* ── Mobile tab bar ──────────────────────────────────── */
+  // Fixed elements don't inherit body's --safe-top padding, so the bar pads
+  // itself — without this the installed PWA draws the tabs under the iOS
+  // clock. Frosted like the bottom pill so both read as app chrome.
   const mobileTabs = (
-    <div className="sm:hidden fixed top-0 left-0 right-0 z-20 border-b border-ink/[0.06] overflow-x-auto bg-[var(--page-bg)]">
-      <div className="flex items-center gap-0.5 px-3 py-1.5" style={{ scrollbarWidth: 'none' }}>
+    <div
+      className="sm:hidden fixed top-0 left-0 right-0 z-20 border-b backdrop-blur-xl"
+      style={{
+        paddingTop: 'var(--safe-top)',
+        backgroundColor: 'color-mix(in srgb, var(--page-bg) 85%, transparent)',
+        borderColor: 'color-mix(in srgb, var(--page-text) 10%, transparent)',
+      }}
+    >
+      <div className="flex items-center gap-1 px-3 py-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
         {/* Mobile context indicator */}
         {currentWorld && (
           <Link
             href="/dashboard"
-            className="shrink-0 font-mono text-[12px] uppercase tracking-wider px-2 py-1 rounded text-ink/40 hover:text-ink transition no-underline"
+            aria-label="Back to personal dashboard"
+            className="shrink-0 w-9 h-9 flex items-center justify-center font-mono text-[14px] rounded-sm text-ink/40 hover:text-ink transition no-underline"
           >
             ←
           </Link>
         )}
 
         {currentWorld && (
-          <span className="shrink-0 font-mono text-[11px] font-bold uppercase tracking-wider px-1 truncate max-w-[80px] text-ink/50">
+          <span className="shrink-0 font-mono text-[11px] font-bold uppercase tracking-wider px-1 truncate max-w-[96px] text-ink/50">
             {currentWorld.worldTitle}
           </span>
         )}
@@ -352,15 +363,16 @@ export default function DashboardSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`shrink-0 font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm transition-colors no-underline ${
-              isActive(item.href) ? 'bg-lime text-obsidian font-bold' : 'text-ink/40 hover:text-ink'
+            className={`shrink-0 h-9 flex items-center font-mono text-[11px] uppercase tracking-wider px-3 rounded-sm transition-colors no-underline ${
+              isActive(item.href) ? 'bg-lime text-obsidian font-bold' : 'text-ink/50 hover:text-ink'
             }`}
           >
             {item.label}
           </Link>
         ))}
 
-        {/* On personal view, show world shortcuts */}
+        {/* On personal view, world shortcuts as avatar chips — full names
+            overflowed the strip and forced sideways scrolling. */}
         {!currentWorld && sortedWorlds.length > 0 && (
           <>
             <span className="shrink-0 w-px h-4 mx-1 bg-ink/15" />
@@ -368,9 +380,18 @@ export default function DashboardSidebar() {
               <Link
                 key={w.worldId}
                 href={`/dashboard/worlds/${w.worldSlug}`}
-                className="shrink-0 font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm text-ink/40 hover:text-ink transition no-underline"
+                aria-label={w.worldTitle}
+                title={w.worldTitle}
+                className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center no-underline hover:bg-ink/[0.05] transition-colors"
               >
-                {w.worldTitle}
+                {w.worldImageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={w.worldImageUrl} alt="" className="w-[26px] h-[26px] rounded-full object-cover border border-ink/10" />
+                ) : (
+                  <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center font-basement text-[11px] bg-lime text-obsidian">
+                    {w.worldTitle[0]?.toUpperCase()}
+                  </span>
+                )}
               </Link>
             ))}
           </>

@@ -57,7 +57,9 @@ export default function ThemeToggle({ embedded = false }: { embedded?: boolean }
   return (
     <button
       onClick={toggle}
-      className="fixed bottom-6 right-6 z-[100] w-8 h-8 rounded-full border flex items-center justify-center transition-all backdrop-blur-sm"
+      // On mobile the floating pill nav owns the bottom edge — lift the toggle
+      // above it; back to the corner once the pill is gone (md+).
+      className="fixed bottom-[var(--mobile-nav-clearance)] md:bottom-6 right-6 z-[100] w-8 h-8 rounded-full border flex items-center justify-center transition-all backdrop-blur-sm"
       style={{
         borderColor: 'rgba(245, 240, 232, 0.15)',
         backgroundColor: 'rgba(26, 26, 26, 0.8)',
