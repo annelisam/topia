@@ -224,14 +224,11 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1a1a', color: INK }}>
-      {/* Safe-area padding: the installed PWA draws under the iOS status bar
-          and home indicator (viewport-fit=cover), so pad past both. */}
+      {/* Top safe-area comes from the global body padding; only the bottom
+          (home indicator) needs handling here. */}
       <div
-        className="mx-auto max-w-md px-5 flex flex-col gap-4"
-        style={{
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
-        }}
+        className="mx-auto max-w-md px-5 pt-5 flex flex-col gap-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)' }}
       >
 
         <div className="flex items-center justify-between">
