@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next allows one `next dev` per dist dir (.next/dev/lock). A second
+  // session runs its own server by setting NEXT_DIST_DIR (see
+  // .claude/launch.json "topia-alt"); default is unchanged.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   serverExternalPackages: [],
   // Covers/avatars live on Vercel Blob AND external hosts (Partiful/Luma
   // imports, social CDNs), so allow any https source; next/image call sites

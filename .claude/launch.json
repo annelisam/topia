@@ -1,1 +1,25 @@
-{"version":"0.0.1","configurations":[{"name":"topia","runtimeExecutable":"/bin/zsh","runtimeArgs":["-c","export PATH=/opt/homebrew/bin:$PATH && exec npm run dev"],"port":3000,"autoPort":true}]}
+{
+ "version": "0.0.1",
+ "configurations": [
+  {
+   "name": "topia",
+   "runtimeExecutable": "/bin/zsh",
+   "runtimeArgs": [
+    "-c",
+    "export PATH=/opt/homebrew/bin:$PATH && exec npm run dev"
+   ],
+   "port": 3000,
+   "autoPort": true
+  },
+  {
+   "name": "topia-alt",
+   "runtimeExecutable": "/bin/zsh",
+   "runtimeArgs": [
+    "-c",
+    "export PATH=/opt/homebrew/bin:$PATH && export NEXT_DIST_DIR=.next-alt && exec npm run dev -- -p 3001"
+   ],
+   "port": 3001,
+   "autoPort": true
+  }
+ ]
+}
