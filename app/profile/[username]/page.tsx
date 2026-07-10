@@ -534,8 +534,11 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
 
-                {/* ═══ ROW 3 — SECTION TAB NAV ═══ */}
-                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {/* ═══ ROW 3 — SECTION TAB NAV ═══
+                    Wraps on mobile so every tab is always fully visible (a
+                    scrolling row reads as cut-off text on phones); single
+                    row with the section counter on md+. */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 flex-wrap md:flex-nowrap md:overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                   {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
                     return (
@@ -548,7 +551,7 @@ export default function PublicProfilePage() {
                       </button>
                     );
                   })}
-                  <span className="font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
+                  <span className="hidden md:inline font-mono text-[9px] text-ink/15 ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
                 {/* ═══ ROW 4 — ACTIVE SECTION CONTENT ═══ */}

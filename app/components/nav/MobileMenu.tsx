@@ -55,7 +55,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         transition-opacity duration-300 ease-out
         ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
       `}
-      style={{ backgroundColor: 'var(--page-bg)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      style={{ backgroundColor: 'var(--page-bg)', paddingTop: 'var(--safe-top, 0px)' }}
     >
       {/* Header */}
       <div

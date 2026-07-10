@@ -230,8 +230,20 @@ body {
   /* Installed-PWA (black-translucent status bar, viewport-fit=cover): page
      content must clear the clock/notch. 0 in regular browsing, so this only
      bites in standalone. Fixed-position surfaces don't inherit body padding —
-     they pad themselves (scanner overlay, takeover menu). */
-  padding-top: env(safe-area-inset-top, 0px);
+     they pad themselves with the same var (scanner overlay, takeover menu). */
+  padding-top: var(--safe-top);
+}
+
+/* --safe-top: the status-bar clearance. env() alone in the browser; in the
+   installed app (display-mode: standalone) it's floored at 24px so even
+   devices/OS states where env() reports 0 never draw text under the clock. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), 24px);
+  }
 }
 
 /* iOS Safari auto-zooms (and distorts the layout) when an input with text

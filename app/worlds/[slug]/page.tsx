@@ -438,8 +438,9 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </div>
                 </div>
 
-                {/* ═══ SECTION TAB NAV — full width, above the active section ═══ */}
-                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {/* ═══ SECTION TAB NAV — full width, above the active section.
+                    Wraps on mobile so no tab is ever cut off; single row + counter on md+. ═══ */}
+                <div className="bg-[var(--page-bg)] border-b border-ink/[0.06] px-4 py-2 flex items-center gap-1 flex-wrap md:flex-nowrap md:overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                   {visibleSections.map((s) => {
                     const isActive = activeSection === s.id;
                     return (
@@ -452,7 +453,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                       </button>
                     );
                   })}
-                  <span className="font-mono text-[9px] text-[var(--text-muted)] ml-auto shrink-0">{visibleSections.length} sections</span>
+                  <span className="hidden md:inline font-mono text-[9px] text-[var(--text-muted)] ml-auto shrink-0">{visibleSections.length} sections</span>
                 </div>
 
                 {/* ═══ ACTIVE SECTION ═══ */}
