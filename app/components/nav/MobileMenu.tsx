@@ -15,6 +15,7 @@ const NAV_LINKS: NavItem[] = [
   { href: '/profile', label: 'Passport' },
   { href: '/tv', label: 'Topia TV' },
   { href: '/events', label: 'Events' },
+  { href: '/worlds', label: 'Worlds' },
   {
     label: 'Resources',
     children: [

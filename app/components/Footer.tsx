@@ -39,6 +39,7 @@ export default function Footer() {
               <FooterLink href={passportHref}>Passport</FooterLink>
               <FooterLink href="/tv">Topia TV</FooterLink>
               <FooterLink href="/events">Events</FooterLink>
+              <FooterLink href="/worlds">Worlds</FooterLink>
               <FooterLink href="/resources/tools">Tools</FooterLink>
               <FooterLink href="/resources/grants">Grants</FooterLink>
               <FooterLink href="/about">About</FooterLink>
