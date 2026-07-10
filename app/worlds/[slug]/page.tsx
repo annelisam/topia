@@ -55,6 +55,9 @@ interface WorldDetail {
   creatorWebsiteUrl: string | null;
   creatorCountry: string | null;
   members: WorldMember[];
+  // Email invitees who haven't claimed their profile yet — shown as pending
+  // credits (name only; the API never exposes emails publicly).
+  pendingGhosts?: { invitationId: string; name: string | null; role: string }[];
 }
 
 const SECTIONS = [
@@ -270,7 +273,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   function renderSection() {
     switch (activeSection) {
       case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} />;
-      case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} />;
+      case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} ghosts={world?.pendingGhosts ?? []} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;
       case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
       default:

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worlds, creators, worldMembers, worldInvitations, users } from '@/lib/db/schema';
-import { ilike, asc, eq, and, inArray } from 'drizzle-orm';
+import { ilike, asc, eq, and, inArray, isNotNull } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     let pendingInvites: { worldId: string; inviteeId: string; role: string; inviteeName: string | null; inviteeUsername: string | null; invitationId: string }[] = [];
     if (worldIds.length > 0) {
       // Only pending invites for the returned worlds (indexed on world_id).
-      pendingInvites = await db
+      const inviteRows = await db
         .select({
           worldId: worldInvitations.worldId,
           inviteeId: worldInvitations.inviteeId,
@@ -108,6 +108,9 @@ export async function GET(request: Request) {
         .from(worldInvitations)
         .innerJoin(users, eq(worldInvitations.inviteeId, users.id))
         .where(and(eq(worldInvitations.status, 'pending'), inArray(worldInvitations.worldId, worldIds)));
+      // The innerJoin guarantees inviteeId — ghost invites (null inviteeId)
+      // are handled separately below.
+      pendingInvites = inviteRows.map((r) => ({ ...r, inviteeId: r.inviteeId! }));
     }
 
     // Group pending invites by worldId
@@ -117,10 +120,41 @@ export async function GET(request: Request) {
       inviteMap[i.worldId].push(i);
     }
 
+    // Ghost invites — email invitees not on Topia yet. Their NAME shows as a
+    // pending credit on the world immediately; the email is exposed only in
+    // manage mode (builders need it to spot/revoke), never publicly.
+    let pendingGhosts: { worldId: string; name: string | null; role: string; invitationId: string; email?: string | null }[] = [];
+    if (worldIds.length > 0) {
+      const ghostRows = await db
+        .select({
+          worldId: worldInvitations.worldId,
+          name: worldInvitations.name,
+          role: worldInvitations.role,
+          invitationId: worldInvitations.id,
+          email: worldInvitations.email,
+        })
+        .from(worldInvitations)
+        .where(and(eq(worldInvitations.status, 'pending'), isNotNull(worldInvitations.email), inArray(worldInvitations.worldId, worldIds)));
+      pendingGhosts = ghostRows.map((r) => {
+        // Email only for actual owner/builder callers of THAT world — the
+        // manage flag alone is client-supplied and proves nothing.
+        const callerIsBuilder = !!managerUserId && (memberMap[r.worldId] || []).some(
+          (m) => m.userId === managerUserId && (m.role === 'owner' || m.role === 'world_builder'),
+        );
+        return callerIsBuilder ? r : { worldId: r.worldId, name: r.name, role: r.role, invitationId: r.invitationId };
+      });
+    }
+    const ghostMap: Record<string, typeof pendingGhosts> = {};
+    for (const g of pendingGhosts) {
+      if (!ghostMap[g.worldId]) ghostMap[g.worldId] = [];
+      ghostMap[g.worldId].push(g);
+    }
+
     const worldsWithMembers = results.map(w => ({
       ...w,
       members: memberMap[w.id] || [],
       pendingInvites: inviteMap[w.id] || [],
+      pendingGhosts: ghostMap[w.id] || [],
     }));
 
     return NextResponse.json({

@@ -45,6 +45,39 @@ export default function WorldMembersPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Ghost invites — credit someone who isn't on Topia yet by name + email.
+  const [ghostName, setGhostName] = useState('');
+  const [ghostEmail, setGhostEmail] = useState('');
+  const [ghostBusy, setGhostBusy] = useState(false);
+  const [ghosts, setGhosts] = useState<{ invitationId: string; name: string | null; role: string; email?: string | null }[]>(
+    (world as { pendingGhosts?: { invitationId: string; name: string | null; role: string; email?: string | null }[] })?.pendingGhosts ?? [],
+  );
+
+  const addGhost = async () => {
+    if (!world || !user || !isBuilder || !ghostName.trim() || !ghostEmail.trim()) return;
+    setGhostBusy(true); setMemberError(''); setMemberSuccess('');
+    try {
+      const res = await fetch('/api/worlds/members', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, worldId: world.id, email: ghostEmail.trim(), name: ghostName.trim(), role: memberRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMemberError(data.error || 'Failed'); return; }
+      if (data.claimUrl) {
+        // Ghost created — credit shows on the world immediately.
+        setGhosts((g) => [...g, { invitationId: data.invitationId, name: ghostName.trim(), role: memberRole, email: ghostEmail.trim().toLowerCase() }]);
+        setMemberSuccess(data.emailSent
+          ? `${ghostName.trim()} is credited — claim email sent.`
+          : `${ghostName.trim()} is credited — email couldn't send, share the claim link yourself: ${data.claimUrl}`);
+      } else {
+        // The email belonged to an existing Topia user — a normal invite went out.
+        setMemberSuccess('That email is already on Topia — a regular invite was sent.');
+      }
+      setGhostName(''); setGhostEmail('');
+      setTimeout(() => setMemberSuccess(''), 8000);
+    } catch { setMemberError('Failed'); } finally { setGhostBusy(false); }
+  };
+
   /* Member search debounce */
   useEffect(() => {
     if (memberSearch.length < 2) { setMemberSearchResults([]); return; }
@@ -198,6 +231,58 @@ export default function WorldMembersPage() {
               </div>
             )}
           </div>
+          {/* Not on Topia yet? Credit them by name — the claim link goes to
+              their email and the name shows on the world right away. */}
+          <div className="mt-4 pt-4 border-t border-ink/[0.06]">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-2">
+              Not on Topia yet? Invite by email
+            </span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={ghostName}
+                onChange={(e) => setGhostName(e.target.value)}
+                placeholder="Their name (shows immediately)"
+                className={inputCls}
+                disabled={ghostBusy}
+              />
+              <input
+                type="email"
+                value={ghostEmail}
+                onChange={(e) => setGhostEmail(e.target.value)}
+                placeholder="their@email.com"
+                className={inputCls}
+                disabled={ghostBusy}
+              />
+              <button
+                type="button"
+                onClick={addGhost}
+                disabled={ghostBusy || !ghostName.trim() || !ghostEmail.trim()}
+                className="font-mono text-[11px] uppercase tracking-[1.5px] bg-lime text-obsidian px-4 py-2 rounded-sm font-bold cursor-pointer border-none disabled:opacity-40 shrink-0"
+              >
+                {ghostBusy ? '…' : 'Credit + invite'}
+              </button>
+            </div>
+            {ghosts.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {ghosts.map((g) => (
+                  <div key={g.invitationId} className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center font-mono text-[11px] border-2 border-dashed border-ink/25 text-ink/50">
+                      {(g.name || '?')[0]?.toUpperCase()}
+                    </div>
+                    <span className="font-mono text-[12px] text-ink/70 truncate">
+                      {g.name}
+                      {g.email && <span className="text-ink/35 ml-1.5">{g.email}</span>}
+                    </span>
+                    <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-ink/35 ml-auto shrink-0">
+                      {g.role === 'world_builder' ? 'builder' : 'collab'} · awaiting claim
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {memberSuccess && <p className="font-mono text-[11px] mt-2" style={{ color: 'var(--accent-ink)' }}>{memberSuccess}</p>}
         </SectionCard>
       )}

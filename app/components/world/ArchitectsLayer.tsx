@@ -33,16 +33,43 @@ function MemberCard({ member }: { member: ArchitectMember }) {
   return <div>{inner}</div>;
 }
 
+export interface GhostCredit {
+  invitationId: string;
+  name: string | null;
+  role: string;
+}
+
+// A credited person who hasn't claimed their Topia profile yet — name shows
+// immediately (dashed avatar, no profile link) until their email invite is
+// accepted, at which point they become a real MemberCard.
+function GhostCard({ ghost }: { ghost: GhostCredit }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-ink/20 bg-[var(--page-bg)] opacity-80">
+      <div className="w-10 h-10 rounded-full flex items-center justify-center font-mono text-[13px] font-bold border-2 border-dashed border-ink/25 text-ink/50">
+        {(ghost.name || '?')[0]?.toUpperCase()}
+      </div>
+      <div className="min-w-0">
+        <p className="font-mono text-[13px] font-bold leading-tight text-ink/80 truncate uppercase">{ghost.name || 'Invited'}</p>
+        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 mt-1 block">
+          {ghost.role.replace('_', ' ')} · invited
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ArchitectsLayer({
   config,
   builders,
   collaborators,
+  ghosts = [],
 }: {
   config: WorldConfig;
   builders: ArchitectMember[];
   collaborators: ArchitectMember[];
+  ghosts?: GhostCredit[];
 }) {
-  const total = builders.length + collaborators.length;
+  const total = builders.length + collaborators.length + ghosts.length;
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
       <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
@@ -64,11 +91,12 @@ export default function ArchitectsLayer({
               </div>
             </div>
           )}
-          {collaborators.length > 0 && (
+          {(collaborators.length > 0 || ghosts.length > 0) && (
             <div>
               <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30 block mb-2">Collaborators</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {collaborators.map((c) => <MemberCard key={c.userId} member={c} />)}
+                {ghosts.map((g) => <GhostCard key={g.invitationId} ghost={g} />)}
               </div>
             </div>
           )}
