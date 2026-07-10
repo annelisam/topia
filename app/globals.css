@@ -240,6 +240,36 @@ body {
   }
 }
 
+/* ── Mobile type floor (accessibility) ─────────────────────────────────
+   The registry aesthetic leans on micro type (10–13px mono labels). Fine on
+   desktop; below the accessible floor on phones. Rather than editing hundreds
+   of call sites, lift the common hardcoded sizes on small screens only —
+   unlayered rules beat Tailwind's layered utilities, same idiom as the
+   .text-ink\/NN overrides below. Relative hierarchy is preserved (everything
+   shifts up together); desktop is untouched. */
+@media (max-width: 767px) {
+  .text-\[8px\]  { font-size: 10px; }
+  .text-\[9px\]  { font-size: 11px; }
+  .text-\[10px\] { font-size: 12px; }
+  .text-\[11px\] { font-size: 13px; }
+  .text-\[12px\] { font-size: 14px; }
+  .text-\[13px\] { font-size: 15px; }
+  /* The named micro-label utility rides the same floor. */
+  .meta-text { font-size: 12px; }
+}
+
+/* WCAG 2.5.8 minimum target size: the many tiny text buttons (approve /
+   delete / copy / pin links) keep their visual size but get a ≥24px hit
+   area on touch screens. Links are left alone — inline anchors can't take
+   a min-height without breaking text flow. */
+@media (pointer: coarse) {
+  button,
+  [role='button'] {
+    min-height: 24px;
+    min-width: 24px;
+  }
+}
+
 /* Grid panels are always dark */
 .bg-obsidian {
   background-color: #1a1a1a;
