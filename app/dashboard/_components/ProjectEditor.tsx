@@ -8,7 +8,7 @@ import { mdComponents } from './mdComponents';
 import { MdToolbar } from './MdToolbar';
 import { WritePrevToggle } from './WritePrevToggle';
 import { resizeAndUploadImage } from '../../../lib/uploadImage';
-import { ToolPicker } from './ToolPicker';
+import { ToolPicker, normalizeToolName } from './ToolPicker';
 import { ToolOption, ProjectItem } from './types';
 
 export function ProjectEditor({
@@ -43,9 +43,12 @@ export function ProjectEditor({
   const selectedToolNames = toolTags.map(t => t.replace('tool:', ''));
 
   const toggleTool = (toolName: string) => {
-    const tag = `tool:${toolName}`;
-    if (tags.includes(tag)) setTags(tags.filter(t => t !== tag));
-    else setTags([...tags, tag]);
+    // Toggle by normalized name so picking a directory tool replaces a legacy
+    // variant tag ("tool:ableton" vs "tool:Ableton") instead of duplicating.
+    const n = normalizeToolName(toolName);
+    const isVariant = (t: string) => t.startsWith('tool:') && normalizeToolName(t.slice(5)) === n;
+    if (tags.some(isVariant)) setTags(tags.filter(t => !isVariant(t)));
+    else setTags([...tags, `tool:${toolName}`]);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

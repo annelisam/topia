@@ -9,7 +9,7 @@ import { mdComponents } from '../../../_components/mdComponents';
 import { MdToolbar } from '../../../_components/MdToolbar';
 import { WritePrevToggle } from '../../../_components/WritePrevToggle';
 import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
-import { ToolPicker } from '../../../_components/ToolPicker';
+import { ToolPicker, normalizeToolName } from '../../../_components/ToolPicker';
 import { SocialLinks } from '../../../_components/types';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import { useWorldDashboard } from '../layout';
@@ -44,7 +44,11 @@ export default function WorldDetailsPage() {
   const toggleTool = (name: string) => {
     if (!isBuilder) return;
     const c = tools.split(',').map(t => t.trim()).filter(Boolean);
-    setTools((c.includes(name) ? c.filter(t => t !== name) : [...c, name]).join(', '));
+    // Toggle by normalized name so picking "Ableton" replaces a legacy
+    // "ableton" instead of adding a duplicate variant.
+    const n = normalizeToolName(name);
+    const has = c.some(t => normalizeToolName(t) === n);
+    setTools((has ? c.filter(t => normalizeToolName(t) !== n) : [...c, name]).join(', '));
   };
 
   const uploadImage = async (file: File | undefined, kind: 'image' | 'header') => {

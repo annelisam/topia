@@ -6,7 +6,7 @@ export interface WorldData {
   members: { userId: string; role: string; userName: string | null; userUsername: string | null }[];
   pendingInvites?: PendingInvite[];
 }
-export interface ToolOption { id: string; name: string; slug: string; }
+export interface ToolOption { id: string; name: string; slug: string; category?: string | null; url?: string | null; }
 export interface SearchUser { id: string; username: string | null; name: string | null; avatarUrl: string | null; }
 export interface ProjectItem {
   id: string; name: string; slug: string; description?: string | null; content?: string | null;
