@@ -418,78 +418,18 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                         </div>
                       </div>
 
-                      {/* Registry fields */}
+                      {/* Registry fields — ordered visitor-first: what it is (declaration),
+                          what you can do (actions), how alive it is (vitals, on deck),
+                          then the registry metadata. */}
                       <div className="px-5 pb-5 pt-1 flex flex-col">
-                        <div className="py-3 border-b border-ink/[0.05] flex flex-wrap gap-x-8 gap-y-3">
-                          <div>
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">category</span>
-                            <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{world.category || 'GENERAL'}</span>
-                          </div>
-                          <div>
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">status</span>
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
-                              <span className="font-mono text-[11px] text-ink/50">LIVE</span>
-                            </div>
-                          </div>
-                          <div>
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">established</span>
-                            <span className="font-mono text-[11px] text-ink/40 mt-1.5 block">{established || '—'}</span>
-                          </div>
-                        </div>
-
-                        {/* Vitals — the four "is this world alive" numbers, glanceable from every tab */}
-                        <div className="py-3 border-b border-ink/[0.05]">
-                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">vitals</span>
-                          <div className="grid grid-cols-4 border border-ink/[0.08] rounded-md overflow-hidden">
-                            {([['crew', crewCount], ['projects', projects.length], ['events', worldEvents.length], ['watching', followers]] as const).map(([label, n]) => (
-                              <div key={label} className="py-2 px-1 text-center bg-ink/[0.02] border-r border-ink/[0.05] last:border-r-0">
-                                <span className="font-mono text-[15px] font-bold text-ink block tabular-nums">{n}</span>
-                                <span className="font-mono text-[8px] uppercase tracking-[1px] text-ink/40 block mt-0.5">{label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* On deck — nearest upcoming event, pinned regardless of active tab */}
-                        {onDeckEvent && (
-                          <div className="py-3 border-b border-ink/[0.05]">
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">on deck</span>
-                            <div className="border border-ink/[0.08] rounded-md px-3 py-2.5" style={{ borderLeft: `3px solid ${config.hex}` }}>
-                              <Link href={`/events/${onDeckEvent.slug}`} className="font-mono text-[13px] font-bold text-ink no-underline hover:underline block truncate">{onDeckEvent.eventName}</Link>
-                              <span className="font-mono text-[10px] uppercase tracking-wider mt-0.5 block" style={{ color: 'var(--accent-ink)' }}>
-                                {[onDeckEvent.date, onDeckEvent.city].filter(Boolean).join(' · ') || 'Upcoming'}
-                              </span>
-                              <Link href={`/events/${onDeckEvent.slug}`} className={`inline-block mt-2 font-mono text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-sm no-underline ${config.bg} ${config.textOn}`}>
-                                RSVP →
-                              </Link>
-                            </div>
-                          </div>
-                        )}
-
-                        {hasSocial && (
-                          <div className="py-3 border-b border-ink/[0.05]">
-                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">connect</span>
-                            <div className="flex flex-wrap gap-3">
-                              {Object.entries(world.socialLinks || {}).map(([key, url]) =>
-                                url ? (
-                                  <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/40 hover:text-ink/70 transition-colors" title={key}>
-                                    <SocialIcon type={key} size={16} />
-                                  </a>
-                                ) : null,
-                              )}
-                            </div>
-                          </div>
-                        )}
-
                         {world.shortDescription && (
-                          <div className="py-3 border-b border-ink/[0.05]">
+                          <div className="py-3 border-b border-ink/[0.05] last:border-b-0">
                             <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">declaration</span>
                             <span className="font-zirkon text-[11px] text-ink/50 italic mt-1 block leading-relaxed">&ldquo;{world.shortDescription}&rdquo;</span>
                           </div>
                         )}
 
-                        <div className="pt-3 flex flex-wrap items-center gap-1.5">
+                        <div className="py-3 border-b border-ink/[0.05] last:border-b-0 flex flex-wrap items-center gap-1.5">
                           {authenticated && !isMember && (
                             <button
                               onClick={toggleWorldFollow}
@@ -521,6 +461,68 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                             </span>
                           )}
                         </div>
+
+                        {/* Vitals — the four "is this world alive" numbers, glanceable from every tab */}
+                        <div className="py-3 border-b border-ink/[0.05] last:border-b-0">
+                          <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">vitals</span>
+                          <div className="grid grid-cols-4 border border-ink/[0.08] rounded-md overflow-hidden">
+                            {([['crew', crewCount], ['projects', projects.length], ['events', worldEvents.length], ['watching', followers]] as const).map(([label, n]) => (
+                              <div key={label} className="py-2 px-1 text-center bg-ink/[0.02] border-r border-ink/[0.05] last:border-r-0">
+                                <span className="font-mono text-[15px] font-bold text-ink block tabular-nums">{n}</span>
+                                <span className="font-mono text-[8px] uppercase tracking-[1px] text-ink/40 block mt-0.5">{label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* On deck — nearest upcoming event, pinned regardless of active tab */}
+                        {onDeckEvent && (
+                          <div className="py-3 border-b border-ink/[0.05]">
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">on deck</span>
+                            <div className="border border-ink/[0.08] rounded-md px-3 py-2.5" style={{ borderLeft: `3px solid ${config.hex}` }}>
+                              <Link href={`/events/${onDeckEvent.slug}`} className="font-mono text-[13px] font-bold text-ink no-underline hover:underline block truncate">{onDeckEvent.eventName}</Link>
+                              <span className="font-mono text-[10px] uppercase tracking-wider mt-0.5 block" style={{ color: 'var(--accent-ink)' }}>
+                                {[onDeckEvent.date, onDeckEvent.city].filter(Boolean).join(' · ') || 'Upcoming'}
+                              </span>
+                              <Link href={`/events/${onDeckEvent.slug}`} className={`inline-block mt-2 font-mono text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-sm no-underline ${config.bg} ${config.textOn}`}>
+                                RSVP →
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="py-3 border-b border-ink/[0.05] last:border-b-0 flex flex-wrap gap-x-8 gap-y-3">
+                          <div>
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">category</span>
+                            <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 ${config.bg} ${config.textOn} inline-block mt-1`}>{world.category || 'GENERAL'}</span>
+                          </div>
+                          <div>
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">status</span>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
+                              <span className="font-mono text-[11px] text-ink/50">LIVE</span>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block">established</span>
+                            <span className="font-mono text-[11px] text-ink/40 mt-1.5 block">{established || '—'}</span>
+                          </div>
+                        </div>
+
+                        {hasSocial && (
+                          <div className="py-3 border-b border-ink/[0.05] last:border-b-0">
+                            <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">connect</span>
+                            <div className="flex flex-wrap gap-3">
+                              {Object.entries(world.socialLinks || {}).map(([key, url]) =>
+                                url ? (
+                                  <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="text-ink/40 hover:text-ink/70 transition-colors" title={key}>
+                                    <SocialIcon type={key} size={16} />
+                                  </a>
+                                ) : null,
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* MRZ strip — rail footer, desktop only */}
