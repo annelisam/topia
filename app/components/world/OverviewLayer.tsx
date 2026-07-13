@@ -126,11 +126,6 @@ export default function OverviewLayer({
 
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
-      <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
-        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Overview</span>
-        <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>topia://about</span>
-      </div>
-
       <div className="p-5 md:p-6 flex flex-col gap-5 max-w-2xl">
         {body && (
           <div className="pb-5 border-b border-ink/[0.08]">
