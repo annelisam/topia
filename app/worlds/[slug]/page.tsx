@@ -292,10 +292,16 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   }, [announcements]);
 
   // Tabs deep-link via URL hash (#projects) — hash, not query, so links
-  // survive the Privy OAuth round-trip that drops query strings.
+  // survive the Privy OAuth round-trip that drops query strings. Also listen
+  // for hashchange: same-page hash navigation doesn't remount the component.
   useEffect(() => {
-    const h = window.location.hash.slice(1);
-    if (SECTIONS.some((s) => s.id === h)) setActiveSection(h as SectionId);
+    function applyHash() {
+      const h = window.location.hash.slice(1);
+      if (SECTIONS.some((s) => s.id === h)) setActiveSection(h as SectionId);
+    }
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
   }, []);
 
   function selectSection(id: SectionId) {
@@ -588,13 +594,6 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                 </div>
               </div>
             )}
-
-            {/* Back link */}
-            <div className="mt-4">
-              <Link href="/worlds" className="font-mono text-[12px] uppercase tracking-wider text-ink/40 hover:text-ink/70 transition-colors no-underline">
-                ← back to worlds
-              </Link>
-            </div>
           </div>
         </section>
       </PageShell>
