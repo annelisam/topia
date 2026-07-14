@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import ShareButton from '../../components/ShareButton';
+import FollowButton from '../../components/FollowButton';
 import { SocialIcon } from '../../components/SocialIcons';
 import { getWorldConfig, type WorldConfig } from '../../components/world/worldConfig';
 import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../components/world/OverviewLayer';
@@ -86,19 +87,23 @@ interface Watcher {
   name: string | null;
   username: string | null;
   avatarUrl: string | null;
+  isSelf?: boolean;
+  isFollowing?: boolean;
 }
 
-function WatchersModal({ worldId, worldTitle, config, onClose }: { worldId: string; worldTitle: string; config: WorldConfig; onClose: () => void }) {
+function WatchersModal({ worldId, worldTitle, config, viewerPrivyId, onClose }: { worldId: string; worldTitle: string; config: WorldConfig; viewerPrivyId: string | null; onClose: () => void }) {
   const [watchers, setWatchers] = useState<Watcher[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/worlds/follow?worldId=${worldId}&list=1`)
+    const qs = new URLSearchParams({ worldId, list: '1' });
+    if (viewerPrivyId) qs.set('privyId', viewerPrivyId);
+    fetch(`/api/worlds/follow?${qs}`)
       .then((r) => r.json())
       .then((d) => { if (!cancelled) setWatchers(d.watchers || []); })
       .catch(() => { if (!cancelled) setWatchers([]); });
     return () => { cancelled = true; };
-  }, [worldId]);
+  }, [worldId, viewerPrivyId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -126,8 +131,8 @@ function WatchersModal({ worldId, worldTitle, config, onClose }: { worldId: stri
             <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30 block py-4 text-center">No one watching yet</span>
           ) : (
             watchers.map((w) => {
-              const inner = (
-                <span className="flex items-center gap-3 py-2">
+              const identity = (
+                <span className="flex items-center gap-3 py-2 min-w-0">
                   {w.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={w.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-ink/10 shrink-0" />
@@ -142,10 +147,19 @@ function WatchersModal({ worldId, worldTitle, config, onClose }: { worldId: stri
                   </span>
                 </span>
               );
-              return w.username ? (
-                <Link key={w.userId} href={`/profile/${w.username}`} className="block no-underline border-b border-ink/[0.05] last:border-b-0 hover:opacity-80 transition-opacity">{inner}</Link>
-              ) : (
-                <div key={w.userId} className="border-b border-ink/[0.05] last:border-b-0">{inner}</div>
+              return (
+                <div key={w.userId} className="flex items-center gap-2 border-b border-ink/[0.05] last:border-b-0">
+                  {w.username ? (
+                    <Link href={`/profile/${w.username}`} className="flex-1 min-w-0 no-underline hover:opacity-80 transition-opacity">{identity}</Link>
+                  ) : (
+                    <div className="flex-1 min-w-0">{identity}</div>
+                  )}
+                  {!w.isSelf && (
+                    <span className="shrink-0">
+                      <FollowButton targetUserId={w.userId} initialIsFollowing={Boolean(w.isFollowing)} />
+                    </span>
+                  )}
+                </div>
               );
             })
           )}
@@ -680,7 +694,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
             )}
 
             {watchersOpen && world && (
-              <WatchersModal worldId={world.id} worldTitle={world.title} config={config} onClose={() => setWatchersOpen(false)} />
+              <WatchersModal worldId={world.id} worldTitle={world.title} config={config} viewerPrivyId={user?.id ?? null} onClose={() => setWatchersOpen(false)} />
             )}
           </div>
         </section>
