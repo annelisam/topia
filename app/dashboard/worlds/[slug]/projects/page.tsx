@@ -46,6 +46,7 @@ export default function WorldProjectsPage() {
             worldId={world.id}
             privyId={privyId}
             allTools={allTools}
+            worldMembers={world.members}
             onSave={(p) => {
               if (editingProject === 'new') setProjects(prev => [...prev, p]);
               else setProjects(prev => prev.map(x => x.id === p.id ? p : x));

@@ -486,6 +486,22 @@ export const worldProjects = pgTable('world_projects', {
   index('world_projects_world_id_idx').on(t.worldId),
 ]);
 
+// Project credits — who made a project, with a free-text role ("recordist",
+// "mastering"). One row per person per project; multiple roles go in the one
+// role string. Shown on the project page, linking to the person's passport.
+export const projectMembers = pgTable('project_members', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => worldProjects.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('project_members_project_id_idx').on(t.projectId),
+  index('project_members_user_id_idx').on(t.userId),
+  uniqueIndex('project_members_project_user_uniq').on(t.projectId, t.userId),
+]);
+
 // World announcements — short builder-posted updates shown in a world's
 // Overview activity feed alongside auto-logged project/member/event activity.
 export const worldAnnouncements = pgTable('world_announcements', {

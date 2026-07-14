@@ -1,7 +1,51 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldProjects, worldMembers, users } from '@/lib/db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { worldProjects, worldMembers, projectMembers, users } from '@/lib/db/schema';
+import { eq, and, asc, inArray } from 'drizzle-orm';
+
+// Fetch a project's credits with the credited person's public profile bits.
+async function getCredits(projectId: string) {
+  return db
+    .select({
+      userId: projectMembers.userId,
+      role: projectMembers.role,
+      name: users.name,
+      username: users.username,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(projectMembers)
+    .innerJoin(users, eq(users.id, projectMembers.userId))
+    .where(eq(projectMembers.projectId, projectId))
+    .orderBy(asc(projectMembers.createdAt));
+}
+
+// Replace a project's credits. Only world members can be credited — anything
+// else in the payload is silently dropped rather than 400ing the whole save.
+async function replaceCredits(projectId: string, worldId: string, credits: unknown) {
+  if (!Array.isArray(credits)) return;
+  const wanted = credits
+    .filter((c): c is { userId: string; role?: string } => Boolean(c && typeof c.userId === 'string'))
+    .slice(0, 30);
+  const memberRows = wanted.length
+    ? await db
+        .select({ userId: worldMembers.userId })
+        .from(worldMembers)
+        .where(and(eq(worldMembers.worldId, worldId), inArray(worldMembers.userId, wanted.map((c) => c.userId))))
+    : [];
+  const allowed = new Set(memberRows.map((m) => m.userId));
+  const seen = new Set<string>();
+  const rows = wanted.filter((c) => {
+    if (!allowed.has(c.userId) || seen.has(c.userId)) return false;
+    seen.add(c.userId);
+    return true;
+  });
+  await db.delete(projectMembers).where(eq(projectMembers.projectId, projectId));
+  if (rows.length > 0) {
+    await db.insert(projectMembers).values(
+      rows.map((c) => ({ projectId, userId: c.userId, role: typeof c.role === 'string' && c.role.trim() ? c.role.trim().slice(0, 80) : null })),
+    );
+  }
+}
 
 // GET – fetch projects for a world
 export async function GET(request: Request) {
@@ -25,7 +69,8 @@ export async function GET(request: Request) {
       if (result.length === 0) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
       }
-      return NextResponse.json({ project: result[0] });
+      const credits = await getCredits(result[0].id);
+      return NextResponse.json({ project: { ...result[0], credits } });
     }
 
     const projects = await db
@@ -70,7 +115,7 @@ async function verifyWorldBuilder(privyId: string, worldId: string) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { worldId, privyId, name, description, content, imageUrl, videoUrl, url, links, tags } = data;
+    const { worldId, privyId, name, description, content, imageUrl, videoUrl, url, links, tags, credits } = data;
 
     if (!worldId || !privyId || !name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -95,6 +140,8 @@ export async function POST(request: Request) {
       links: links || null,
       tags: tags || null,
     }).returning();
+
+    await replaceCredits(result[0].id, worldId, credits);
 
     return NextResponse.json({ project: result[0] });
   } catch (error) {
@@ -131,10 +178,18 @@ export async function PUT(request: Request) {
     if (fields.links !== undefined) updateData.links = fields.links || null;
     if (fields.tags !== undefined) updateData.tags = fields.tags || null;
 
+    // Scope by worldId too — the builder check above authorizes the SUBMITTED
+    // world, so the project must actually belong to it.
     const result = await db.update(worldProjects)
       .set(updateData)
-      .where(eq(worldProjects.id, projectId))
+      .where(and(eq(worldProjects.id, projectId), eq(worldProjects.worldId, worldId)))
       .returning();
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (fields.credits !== undefined) await replaceCredits(projectId, worldId, fields.credits);
 
     return NextResponse.json({ project: result[0] });
   } catch (error) {
@@ -158,7 +213,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    await db.delete(worldProjects).where(eq(worldProjects.id, projectId));
+    await db.delete(worldProjects).where(and(eq(worldProjects.id, projectId), eq(worldProjects.worldId, worldId)));
 
     return NextResponse.json({ success: true });
   } catch (error) {
