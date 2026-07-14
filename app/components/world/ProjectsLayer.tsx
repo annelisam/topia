@@ -149,13 +149,14 @@ export default function ProjectsLayer({
         </div>
       )}
 
-      {/* Index — flat browsable grid, the peer view to the galaxy */}
+      {/* Project grid — always listed; in galaxy view it sits under the globe,
+          in index view it stands alone. */}
       {view === 'index' && isEmpty && (
         <div className="flex-1 flex items-center justify-center py-10">
           <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No projects yet</span>
         </div>
       )}
-      {view === 'index' && !isEmpty && (
+      {!isEmpty && (
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {projects.map((proj) => {
             const isSelected = selectedProject?.slug === proj.slug;
