@@ -155,7 +155,6 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const worldBuilders = useMemo(() => world?.members?.filter((m) => m.role === 'world_builder' || m.role === 'owner') || [], [world]);
   const collaboratorMembers = useMemo(() => world?.members?.filter((m) => m.role === 'collaborator') || [], [world]);
   const isWorldBuilder = currentUserId && worldBuilders.some((b) => b.userId === currentUserId);
-  const isMember = currentUserId && (world?.members ?? []).some((m) => m.userId === currentUserId);
   const hasSocial = world?.socialLinks && Object.values(world.socialLinks).some((v) => v);
 
   async function toggleWorldFollow() {
@@ -436,7 +435,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                         )}
 
                         <div className="py-3 border-b border-ink/[0.05] last:border-b-0 flex flex-wrap items-center gap-1.5">
-                          {authenticated && !isMember && (
+                          {authenticated && (
                             <button
                               onClick={toggleWorldFollow}
                               disabled={followPending}

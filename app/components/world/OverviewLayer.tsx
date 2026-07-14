@@ -126,10 +126,12 @@ export default function OverviewLayer({
 
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
-      <div className="p-5 md:p-6 flex flex-col gap-5 max-w-2xl">
+      {/* Divider lines run the full folio width; only the prose is capped
+          at a readable measure. */}
+      <div className="p-5 md:p-6 flex flex-col gap-5">
         {body && (
           <div className="pb-5 border-b border-ink/[0.08]">
-            <div className="prose prose-sm max-w-none">
+            <div className="prose prose-sm max-w-2xl">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{body}</ReactMarkdown>
             </div>
           </div>
