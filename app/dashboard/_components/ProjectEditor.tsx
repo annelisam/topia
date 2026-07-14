@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { inputCls, labelCls } from './sharedStyles';
@@ -11,13 +11,16 @@ import { resizeAndUploadImage } from '../../../lib/uploadImage';
 import { ToolPicker, normalizeToolName } from './ToolPicker';
 import { ToolOption, ProjectItem } from './types';
 
+export interface CreditDraft { userId: string; role: string }
+
 export function ProjectEditor({
-  project, worldId, privyId, allTools, onSave, onCancel,
+  project, worldId, privyId, allTools, worldMembers = [], onSave, onCancel,
 }: {
   project: ProjectItem | null;
   worldId: string;
   privyId: string;
   allTools: ToolOption[];
+  worldMembers?: { userId: string; role: string; userName: string | null; userUsername: string | null }[];
   onSave: (p: ProjectItem) => void;
   onCancel: () => void;
 }) {
@@ -35,6 +38,37 @@ export function ProjectEditor({
   const [error, setError] = useState('');
   const [contentPreview, setContentPreview] = useState(false);
   const [toolSearch, setToolSearch] = useState('');
+  const [credits, setCredits] = useState<CreditDraft[]>([]);
+  const [creditPick, setCreditPick] = useState('');
+
+  // Credits aren't in the dashboard's project LIST payload — load them from the
+  // single-project endpoint when editing an existing project.
+  useEffect(() => {
+    if (!project?.slug) return;
+    let cancelled = false;
+    fetch(`/api/worlds/projects?worldId=${worldId}&slug=${encodeURIComponent(project.slug)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled || !Array.isArray(d.project?.credits)) return;
+        setCredits(d.project.credits.map((c: { userId: string; role: string | null }) => ({ userId: c.userId, role: c.role || '' })));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [project?.slug, worldId]);
+
+  const memberName = (userId: string) => {
+    const m = worldMembers.find(x => x.userId === userId);
+    return m ? (m.userName || m.userUsername || 'Unknown') : 'Unknown';
+  };
+  const uncredited = worldMembers.filter(m => !credits.some(c => c.userId === m.userId));
+
+  const addCredit = () => {
+    if (!creditPick || credits.some(c => c.userId === creditPick)) return;
+    setCredits([...credits, { userId: creditPick, role: '' }]);
+    setCreditPick('');
+  };
+  const setCreditRole = (userId: string, role: string) => setCredits(credits.map(c => c.userId === userId ? { ...c, role } : c));
+  const removeCredit = (userId: string) => setCredits(credits.filter(c => c.userId !== userId));
 
   // Parse "tools:" from tags for display, but store them as regular tags prefixed
   // Actually: let's use tags for tools too — tags starting with "tool:" are tools
@@ -93,6 +127,7 @@ export function ProjectEditor({
         url: url.trim() || null,
         tags: tags.length > 0 ? tags : null,
         links: links.filter(l => l.label && l.url).length > 0 ? links.filter(l => l.label && l.url) : null,
+        credits: credits.map(c => ({ userId: c.userId, role: c.role.trim() || null })),
       };
       if (project) body.projectId = project.id;
       const res = await fetch('/api/worlds/projects', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -173,6 +208,32 @@ export function ProjectEditor({
           <div>
             <label className={labelCls}>Tools used</label>
             <ToolPicker allTools={allTools} selected={selectedToolNames} onToggle={toggleTool} search={toolSearch} setSearch={setToolSearch} />
+          </div>
+        )}
+
+        {/* Credits — world members with a free-text role each */}
+        {worldMembers.length > 0 && (
+          <div>
+            <label className={labelCls}>Credits</label>
+            {credits.map(c => (
+              <div key={c.userId} className="flex items-center gap-2 mb-1.5">
+                <span className="font-mono text-[12px] font-bold text-ink shrink-0 min-w-[110px] truncate">{memberName(c.userId)}</span>
+                <input type="text" value={c.role} onChange={e => setCreditRole(c.userId, e.target.value)} placeholder="Role (e.g. design, sound)" className={inputCls + ' flex-1'} />
+                <button type="button" onClick={() => removeCredit(c.userId)} className="font-mono text-[13px] text-ink/30 hover:text-ink transition px-1 bg-transparent border-none cursor-pointer">×</button>
+              </div>
+            ))}
+            {uncredited.length > 0 && (
+              <div className="flex gap-1.5">
+                <select value={creditPick} onChange={e => setCreditPick(e.target.value)} className={inputCls + ' flex-1'}>
+                  <option value="">Add a member…</option>
+                  {uncredited.map(m => (
+                    <option key={m.userId} value={m.userId}>{m.userName || m.userUsername || 'Unknown'}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={addCredit} disabled={!creditPick} className="px-3 py-2 border border-ink/15 text-ink/60 font-mono text-[13px] uppercase rounded-sm transition hover:border-ink/40 hover:text-ink cursor-pointer bg-transparent disabled:opacity-40">+</button>
+              </div>
+            )}
+            <p className="font-mono text-[10px] text-ink/30 mt-1.5">Credits show on the project page and link to each person&apos;s passport. Invite someone to the world first to credit them.</p>
           </div>
         )}
 
