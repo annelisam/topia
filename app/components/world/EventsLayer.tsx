@@ -14,14 +14,9 @@ export interface WorldEvent {
   createdAt?: string;
 }
 
-export default function EventsLayer({ config, events }: { config: WorldConfig; events: WorldEvent[] }) {
+export default function EventsLayer({ events }: { config: WorldConfig; events: WorldEvent[] }) {
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
-      <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
-        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Events</span>
-        <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{events.length} {events.length === 1 ? 'event' : 'events'}</span>
-      </div>
-
       {events.length === 0 ? (
         <div className="flex-1 flex items-center justify-center py-10">
           <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No events yet</span>

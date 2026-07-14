@@ -113,24 +113,23 @@ export default function ProjectsLayer({
 
   return (
     <div className="bg-[var(--page-bg)] flex flex-col h-full">
-      <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between`}>
-        <span className={`font-mono text-[11px] uppercase tracking-wider font-bold ${config.textOn}`}>Projects</span>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-full overflow-hidden border border-current/20">
-            <button
-              onClick={() => setView('galaxy')}
-              className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'galaxy' ? 'bg-lime text-obsidian font-bold' : `${config.textOn} opacity-60 bg-transparent`}`}
-            >
-              Galaxy
-            </button>
-            <button
-              onClick={() => setView('index')}
-              className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'index' ? 'bg-lime text-obsidian font-bold' : `${config.textOn} opacity-60 bg-transparent`}`}
-            >
-              Index
-            </button>
-          </div>
-          <span className={`font-mono text-[9px] uppercase tracking-[2px] ${config.textOn} opacity-40`}>{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+      {/* Quiet toolbar — the tab above already names the section; this row only
+          carries the view toggle so it doesn't compete with the tab bar. */}
+      <div className="px-4 py-2 flex items-center justify-between border-b border-ink/[0.06]">
+        <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/30">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+        <div className="flex items-center rounded-full overflow-hidden border border-ink/15">
+          <button
+            onClick={() => setView('galaxy')}
+            className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'galaxy' ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/45 hover:text-ink/70 bg-transparent'}`}
+          >
+            Galaxy
+          </button>
+          <button
+            onClick={() => setView('index')}
+            className={`font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 cursor-pointer border-none transition-colors ${view === 'index' ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/45 hover:text-ink/70 bg-transparent'}`}
+          >
+            Index
+          </button>
         </div>
       </div>
 
