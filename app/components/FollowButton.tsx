@@ -58,7 +58,7 @@ export default function FollowButton({ targetUserId, initialIsFollowing = false,
       disabled={busy}
       className={`font-mono text-[10px] uppercase tracking-wider rounded-sm px-2.5 py-1 transition-colors disabled:opacity-40 ${
         isFollowing
-          ? 'bg-transparent text-bone/60 border border-bone/20 hover:text-bone hover:border-bone/40'
+          ? 'bg-transparent text-ink/60 border border-ink/20 hover:text-ink hover:border-ink/40'
           : 'bg-lime text-obsidian border border-lime font-bold hover:opacity-80'
       }`}
     >

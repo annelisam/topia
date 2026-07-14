@@ -1,15 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldFollows, worldMembers, worlds, users, notifications } from '@/lib/db/schema';
-import { eq, and, count, inArray } from 'drizzle-orm';
+import { worldFollows, worldMembers, worlds, users, notifications, follows } from '@/lib/db/schema';
+import { eq, and, count, desc, inArray } from 'drizzle-orm';
 
-// GET /api/worlds/follow?worldId=...&privyId=... — follower count for a world,
-// plus whether the viewer follows it (privyId optional).
+// GET /api/worlds/follow?worldId=...&privyId=... — watcher count for a world,
+// plus whether the viewer watches it (privyId optional). With &list=1, also
+// returns who's watching (public profile bits only).
 export async function GET(request: NextRequest) {
   try {
     const worldId = request.nextUrl.searchParams.get('worldId');
     const privyId = request.nextUrl.searchParams.get('privyId');
+    const wantList = request.nextUrl.searchParams.get('list') === '1';
     if (!worldId) return NextResponse.json({ error: 'Missing worldId' }, { status: 400 });
+
+    if (wantList) {
+      const rows = await db
+        .select({
+          userId: worldFollows.userId,
+          name: users.name,
+          username: users.username,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(worldFollows)
+        .innerJoin(users, eq(users.id, worldFollows.userId))
+        .where(eq(worldFollows.worldId, worldId))
+        .orderBy(desc(worldFollows.createdAt))
+        .limit(200);
+
+      // With a viewer, annotate each watcher with whether the viewer already
+      // follows them (drives the per-row Connect button) and which row is
+      // the viewer themselves.
+      let viewerId: string | null = null;
+      let followedIds = new Set<string>();
+      if (privyId && rows.length > 0) {
+        const [viewer] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId)).limit(1);
+        if (viewer) {
+          viewerId = viewer.id;
+          const followed = await db
+            .select({ followingId: follows.followingId })
+            .from(follows)
+            .where(and(eq(follows.followerId, viewer.id), inArray(follows.followingId, rows.map((r) => r.userId))));
+          followedIds = new Set(followed.map((f) => f.followingId));
+        }
+      }
+
+      const watchers = rows.map((r) => ({
+        ...r,
+        isSelf: r.userId === viewerId,
+        isFollowing: followedIds.has(r.userId),
+      }));
+
+      return NextResponse.json(
+        { watchers },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
+    }
 
     const [{ value: followers }] = await db
       .select({ value: count() })

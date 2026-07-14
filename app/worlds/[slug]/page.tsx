@@ -6,8 +6,9 @@ import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
 import LoadingScreen from '../../components/LoadingScreen';
 import ShareButton from '../../components/ShareButton';
+import FollowButton from '../../components/FollowButton';
 import { SocialIcon } from '../../components/SocialIcons';
-import { getWorldConfig } from '../../components/world/worldConfig';
+import { getWorldConfig, type WorldConfig } from '../../components/world/worldConfig';
 import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../components/world/OverviewLayer';
 import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
@@ -79,6 +80,95 @@ function timeAgo(date: Date): string {
   return 'just now';
 }
 
+/* ── Watchers modal — who's watching this world ───────────────── */
+
+interface Watcher {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  isSelf?: boolean;
+  isFollowing?: boolean;
+}
+
+function WatchersModal({ worldId, worldTitle, config, viewerPrivyId, onClose }: { worldId: string; worldTitle: string; config: WorldConfig; viewerPrivyId: string | null; onClose: () => void }) {
+  const [watchers, setWatchers] = useState<Watcher[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const qs = new URLSearchParams({ worldId, list: '1' });
+    if (viewerPrivyId) qs.set('privyId', viewerPrivyId);
+    fetch(`/api/worlds/follow?${qs}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setWatchers(d.watchers || []); })
+      .catch(() => { if (!cancelled) setWatchers([]); });
+    return () => { cancelled = true; };
+  }, [worldId, viewerPrivyId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1500] flex items-center justify-center px-4 py-6"
+      style={{ backgroundColor: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(2px)' }}
+      onClick={onClose}
+      role="dialog"
+      aria-label={`Who's watching ${worldTitle}`}
+    >
+      <div className="w-full max-w-[380px] max-h-[70vh] overflow-y-auto rounded-lg border border-ink/10 bg-[var(--page-bg)]" onClick={(e) => e.stopPropagation()}>
+        <div className={`${config.bg} px-4 py-2.5 flex items-center justify-between sticky top-0 z-10`}>
+          <span className={`font-mono text-[10px] font-bold uppercase tracking-[2px] ${config.textOn} truncate`}>Watching {worldTitle}</span>
+          <button onClick={onClose} className={`w-6 h-6 flex items-center justify-center font-mono text-[16px] cursor-pointer bg-transparent border-none shrink-0 ${config.textOn}`}>×</button>
+        </div>
+        <div className="px-4 py-2">
+          {watchers === null ? (
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30 block py-4 text-center">Loading…</span>
+          ) : watchers.length === 0 ? (
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink/30 block py-4 text-center">No one watching yet</span>
+          ) : (
+            watchers.map((w) => {
+              const identity = (
+                <span className="flex items-center gap-3 py-2 min-w-0">
+                  {w.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={w.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-ink/10 shrink-0" />
+                  ) : (
+                    <span className="w-8 h-8 rounded-full bg-ink/10 flex items-center justify-center font-basement font-black text-[11px] text-ink/50 shrink-0">
+                      {(w.name || w.username || '?')[0]?.toUpperCase()}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="font-mono text-[12px] font-bold text-ink block truncate">{w.name || w.username || 'Someone'}</span>
+                    {w.username && <span className="font-mono text-[10px] text-ink/40 block truncate">@{w.username}</span>}
+                  </span>
+                </span>
+              );
+              return (
+                <div key={w.userId} className="flex items-center gap-2 border-b border-ink/[0.05] last:border-b-0">
+                  {w.username ? (
+                    <Link href={`/profile/${w.username}`} className="flex-1 min-w-0 no-underline hover:opacity-80 transition-opacity">{identity}</Link>
+                  ) : (
+                    <div className="flex-1 min-w-0">{identity}</div>
+                  )}
+                  {!w.isSelf && (
+                    <span className="shrink-0">
+                      <FollowButton targetUserId={w.userId} initialIsFollowing={Boolean(w.isFollowing)} />
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Page ────────────────────────────────────────────────── */
 
 export default function WorldPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -96,6 +186,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(false);
   const [followPending, setFollowPending] = useState(false);
+  const [watchersOpen, setWatchersOpen] = useState(false);
 
   useEffect(() => {
     const worldPromise = fetch(`/api/worlds?slug=${slug}`)
@@ -445,7 +536,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                                   : 'bg-transparent border-ink/[0.12] text-ink/60 hover:text-ink/80'
                               }`}
                             >
-                              {followPending ? '…' : following ? 'Following' : '+ Follow'}
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill={following ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                              </svg>
+                              {followPending ? '…' : following ? 'Watching' : 'Watch'}
                             </button>
                           )}
                           <ShareButton
@@ -460,23 +554,28 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                               Manage
                             </Link>
                           )}
-                          {followers > 0 && (
-                            <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40 ml-auto">
-                              {followers} follower{followers !== 1 ? 's' : ''}
-                            </span>
-                          )}
                         </div>
 
-                        {/* Vitals — the four "is this world alive" numbers, glanceable from every tab */}
+                        {/* Vitals — the four "is this world alive" numbers, glanceable from every tab.
+                            WATCHING opens the list of watchers. */}
                         <div className="py-3 border-b border-ink/[0.05] last:border-b-0">
                           <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">vitals</span>
                           <div className="grid grid-cols-4 border border-ink/[0.08] rounded-md overflow-hidden">
-                            {([['crew', crewCount], ['projects', projects.length], ['events', worldEvents.length], ['watching', followers]] as const).map(([label, n]) => (
-                              <div key={label} className="py-2 px-1 text-center bg-ink/[0.02] border-r border-ink/[0.05] last:border-r-0">
+                            {([['crew', crewCount], ['projects', projects.length], ['events', worldEvents.length]] as const).map(([label, n]) => (
+                              <div key={label} className="py-2 px-1 text-center bg-ink/[0.02] border-r border-ink/[0.05]">
                                 <span className="font-mono text-[15px] font-bold text-ink block tabular-nums">{n}</span>
                                 <span className="font-mono text-[8px] uppercase tracking-[1px] text-ink/40 block mt-0.5">{label}</span>
                               </div>
                             ))}
+                            <button
+                              onClick={() => setWatchersOpen(true)}
+                              disabled={followers === 0}
+                              title={followers > 0 ? "See who's watching" : undefined}
+                              className={`py-2 px-1 text-center bg-ink/[0.02] border-none ${followers > 0 ? 'cursor-pointer hover:bg-ink/[0.06] transition-colors' : 'cursor-default'}`}
+                            >
+                              <span className="font-mono text-[15px] font-bold text-ink block tabular-nums">{followers}</span>
+                              <span className={`font-mono text-[8px] uppercase tracking-[1px] block mt-0.5 ${followers > 0 ? 'underline decoration-dotted underline-offset-2 text-ink/50' : 'text-ink/40'}`}>watching</span>
+                            </button>
                           </div>
                         </div>
 
@@ -592,6 +691,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
                   </main>
                 </div>
               </div>
+            )}
+
+            {watchersOpen && world && (
+              <WatchersModal worldId={world.id} worldTitle={world.title} config={config} viewerPrivyId={user?.id ?? null} onClose={() => setWatchersOpen(false)} />
             )}
           </div>
         </section>
