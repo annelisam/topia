@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worldFollows, worldMembers, worlds, users, notifications } from '@/lib/db/schema';
-import { eq, and, count, inArray } from 'drizzle-orm';
+import { eq, and, count, desc, inArray } from 'drizzle-orm';
 
-// GET /api/worlds/follow?worldId=...&privyId=... — follower count for a world,
-// plus whether the viewer follows it (privyId optional).
+// GET /api/worlds/follow?worldId=...&privyId=... — watcher count for a world,
+// plus whether the viewer watches it (privyId optional). With &list=1, also
+// returns who's watching (public profile bits only).
 export async function GET(request: NextRequest) {
   try {
     const worldId = request.nextUrl.searchParams.get('worldId');
     const privyId = request.nextUrl.searchParams.get('privyId');
+    const wantList = request.nextUrl.searchParams.get('list') === '1';
     if (!worldId) return NextResponse.json({ error: 'Missing worldId' }, { status: 400 });
+
+    if (wantList) {
+      const watchers = await db
+        .select({
+          userId: worldFollows.userId,
+          name: users.name,
+          username: users.username,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(worldFollows)
+        .innerJoin(users, eq(users.id, worldFollows.userId))
+        .where(eq(worldFollows.worldId, worldId))
+        .orderBy(desc(worldFollows.createdAt))
+        .limit(200);
+      return NextResponse.json(
+        { watchers },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
+    }
 
     const [{ value: followers }] = await db
       .select({ value: count() })
