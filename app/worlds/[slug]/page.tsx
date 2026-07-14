@@ -340,7 +340,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
 
   function renderSection() {
     switch (activeSection) {
-      case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} />;
+      case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} worldId={world?.id ?? ''} allTools={allTools} />;
       case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} ghosts={world?.pendingGhosts ?? []} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;
       case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
