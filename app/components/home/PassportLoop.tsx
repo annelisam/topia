@@ -173,9 +173,10 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
     });
 
     // Cover-flow through the center: cards travel right → left while tilting
-    // in perspective. Opacity fades linearly (not eased) so more neighbors
-    // stay readable — a fuller fan on both sides of the center card.
-    const spacing = 0.1;
+    // in perspective. Opacity fades linearly (not eased) and the stagger is
+    // tight, so the stage reads as a crowded spread — a dozen-plus cards
+    // overlapping shoulder-to-shoulder around the center one.
+    const spacing = 0.05;
     const snapTime = gsap.utils.snap(spacing);
     const animateFunc = (element: HTMLElement) => {
       const tl = gsap.timeline();
@@ -262,7 +263,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
       onDrag() {
         draggedRef.current = true;
         markInteracted();
-        scrubTo(startOffset + (this.startX - this.x) * 0.0012);
+        scrubTo(startOffset + (this.startX - this.x) * 0.0008);
       },
       onRelease() {
         wrap.classList.remove('deck-dragging');
@@ -279,7 +280,7 @@ export default function PassportLoop({ profiles, showCompleteCta = false }: Prop
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
       markInteracted();
-      scrubTo(vars.offset + e.deltaX * 0.0014);
+      scrubTo(vars.offset + e.deltaX * 0.0008);
       clearTimeout(wheelSnap);
       wheelSnap = setTimeout(() => scrubTo(snapTime(vars.offset)), 180);
     };

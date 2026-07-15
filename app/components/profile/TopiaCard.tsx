@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
+import QRCode from 'qrcode';
 import { PATH_CONFIG, resolvePath, type UserPath } from './pathConfig';
 import FitText from './FitText';
 
@@ -14,6 +16,11 @@ export interface TopiaCardProps {
   // Hide the "tilt with motion →" permission prompt (e.g. inside a modal where
   // it crowds the layout).
   showMotionPrompt?: boolean;
+  // Give the card a QR back face with the VIEWER'S permanent Topia connect
+  // code (the same one scanned at event doors) plus a flip toggle. Only pass
+  // this when the card being shown is the logged-in viewer's own — the code
+  // is theirs, not the profile's.
+  showConnectQr?: boolean;
 }
 
 const MAX_TILT = 16; // degrees
@@ -24,13 +31,43 @@ const LOGO_PATH = 'M248.244 0L249.567 0.534218C253.772 5.33588 268.237 51.6617 2
 // A holographic, motion-reactive "Topia card". Tilts toward the cursor on
 // desktop and toward device orientation on mobile (hand movement). Mirrors the
 // shareable card image at /api/profile/<username>/card.
-export default function TopiaCard({ name, username, avatarUrl, roleTags = [], path, issued, showMotionPrompt = true }: TopiaCardProps) {
+export default function TopiaCard({ name, username, avatarUrl, roleTags = [], path, issued, showMotionPrompt = true, showConnectQr = false }: TopiaCardProps) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [needsMotionPermission, setNeedsMotionPermission] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const target = useRef({ x: 0, y: 0 }); // latest tilt target (cursor / gyro)
   const cur = useRef({ x: 0, y: 0 });    // eased value, mirrored into `tilt`
   const motionOn = useRef(false);
+
+  // QR back face — the viewer's own permanent connect code, lazily fetched
+  // and rendered as a scannable back of the card.
+  const { user, authenticated } = usePrivy();
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [flipped, setFlipped] = useState(false);
+  const [flipAnim, setFlipAnim] = useState(false);
+
+  useEffect(() => {
+    if (!showConnectQr || !authenticated || !user?.id) return;
+    let cancelled = false;
+    fetch(`/api/connect/code?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(async (d) => {
+        if (!d?.path || cancelled) return;
+        const dataUrl = await QRCode.toDataURL(`${window.location.origin}${d.path}`, {
+          width: 480, margin: 1, color: { dark: '#1a1a1a', light: '#ffffff' },
+        });
+        if (!cancelled) setQrDataUrl(dataUrl);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [showConnectQr, authenticated, user?.id]);
+
+  const flip = () => {
+    target.current = { x: 0, y: 0 }; // settle flat so the turn reads clean
+    setFlipAnim(true);
+    setFlipped((f) => !f);
+    window.setTimeout(() => setFlipAnim(false), 700);
+  };
 
   const resolved = resolvePath(typeof path === 'string' ? path : null, roleTags, false);
   const cfg = PATH_CONFIG[resolved];
@@ -116,17 +153,22 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         onMouseLeave={recenter}
         onTouchMove={(e) => { const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY); }}
         onTouchEnd={recenter}
-        className="relative w-[300px] max-w-full aspect-[4/5] rounded-2xl overflow-hidden"
+        // overflow-hidden must live on the FACES, not here — a non-visible
+        // overflow is a grouping property that forces transform-style back to
+        // flat, which would kill the backface-visibility flip.
+        className="relative w-[300px] max-w-full aspect-[4/5] rounded-2xl"
         style={{
-          transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+          transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y + (flipped ? 180 : 0)}deg)`,
           transformStyle: 'preserve-3d',
+          transition: flipAnim ? 'transform 0.65s cubic-bezier(0.25, 0.8, 0.3, 1)' : undefined,
           // Stops the page/background from scrolling while dragging on the card.
           touchAction: 'none',
-          background: '#0f0f0f',
           border: `1px solid ${accent}55`,
           boxShadow: `0 30px 60px -20px rgba(0,0,0,0.7), 0 0 40px -12px ${accent}66`,
         }}
       >
+        {/* ── FRONT FACE ── */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f' }}>
         {/* path glow */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 30%, ${accent}33 0%, transparent 60%)` }} />
 
@@ -185,7 +227,56 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
             opacity: intensity,
           }}
         />
+        </div>
+
+        {/* ── BACK FACE — the viewer's Topia connect QR ── */}
+        {showConnectQr && (
+          <div
+            className="absolute inset-0 flex flex-col p-5 rounded-2xl overflow-hidden"
+            style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f' }}
+          >
+            <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 70%, ${accent}26 0%, transparent 60%)` }} />
+            <div className="relative h-full flex flex-col">
+              <div className="flex items-center justify-between">
+                <svg width="34" height="22" viewBox="0 0 468 309" fill="none" aria-label="Topia">
+                  <path d={LOGO_PATH} fill={accent} />
+                </svg>
+                <span className="font-mono text-[8px] tracking-[2px] uppercase text-bone/40">connect</span>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="rounded-xl p-2.5" style={{ background: '#ffffff' }}>
+                  {qrDataUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={qrDataUrl} alt="Your Topia connect QR code" style={{ width: 164, height: 164, display: 'block' }} />
+                  ) : (
+                    <div className="flex items-center justify-center font-mono text-[10px] uppercase tracking-[2px]" style={{ width: 164, height: 164, color: '#1a1a1a99' }}>
+                      loading…
+                    </div>
+                  )}
+                </div>
+                <div className="font-mono text-[11px] text-bone/70 mt-4">@{username}</div>
+                <p className="font-mono text-[9px] tracking-[1px] uppercase text-bone/40 mt-2 text-center px-4 leading-relaxed">
+                  Scan with any camera — instant mutual connect
+                </p>
+              </div>
+              <div className="flex items-center justify-between font-mono text-[8px] tracking-[2px] uppercase text-bone/35">
+                <span>one code · everywhere</span>
+                <span>topia.vision</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showConnectQr && (
+        <button
+          onClick={flip}
+          className="mt-3 mx-auto flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-[2px] px-4 py-2 rounded-full cursor-pointer bg-transparent"
+          style={{ border: `1px solid ${accent}66`, color: accent }}
+        >
+          {flipped ? '↺ show card' : '⇄ show my QR'}
+        </button>
+      )}
 
       {showMotionPrompt && needsMotionPermission && (
         <button onClick={requestMotion} className="mt-3 mx-auto block font-mono text-[10px] uppercase tracking-[2px] text-bone/50 hover:text-bone underline bg-transparent border-none cursor-pointer">

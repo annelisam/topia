@@ -1,10 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePrivy } from '@privy-io/react-auth';
 import QRCode from 'qrcode';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
+import { describeQuestRule } from '../../../../lib/events/questTypes';
+
+// The site-wide messages UI, mounted locally so the "DM someone you met"
+// quest can open a thread without leaving Event Mode (this page has no
+// Navigation, which normally hosts the modal).
+const MessagesModal = dynamic(() => import('../../../components/MessagesModal'), { ssr: false });
 
 /* Event Mode — the in-the-room hub for a live event. Deliberately committed
  * to a single dark look (obsidian ground, lime accents) regardless of the
@@ -31,7 +38,7 @@ interface LiveEvent {
 interface Guest { name: string | null; username: string | null; avatarUrl: string | null; }
 interface MyDoorState { onList: boolean; rsvpStatus: string | null; checkedIn: boolean; checkedInAt: string | null; }
 interface Connection { id: string; name: string | null; username: string | null; avatarUrl: string | null; connectedAt: string; }
-interface QuestItem { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; rule: { kind: string; count?: number } | null; completed: boolean; }
+interface QuestItem { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; rule: { kind: string; count?: number } | null; completed: boolean; progress: { current: number; target: number } | null; }
 interface QuestState { quests: QuestItem[]; total: number; completedCount: number; inRaffle: boolean; }
 interface PrizeItem { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
 interface BoardEntry { userId: string; name: string | null; username: string | null; avatarUrl: string | null; completedCount: number; inRaffle: boolean; }
@@ -45,6 +52,18 @@ const DIM = 'rgba(245,240,232,0.55)';
 const card: React.CSSProperties = { border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px' };
 const meta: React.CSSProperties = { color: DIM, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em' };
 
+// Slim labeled divider — groups the card stack into scannable sections
+// (Your pass / Tonight's game / The room) so the page reads as a map,
+// not a pile.
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mt-1.5 -mb-1" aria-hidden="true">
+      <span style={meta}>{children}</span>
+      <span className="flex-1 h-px" style={{ backgroundColor: LINE }} />
+    </div>
+  );
+}
+
 function isToday(dateIso: string | null): boolean {
   if (!dateIso) return false;
   const now = new Date();
@@ -54,7 +73,7 @@ function isToday(dateIso: string | null): boolean {
 
 export default function EventLivePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, login } = usePrivy();
   const privyId = user?.id;
 
   const [event, setEvent] = useState<LiveEvent | null>(null);
@@ -74,6 +93,17 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const [questScanOpen, setQuestScanOpen] = useState(false);
   const [questScanStatus, setQuestScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
   const [questToast, setQuestToast] = useState<string | null>(null);
+  const [introDismissed, setIntroDismissed] = useState(true);
+  const [dmConversation, setDmConversation] = useState<string | null>(null);
+  const [dmBusyId, setDmBusyId] = useState<string | null>(null);
+
+  // Scroll targets so quest action buttons can point at the section where
+  // that quest actually happens.
+  const qrCardRef = useRef<HTMLDivElement | null>(null);
+  const peopleRef = useRef<HTMLDivElement | null>(null);
+  const goingRef = useRef<HTMLDivElement | null>(null);
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) =>
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // The viewer's personal connect QR — a host scans it at the door to check
   // them in (and in P3 other guests scan it to connect).
@@ -96,6 +126,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
   useEffect(() => {
     setInstallDismissed(localStorage.getItem('topia:install-hint') === 'dismissed');
+    setIntroDismissed(localStorage.getItem('topia:quest-intro') === 'done');
     setStandalone(window.matchMedia('(display-mode: standalone)').matches);
   }, []);
 
@@ -162,7 +193,30 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
       .then((d) => { if (d?.prizes) setPrizes(d.prizes); })
       .catch(() => {});
   }, [event?.id, privyId]);
-  useEffect(() => { loadQuests(); }, [loadQuests]);
+  // Poll alongside the door state: auto quests (connections, follows, DMs)
+  // complete server-side, so the checklist ticks itself without a reload.
+  useEffect(() => {
+    loadQuests();
+    const t = setInterval(loadQuests, 20000);
+    return () => clearInterval(t);
+  }, [loadQuests]);
+
+  // Start (or reopen) a DM with someone met tonight — powers the "DM someone
+  // you met" quest without leaving Event Mode.
+  const messagePerson = useCallback(async (targetUserId: string) => {
+    if (!privyId) return;
+    setDmBusyId(targetUserId);
+    try {
+      const res = await fetch('/api/messages/conversations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, targetUserId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.conversationId) setDmConversation(d.conversationId);
+    } catch {
+      // best-effort; the row's button just re-enables
+    } finally { setDmBusyId(null); }
+  }, [privyId]);
 
   const completeQuestCode = useCallback(async (value: string): Promise<{ kind: 'ok' | 'warn' | 'err'; text: string }> => {
     if (!privyId || !event?.id) return { kind: 'err', text: 'Log in first.' };
@@ -215,12 +269,14 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
         ? { kind: 'warn', text: `Already connected with ${who}` }
         : { kind: 'ok', text: `✦ Connected with ${who}` });
       loadPeople();
+      loadQuests(); // connection-counting quests tick immediately
     } catch {
       setScanStatus({ kind: 'err', text: 'Scan failed — try again.' });
     }
-  }, [privyId, event?.id, loadPeople]);
+  }, [privyId, event?.id, loadPeople, loadQuests]);
 
   const live = isToday(event?.dateIso ?? null);
+  const nextQuest = questState?.quests.find((q) => !q.completed) ?? null;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1a1a', color: INK }}>
@@ -269,106 +325,131 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </p>
             </div>
 
-            {/* Door state — the gate everything else will hang off */}
+            {/* Door state — the hero card. Always answers ONE question:
+                "what do I do right now?" — log in, RSVP, get checked in,
+                or go play. Each state carries its own CTA. */}
             {!authenticated ? (
-              <div style={{ ...card, borderColor: LINE }}>
-                <p style={meta}>Check-in</p>
-                <p className="text-[13px] mt-1.5" style={{ color: INK }}>Log in to see your check-in status and join the quests.</p>
+              <div style={{ ...card, borderColor: LIME }}>
+                <p style={{ ...meta, color: LIME }}>Step 1 · Log in</p>
+                <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                  Everything here — check-in, quests, meeting people — hangs off your Topia account. New? Signing up takes a minute.
+                </p>
+                <button
+                  onClick={login}
+                  className="font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full cursor-pointer border-none mt-3"
+                  style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                >
+                  Log in or sign up →
+                </button>
               </div>
             ) : me?.checkedIn ? (
               <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
                 <p style={{ ...meta, color: LIME }}>✓ You're checked in</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  Since {me.checkedInAt ? new Date(me.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'just now'} — you're all set for quests when they land here.
+                  Since {me.checkedInAt ? new Date(me.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'just now'}
+                  {questState && questState.total > 0 ? ' — every quest is unlocked.' : " — you're all set."}
                 </p>
+                {nextQuest && (
+                  <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>
+                    Up next: {nextQuest.icon ? `${nextQuest.icon} ` : ''}{nextQuest.title} ↓
+                  </p>
+                )}
               </div>
             ) : me?.onList ? (
               <div style={{ ...card, borderColor: ORANGE }}>
-                <p style={{ ...meta, color: ORANGE }}>Not checked in yet</p>
+                <p style={{ ...meta, color: ORANGE }}>Step 2 · Check in at the door</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  Find a host at the door — they'll check you in, and that's what unlocks quests.
+                  You're on the list. Show your Topia code (below) to a host at the door — check-in unlocks the in-person quests.
                 </p>
               </div>
             ) : (
-              <div style={card}>
-                <p style={meta}>You're not on the list</p>
+              <div style={{ ...card, borderColor: ORANGE }}>
+                <p style={{ ...meta, color: ORANGE }}>Step 1 · RSVP</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  RSVP on the <Link href={`/events/${slug}`} className="underline" style={{ color: LIME }}>event page</Link> to join.
+                  You're not on the guest list yet — RSVP first, then come back here.
                 </p>
+                <Link
+                  href={`/events/${slug}`}
+                  className="inline-block font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full no-underline mt-3"
+                  style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                >
+                  RSVP on the event page →
+                </Link>
+              </div>
+            )}
+
+            {/* Host tools — pinned high; a manager is usually working the
+                door, not playing the game */}
+            {event.isManager && (
+              <div style={{ ...card, borderColor: LIME, paddingTop: 6, paddingBottom: 6 }}>
+                <Link href={`/events/${slug}/manage#checkin`} className="no-underline flex items-center justify-between py-2.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Working the door? Check-in</span>
+                  <span style={{ color: LIME }}>→</span>
+                </Link>
+                <div style={{ height: 1, backgroundColor: LINE }} />
+                <Link href={`/events/${slug}/manage#quests`} className="no-underline flex items-center justify-between py-2.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Quests, prizes & raffle</span>
+                  <span style={{ color: LIME }}>→</span>
+                </Link>
               </div>
             )}
 
             {/* Personal QR — the door scans it to check you in; other guests
                 scan it to connect with you */}
             {authenticated && qrDataUrl && (
-              <div style={card}>
-                <div className="flex items-center justify-between">
-                  <p style={meta}>Your Topia code</p>
-                  <button
-                    onClick={() => { setScanStatus(null); setScanOpen(true); }}
-                    className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
-                    style={{ backgroundColor: LIME, color: '#1a1a1a' }}
-                  >
-                    ◎ Scan to connect
-                  </button>
-                </div>
-                <div className="flex items-center gap-4 mt-2.5">
-                  <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
-                  <p className="text-[12px] flex-1" style={{ color: DIM }}>
-                    {me?.checkedIn
-                      ? 'Trade scans with people you meet — an instant mutual connection, recorded from tonight.'
-                      : 'Show this at the door to get checked in — then trade scans with people you meet to connect.'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* People you met at this event */}
-            {authenticated && (people.length > 0 || me?.checkedIn) && (
-              <div style={card}>
-                <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
-                {people.length === 0 ? (
-                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No connections yet — scan someone's Topia code to start your list.</p>
-                ) : (
-                  <div className="mt-2 flex flex-col gap-0.5">
-                    {people.slice(0, 12).map((p) => (
-                      <Link key={p.id} href={p.username ? `/profile/${p.username}` : '#'} className="flex items-center gap-3 py-2 no-underline" style={{ borderBottom: `1px solid ${LINE}` }}>
-                        {p.avatarUrl
-                          ? <img src={p.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
-                          : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(p.name || p.username || '?')[0].toUpperCase()}</div>}
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{p.name || p.username}</span>
-                          {p.username && <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{p.username}</span>}
-                        </span>
-                        <span className="font-mono text-[10px]" style={{ color: DIM }}>
-                          {new Date(p.connectedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                        </span>
-                      </Link>
-                    ))}
+              <>
+                <SectionLabel>Your pass</SectionLabel>
+                <div ref={qrCardRef} style={card}>
+                  <div className="flex items-center justify-between">
+                    <p style={meta}>Your Topia code</p>
+                    <button
+                      onClick={() => { setScanStatus(null); setScanOpen(true); }}
+                      className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
+                      style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                    >
+                      ◎ Scan to connect
+                    </button>
                   </div>
-                )}
-              </div>
+                  <div className="flex items-center gap-4 mt-2.5">
+                    <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
+                    <p className="text-[12px] flex-1" style={{ color: DIM }}>
+                      {me?.checkedIn
+                        ? 'Trade scans with people you meet — an instant mutual connection, recorded from tonight.'
+                        : 'Show this at the door to get checked in — then trade scans with people you meet to connect.'}
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* Host shortcut to the door roster */}
-            {event.isManager && (
-              <Link href={`/events/${slug}/manage#checkin`} className="no-underline flex items-center justify-between" style={{ ...card, borderColor: LIME }}>
-                <span className="font-mono text-[12px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Working the door? Open check-in</span>
-                <span style={{ color: LIME }}>→</span>
-              </Link>
+            {/* Quests — the checklist for tonight. Actionable: every open
+                quest carries the button (or pointer) that gets it done. */}
+            {((questState?.total ?? 0) > 0 || prizes.length > 0) && (
+              <SectionLabel>Tonight's game</SectionLabel>
             )}
-
-            {/* Quests */}
             {questToast && (
               <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
                 <p className="text-[13px] font-bold" style={{ color: LIME }}>{questToast}</p>
               </div>
             )}
             {authenticated && questState && questState.total > 0 && (
-              <div style={card}>
+              <div style={questState.inRaffle ? { ...card, borderColor: LIME } : card}>
                 <div className="flex items-center justify-between">
-                  <p style={meta}>Quests · {questState.completedCount}/{questState.total}</p>
-                  {me?.checkedIn && (
+                  <span className="flex items-center gap-2">
+                    <p style={meta}>Quests · {questState.completedCount}/{questState.total}</p>
+                    {introDismissed && !questState.inRaffle && (
+                      <button
+                        onClick={() => setIntroDismissed(false)}
+                        aria-label="How quests work"
+                        title="How quests work"
+                        className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold cursor-pointer bg-transparent p-0"
+                        style={{ border: `1px solid ${LINE}`, color: DIM }}
+                      >
+                        ?
+                      </button>
+                    )}
+                  </span>
+                  {me?.checkedIn && questState.quests.some((q) => q.verifyMethod === 'qr' && !q.completed) && (
                     <button
                       onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }}
                       className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
@@ -383,31 +464,100 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                 </div>
                 {questState.inRaffle ? (
                   <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>🎉 All quests complete — you're in the raffle</p>
-                ) : !me?.checkedIn ? (
-                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>Check in at the door to unlock quests</p>
                 ) : (
-                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>Complete all {questState.total} to enter the raffle</p>
+                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>
+                    Finish all {questState.total} to enter the raffle{me?.checkedIn ? '' : ' — check-in unlocks the in-person ones'}
+                  </p>
                 )}
-                <div className="mt-3 flex flex-col gap-2">
-                  {questState.quests.map((q) => (
-                    <div key={q.id} className="flex items-start gap-2.5 rounded-xl px-3 py-2.5"
-                      style={{ border: `1px solid ${q.completed ? LIME : LINE}`, opacity: me?.checkedIn || q.completed ? 1 : 0.5 }}>
-                      <span className="text-[15px] leading-tight">{me?.checkedIn || q.completed ? (q.icon || '✦') : '🔒'}</span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-[13px] font-bold" style={{ color: INK }}>{q.title}</span>
-                        {q.description && <span className="block text-[11px] mt-0.5" style={{ color: DIM }}>{q.description}</span>}
-                        {q.verifyMethod === 'auto' && !q.completed && (
-                          <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>
-                            {q.rule?.kind === 'connections' ? `Auto — connect with ${q.rule.count ?? 1} people` : 'Auto — completes at check-in'}
-                          </span>
-                        )}
-                        {q.verifyMethod === 'host' && !q.completed && (
-                          <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>A host verifies this one</span>
-                        )}
-                      </span>
-                      <span className="font-mono text-[13px] font-bold" style={{ color: q.completed ? LIME : DIM }}>{q.completed ? '✓' : '○'}</span>
+
+                {/* One-time explainer for people on their first quest run */}
+                {!introDismissed && !questState.inRaffle && (
+                  <div className="rounded-xl px-3 py-2.5 mt-3" style={{ border: `1px dashed rgba(228,254,82,0.4)`, backgroundColor: 'rgba(228,254,82,0.04)' }}>
+                    <p style={{ ...meta, color: LIME }}>First time? Here's the game</p>
+                    <div className="mt-1.5 flex flex-col gap-1">
+                      <p className="text-[12px]" style={{ color: INK }}>1 · Some quests complete on their own as you use Topia — you may have progress already.</p>
+                      <p className="text-[12px]" style={{ color: INK }}>2 · The in-person ones happen right here: scan, meet, message.</p>
+                      <p className="text-[12px]" style={{ color: INK }}>3 · Finish the whole list and you're in the raffle for tonight's prizes.</p>
                     </div>
-                  ))}
+                    <button
+                      onClick={() => { setIntroDismissed(true); localStorage.setItem('topia:quest-intro', 'done'); }}
+                      className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none mt-2"
+                      style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                    >
+                      Got it
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-col gap-2">
+                  {questState.quests.map((q, i) => {
+                    // Only QR + host quests hard-require check-in (the server
+                    // enforces it); auto quests tick on their own so a new
+                    // user sees momentum before they even reach the door.
+                    const locked = !q.completed && !me?.checkedIn && (q.verifyMethod === 'qr' || q.verifyMethod === 'host');
+                    const pct = q.progress ? Math.min(100, (q.progress.current / q.progress.target) * 100) : 0;
+                    const kind = q.rule?.kind;
+                    const actionBtn = 'font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-full cursor-pointer';
+                    return (
+                      <div key={q.id} className="rounded-xl px-3 py-3"
+                        style={{ border: `1px solid ${q.completed ? LIME : LINE}`, backgroundColor: q.completed ? 'rgba(228,254,82,0.05)' : 'transparent', opacity: locked ? 0.6 : 1 }}>
+                        <div className="flex items-start gap-2.5">
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[11px] font-bold shrink-0 mt-0.5"
+                            style={q.completed ? { backgroundColor: LIME, color: '#1a1a1a' } : { border: `1px solid ${LINE}`, color: DIM }}>
+                            {q.completed ? '✓' : i + 1}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[13px] font-bold" style={{ color: INK }}>{q.icon ? `${q.icon} ` : ''}{q.title}</span>
+                            {q.description && <span className="block text-[11px] mt-0.5" style={{ color: DIM }}>{q.description}</span>}
+                            {!q.completed && (
+                              <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>
+                                {locked ? '🔒 Unlocks at check-in' : describeQuestRule(q.verifyMethod, q.rule)}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {!q.completed && q.progress && (
+                          <div className="flex items-center gap-2 mt-2" style={{ marginLeft: 34 }}>
+                            <div className="h-1.5 rounded-full flex-1 overflow-hidden" style={{ backgroundColor: 'rgba(245,240,232,0.12)' }}>
+                              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: LIME }} />
+                            </div>
+                            <span className="font-mono text-[10px] font-bold shrink-0" style={{ color: q.progress.current > 0 ? LIME : DIM }}>
+                              {Math.min(q.progress.current, q.progress.target)}/{q.progress.target}
+                            </span>
+                          </div>
+                        )}
+                        {!q.completed && !locked && (
+                          <div className="mt-2 flex" style={{ marginLeft: 34 }}>
+                            {q.verifyMethod === 'qr' ? (
+                              <button onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }} className={`${actionBtn} border-none`} style={{ backgroundColor: LIME, color: '#1a1a1a' }}>
+                                ◉ Scan the code
+                              </button>
+                            ) : kind === 'connections' ? (
+                              <button onClick={() => { setScanStatus(null); setScanOpen(true); }} className={`${actionBtn} border-none`} style={{ backgroundColor: LIME, color: '#1a1a1a' }}>
+                                ◎ Scan someone's code
+                              </button>
+                            ) : kind === 'follows' ? (
+                              <button onClick={() => scrollTo(goingRef)} className={actionBtn} style={{ backgroundColor: 'transparent', color: INK, border: `1px solid ${LINE}` }}>
+                                Find people here ↓
+                              </button>
+                            ) : kind === 'dm' && people.length > 0 ? (
+                              <button onClick={() => scrollTo(peopleRef)} className={actionBtn} style={{ backgroundColor: 'transparent', color: INK, border: `1px solid ${LINE}` }}>
+                                Message someone you met ↓
+                              </button>
+                            ) : kind === 'dm' ? (
+                              <button onClick={() => { setScanStatus(null); setScanOpen(true); }} className={actionBtn} style={{ backgroundColor: 'transparent', color: INK, border: `1px solid ${LINE}` }}>
+                                Meet someone first — scan their code
+                              </button>
+                            ) : kind === 'checkin' && !me?.checkedIn ? (
+                              <button onClick={() => scrollTo(qrCardRef)} className={actionBtn} style={{ backgroundColor: 'transparent', color: INK, border: `1px solid ${LINE}` }}>
+                                Show my code ↑
+                              </button>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -453,8 +603,45 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </div>
             )}
 
-            {/* Who's here */}
-            <div style={card}>
+            <SectionLabel>The room</SectionLabel>
+
+            {/* People you met at this event */}
+            {authenticated && (people.length > 0 || me?.checkedIn) && (
+              <div ref={peopleRef} style={card}>
+                <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
+                {people.length === 0 ? (
+                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No one yet — trade a scan with someone you meet and they'll show up here.</p>
+                ) : (
+                  <div className="mt-2 flex flex-col gap-0.5">
+                    {people.slice(0, 12).map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${LINE}` }}>
+                        <Link href={p.username ? `/profile/${p.username}` : '#'} className="flex items-center gap-3 flex-1 min-w-0 no-underline">
+                          {p.avatarUrl
+                            ? <img src={p.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(p.name || p.username || '?')[0].toUpperCase()}</div>}
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{p.name || p.username}</span>
+                            {p.username && <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{p.username}</span>}
+                          </span>
+                        </Link>
+                        <button
+                          onClick={() => messagePerson(p.id)}
+                          disabled={dmBusyId === p.id}
+                          className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-full cursor-pointer shrink-0 disabled:opacity-50"
+                          style={{ backgroundColor: 'transparent', color: LIME, border: '1px solid rgba(228,254,82,0.4)' }}
+                        >
+                          {dmBusyId === p.id ? '…' : '💬 DM'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Who's here — expands into a browsable list when a "connect on
+                Topia" quest is live, so "find people" has somewhere to land */}
+            <div ref={goingRef} style={card}>
               <p style={meta}>{guestCount} going</p>
               {guests.length > 0 && (
                 <div className="flex items-center mt-2.5">
@@ -465,6 +652,25 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                   ))}
                   {guestCount > 8 && <span className="font-mono text-[11px] ml-2" style={{ color: DIM }}>+{guestCount - 8}</span>}
                 </div>
+              )}
+              {authenticated && questState?.quests.some((q) => q.rule?.kind === 'follows') && guests.some((g) => g.username) && (
+                <>
+                  <div className="mt-3 flex flex-col gap-0.5">
+                    {guests.filter((g) => g.username).slice(0, 12).map((g, i) => (
+                      <Link key={i} href={`/profile/${g.username}`} className="flex items-center gap-3 py-2 no-underline" style={{ borderBottom: `1px solid ${LINE}` }}>
+                        {g.avatarUrl
+                          ? <img src={g.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(g.name || g.username || '?')[0].toUpperCase()}</div>}
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{g.name || g.username}</span>
+                          <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{g.username}</span>
+                        </span>
+                        <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: LIME }}>View →</span>
+                      </Link>
+                    ))}
+                  </div>
+                  <p className="font-mono text-[10px] mt-2" style={{ color: DIM }}>Tap someone to see their profile and connect — sent requests count toward your quest.</p>
+                </>
               )}
             </div>
 
@@ -507,6 +713,12 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           status={questScanStatus}
           onCode={handleQuestScan}
           onClose={() => setQuestScanOpen(false)}
+        />
+      )}
+      {dmConversation && (
+        <MessagesModal
+          initialConversationId={dmConversation}
+          onClose={() => { setDmConversation(null); loadQuests(); }}
         />
       )}
     </div>
