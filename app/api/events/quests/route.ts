@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, users, eventQuests, eventQuestCompletions } from '@/lib/db';
 import { and, asc, count, eq } from 'drizzle-orm';
 import { requireManager } from '@/lib/events/auth';
-import { generateQuestCode, getMyQuestState, AUTO_RULE_KINDS, AutoRule } from '@/lib/events/quests';
+import { generateQuestCode, getMyQuestState, AUTO_RULE_KINDS, COUNTED_RULE_KINDS, AutoRule } from '@/lib/events/quests';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const VERIFY_METHODS = new Set(['qr', 'host', 'auto']);
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       if (!AUTO_RULE_KINDS.includes(kind)) {
         return NextResponse.json({ error: `auto rule kind must be one of: ${AUTO_RULE_KINDS.join(', ')}` }, { status: 400 });
       }
-      cleanRule = kind === 'connections'
+      cleanRule = (COUNTED_RULE_KINDS as readonly string[]).includes(kind)
         ? { kind, count: Math.max(1, Math.floor(Number(rule?.count ?? 1))) }
         : { kind };
     }

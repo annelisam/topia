@@ -11,6 +11,7 @@ import { PAYMENTS_ENABLED } from '../../../../lib/featureFlags';
 import TicketManager from '../TicketManager';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
 import QRCode from 'qrcode';
+import { QUEST_TYPES, QuestTypeDef, STARTER_PACK, questTypeById, describeQuestRule } from '../../../../lib/events/questTypes';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface EventLite {
@@ -262,13 +263,6 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
 interface Quest { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; code: string | null; rule: { kind: string; count?: number } | null; isActive: boolean; completions: number; }
 interface Prize { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
 
-const VERIFY_OPTIONS = [
-  { value: 'qr', label: 'QR code — guests scan a code you post at the venue' },
-  { value: 'host', label: 'Host verified — you mark it done in person' },
-  { value: 'auto_connections', label: 'Auto — connect with N people at this event' },
-  { value: 'auto_checkin', label: 'Auto — completes at door check-in' },
-];
-
 function methodTag(q: Quest): { text: string; color: string } {
   if (q.verifyMethod === 'qr') return { text: 'QR', color: '#4F46FF' };
   if (q.verifyMethod === 'host') return { text: 'HOST', color: '#FF9F1C' };
@@ -282,14 +276,15 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
 
-  // Add-quest form
-  const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
-  const [icon, setIcon] = useState('');
-  const [verify, setVerify] = useState('qr');
-  const [connCount, setConnCount] = useState('3');
+  // Add-quest flow: "+ Add quest" opens a type picker (plain-language cards);
+  // choosing one opens a prefilled draft the host can tweak before saving.
+  const [picking, setPicking] = useState(false);
+  const [draft, setDraft] = useState<{ type: QuestTypeDef; title: string; desc: string; icon: string; count: number } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [packBusy, setPackBusy] = useState(false);
+
+  // Host-verified grant modal (mark a quest done for a checked-in guest)
+  const [grantQuest, setGrantQuest] = useState<Quest | null>(null);
 
   // QR sheet modal
   const [qrQuest, setQrQuest] = useState<Quest | null>(null);
@@ -316,23 +311,57 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
   }, [eventId, privyId]);
   useEffect(() => { load(); }, [load]);
 
-  const addQuest = async () => {
-    if (!title.trim()) return;
+  const postQuest = useCallback(async (t: QuestTypeDef, title: string, desc: string, icon: string, n: number) => {
+    const rule = t.verifyMethod === 'auto'
+      ? (t.counted ? { kind: t.ruleKind, count: Math.max(1, n) } : { kind: t.ruleKind })
+      : undefined;
+    const res = await fetch('/api/events/quests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, eventId, title: title.trim(), description: desc.trim() || undefined, icon: icon.trim() || undefined, verifyMethod: t.verifyMethod, rule }),
+    });
+    const d = await res.json().catch(() => ({}));
+    return res.ok ? null : (d.error as string || 'Could not add quest.');
+  }, [privyId, eventId]);
+
+  const startDraft = (t: QuestTypeDef) => {
+    const n = t.defaultCount ?? 1;
+    setDraft({ type: t, title: t.titleFor(n), desc: t.descFor(n), icon: t.icon, count: n });
+  };
+
+  // Bumping the count keeps an untouched title in sync ("Connect with 5
+  // people…" → "…6 people…") but never overwrites a host's own words.
+  const setDraftCount = (n: number) => {
+    setDraft((d) => {
+      if (!d) return d;
+      const next = Math.max(1, Math.min(99, n));
+      return { ...d, count: next, title: d.title === d.type.titleFor(d.count) ? d.type.titleFor(next) : d.title };
+    });
+  };
+
+  const saveDraft = async () => {
+    if (!draft || !draft.title.trim()) return;
     setBusy(true); setError('');
     try {
-      const verifyMethod = verify.startsWith('auto') ? 'auto' : verify;
-      const rule = verify === 'auto_connections'
-        ? { kind: 'connections', count: Math.max(1, parseInt(connCount, 10) || 1) }
-        : verify === 'auto_checkin' ? { kind: 'checkin' } : undefined;
-      const res = await fetch('/api/events/quests', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ privyId, eventId, title: title.trim(), description: desc.trim() || undefined, icon: icon.trim() || undefined, verifyMethod, rule }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(d.error || 'Could not add quest.'); return; }
-      setTitle(''); setDesc(''); setIcon(''); setVerify('qr'); setAdding(false);
+      const err = await postQuest(draft.type, draft.title, draft.desc, draft.icon, draft.count);
+      if (err) { setError(err); return; }
+      setDraft(null); setPicking(false);
       load();
     } finally { setBusy(false); }
+  };
+
+  const addStarterPack = async () => {
+    setPackBusy(true); setError('');
+    try {
+      for (const item of STARTER_PACK) {
+        const t = questTypeById(item.typeId);
+        if (!t) continue;
+        const n = item.count ?? t.defaultCount ?? 1;
+        const err = await postQuest(t, t.titleFor(n), t.descFor(n), t.icon, n);
+        if (err) { setError(err); break; }
+      }
+      setPicking(false); setDraft(null);
+      load();
+    } finally { setPackBusy(false); }
   };
 
   const toggleActive = async (q: Quest) => {
@@ -382,10 +411,7 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
     } finally { setDrawing(null); }
   };
 
-  const describeRule = (q: Quest) =>
-    q.verifyMethod === 'auto'
-      ? q.rule?.kind === 'connections' ? `Auto: ${q.rule.count ?? 1} connections` : 'Auto: on check-in'
-      : q.verifyMethod === 'host' ? 'You verify in person' : 'Scan at venue';
+  const describeRule = (q: Quest) => describeQuestRule(q.verifyMethod, q.rule);
 
   return (
     <div>
@@ -399,23 +425,70 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
       {/* Quest list */}
       <div className="flex items-center justify-between mb-3">
         <p className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Quests</p>
-        <button onClick={() => setAdding((a) => !a)} className={btnGhost} style={fieldStyle}>{adding ? 'Cancel' : '+ Add quest'}</button>
+        <button onClick={() => { setPicking((p) => !p); setDraft(null); }} className={btnGhost} style={fieldStyle}>{picking || draft ? 'Cancel' : '+ Add quest'}</button>
       </div>
 
-      {adding && (
-        <div className="rounded-lg border p-4 space-y-2 mb-4" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex gap-2">
-            <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🎯" className={`${inputCls} !w-16 text-center`} style={fieldStyle} />
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Quest title (e.g. Find the golden koi)" className={inputCls} style={fieldStyle} />
+      {/* Starter pack — the fastest path from zero to a full first-timer journey */}
+      {picking && !draft && (
+        <div className="rounded-lg border p-4 mb-3" style={{ borderColor: 'var(--accent-ink, var(--foreground))' }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-mono text-[12px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--accent-ink, var(--foreground))' }}>✦ First-timer journey</p>
+              <p className="font-mono text-[11px] opacity-60 mt-1" style={{ color: 'var(--foreground)' }}>
+                Four quests that walk a brand-new Topia user from sign-up to their first DM:
+                sign up → connect with 5 people → meet 3 IRL → message someone they met.
+              </p>
+            </div>
+            <button onClick={addStarterPack} disabled={packBusy} className={`${btnPrimary} shrink-0`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+              {packBusy ? 'Adding…' : 'Add all 4'}
+            </button>
           </div>
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Hint shown to guests (optional)" className={inputCls} style={fieldStyle} />
-          <select value={verify} onChange={(e) => setVerify(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
-            {VERIFY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          {verify === 'auto_connections' && (
-            <input value={connCount} onChange={(e) => setConnCount(e.target.value)} inputMode="numeric" placeholder="How many connections?" className={inputCls} style={fieldStyle} />
+        </div>
+      )}
+
+      {/* Type picker — plain-language cards, one per way a quest can verify */}
+      {picking && !draft && (
+        <div className="rounded-lg border p-2 mb-4 space-y-1" style={{ borderColor: 'var(--border-color)' }}>
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-50 px-2 pt-1.5 pb-1" style={{ color: 'var(--foreground)' }}>Or pick a quest type</p>
+          {QUEST_TYPES.map((t) => (
+            <button key={t.id} onClick={() => startDraft(t)}
+              className="w-full flex items-start gap-3 text-left px-2.5 py-2.5 rounded-lg cursor-pointer bg-transparent border-none hover:opacity-70 transition"
+              style={{ color: 'var(--foreground)' }}>
+              <span className="text-[18px] w-7 text-center shrink-0">{t.icon}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-mono text-[13px] font-bold">{t.name}</span>
+                <span className="block font-mono text-[11px] opacity-50 mt-0.5">{t.how}</span>
+              </span>
+              <span className="font-mono text-[13px] opacity-40 shrink-0 mt-1">→</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Draft — prefilled from the chosen type; everything editable */}
+      {draft && (
+        <div className="rounded-lg border p-4 space-y-2.5 mb-4" style={{ borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-50" style={{ color: 'var(--foreground)' }}>{draft.type.icon} {draft.type.name}</p>
+            <button onClick={() => setDraft(null)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none opacity-60" style={{ color: 'var(--foreground)' }}>← Types</button>
+          </div>
+          <p className="font-mono text-[11px] opacity-50" style={{ color: 'var(--foreground)' }}>{draft.type.how}</p>
+          <div className="flex gap-2">
+            <input value={draft.icon} onChange={(e) => setDraft({ ...draft, icon: e.target.value })} placeholder="🎯" aria-label="Quest icon" className={`${inputCls} !w-16 text-center`} style={fieldStyle} />
+            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder={draft.type.verifyMethod === 'host' ? 'Quest title (e.g. Ask the DJ for a song)' : 'Quest title'} className={inputCls} style={fieldStyle} />
+          </div>
+          <input value={draft.desc} onChange={(e) => setDraft({ ...draft, desc: e.target.value })} placeholder="What guests see under the title (optional)" className={inputCls} style={fieldStyle} />
+          {draft.type.counted && (
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-50" style={{ color: 'var(--foreground)' }}>How many</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setDraftCount(draft.count - 1)} disabled={draft.count <= 1} aria-label="Fewer" className="w-9 h-9 rounded-lg border cursor-pointer bg-transparent font-mono text-[16px] disabled:opacity-30" style={fieldStyle}>−</button>
+                <span className="w-10 text-center font-mono text-[16px] font-bold" style={{ color: 'var(--foreground)' }}>{draft.count}</span>
+                <button onClick={() => setDraftCount(draft.count + 1)} aria-label="More" className="w-9 h-9 rounded-lg border cursor-pointer bg-transparent font-mono text-[16px]" style={fieldStyle}>+</button>
+              </div>
+            </div>
           )}
-          <button onClick={addQuest} disabled={busy || !title.trim()} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+          <button onClick={saveDraft} disabled={busy || !draft.title.trim()} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
             {busy ? 'Adding…' : 'Add quest'}
           </button>
         </div>
@@ -445,6 +518,9 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
                   <span className="flex gap-2 shrink-0">
                     {q.verifyMethod === 'qr' && (
                       <button onClick={() => showQr(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>QR</button>
+                    )}
+                    {q.verifyMethod !== 'auto' && q.isActive && (
+                      <button onClick={() => setGrantQuest(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Grant</button>
                     )}
                     <button onClick={() => toggleActive(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none opacity-60" style={{ color: 'var(--foreground)' }}>
                       {q.isActive ? 'Hide' : 'Show'}
@@ -498,6 +574,95 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
           </div>
         </div>
       )}
+
+      {grantQuest && (
+        <GrantQuestModal
+          quest={grantQuest}
+          eventId={eventId}
+          privyId={privyId}
+          onClose={() => { setGrantQuest(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* Grant a quest to a checked-in guest — the missing half of "host verified":
+ * search the checked-in roster, tap a guest, done. Works for QR quests too
+ * (phone died, code won't scan — the host is the authority). */
+function GrantQuestModal({ quest, eventId, privyId, onClose }: { quest: Quest; eventId: string; privyId: string; onClose: () => void }) {
+  const [guests, setGuests] = useState<CheckinGuest[]>([]);
+  const [query, setQuery] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [result, setResult] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch(`/api/events/checkin?eventId=${eventId}&privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.guests) setGuests((d.guests as CheckinGuest[]).filter((g) => g.checkedInAt)); })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [eventId, privyId]);
+
+  const grant = async (g: CheckinGuest) => {
+    setBusyId(g.userId);
+    try {
+      const res = await fetch('/api/events/quests/complete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, questId: quest.id, guestUserId: g.userId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) setResult((m) => ({ ...m, [g.userId]: d.error || 'Failed' }));
+      else setResult((m) => ({ ...m, [g.userId]: d.already ? 'Already done' : '✓ Granted' }));
+    } catch {
+      setResult((m) => ({ ...m, [g.userId]: 'Failed' }));
+    } finally { setBusyId(null); }
+  };
+
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? guests.filter((g) => (g.name ?? '').toLowerCase().includes(q) || (g.username ?? '').toLowerCase().includes(q))
+    : guests;
+
+  return (
+    <div className="fixed inset-0 z-[2100] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-4 flex flex-col" style={{ backgroundColor: 'var(--background)', maxHeight: '80lvh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] uppercase tracking-[0.15em] opacity-50" style={{ color: 'var(--foreground)' }}>Mark quest done</p>
+            <p className="font-mono text-[14px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{quest.icon || '✦'} {quest.title}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-1 opacity-60" style={{ color: 'var(--foreground)' }}>×</button>
+        </div>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search checked-in guests" className={`${inputCls} mb-2 text-[16px]`} style={fieldStyle} />
+        <div className="overflow-y-auto flex-1 min-h-0">
+          {!loaded ? (
+            <p className="font-mono text-[12px] opacity-40 py-3" style={{ color: 'var(--foreground)' }}>Loading roster…</p>
+          ) : shown.length === 0 ? (
+            <p className="font-mono text-[12px] opacity-40 py-3" style={{ color: 'var(--foreground)' }}>
+              {guests.length === 0 ? 'No one is checked in yet — quests unlock at check-in.' : 'No matches.'}
+            </p>
+          ) : shown.map((g) => (
+            <div key={g.userId} className="flex items-center gap-3 py-2.5 border-b" style={{ borderColor: 'var(--border-color)' }}>
+              {g.avatarUrl
+                ? <img src={g.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: 'var(--border-color)', color: 'var(--foreground)' }}>{(g.name || g.username || '?')[0].toUpperCase()}</div>}
+              <span className="flex-1 min-w-0">
+                <span className="block font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{g.name || g.username || 'Guest'}</span>
+                {g.username && <span className="block font-mono text-[10px] opacity-50" style={{ color: 'var(--foreground)' }}>@{g.username}</span>}
+              </span>
+              {result[g.userId] ? (
+                <span className="font-mono text-[11px] font-bold shrink-0" style={{ color: 'var(--accent-ink, var(--foreground))' }}>{result[g.userId]}</span>
+              ) : (
+                <button onClick={() => grant(g)} disabled={busyId === g.userId} className={`${btnGhost} shrink-0 !py-1.5`} style={fieldStyle}>
+                  {busyId === g.userId ? '…' : 'Mark done'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
