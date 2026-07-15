@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import QRCode from 'qrcode';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
 import { describeQuestRule } from '../../../../lib/events/questTypes';
+import { getConnectPath } from '../../../../lib/connect/clientCode';
 
 // The site-wide messages UI, mounted locally so the "DM someone you met"
 // quest can open a thread without leaving Event Mode (this page has no
@@ -106,15 +107,14 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // The viewer's personal connect QR — a host scans it at the door to check
-  // them in (and in P3 other guests scan it to connect).
+  // them in; other guests scan it to connect. Cached-first (the code is
+  // permanent) so the pass renders instantly after the first visit ever.
   useEffect(() => {
     if (!authenticated || !privyId) return;
-    fetch(`/api/connect/code?privyId=${encodeURIComponent(privyId)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(async (d) => {
-        if (!d?.path) return;
-        const url = `${window.location.origin}${d.path}`;
-        const dataUrl = await QRCode.toDataURL(url, {
+    getConnectPath(privyId)
+      .then(async (path) => {
+        if (!path) return;
+        const dataUrl = await QRCode.toDataURL(`${window.location.origin}${path}`, {
           width: 480,
           margin: 1,
           color: { dark: '#1a1a1a', light: '#ffffff' },

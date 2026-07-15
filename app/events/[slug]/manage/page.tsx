@@ -286,6 +286,10 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
   // Host-verified grant modal (mark a quest done for a checked-in guest)
   const [grantQuest, setGrantQuest] = useState<Quest | null>(null);
 
+  // Inline edit of a saved quest (title/desc/icon + count for counted rules)
+  const [editing, setEditing] = useState<{ id: string; title: string; desc: string; icon: string; count: number; counted: boolean } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // QR sheet modal
   const [qrQuest, setQrQuest] = useState<Quest | null>(null);
   const [qrImg, setQrImg] = useState<string | null>(null);
@@ -362,6 +366,51 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
       setPicking(false); setDraft(null);
       load();
     } finally { setPackBusy(false); }
+  };
+
+  const startEdit = (q: Quest) => setEditing({
+    id: q.id,
+    title: q.title,
+    desc: q.description ?? '',
+    icon: q.icon ?? '',
+    count: Math.max(1, Number(q.rule?.count ?? 1)),
+    counted: q.verifyMethod === 'auto' && ['connections', 'follows', 'dm'].includes(q.rule?.kind ?? ''),
+  });
+
+  const saveEdit = async () => {
+    if (!editing || !editing.title.trim()) return;
+    setSavingEdit(true); setError('');
+    try {
+      const res = await fetch('/api/events/quests', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId, id: editing.id,
+          title: editing.title.trim(),
+          description: editing.desc.trim() || null,
+          icon: editing.icon.trim() || null,
+          ...(editing.counted ? { rule: { count: Math.max(1, editing.count) } } : {}),
+        }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || 'Could not save the quest.'); return; }
+      setEditing(null);
+      load();
+    } finally { setSavingEdit(false); }
+  };
+
+  // Reorder by swapping locally, then persisting index → sortOrder for the
+  // whole list — also normalizes legacy duplicate sortOrders in one pass.
+  const move = async (q: Quest, dir: -1 | 1) => {
+    const idx = quests.findIndex((x) => x.id === q.id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= quests.length) return;
+    const next = [...quests];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setQuests(next);
+    await Promise.all(next.map((x, i) => fetch('/api/events/quests', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ privyId, id: x.id, sortOrder: i }),
+    })));
+    load();
   };
 
   const toggleActive = async (q: Quest) => {
@@ -500,8 +549,11 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
         <p className="font-mono text-[12px] opacity-40 mb-6" style={{ color: 'var(--foreground)' }}>No quests yet — add one to turn the event into a game.</p>
       ) : (
         <div className="space-y-2 mb-8">
-          {quests.map((q) => {
+          {quests.map((q, qi) => {
             const tag = methodTag(q);
+            const isEditing = editing?.id === q.id;
+            const linkBtn = 'font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none';
+            const arrowBtn = 'w-7 h-7 rounded border cursor-pointer bg-transparent font-mono text-[12px] leading-none disabled:opacity-25';
             return (
               <div key={q.id} className="border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)', opacity: q.isActive ? 1 : 0.5 }}>
                 <div className="flex items-center gap-2.5">
@@ -515,19 +567,50 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
                     </p>
                   </div>
                   <span className="font-mono text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: tag.color, color: '#fff' }}>{tag.text}</span>
-                  <span className="flex gap-2 shrink-0">
-                    {q.verifyMethod === 'qr' && (
-                      <button onClick={() => showQr(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>QR</button>
-                    )}
-                    {q.verifyMethod !== 'auto' && q.isActive && (
-                      <button onClick={() => setGrantQuest(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>Grant</button>
-                    )}
-                    <button onClick={() => toggleActive(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none opacity-60" style={{ color: 'var(--foreground)' }}>
-                      {q.isActive ? 'Hide' : 'Show'}
-                    </button>
-                    <button onClick={() => removeQuest(q)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Del</button>
-                  </span>
                 </div>
+                <div className="flex items-center gap-3 mt-2 pl-8 flex-wrap">
+                  <span className="flex gap-1">
+                    <button onClick={() => move(q, -1)} disabled={qi === 0} aria-label="Move up" className={arrowBtn} style={fieldStyle}>↑</button>
+                    <button onClick={() => move(q, 1)} disabled={qi === quests.length - 1} aria-label="Move down" className={arrowBtn} style={fieldStyle}>↓</button>
+                  </span>
+                  {q.verifyMethod === 'qr' && (
+                    <button onClick={() => showQr(q)} className={linkBtn} style={{ color: 'var(--foreground)' }}>QR</button>
+                  )}
+                  {q.verifyMethod !== 'auto' && q.isActive && (
+                    <button onClick={() => setGrantQuest(q)} className={linkBtn} style={{ color: 'var(--foreground)' }}>Grant</button>
+                  )}
+                  <button onClick={() => (isEditing ? setEditing(null) : startEdit(q))} className={linkBtn} style={{ color: 'var(--foreground)' }}>
+                    {isEditing ? 'Cancel' : 'Edit'}
+                  </button>
+                  <button onClick={() => toggleActive(q)} className={`${linkBtn} opacity-60`} style={{ color: 'var(--foreground)' }}>
+                    {q.isActive ? 'Hide' : 'Show'}
+                  </button>
+                  <button onClick={() => removeQuest(q)} className={linkBtn} style={{ color: '#FF5C34' }}>Del</button>
+                </div>
+
+                {isEditing && editing && (
+                  <div className="mt-3 pt-3 space-y-2" style={{ borderTop: '1px solid var(--border-color)' }}>
+                    <div className="flex gap-2">
+                      <input value={editing.icon} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} placeholder="🎯" aria-label="Quest icon" className={`${inputCls} !w-16 text-center`} style={fieldStyle} />
+                      <input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="Quest title" className={inputCls} style={fieldStyle} />
+                    </div>
+                    <input value={editing.desc} onChange={(e) => setEditing({ ...editing, desc: e.target.value })} placeholder="What guests see under the title (optional)" className={inputCls} style={fieldStyle} />
+                    {editing.counted && (
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-50" style={{ color: 'var(--foreground)' }}>How many</span>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setEditing({ ...editing, count: Math.max(1, editing.count - 1) })} disabled={editing.count <= 1} aria-label="Fewer" className="w-9 h-9 rounded-lg border cursor-pointer bg-transparent font-mono text-[16px] disabled:opacity-30" style={fieldStyle}>−</button>
+                          <span className="w-10 text-center font-mono text-[16px] font-bold" style={{ color: 'var(--foreground)' }}>{editing.count}</span>
+                          <button onClick={() => setEditing({ ...editing, count: Math.min(99, editing.count + 1) })} aria-label="More" className="w-9 h-9 rounded-lg border cursor-pointer bg-transparent font-mono text-[16px]" style={fieldStyle}>+</button>
+                        </div>
+                        <span className="font-mono text-[10px] opacity-40" style={{ color: 'var(--foreground)' }}>Guests who already completed it keep it.</span>
+                      </div>
+                    )}
+                    <button onClick={saveEdit} disabled={savingEdit || !editing.title.trim()} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                      {savingEdit ? 'Saving…' : 'Save changes'}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
