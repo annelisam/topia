@@ -52,6 +52,18 @@ const DIM = 'rgba(245,240,232,0.55)';
 const card: React.CSSProperties = { border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px' };
 const meta: React.CSSProperties = { color: DIM, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em' };
 
+// Slim labeled divider — groups the card stack into scannable sections
+// (Your pass / Tonight's game / The room) so the page reads as a map,
+// not a pile.
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mt-1.5 -mb-1" aria-hidden="true">
+      <span style={meta}>{children}</span>
+      <span className="flex-1 h-px" style={{ backgroundColor: LINE }} />
+    </div>
+  );
+}
+
 function isToday(dateIso: string | null): boolean {
   if (!dateIso) return false;
   const now = new Date();
@@ -61,7 +73,7 @@ function isToday(dateIso: string | null): boolean {
 
 export default function EventLivePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const { user, authenticated, ready } = usePrivy();
+  const { user, authenticated, ready, login } = usePrivy();
   const privyId = user?.id;
 
   const [event, setEvent] = useState<LiveEvent | null>(null);
@@ -264,6 +276,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   }, [privyId, event?.id, loadPeople, loadQuests]);
 
   const live = isToday(event?.dateIso ?? null);
+  const nextQuest = questState?.quests.find((q) => !q.completed) ?? null;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1a1a', color: INK }}>
@@ -312,63 +325,108 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </p>
             </div>
 
-            {/* Door state — the gate everything else will hang off */}
+            {/* Door state — the hero card. Always answers ONE question:
+                "what do I do right now?" — log in, RSVP, get checked in,
+                or go play. Each state carries its own CTA. */}
             {!authenticated ? (
-              <div style={{ ...card, borderColor: LINE }}>
-                <p style={meta}>Check-in</p>
-                <p className="text-[13px] mt-1.5" style={{ color: INK }}>Log in to see your check-in status and join the quests.</p>
+              <div style={{ ...card, borderColor: LIME }}>
+                <p style={{ ...meta, color: LIME }}>Step 1 · Log in</p>
+                <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                  Everything here — check-in, quests, meeting people — hangs off your Topia account. New? Signing up takes a minute.
+                </p>
+                <button
+                  onClick={login}
+                  className="font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full cursor-pointer border-none mt-3"
+                  style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                >
+                  Log in or sign up →
+                </button>
               </div>
             ) : me?.checkedIn ? (
               <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
                 <p style={{ ...meta, color: LIME }}>✓ You're checked in</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
                   Since {me.checkedInAt ? new Date(me.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'just now'}
-                  {questState && questState.total > 0 ? ' — every quest is unlocked. Go.' : " — you're all set."}
+                  {questState && questState.total > 0 ? ' — every quest is unlocked.' : " — you're all set."}
                 </p>
+                {nextQuest && (
+                  <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>
+                    Up next: {nextQuest.icon ? `${nextQuest.icon} ` : ''}{nextQuest.title} ↓
+                  </p>
+                )}
               </div>
             ) : me?.onList ? (
               <div style={{ ...card, borderColor: ORANGE }}>
-                <p style={{ ...meta, color: ORANGE }}>Not checked in yet</p>
+                <p style={{ ...meta, color: ORANGE }}>Step 2 · Check in at the door</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  Show your Topia code (below) to a host at the door — check-in unlocks the in-person quests.
+                  You're on the list. Show your Topia code (below) to a host at the door — check-in unlocks the in-person quests.
                 </p>
               </div>
             ) : (
-              <div style={card}>
-                <p style={meta}>You're not on the list</p>
+              <div style={{ ...card, borderColor: ORANGE }}>
+                <p style={{ ...meta, color: ORANGE }}>Step 1 · RSVP</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  RSVP on the <Link href={`/events/${slug}`} className="underline" style={{ color: LIME }}>event page</Link> to join.
+                  You're not on the guest list yet — RSVP first, then come back here.
                 </p>
+                <Link
+                  href={`/events/${slug}`}
+                  className="inline-block font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full no-underline mt-3"
+                  style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                >
+                  RSVP on the event page →
+                </Link>
+              </div>
+            )}
+
+            {/* Host tools — pinned high; a manager is usually working the
+                door, not playing the game */}
+            {event.isManager && (
+              <div style={{ ...card, borderColor: LIME, paddingTop: 6, paddingBottom: 6 }}>
+                <Link href={`/events/${slug}/manage#checkin`} className="no-underline flex items-center justify-between py-2.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Working the door? Check-in</span>
+                  <span style={{ color: LIME }}>→</span>
+                </Link>
+                <div style={{ height: 1, backgroundColor: LINE }} />
+                <Link href={`/events/${slug}/manage#quests`} className="no-underline flex items-center justify-between py-2.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Quests, prizes & raffle</span>
+                  <span style={{ color: LIME }}>→</span>
+                </Link>
               </div>
             )}
 
             {/* Personal QR — the door scans it to check you in; other guests
                 scan it to connect with you */}
             {authenticated && qrDataUrl && (
-              <div ref={qrCardRef} style={card}>
-                <div className="flex items-center justify-between">
-                  <p style={meta}>Your Topia code</p>
-                  <button
-                    onClick={() => { setScanStatus(null); setScanOpen(true); }}
-                    className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
-                    style={{ backgroundColor: LIME, color: '#1a1a1a' }}
-                  >
-                    ◎ Scan to connect
-                  </button>
+              <>
+                <SectionLabel>Your pass</SectionLabel>
+                <div ref={qrCardRef} style={card}>
+                  <div className="flex items-center justify-between">
+                    <p style={meta}>Your Topia code</p>
+                    <button
+                      onClick={() => { setScanStatus(null); setScanOpen(true); }}
+                      className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
+                      style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                    >
+                      ◎ Scan to connect
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2.5">
+                    <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
+                    <p className="text-[12px] flex-1" style={{ color: DIM }}>
+                      {me?.checkedIn
+                        ? 'Trade scans with people you meet — an instant mutual connection, recorded from tonight.'
+                        : 'Show this at the door to get checked in — then trade scans with people you meet to connect.'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 mt-2.5">
-                  <img src={qrDataUrl} alt="Your Topia QR code" className="rounded-lg" style={{ width: 132, height: 132, backgroundColor: '#fff' }} />
-                  <p className="text-[12px] flex-1" style={{ color: DIM }}>
-                    {me?.checkedIn
-                      ? 'Trade scans with people you meet — an instant mutual connection, recorded from tonight.'
-                      : 'Show this at the door to get checked in — then trade scans with people you meet to connect.'}
-                  </p>
-                </div>
-              </div>
+              </>
             )}
 
             {/* Quests — the checklist for tonight. Actionable: every open
                 quest carries the button (or pointer) that gets it done. */}
+            {((questState?.total ?? 0) > 0 || prizes.length > 0) && (
+              <SectionLabel>Tonight's game</SectionLabel>
+            )}
             {questToast && (
               <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
                 <p className="text-[13px] font-bold" style={{ color: LIME }}>{questToast}</p>
@@ -377,7 +435,20 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
             {authenticated && questState && questState.total > 0 && (
               <div style={questState.inRaffle ? { ...card, borderColor: LIME } : card}>
                 <div className="flex items-center justify-between">
-                  <p style={meta}>Quests · {questState.completedCount}/{questState.total}</p>
+                  <span className="flex items-center gap-2">
+                    <p style={meta}>Quests · {questState.completedCount}/{questState.total}</p>
+                    {introDismissed && !questState.inRaffle && (
+                      <button
+                        onClick={() => setIntroDismissed(false)}
+                        aria-label="How quests work"
+                        title="How quests work"
+                        className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[10px] font-bold cursor-pointer bg-transparent p-0"
+                        style={{ border: `1px solid ${LINE}`, color: DIM }}
+                      >
+                        ?
+                      </button>
+                    )}
+                  </span>
                   {me?.checkedIn && questState.quests.some((q) => q.verifyMethod === 'qr' && !q.completed) && (
                     <button
                       onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }}
@@ -491,48 +562,6 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </div>
             )}
 
-            {/* People you met at this event */}
-            {authenticated && (people.length > 0 || me?.checkedIn) && (
-              <div ref={peopleRef} style={card}>
-                <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
-                {people.length === 0 ? (
-                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No connections yet — scan someone's Topia code to start your list.</p>
-                ) : (
-                  <div className="mt-2 flex flex-col gap-0.5">
-                    {people.slice(0, 12).map((p) => (
-                      <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${LINE}` }}>
-                        <Link href={p.username ? `/profile/${p.username}` : '#'} className="flex items-center gap-3 flex-1 min-w-0 no-underline">
-                          {p.avatarUrl
-                            ? <img src={p.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
-                            : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(p.name || p.username || '?')[0].toUpperCase()}</div>}
-                          <span className="flex-1 min-w-0">
-                            <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{p.name || p.username}</span>
-                            {p.username && <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{p.username}</span>}
-                          </span>
-                        </Link>
-                        <button
-                          onClick={() => messagePerson(p.id)}
-                          disabled={dmBusyId === p.id}
-                          className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-full cursor-pointer shrink-0 disabled:opacity-50"
-                          style={{ backgroundColor: 'transparent', color: LIME, border: '1px solid rgba(228,254,82,0.4)' }}
-                        >
-                          {dmBusyId === p.id ? '…' : '💬 DM'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Host shortcut to the door roster */}
-            {event.isManager && (
-              <Link href={`/events/${slug}/manage#checkin`} className="no-underline flex items-center justify-between" style={{ ...card, borderColor: LIME }}>
-                <span className="font-mono text-[12px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Working the door? Open check-in</span>
-                <span style={{ color: LIME }}>→</span>
-              </Link>
-            )}
-
             {/* Prizes */}
             {prizes.length > 0 && (
               <div style={{ ...card, borderColor: 'rgba(228,254,82,0.35)' }}>
@@ -571,6 +600,42 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            <SectionLabel>The room</SectionLabel>
+
+            {/* People you met at this event */}
+            {authenticated && (people.length > 0 || me?.checkedIn) && (
+              <div ref={peopleRef} style={card}>
+                <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
+                {people.length === 0 ? (
+                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No one yet — trade a scan with someone you meet and they'll show up here.</p>
+                ) : (
+                  <div className="mt-2 flex flex-col gap-0.5">
+                    {people.slice(0, 12).map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: `1px solid ${LINE}` }}>
+                        <Link href={p.username ? `/profile/${p.username}` : '#'} className="flex items-center gap-3 flex-1 min-w-0 no-underline">
+                          {p.avatarUrl
+                            ? <img src={p.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            : <div className="w-8 h-8 rounded-full flex items-center justify-center font-mono text-[11px] font-bold" style={{ backgroundColor: '#333', color: INK }}>{(p.name || p.username || '?')[0].toUpperCase()}</div>}
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[13px] font-bold truncate" style={{ color: INK }}>{p.name || p.username}</span>
+                            {p.username && <span className="block font-mono text-[10px]" style={{ color: DIM }}>@{p.username}</span>}
+                          </span>
+                        </Link>
+                        <button
+                          onClick={() => messagePerson(p.id)}
+                          disabled={dmBusyId === p.id}
+                          className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-full cursor-pointer shrink-0 disabled:opacity-50"
+                          style={{ backgroundColor: 'transparent', color: LIME, border: '1px solid rgba(228,254,82,0.4)' }}
+                        >
+                          {dmBusyId === p.id ? '…' : '💬 DM'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
