@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import QRCode from 'qrcode';
+import { getConnectPath } from '../../../lib/connect/clientCode';
 import { PATH_CONFIG, resolvePath, type UserPath } from './pathConfig';
 import FitText from './FitText';
 
@@ -49,11 +50,13 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
   useEffect(() => {
     if (!showConnectQr || !authenticated || !user?.id) return;
     let cancelled = false;
-    fetch(`/api/connect/code?privyId=${encodeURIComponent(user.id)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(async (d) => {
-        if (!d?.path || cancelled) return;
-        const dataUrl = await QRCode.toDataURL(`${window.location.origin}${d.path}`, {
+    // Cached-first: the connect code is permanent, so after the first fetch
+    // ever this resolves synchronously from localStorage and the QR is ready
+    // before anyone can flip the card.
+    getConnectPath(user.id)
+      .then(async (path) => {
+        if (!path || cancelled) return;
+        const dataUrl = await QRCode.toDataURL(`${window.location.origin}${path}`, {
           width: 480, margin: 1, color: { dark: '#1a1a1a', light: '#ffffff' },
         });
         if (!cancelled) setQrDataUrl(dataUrl);

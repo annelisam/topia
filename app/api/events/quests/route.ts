@@ -94,17 +94,29 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/events/quests — update title/description/icon/isActive/sortOrder.
+// PUT /api/events/quests — update title/description/icon/isActive/sortOrder,
+// plus rule.count for counted auto quests (the kind is immutable — changing
+// what a quest measures is a new quest, not an edit).
 export async function PUT(request: NextRequest) {
   try {
-    const { privyId, id, title, description, icon, isActive, sortOrder } = await request.json();
+    const { privyId, id, title, description, icon, isActive, sortOrder, rule } = await request.json();
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    const [quest] = await db.select({ eventId: eventQuests.eventId }).from(eventQuests).where(eq(eventQuests.id, id)).limit(1);
+    const [quest] = await db
+      .select({ eventId: eventQuests.eventId, verifyMethod: eventQuests.verifyMethod, rule: eventQuests.rule })
+      .from(eventQuests).where(eq(eventQuests.id, id)).limit(1);
     if (!quest) return NextResponse.json({ error: 'Quest not found' }, { status: 404 });
 
     const auth = await requireManager(privyId, quest.eventId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    let ruleUpdate: { rule: AutoRule } | Record<string, never> = {};
+    if (rule?.count !== undefined && quest.verifyMethod === 'auto') {
+      const existing = quest.rule as AutoRule | null;
+      if (existing && (COUNTED_RULE_KINDS as readonly string[]).includes(existing.kind)) {
+        ruleUpdate = { rule: { kind: existing.kind, count: Math.max(1, Math.floor(Number(rule.count))) } };
+      }
+    }
 
     await db.update(eventQuests).set({
       ...(title !== undefined ? { title: String(title).trim() } : {}),
@@ -112,6 +124,7 @@ export async function PUT(request: NextRequest) {
       ...(icon !== undefined ? { icon: icon ? String(icon).trim().slice(0, 8) : null } : {}),
       ...(isActive !== undefined ? { isActive: !!isActive } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) } : {}),
+      ...ruleUpdate,
       updatedAt: new Date(),
     }).where(eq(eventQuests.id, id));
 

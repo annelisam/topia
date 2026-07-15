@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMessagesBadge } from '../MessagesNavIcon';
@@ -9,6 +10,42 @@ import TopiaMark from './TopiaMark';
 interface FrostedPillProps {
   onMenuToggle: () => void;
   onOpenMessages: () => void;
+  onOpenCard: () => void;
+}
+
+interface LiveEvent { slug: string; eventName: string; checkedIn: boolean; isHost: boolean }
+
+// One live-now lookup per minute across all FrostedPill mounts (the nav
+// remounts on every route change — don't re-hit the API each time).
+let liveCache: { at: number; date: string; privyId: string; event: LiveEvent | null } | null = null;
+
+function localDate(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
+function useLiveEvent(privyId: string | undefined): LiveEvent | null {
+  const [live, setLive] = useState<LiveEvent | null>(() =>
+    liveCache && liveCache.privyId === privyId ? liveCache.event : null);
+  useEffect(() => {
+    if (!privyId) { setLive(null); return; }
+    const date = localDate();
+    if (liveCache && liveCache.privyId === privyId && liveCache.date === date && Date.now() - liveCache.at < 60_000) {
+      setLive(liveCache.event);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/events/live-now?privyId=${encodeURIComponent(privyId)}&date=${date}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const event = (d?.event as LiveEvent | undefined) ?? null;
+        liveCache = { at: Date.now(), date, privyId, event };
+        if (!cancelled) setLive(event);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [privyId]);
+  return live;
 }
 
 // The mobile nav: a detached frosted-glass pill floating above the bottom
@@ -16,18 +53,23 @@ interface FrostedPillProps {
 // The active tab sits in a soft circle; unread state is a brand-orange dot
 // (the pill has no labels, so dots do the talking). The avatar slot opens
 // the full takeover menu (profile, TV, resources, theme, auth).
-export default function FrostedPill({ onMenuToggle, onOpenMessages }: FrostedPillProps) {
+export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }: FrostedPillProps) {
   const pathname = usePathname();
   const messagesBadge = useMessagesBadge();
   const { profile, authenticated } = useUserProfile();
+  const liveEvent = useLiveEvent(authenticated ? profile?.privyId : undefined);
+  // Hide the chip while already in Event Mode — it would link to itself.
+  const showLiveChip = !!liveEvent && !pathname.endsWith('/live');
 
   const isActive = (href: string) =>
     href === '/'
       ? pathname === '/' || pathname === '/home'
       : pathname === href || pathname.startsWith(`${href}/`);
 
+  // 52px targets (down from 56) so the sixth item — the Topia card — still
+  // fits inside 375px with room to breathe.
   const itemCls =
-    'relative flex items-center justify-center w-[56px] h-[56px] rounded-full no-underline bg-transparent border-none cursor-pointer transition-[background-color,opacity] duration-200';
+    'relative flex items-center justify-center w-[52px] h-[52px] rounded-full no-underline bg-transparent border-none cursor-pointer transition-[background-color,opacity] duration-200';
   const itemStyle = (on: boolean): React.CSSProperties => ({
     color: 'var(--page-text)',
     opacity: on ? 1 : 0.72,
@@ -45,9 +87,28 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages }: FrostedPil
   return (
     <nav
       aria-label="Primary"
-      className="fixed left-0 right-0 z-[1000] md:hidden flex justify-center pointer-events-none"
+      className="fixed left-0 right-0 z-[1000] md:hidden flex flex-col items-center gap-2 pointer-events-none"
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)' }}
     >
+      {/* Live-event quick access — one tap from anywhere into Event Mode
+          when an event you're part of is happening today */}
+      {showLiveChip && liveEvent && (
+        <Link
+          href={`/events/${liveEvent.slug}/live`}
+          className="pointer-events-auto flex items-center gap-2 rounded-full border pl-3.5 pr-4 py-2 no-underline backdrop-blur-xl max-w-[88vw]"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--page-bg) 85%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--orange, #FF5C34) 55%, transparent)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse shrink-0" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] truncate" style={{ color: 'var(--page-text)' }}>
+            Live · {liveEvent.eventName}
+          </span>
+          <span className="font-mono text-[11px] shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>→</span>
+        </Link>
+      )}
       {/* Bigger + higher-contrast than a default glass bar: 56px targets,
           80% glass, an ink-mixed hairline and a two-layer shadow so the
           pill reads as THE control surface, not background chrome. */}
@@ -85,6 +146,20 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages }: FrostedPil
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </Link>
+
+        {/* Your Topia card + connect QR — the thing you flash at a door or
+            trade with someone you just met, one tap from anywhere */}
+        {authenticated && (
+          <button onClick={onOpenCard} aria-label="Your Topia card" className={itemCls} style={itemStyle(false)}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <path d="M14 14h3v3h-3z" />
+              <path d="M18 18h3v3h-3z" />
+            </svg>
+          </button>
+        )}
 
         <button onClick={onMenuToggle} aria-label="Menu" className={itemCls} style={itemStyle(false)}>
           {authenticated && profile?.avatarUrl ? (
