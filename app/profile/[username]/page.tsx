@@ -597,6 +597,9 @@ export default function PublicProfilePage() {
           avatarUrl={profile.avatarUrl}
           roleTags={roleTags}
           path={path}
+          // Own card gets the flip-to-QR back face (the viewer's permanent
+          // connect code — same one scanned at event doors).
+          showConnectQr={isOwnProfile}
         />
       )}
 
