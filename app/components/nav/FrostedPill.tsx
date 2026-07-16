@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMessagesBadge } from '../MessagesNavIcon';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { isCoreProfileComplete } from '../../../lib/profile/completeness';
 import TopiaMark from './TopiaMark';
 
 interface FrostedPillProps {
@@ -76,8 +77,25 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
     setInstallState('hidden');
     try { localStorage.setItem('topia:install-hint', 'dismissed'); } catch { /* private mode */ }
   };
-  // One chip at a time — a live event outranks the install nudge.
-  const showInstallChip = authenticated && installState !== 'hidden' && !showLiveChip;
+  // Finish-your-passport nudge: a user without name+username is invisible on
+  // Topia (no guest-list entry, no DM search, no profile URL) — worth a
+  // persistent-but-polite chip. Dismiss lasts the session (it returns next
+  // visit, because the broken state persists too). Hidden while already in
+  // onboarding, and while the profile is still loading (null ≠ incomplete).
+  const [passportDismissed, setPassportDismissed] = useState(true);
+  useEffect(() => {
+    try { setPassportDismissed(sessionStorage.getItem('topia:passport-chip') === 'dismissed'); } catch { setPassportDismissed(false); }
+  }, []);
+  const dismissPassport = () => {
+    setPassportDismissed(true);
+    try { sessionStorage.setItem('topia:passport-chip', 'dismissed'); } catch { /* private mode */ }
+  };
+  const showPassportChip =
+    authenticated && !!profile && !isCoreProfileComplete(profile) &&
+    !passportDismissed && !pathname.startsWith('/onboarding') && !showLiveChip;
+
+  // One chip at a time — live event > passport > install nudge.
+  const showInstallChip = authenticated && installState !== 'hidden' && !showLiveChip && !showPassportChip;
 
   const isActive = (href: string) =>
     href === '/'
@@ -126,6 +144,22 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
           </span>
           <span className="font-mono text-[11px] shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>→</span>
         </Link>
+      )}
+
+      {showPassportChip && (
+        <div
+          className="pointer-events-auto flex items-center gap-2.5 rounded-full border pl-3.5 pr-3 py-2 backdrop-blur-xl max-w-[88vw]"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--page-bg) 88%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--accent, #e4fe52) 60%, transparent)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          <Link href="/onboarding" className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] no-underline truncate" style={{ color: 'var(--page-text)' }}>
+            ✦ Finish your passport — 60 seconds
+          </Link>
+          <button onClick={dismissPassport} aria-label="Dismiss" className="bg-transparent border-none cursor-pointer text-[14px] leading-none p-0 shrink-0" style={{ color: 'var(--page-text)', opacity: 0.5 }}>×</button>
+        </div>
       )}
 
       {showInstallChip && (

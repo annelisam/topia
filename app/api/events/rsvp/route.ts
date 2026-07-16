@@ -64,7 +64,9 @@ async function resolveOrCreateUser(privyId: string, hint: { email?: string; name
   try {
     const [created] = await db
       .insert(users)
-      .values({ privyId, email: hint.email ?? null, name: hint.name ?? null, phone: hint.phone ?? null })
+      // path defaults to 'catalyst' to match /api/auth/sync's first-insert —
+      // RSVP-created rows used to leave it null, the only creation path that did.
+      .values({ privyId, email: hint.email ?? null, name: hint.name ?? null, phone: hint.phone ?? null, path: 'catalyst' })
       .returning({ id: users.id });
     return created.id;
   } catch {
