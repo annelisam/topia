@@ -942,6 +942,153 @@ function CheckinTab({ eventId, privyId }: { eventId: string; privyId: string }) 
   );
 }
 
+/* ── Invite guests from a past event (inside Guests) ───────────────── */
+interface GuestSource { id: string; eventName: string; date: string | null; dateIso: string | null; going: number }
+interface PastGuest { name: string | null; contact: string; alreadyHere: boolean; checked: boolean }
+
+function PastGuestsPanel({ eventId, privyId, currentContacts, onInvited }: {
+  eventId: string; privyId: string; currentContacts: Set<string>; onInvited: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [sources, setSources] = useState<GuestSource[] | null>(null);
+  const [srcId, setSrcId] = useState('');
+  const [guests, setGuests] = useState<PastGuest[] | null>(null);
+  const [loadingGuests, setLoadingGuests] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+
+  // Load the picker's event list lazily, on first expand.
+  useEffect(() => {
+    if (!open || sources !== null) return;
+    fetch(`/api/events/guest-sources?privyId=${encodeURIComponent(privyId)}&excludeEventId=${eventId}`)
+      .then((r) => r.json())
+      .then((d) => setSources(d.events ?? []))
+      .catch(() => setSources([]));
+  }, [open, sources, privyId, eventId]);
+
+  // Picking a source event loads ITS going list (manager-gated per event) —
+  // only guests with a reachable contact, deduped, current-list flagged.
+  useEffect(() => {
+    if (!srcId) { setGuests(null); return; }
+    let cancelled = false;
+    setLoadingGuests(true); setNote('');
+    fetch(`/api/events/rsvps?eventId=${srcId}&privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const seen = new Set<string>();
+        const list: PastGuest[] = (d.rsvps ?? [])
+          .filter((r: Rsvp) => r.status === 'going' && (r.email || r.phone))
+          .flatMap((r: Rsvp) => {
+            const contact = (r.email || r.phone)!;
+            const key = contact.toLowerCase();
+            if (seen.has(key)) return [];
+            seen.add(key);
+            const alreadyHere = currentContacts.has(key);
+            return [{ name: r.name, contact, alreadyHere, checked: !alreadyHere }];
+          });
+        setGuests(list);
+      })
+      .catch(() => { if (!cancelled) setGuests([]); })
+      .finally(() => { if (!cancelled) setLoadingGuests(false); });
+    return () => { cancelled = true; };
+    // currentContacts is derived fresh each render; keying on srcId is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [srcId, privyId]);
+
+  const pickable = guests?.filter((g) => !g.alreadyHere) ?? [];
+  const picked = pickable.filter((g) => g.checked);
+  const allOn = pickable.length > 0 && picked.length === pickable.length;
+
+  const toggle = (contact: string) =>
+    setGuests((gs) => (gs ?? []).map((g) => (g.contact === contact ? { ...g, checked: !g.checked } : g)));
+  const toggleAll = () =>
+    setGuests((gs) => (gs ?? []).map((g) => (g.alreadyHere ? g : { ...g, checked: !allOn })));
+
+  const send = async () => {
+    if (picked.length === 0) return;
+    setBusy(true); setNote('');
+    try {
+      const res = await fetch('/api/events/invites', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privyId, eventId, recipients: picked.map((g) => g.contact) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setNote(d.error || 'Could not send invites.'); return; }
+      const made = d.created?.length ?? 0;
+      const sent = d.sentCount ?? 0;
+      setNote(
+        made === 0 ? 'Everyone selected was already invited.'
+        : `Invited ${made}${sent < made ? ` — ${made - sent} need a shared link (see Invite guests above)` : ' by email'}.`
+      );
+      setGuests((gs) => (gs ?? []).map((g) => (g.checked ? { ...g, checked: false, alreadyHere: true } : g)));
+      onInvited();
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="rounded-lg border p-4 mb-6" style={{ borderColor: 'var(--border-color)' }}>
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between bg-transparent border-none cursor-pointer p-0">
+        <span className="font-mono text-[12px] uppercase tracking-[0.12em] font-bold opacity-60" style={{ color: 'var(--foreground)' }}>Invite guests from a past event</span>
+        <span className="font-mono text-[12px] opacity-50" style={{ color: 'var(--foreground)' }}>{open ? '▾' : '▸'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3">
+          {sources === null ? (
+            <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>Loading your events…</p>
+          ) : sources.length === 0 ? (
+            <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>No other events yet — host one and its guest list shows up here.</p>
+          ) : (
+            <select value={srcId} onChange={(e) => setSrcId(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
+              <option value="">Pick one of your events…</option>
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>{s.eventName}{s.date ? ` — ${s.date}` : ''} · {s.going} going</option>
+              ))}
+            </select>
+          )}
+
+          {loadingGuests && <p className="font-mono text-[11px] opacity-40 mt-2" style={{ color: 'var(--foreground)' }}>Loading guests…</p>}
+
+          {guests !== null && !loadingGuests && (
+            guests.length === 0 ? (
+              <p className="font-mono text-[11px] opacity-40 mt-2" style={{ color: 'var(--foreground)' }}>No reachable guests on that list (no emails or phones).</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mt-3 mb-1.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest opacity-50" style={{ color: 'var(--foreground)' }}>
+                    {picked.length}/{pickable.length} selected
+                  </span>
+                  {pickable.length > 0 && (
+                    <button onClick={toggleAll} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: 'var(--foreground)' }}>
+                      {allOn ? 'Clear all' : 'Select all'}
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-56 overflow-y-auto space-y-0.5">
+                  {guests.map((g) => (
+                    <label key={g.contact} className={`flex items-center gap-2.5 py-1.5 text-[12px] font-mono ${g.alreadyHere ? 'opacity-35' : 'cursor-pointer'}`} style={{ color: 'var(--foreground)' }}>
+                      <input type="checkbox" checked={g.checked} disabled={g.alreadyHere} onChange={() => toggle(g.contact)} className="cursor-pointer" />
+                      <span className="flex-1 truncate">{g.name || g.contact}{g.name ? <span className="opacity-40"> · {g.contact}</span> : null}</span>
+                      {g.alreadyHere && <span className="text-[10px] uppercase opacity-70 shrink-0">on this list</span>}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <button onClick={send} disabled={busy || picked.length === 0} className={btnPrimary} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>
+                    {busy ? 'Inviting…' : `Invite ${picked.length || ''}`.trim()}
+                  </button>
+                  {note && <span className="font-mono text-[11px] opacity-70" style={{ color: 'var(--foreground)' }}>{note}</span>}
+                </div>
+              </>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Invite-by-email/phone panel (inside Guests) ───────────────────── */
 function InvitesPanel({ eventId, privyId }: { eventId: string; privyId: string }) {
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -1070,6 +1217,8 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
   // Host action awaiting an "are you sure?" confirm (approve/decline a request,
   // or remove a guest from the list).
   const [confirmAction, setConfirmAction] = useState<{ userId: string; action: 'approve' | 'decline' | 'remove' } | null>(null);
+  // Bumped when the past-guests panel sends invites, so InvitesPanel reloads.
+  const [inviteReload, setInviteReload] = useState(0);
 
   const load = useCallback(() => {
     fetch(`/api/events/rsvps?eventId=${eventId}&privyId=${privyId}`)
@@ -1140,6 +1289,12 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
     .filter((r) => r.status === 'waitlisted')
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+  // Contacts already on THIS event's list — the past-event picker greys
+  // them out instead of re-inviting.
+  const currentContacts = new Set(
+    rsvps.flatMap((r) => [r.email, r.phone]).filter(Boolean).map((c) => String(c).toLowerCase()),
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -1151,7 +1306,8 @@ function GuestsTab({ eventId, eventName, privyId, capacity }: { eventId: string;
         {rsvps.length > 0 && <button onClick={exportCsv} className={btnGhost} style={fieldStyle}>Export CSV</button>}
       </div>
 
-      <InvitesPanel eventId={eventId} privyId={privyId} />
+      <InvitesPanel key={inviteReload} eventId={eventId} privyId={privyId} />
+      <PastGuestsPanel eventId={eventId} privyId={privyId} currentContacts={currentContacts} onInvited={() => setInviteReload((k) => k + 1)} />
 
       {decideMsg && (
         <p className="font-mono text-[12px] mb-3 opacity-70" style={{ color: 'var(--foreground)' }}>{decideMsg}</p>

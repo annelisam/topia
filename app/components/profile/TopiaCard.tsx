@@ -134,6 +134,9 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    // A zero-size rect (mid-mount / display:none) makes these divisions
+    // Infinity → NaN in the easing → NaN opacity on the sheen. Skip.
+    if (!r.width || !r.height) return;
     const px = (clientX - r.left) / r.width - 0.5;
     const py = (clientY - r.top) / r.height - 0.5;
     target.current = { y: px * MAX_TILT * 2, x: -py * MAX_TILT * 2 };
@@ -163,6 +166,7 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         style={{
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y + (flipped ? 180 : 0)}deg)`,
           transformStyle: 'preserve-3d',
+          willChange: 'transform',
           transition: flipAnim ? 'transform 0.65s cubic-bezier(0.25, 0.8, 0.3, 1)' : undefined,
           // Stops the page/background from scrolling while dragging on the card.
           touchAction: 'none',
@@ -171,12 +175,19 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         }}
       >
         {/* ── FRONT FACE ── */}
-        <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f' }}>
+        {/* Second line of defense against WebKit backface leaks: once the
+            flip settles, the away-facing side is hidden outright — a buggy
+            compositor can't ghost content that isn't painted at all. During
+            the turn both faces stay live so the 3D flip still reads. */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f', visibility: flipped && !flipAnim ? 'hidden' : 'visible' }}>
         {/* path glow */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 30%, ${accent}33 0%, transparent 60%)` }} />
 
-        {/* content */}
-        <div className="relative h-full flex flex-col p-5" style={{ transform: 'translateZ(40px)' }}>
+        {/* content — deliberately NO translateZ: WebKit doesn't apply the
+            parent's backface-visibility to descendants with their own 3D
+            transforms, so a lifted front face bled through the QR back
+            mirrored (and forced expensive extra layers = the flip lag). */}
+        <div className="relative h-full flex flex-col p-5">
           <div className="flex items-center justify-between">
             <svg width="34" height="22" viewBox="0 0 468 309" fill="none" aria-label="Topia">
               <path d={LOGO_PATH} fill={accent} />
@@ -236,7 +247,7 @@ export default function TopiaCard({ name, username, avatarUrl, roleTags = [], pa
         {showConnectQr && (
           <div
             className="absolute inset-0 flex flex-col p-5 rounded-2xl overflow-hidden"
-            style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f' }}
+            style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#0f0f0f', visibility: !flipped && !flipAnim ? 'hidden' : 'visible' }}
           >
             <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 70%, ${accent}26 0%, transparent 60%)` }} />
             <div className="relative h-full flex flex-col">

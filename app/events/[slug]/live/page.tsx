@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { usePrivy } from '@privy-io/react-auth';
 import QRCode from 'qrcode';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
+import AddToHomeScreenSheet from '../../../components/AddToHomeScreenSheet';
 import { describeQuestRule } from '../../../../lib/events/questTypes';
 import { getConnectPath } from '../../../../lib/connect/clientCode';
 
@@ -129,6 +130,22 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
     setInstallDismissed(localStorage.getItem('topia:install-hint') === 'dismissed');
     setIntroDismissed(localStorage.getItem('topia:quest-intro') === 'done');
     setStandalone(window.matchMedia('(display-mode: standalone)').matches);
+  }, []);
+
+  // Event Mode's own add-to-home-screen moment: this is the screen people
+  // keep reopening all night, so the full explainer sheet auto-opens once
+  // ever (separate key from the global nav's) for signed-in browser-tab
+  // visitors, and the lime banner below re-opens it on demand.
+  const [installSheetOpen, setInstallSheetOpen] = useState(false);
+  useEffect(() => {
+    if (!authenticated || standalone) return;
+    try { if (localStorage.getItem('topia:a2hs-event-seen')) return; } catch { return; }
+    const t = setTimeout(() => setInstallSheetOpen(true), 1800);
+    return () => clearTimeout(t);
+  }, [authenticated, standalone]);
+  const closeInstallSheet = useCallback(() => {
+    setInstallSheetOpen(false);
+    try { localStorage.setItem('topia:a2hs-event-seen', '1'); } catch { /* private mode */ }
   }, []);
 
   useEffect(() => {
@@ -700,20 +717,26 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               )}
             </div>
 
-            {/* Add-to-home-screen hint — hidden once installed or dismissed */}
+            {/* Add-to-home-screen — a standout lime banner that opens the
+                full how-to sheet; hidden once installed or dismissed */}
             {!standalone && !installDismissed && (
-              <div style={{ ...card, borderColor: 'rgba(228,254,82,0.35)', backgroundColor: 'rgba(228,254,82,0.06)' }}>
+              <div className="rounded-2xl px-4 py-3.5" style={{ backgroundColor: LIME }}>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p style={{ ...meta, color: LIME }}>＋ Add Topia to your Home Screen</p>
-                    <p className="text-[12px] mt-1.5" style={{ color: DIM }}>
-                      Open your browser's share menu and tap "Add to Home Screen" — Event Mode launches full-screen like an app.
+                  <button
+                    onClick={() => setInstallSheetOpen(true)}
+                    className="text-left bg-transparent border-none cursor-pointer p-0 flex-1 min-w-0"
+                  >
+                    <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: '#1a1a1a' }}>
+                      ＋ Put Event Mode on your Home Screen
                     </p>
-                  </div>
+                    <p className="text-[12px] mt-1" style={{ color: 'rgba(26,26,26,0.75)' }}>
+                      One tap back to your pass and quests all night — takes ten seconds. <u>Show me how</u>
+                    </p>
+                  </button>
                   <button
                     onClick={() => { setInstallDismissed(true); localStorage.setItem('topia:install-hint', 'dismissed'); }}
-                    className="bg-transparent border-none cursor-pointer text-[14px] leading-none p-0"
-                    style={{ color: DIM }}
+                    className="bg-transparent border-none cursor-pointer text-[16px] leading-none p-0 shrink-0"
+                    style={{ color: 'rgba(26,26,26,0.6)' }}
                     aria-label="Dismiss"
                   >
                     ×
@@ -747,6 +770,12 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           onClose={() => { setDmConversation(null); loadQuests(); }}
         />
       )}
+      <AddToHomeScreenSheet
+        open={installSheetOpen}
+        onClose={closeInstallSheet}
+        variant="event"
+        eventName={event?.eventName ?? null}
+      />
     </div>
   );
 }
