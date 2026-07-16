@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, use, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
@@ -61,9 +61,12 @@ interface WorldDetail {
   pendingGhosts?: { invitationId: string; name: string | null; role: string }[];
 }
 
+// Projects lead — the work is the front door of a world. Worlds with no
+// projects still land on Overview (see the auto-default effect), so a fresh
+// world never opens on an empty grid.
 const SECTIONS = [
-  { id: 'overview',   label: 'OVERVIEW' },
   { id: 'projects',   label: 'PROJECTS' },
+  { id: 'overview',   label: 'OVERVIEW' },
   { id: 'architects', label: 'ARCHITECTS' },
   { id: 'events',     label: 'EVENTS' },
   { id: 'tools',      label: 'TOOLS' },
@@ -183,6 +186,9 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const { user, authenticated } = usePrivy();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SectionId>('overview');
+  // True once the visitor deliberately picks a tab (click or arrow key) —
+  // stops the projects-first auto-default from yanking them elsewhere.
+  const userPickedSection = useRef(false);
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(false);
   const [followPending, setFollowPending] = useState(false);
@@ -214,7 +220,16 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     if (!world?.id) return;
     fetch(`/api/worlds/projects?worldId=${world.id}`)
       .then((r) => r.json())
-      .then((data) => setProjects(data.projects || []))
+      .then((data) => {
+        const list = data.projects || [];
+        setProjects(list);
+        // Projects-first default: once we know the world HAS projects, land
+        // there — unless a deep link (#hash) or the visitor already chose a
+        // tab. Empty worlds keep Overview as the front page.
+        if (list.length > 0 && !window.location.hash && !userPickedSection.current) {
+          setActiveSection('projects');
+        }
+      })
       .catch(console.error);
     fetch(`/api/events?worldId=${world.id}`)
       .then((r) => r.json())
@@ -395,6 +410,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   }, []);
 
   function selectSection(id: SectionId) {
+    userPickedSection.current = true;
     setActiveSection(id);
     history.replaceState(null, '', id === 'overview' ? window.location.pathname + window.location.search : `#${id}`);
   }
@@ -406,6 +422,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      userPickedSection.current = true;
       setActiveSection((prev) => {
         const idx = visibleSections.findIndex((s) => s.id === prev);
         if (idx === -1) return prev;
