@@ -12,12 +12,9 @@ import ActivityFeedWidget from './_components/ActivityFeedWidget';
 import RecentlyViewedWorldsWidget from './_components/RecentlyViewedWorlds';
 import InMyKitWidget from './_components/InMyKitWidget';
 
-function Delta({ n }: { n: number | undefined }) {
-  if (!n || n <= 0) return null;
-  return (
-    <span className="font-mono text-[9px] uppercase tracking-[2px] text-[var(--accent-ink)]/80 ml-1.5">+{n}</span>
-  );
-}
+// Every stat carries a one-line explainer under the number — the bare "+2"
+// and the mystery "Builder" tile were reported as confusing. Deltas say what
+// they measure ("+2 this month"); static tiles say what they count.
 
 export default function DashboardOverviewPage() {
   const { profile, worldMemberships, hostedEvents } = useDashboard();
@@ -78,19 +75,23 @@ export default function DashboardOverviewPage() {
               strip clipped the tail stats); divider-separated row from sm up. */}
           <div className="px-5 py-3 grid grid-cols-3 gap-y-3 sm:flex sm:items-center sm:gap-0 sm:overflow-x-auto lg:flex-1">
             {([
-              { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    href: '/worlds' },
-              { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events,    href: '/events' },
-              { label: 'Builder',   value: builderCount,             delta: undefined,                href: null },
-              { label: 'Connects', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, href: profile?.username ? `/profile/${profile.username}` : null },
-              { label: 'Connected', value: stats?.following ?? 0,    delta: undefined,                href: null },
-            ] satisfies { label: string; value: number; delta?: number; href: string | null }[]).map((stat, i, arr) => {
+              { label: 'Worlds',    value: worldMemberships.length, delta: stats?.deltas.worlds,    sub: "you're in",       href: '/worlds' },
+              { label: 'Events',    value: stats?.events ?? hostedEvents.length, delta: stats?.deltas.events, sub: 'hosted', href: '/events' },
+              { label: 'Building',  value: builderCount,             delta: undefined,               sub: 'as owner/builder', href: null },
+              { label: 'Connects', value: stats?.followers ?? 0,    delta: stats?.deltas.followers, sub: 'follow you',      href: profile?.username ? `/profile/${profile.username}` : null },
+              { label: 'Connected', value: stats?.following ?? 0,    delta: undefined,               sub: 'you follow',      href: null },
+            ] satisfies { label: string; value: number; delta?: number; sub: string; href: string | null }[]).map((stat, i, arr) => {
               const inner = (
                 <div className={`flex flex-col sm:px-4 ${i < arr.length - 1 ? 'sm:border-r sm:border-ink/[0.06]' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}>
                   <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/30">{stat.label}</span>
-                  <span className="font-mono text-[20px] md:text-[24px] text-ink font-bold leading-none mt-1 flex items-baseline">
+                  <span className="font-mono text-[20px] md:text-[24px] text-ink font-bold leading-none mt-1">
                     {stat.value}
-                    <Delta n={stat.delta} />
                   </span>
+                  {stat.delta && stat.delta > 0 ? (
+                    <span className="font-mono text-[9px] uppercase tracking-[1px] text-[var(--accent-ink)]/80 mt-1">+{stat.delta} this month</span>
+                  ) : (
+                    <span className="font-mono text-[9px] uppercase tracking-[1px] text-ink/25 mt-1">{stat.sub}</span>
+                  )}
                 </div>
               );
               return stat.href ? (
