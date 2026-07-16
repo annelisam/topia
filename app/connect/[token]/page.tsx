@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import Navigation from '../../components/Navigation';
+import { isCoreProfileComplete } from '../../../lib/profile/completeness';
 
 /* /connect/<code> — where a personal Topia QR lands when scanned with a
  * plain camera app. Shows whose code it is with a one-tap Connect (mutual
@@ -22,6 +23,7 @@ export default function ConnectPage({ params }: { params: Promise<{ token: strin
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<'connected' | 'already' | 'self' | null>(null);
   const [error, setError] = useState('');
+  const [viewerIncomplete, setViewerIncomplete] = useState(false);
 
   useEffect(() => {
     fetch(`/api/connect/resolve?code=${encodeURIComponent(token)}`)
@@ -29,6 +31,19 @@ export default function ConnectPage({ params }: { params: Promise<{ token: strin
       .then((d) => { if (d) setPerson(d); else setNotFound(true); })
       .catch(() => setNotFound(true));
   }, [token]);
+
+  // A first-time scanner often has a blank profile — which makes the
+  // connection they just made pointless (no name, invisible in DM search).
+  // Right after connecting is the highest-intent moment to fix that.
+  useEffect(() => {
+    if (!authenticated || !privyId) { setViewerIncomplete(false); return; }
+    let cancelled = false;
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setViewerIncomplete(!isCoreProfileComplete(d?.user)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [authenticated, privyId, done]);
 
   const connect = async () => {
     if (!privyId) return;
@@ -81,6 +96,15 @@ export default function ConnectPage({ params }: { params: Promise<{ token: strin
                   <p className="font-mono text-[13px] font-bold mb-1" style={{ color: 'var(--accent-ink)' }}>✓ Connected</p>
                   <p className="font-mono text-[11px] opacity-60" style={{ color: 'var(--foreground)' }}>You now follow each other — DMs are open.</p>
                 </div>
+              )}
+              {(done === 'connected' || done === 'already') && viewerIncomplete && (
+                <Link
+                  href="/onboarding"
+                  className="block w-full px-4 py-3 mb-4 font-mono text-[12px] uppercase tracking-widest rounded-lg no-underline font-bold"
+                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}
+                >
+                  Set up your profile so {displayName.split(' ')[0]} can find you →
+                </Link>
               )}
               {done === 'already' && (
                 <p className="font-mono text-[13px] font-bold mb-4" style={{ color: 'var(--accent-ink)' }}>✓ Already connected</p>

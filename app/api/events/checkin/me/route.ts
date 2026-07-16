@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, users, eventRsvps, eventCheckins, tickets } from '@/lib/db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, lte, count } from 'drizzle-orm';
 
 // GET /api/events/checkin/me?eventId=X&privyId=Y — the viewer's own door
 // state for an event: on the list? checked in? Powers Event Mode's
@@ -25,12 +25,22 @@ export async function GET(request: NextRequest) {
         .where(and(eq(eventCheckins.eventId, eventId), eq(eventCheckins.userId, viewer.id))).limit(1),
     ]);
 
+    // Check-in ordinal (1 = first through the door) — powers "first N"
+    // prizes ("you're #12, you qualify").
+    let checkinPosition: number | null = null;
+    if (checkin) {
+      const [row] = await db.select({ value: count() }).from(eventCheckins)
+        .where(and(eq(eventCheckins.eventId, eventId), lte(eventCheckins.createdAt, checkin.createdAt)));
+      checkinPosition = Number(row?.value ?? 0) || null;
+    }
+
     return NextResponse.json(
       {
         onList: rsvp?.status === 'going' || !!ticket,
         rsvpStatus: rsvp?.status ?? null,
         checkedIn: !!checkin,
         checkedInAt: checkin?.createdAt ?? null,
+        checkinPosition,
       },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );

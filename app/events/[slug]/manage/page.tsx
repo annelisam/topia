@@ -261,7 +261,16 @@ function OverviewTab({ event, slug, privyId, goTo }: { event: EventLite; slug: s
 
 /* ── Quests tab (builder + completions + prizes + raffle) ──────────── */
 interface Quest { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; code: string | null; rule: { kind: string; count?: number } | null; isActive: boolean; completions: number; }
-interface Prize { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
+interface Prize { id: string; title: string; description: string | null; kind: string; threshold: number | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
+
+// Plain-language prize tiers — "separate the raffle thing from the other
+// prizes": perks for everyone, door prizes for the first N, raffle for
+// quest-finishers.
+const PRIZE_KIND_OPTIONS = [
+  { value: 'raffle', label: '🎲 Raffle — drawn from guests who finish every quest' },
+  { value: 'everyone', label: '🍸 Everyone — every checked-in guest gets it' },
+  { value: 'first_n', label: '⚡ First N — the first N guests through the door' },
+];
 
 function methodTag(q: Quest): { text: string; color: string } {
   if (q.verifyMethod === 'qr') return { text: 'QR', color: '#4F46FF' };
@@ -296,6 +305,8 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
 
   // Prizes form
   const [prizeTitle, setPrizeTitle] = useState('');
+  const [prizeKind, setPrizeKind] = useState('raffle');
+  const [prizeCount, setPrizeCount] = useState('30');
   const [drawing, setDrawing] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -437,9 +448,13 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
     if (!prizeTitle.trim()) return;
     const res = await fetch('/api/events/prizes', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ privyId, eventId, title: prizeTitle.trim() }),
+      body: JSON.stringify({
+        privyId, eventId, title: prizeTitle.trim(), kind: prizeKind,
+        ...(prizeKind === 'first_n' ? { threshold: Math.max(1, parseInt(prizeCount, 10) || 1) } : {}),
+      }),
     });
-    if (res.ok) { setPrizeTitle(''); load(); }
+    if (res.ok) { setPrizeTitle(''); setPrizeKind('raffle'); load(); }
+    else { const d = await res.json().catch(() => ({})); setError(d.error || 'Could not add prize.'); }
   };
 
   const removePrize = async (id: string) => {
@@ -625,24 +640,38 @@ function QuestsTab({ eventId, slug, privyId }: { eventId: string; slug: string; 
           <div key={p.id} className="flex items-center gap-2 border rounded-lg px-3 py-2.5" style={{ borderColor: 'var(--border-color)' }}>
             <div className="flex-1 min-w-0">
               <p className="font-mono text-[13px] font-bold truncate" style={{ color: 'var(--foreground)' }}>{p.title}</p>
-              {p.drawnAt ? (
+              {p.kind === 'everyone' ? (
+                <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>🍸 Every checked-in guest gets this</p>
+              ) : p.kind === 'first_n' ? (
+                <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>⚡ First {p.threshold ?? 1} checked in qualify</p>
+              ) : p.drawnAt ? (
                 <p className="font-mono text-[11px]" style={{ color: 'var(--accent-ink, var(--foreground))' }}>
                   🎉 Winner: {p.winnerName || p.winnerUsername || 'guest'}{p.winnerUsername ? ` (@${p.winnerUsername})` : ''}
                 </p>
               ) : (
-                <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>Not drawn yet</p>
+                <p className="font-mono text-[11px] opacity-40" style={{ color: 'var(--foreground)' }}>🎲 Raffle — not drawn yet</p>
               )}
             </div>
-            <button onClick={() => draw(p)} disabled={drawing === p.id} className={btnGhost} style={fieldStyle}>
-              {drawing === p.id ? 'Drawing…' : p.drawnAt ? 'Redraw' : '🎲 Draw'}
-            </button>
+            {p.kind === 'raffle' && (
+              <button onClick={() => draw(p)} disabled={drawing === p.id} className={btnGhost} style={fieldStyle}>
+                {drawing === p.id ? 'Drawing…' : p.drawnAt ? 'Redraw' : '🎲 Draw'}
+              </button>
+            )}
             <button onClick={() => removePrize(p.id)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Del</button>
           </div>
         ))}
       </div>
-      <div className="flex gap-2">
-        <input value={prizeTitle} onChange={(e) => setPrizeTitle(e.target.value)} placeholder="Prize (e.g. Limited stamp + tee)" className={inputCls} style={fieldStyle} />
-        <button onClick={addPrize} disabled={!prizeTitle.trim()} className={`${btnPrimary} shrink-0`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>Add</button>
+      <div className="space-y-2">
+        <select value={prizeKind} onChange={(e) => setPrizeKind(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`} style={fieldStyle}>
+          {PRIZE_KIND_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <div className="flex gap-2">
+          {prizeKind === 'first_n' && (
+            <input value={prizeCount} onChange={(e) => setPrizeCount(e.target.value)} inputMode="numeric" aria-label="How many guests qualify" className={`${inputCls} !w-20 text-center`} style={fieldStyle} />
+          )}
+          <input value={prizeTitle} onChange={(e) => setPrizeTitle(e.target.value)} placeholder={prizeKind === 'everyone' ? 'Perk (e.g. Free welcome drink)' : prizeKind === 'first_n' ? 'Door prize (e.g. Limited tee)' : 'Raffle prize (e.g. Limited stamp + tee)'} className={inputCls} style={fieldStyle} />
+          <button onClick={addPrize} disabled={!prizeTitle.trim()} className={`${btnPrimary} shrink-0`} style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}>Add</button>
+        </div>
       </div>
 
       {/* QR sheet modal — screenshot/print and post at the venue */}

@@ -30,6 +30,8 @@ export const users = pgTable('users', {
   pronouns: text('pronouns'),         // Optional free-text e.g. 'she/her', 'they/them'
   customLinks: jsonb('custom_links'), // Array of {label, url} pairs for arbitrary user links
   published: boolean('published').notNull().default(true), // admin can hide a profile from Discover
+  profileNudgeSentAt: timestamp('profile_nudge_sent_at'), // one-per-user "finish your passport" email ledger (lib/notify/profileNudge.ts)
+  dmDigestOptOut: boolean('dm_digest_opt_out').notNull().default(false), // user turned off the daily unread-DM email (profile → Notifications, or the email's unsubscribe link)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -432,15 +434,21 @@ export const eventQuestCompletions = pgTable('event_quest_completions', {
   uniqueIndex('event_quest_completions_quest_user_uniq').on(t.questId, t.userId),
 ]);
 
-// Prizes shown in Event Mode. The host draws the raffle per prize — a random
-// pick from guests who completed every active quest; redrawing overwrites
-// (e.g. winner already left).
+// Prizes shown in Event Mode, in three tiers ("separate the raffle thing
+// from the other prizes"):
+//   kind 'raffle'   — drawn from guests who completed every active quest;
+//                     the host draws per prize, redrawing overwrites.
+//   kind 'everyone' — every checked-in guest gets it (e.g. a free drink).
+//   kind 'first_n'  — the first `threshold` guests through the door
+//                     (check-in order) qualify.
 export const eventPrizes = pgTable('event_prizes', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),
   description: text('description'),
   imageUrl: text('image_url'),
+  kind: text('kind').notNull().default('raffle'), // 'raffle' | 'everyone' | 'first_n'
+  threshold: integer('threshold'),                // first_n: how many earliest check-ins qualify
   sortOrder: integer('sort_order').default(0),
   raffleWinnerUserId: uuid('raffle_winner_user_id').references(() => users.id),
   drawnAt: timestamp('drawn_at'),

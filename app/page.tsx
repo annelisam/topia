@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import GlitchType from './components/ui/GlitchType';
+import { isCoreProfileComplete } from '../lib/profile/completeness';
 
 export default function Home() {
   const router = useRouter();
@@ -12,15 +13,18 @@ export default function Home() {
   const [routing, setRouting] = useState(false);
 
   // When authenticated, route to a remembered destination (e.g. a "complete your
-  // profile" email sends logged-out users here intending /onboarding), otherwise
-  // the main homepage (/home). The destination comes from ?next= (modal logins,
-  // query preserved) or sessionStorage (OAuth logins, which redirect and drop the
-  // query). Only safe internal paths are honored (guards against open redirects).
+  // profile" email sends logged-out users here intending /onboarding). A stored
+  // intent always wins — never derail an RSVP/invite/connect mid-flow. With no
+  // intent: brand-new (or core-incomplete) accounts flow straight into
+  // /onboarding — the one moment a user EXPECTS setup — and complete profiles
+  // go to /home exactly as before. Destination comes from ?next= (modal logins,
+  // query preserved) or sessionStorage (OAuth logins, which drop the query).
+  // Only safe internal paths are honored (guards against open redirects).
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
     setRouting(true);
     const isSafe = (p: string | null): p is string => !!p && p.startsWith('/') && !p.startsWith('//');
-    let dest = '/home';
+    let dest: string | null = null;
     try {
       const fromQuery = new URLSearchParams(window.location.search).get('next');
       const stored = sessionStorage.getItem('topia:postLogin');
@@ -28,7 +32,19 @@ export default function Home() {
       if (isSafe(fromQuery)) dest = fromQuery;
       else if (isSafe(stored)) dest = stored;
     } catch { /* ignore */ }
-    router.replace(dest);
+    if (dest) { router.replace(dest); return; }
+
+    let cancelled = false;
+    fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        // No row yet (sync hasn't run) counts as incomplete — that IS the
+        // brand-new signup case.
+        router.replace(isCoreProfileComplete(d?.user) ? '/home' : '/onboarding');
+      })
+      .catch(() => { if (!cancelled) router.replace('/home'); });
+    return () => { cancelled = true; };
   }, [ready, authenticated, user, router]);
 
   useEffect(() => {

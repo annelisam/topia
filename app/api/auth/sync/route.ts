@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
     const stackTitleRaw     = norm(body, 'stackTitle');
     const stackTitle        = typeof stackTitleRaw === 'string' ? stackTitleRaw.slice(0, 60) : stackTitleRaw;
     const path              = norm(body, 'path');
+    // Notification preference: opt out of the daily unread-DM digest.
+    const dmDigestOptOut    = 'dmDigestOptOut' in body ? !!body.dmDigestOptOut : undefined;
 
     // verifyProvider / unverifyProvider: atomically add/remove a provider from
     // the verifiedProviders CSV without the client needing to read-modify-write.
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
           ...(roleTags  !== undefined && { roleTags }),
           ...(toolSlugs !== undefined && { toolSlugs }),
           ...(stackTitle !== undefined && { stackTitle }),
+          ...(dmDigestOptOut !== undefined && { dmDigestOptOut }),
           path:             path            !== undefined ? path            : prev.path,
           ...((verifyProvider || unverifyProvider) && { verifiedProviders: nextVerifiedProviders(prev.verifiedProviders) }),
           updatedAt: new Date(),

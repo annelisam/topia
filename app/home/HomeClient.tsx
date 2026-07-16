@@ -10,6 +10,7 @@ import EventCover from '../events/EventCover';
 import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
 import { isRealPhoto } from '../../lib/avatar';
+import { openFeedbackWidget } from '../../lib/openFeedback';
 
 interface Episode {
   id: string;
@@ -502,6 +503,14 @@ export default function HomeClient({
             <p className="font-mono text-[12px] leading-[1.7] font-bold">Welcome to beta — and to a new path for ownership and sovereignty.</p>
             <p className="font-mono text-[11px] leading-[1.7]"><span className="font-bold">What is TOPIA?</span> Not another algorithm to fight. Not another platform to feed. It&apos;s the infrastructure: a network of world builders your algorithm can&apos;t contain, and a community to support your ecosystem.</p>
             <p className="font-mono text-[11px] leading-[1.7]">We&apos;re still building. You&apos;re here early because we need you — to tell us what&apos;s working, what&apos;s missing, and what TOPIA should become.</p>
+            {/* The feedback drawer's edge tab was invisible to most users —
+                surface it right where we ask for feedback. */}
+            <button
+              onClick={openFeedbackWidget}
+              className="mt-1 font-mono text-[11px] font-bold uppercase tracking-[2px] px-3.5 py-2 rounded-sm cursor-pointer border-none bg-lime text-obsidian hover:opacity-90 transition"
+            >
+              ✎ Share feedback
+            </button>
           </DraggablePopup>
 
           {/* Scroll cue — centered on the divider, clear of the popup */}
