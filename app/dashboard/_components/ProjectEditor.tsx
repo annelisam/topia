@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { inputCls, labelCls } from './sharedStyles';
@@ -38,23 +38,14 @@ export function ProjectEditor({
   const [error, setError] = useState('');
   const [contentPreview, setContentPreview] = useState(false);
   const [toolSearch, setToolSearch] = useState('');
-  const [credits, setCredits] = useState<CreditDraft[]>([]);
+  // Credits now ride the project object itself (list + save payloads include
+  // them), so the editor reflects saved credits immediately — the old
+  // slug-keyed refetch could resolve the wrong row when slugs collided,
+  // which is exactly why saved credits "disappeared" from the editor.
+  const [credits, setCredits] = useState<CreditDraft[]>(
+    (project?.credits ?? []).map((c) => ({ userId: c.userId, role: c.role || '' })),
+  );
   const [creditPick, setCreditPick] = useState('');
-
-  // Credits aren't in the dashboard's project LIST payload — load them from the
-  // single-project endpoint when editing an existing project.
-  useEffect(() => {
-    if (!project?.slug) return;
-    let cancelled = false;
-    fetch(`/api/worlds/projects?worldId=${worldId}&slug=${encodeURIComponent(project.slug)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (cancelled || !Array.isArray(d.project?.credits)) return;
-        setCredits(d.project.credits.map((c: { userId: string; role: string | null }) => ({ userId: c.userId, role: c.role || '' })));
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [project?.slug, worldId]);
 
   const memberName = (userId: string) => {
     const m = worldMembers.find(x => x.userId === userId);

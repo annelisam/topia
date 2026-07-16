@@ -86,6 +86,23 @@ export default function WorldProjectsPage() {
                       {pTools.map(t => <span key={t} className="font-mono text-[10px] uppercase tracking-[1px] px-1.5 py-0.5 rounded-sm bg-lime text-obsidian">{t}</span>)}
                     </div>
                   )}
+                  {/* Saved credits, visible right on the card — the builder's
+                      confirmation that their add actually persisted. */}
+                  {(p.credits?.length ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <span className="flex items-center">
+                        {p.credits!.slice(0, 5).map((c, i) => (
+                          c.avatarUrl
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            ? <img key={c.userId} src={c.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-[var(--page-bg)]" style={{ marginLeft: i ? -6 : 0 }} />
+                            : <span key={c.userId} className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[8px] font-bold bg-ink/10 text-ink/60 border border-[var(--page-bg)]" style={{ marginLeft: i ? -6 : 0 }}>{(c.name || c.username || '?')[0].toUpperCase()}</span>
+                        ))}
+                      </span>
+                      <span className="font-mono text-[10px] text-ink/40">
+                        {p.credits!.length} credit{p.credits!.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {/* Actions — builders only. Always visible on touch; hover-reveal on pointer devices. */}
                 {isBuilder && (

@@ -8,8 +8,14 @@ export interface WorldData {
 }
 export interface ToolOption { id: string; name: string; slug: string; category?: string | null; url?: string | null; }
 export interface SearchUser { id: string; username: string | null; name: string | null; avatarUrl: string | null; }
+export interface ProjectCredit {
+  userId: string; role: string | null;
+  name?: string | null; username?: string | null; avatarUrl?: string | null;
+}
+
 export interface ProjectItem {
   id: string; name: string; slug: string; description?: string | null; content?: string | null;
   imageUrl?: string | null; videoUrl?: string | null; url?: string | null;
   links?: { label: string; url: string }[] | null; tags?: string[] | null;
+  credits?: ProjectCredit[];
 }
