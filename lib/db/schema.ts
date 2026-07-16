@@ -31,6 +31,7 @@ export const users = pgTable('users', {
   customLinks: jsonb('custom_links'), // Array of {label, url} pairs for arbitrary user links
   published: boolean('published').notNull().default(true), // admin can hide a profile from Discover
   profileNudgeSentAt: timestamp('profile_nudge_sent_at'), // one-per-user "finish your passport" email ledger (lib/notify/profileNudge.ts)
+  dmDigestOptOut: boolean('dm_digest_opt_out').notNull().default(false), // user turned off the daily unread-DM email (profile → Notifications, or the email's unsubscribe link)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

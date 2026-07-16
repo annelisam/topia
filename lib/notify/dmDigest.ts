@@ -13,6 +13,7 @@
 import { and, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import { db, users, conversationMembers, messages } from '@/lib/db';
 import { sendBulkEmails } from './email';
+import { unsubUrl } from './unsubscribe';
 
 const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_SENDERS_LISTED = 6;
@@ -21,8 +22,11 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function digestHtml(opts: { name: string | null; lines: string[]; total: number; origin: string }): string {
+function digestHtml(opts: { name: string | null; lines: string[]; total: number; origin: string; unsubscribe: string | null }): string {
   const rows = opts.lines.map((l) => `<tr><td style="padding:4px 0;font-size:14px;color:#1a1a1a;">${l}</td></tr>`).join('');
+  const optOutLine = opts.unsubscribe
+    ? `<a href="${opts.unsubscribe}" style="color:#1a1a1a80;">Unsubscribe from these</a>`
+    : 'Turn these off anytime in your profile settings.';
   return `
   <div style="background:#f5f0e8;padding:32px 16px;font-family:ui-monospace,Menlo,monospace;">
     <div style="max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #1a1a1a22;border-radius:12px;overflow:hidden;">
@@ -39,7 +43,7 @@ function digestHtml(opts: { name: string | null; lines: string[]; total: number;
           Open messages →
         </a>
         <p style="font-size:11px;color:#1a1a1a80;margin:20px 0 0;">
-          You get at most one of these a day, and only when something new arrived.
+          You get at most one of these a day, and only when something new arrived. ${optOutLine}
         </p>
       </div>
     </div>
@@ -85,14 +89,14 @@ export async function sendDmDigests(origin: string) {
   const userIds = new Set<string>();
   for (const [rid, e] of recipients) { userIds.add(rid); for (const sid of e.bySender.keys()) userIds.add(sid); }
   const people = await db
-    .select({ id: users.id, name: users.name, username: users.username, email: users.email })
+    .select({ id: users.id, name: users.name, username: users.username, email: users.email, dmDigestOptOut: users.dmDigestOptOut })
     .from(users)
     .where(inArray(users.id, [...userIds]));
   const byId = new Map(people.map((p) => [p.id, p]));
 
   const emails = recipients.flatMap(([recipientId, entry]) => {
     const me = byId.get(recipientId);
-    if (!me?.email) return [];
+    if (!me?.email || me.dmDigestOptOut) return [];
     const senders = [...entry.bySender.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([sid, n]) => ({ who: byId.get(sid), n }));
@@ -104,7 +108,7 @@ export async function sendDmDigests(origin: string) {
     return [{
       to: me.email,
       subject: `${entry.total} unread message${entry.total === 1 ? '' : 's'} on Topia`,
-      html: digestHtml({ name: me.name, lines, total: entry.total, origin }),
+      html: digestHtml({ name: me.name, lines, total: entry.total, origin, unsubscribe: unsubUrl(origin, me.id) }),
     }];
   });
 

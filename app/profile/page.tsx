@@ -11,6 +11,7 @@ import { CheckIcon } from '../components/ui/Icons';
 import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '../components/SocialConnect';
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
+import NotificationPrefs from './_components/NotificationPrefs';
 import HandleChangeModal from './_components/HandleChangeModal';
 import { resizeAndUploadAvatar } from '../../lib/uploadImage';
 import RoleTagPicker from '../components/RoleTagPicker';
@@ -712,7 +713,12 @@ export default function ProfilePage() {
             </div>
           </Section>
 
-          {/* ─── 7. PREVIEW + EXTRAS ─── */}
+          {/* ─── 7. NOTIFICATIONS ─── */}
+          <Section label="Notifications" sub="what we email you">
+            <NotificationPrefs />
+          </Section>
+
+          {/* ─── 8. PREVIEW + EXTRAS ─── */}
           <Section label="Preview" sub="what others see">
             <ProfilePreviewCard
               name={name}
