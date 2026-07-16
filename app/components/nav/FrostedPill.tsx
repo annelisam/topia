@@ -61,6 +61,24 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
   // Hide the chip while already in Event Mode — it would link to itself.
   const showLiveChip = !!liveEvent && !pathname.endsWith('/live');
 
+  // Add-to-home-screen nudge: signed-in mobile users, browser tab only,
+  // dismissable forever (same key as Event Mode's hint — one dismissal
+  // silences both). A chip, deliberately NOT a popup: it never blocks the
+  // page, and iOS can't trigger install anyway — only instruct.
+  const [installState, setInstallState] = useState<'hidden' | 'chip' | 'how'>('hidden');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const dismissed = localStorage.getItem('topia:install-hint') === 'dismissed';
+    setInstallState(!standalone && !dismissed ? 'chip' : 'hidden');
+  }, []);
+  const dismissInstall = () => {
+    setInstallState('hidden');
+    try { localStorage.setItem('topia:install-hint', 'dismissed'); } catch { /* private mode */ }
+  };
+  // One chip at a time — a live event outranks the install nudge.
+  const showInstallChip = authenticated && installState !== 'hidden' && !showLiveChip;
+
   const isActive = (href: string) =>
     href === '/'
       ? pathname === '/' || pathname === '/home'
@@ -108,6 +126,37 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
           </span>
           <span className="font-mono text-[11px] shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>→</span>
         </Link>
+      )}
+
+      {showInstallChip && (
+        <div
+          className="pointer-events-auto flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 backdrop-blur-xl max-w-[88vw]"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--page-bg) 88%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--page-text) 20%, transparent)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          {installState === 'chip' ? (
+            <>
+              <button
+                onClick={() => setInstallState('how')}
+                className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] bg-transparent border-none cursor-pointer p-0 truncate"
+                style={{ color: 'var(--page-text)' }}
+              >
+                ＋ Add Topia to your Home Screen
+              </button>
+              <button onClick={dismissInstall} aria-label="Dismiss" className="bg-transparent border-none cursor-pointer text-[14px] leading-none p-0 shrink-0" style={{ color: 'var(--page-text)', opacity: 0.5 }}>×</button>
+            </>
+          ) : (
+            <>
+              <p className="font-mono text-[10px] leading-relaxed m-0" style={{ color: 'var(--page-text)' }}>
+                Open your browser&apos;s <b>share menu</b> → <b>&quot;Add to Home Screen&quot;</b>. Topia launches full-screen like an app.
+              </p>
+              <button onClick={dismissInstall} aria-label="Dismiss" className="bg-transparent border-none cursor-pointer text-[14px] leading-none p-0 shrink-0" style={{ color: 'var(--page-text)', opacity: 0.5 }}>×</button>
+            </>
+          )}
+        </div>
       )}
       {/* Bigger + higher-contrast than a default glass bar: 56px targets,
           80% glass, an ink-mixed hairline and a two-layer shadow so the
