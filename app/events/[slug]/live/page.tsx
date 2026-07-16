@@ -37,11 +37,11 @@ interface LiveEvent {
   userStatus: string | null;
 }
 interface Guest { name: string | null; username: string | null; avatarUrl: string | null; }
-interface MyDoorState { onList: boolean; rsvpStatus: string | null; checkedIn: boolean; checkedInAt: string | null; }
+interface MyDoorState { onList: boolean; rsvpStatus: string | null; checkedIn: boolean; checkedInAt: string | null; checkinPosition: number | null; }
 interface Connection { id: string; name: string | null; username: string | null; avatarUrl: string | null; connectedAt: string; }
 interface QuestItem { id: string; title: string; description: string | null; icon: string | null; verifyMethod: string; rule: { kind: string; count?: number } | null; completed: boolean; progress: { current: number; target: number } | null; }
 interface QuestState { quests: QuestItem[]; total: number; completedCount: number; inRaffle: boolean; }
-interface PrizeItem { id: string; title: string; description: string | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
+interface PrizeItem { id: string; title: string; description: string | null; kind: string; threshold: number | null; drawnAt: string | null; winnerName: string | null; winnerUsername: string | null; }
 interface BoardEntry { userId: string; name: string | null; username: string | null; avatarUrl: string | null; completedCount: number; inRaffle: boolean; }
 
 const INK = '#f5f0e8';
@@ -90,6 +90,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const [people, setPeople] = useState<Connection[]>([]);
   const [questState, setQuestState] = useState<QuestState | null>(null);
   const [prizes, setPrizes] = useState<PrizeItem[]>([]);
+  const [checkedInCount, setCheckedInCount] = useState(0);
   const [board, setBoard] = useState<BoardEntry[]>([]);
   const [questScanOpen, setQuestScanOpen] = useState(false);
   const [questScanStatus, setQuestScanStatus] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
@@ -190,7 +191,10 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
     }
     fetch(`/api/events/prizes?eventId=${event.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.prizes) setPrizes(d.prizes); })
+      .then((d) => {
+        if (d?.prizes) setPrizes(d.prizes);
+        if (typeof d?.checkedInCount === 'number') setCheckedInCount(d.checkedInCount);
+      })
       .catch(() => {});
   }, [event?.id, privyId]);
   // Poll alongside the door state: auto quests (connections, follows, DMs)
@@ -562,24 +566,46 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </div>
             )}
 
-            {/* Prizes */}
+            {/* Prizes — three tiers, each telling the viewer exactly where
+                THEY stand: perks for everyone checked in, door prizes for the
+                first N through, and the quest raffle. */}
             {prizes.length > 0 && (
               <div style={{ ...card, borderColor: 'rgba(228,254,82,0.35)' }}>
-                <p style={{ ...meta, color: LIME }}>Prizes · raffle</p>
-                <div className="mt-2 flex flex-col gap-2">
-                  {prizes.map((p) => (
-                    <div key={p.id}>
-                      <p className="text-[13px] font-bold" style={{ color: INK }}>✶ {p.title}</p>
-                      {p.description && <p className="text-[11px]" style={{ color: DIM }}>{p.description}</p>}
-                      {p.drawnAt && (
-                        <p className="font-mono text-[11px] mt-0.5" style={{ color: LIME }}>
-                          Winner: {p.winnerName || p.winnerUsername || 'drawn'}{p.winnerUsername ? ` (@${p.winnerUsername})` : ''}
+                <p style={{ ...meta, color: LIME }}>Prizes</p>
+                <div className="mt-2 flex flex-col gap-2.5">
+                  {prizes.map((p) => {
+                    const pos = me?.checkinPosition ?? null;
+                    let status: { text: string; on: boolean } | null = null;
+                    if (p.kind === 'everyone') {
+                      status = me?.checkedIn
+                        ? { text: "✓ Yours — you're checked in", on: true }
+                        : { text: 'Every checked-in guest gets this', on: false };
+                    } else if (p.kind === 'first_n') {
+                      const cap = Math.max(1, p.threshold ?? 1);
+                      if (pos && pos <= cap) status = { text: `✓ You're #${pos} of the first ${cap} — you qualify`, on: true };
+                      else if (pos) status = { text: `First ${cap} only — you were #${pos}`, on: false };
+                      else {
+                        const left = Math.max(0, cap - checkedInCount);
+                        status = left > 0
+                          ? { text: `First ${cap} through the door — ${left} spot${left === 1 ? '' : 's'} left`, on: false }
+                          : { text: `First ${cap} through the door — all claimed`, on: false };
+                      }
+                    } else if (p.drawnAt) {
+                      status = { text: `Winner: ${p.winnerName || p.winnerUsername || 'drawn'}${p.winnerUsername ? ` (@${p.winnerUsername})` : ''}`, on: true };
+                    } else {
+                      status = { text: '🎲 Raffle — finish every quest to be in the draw', on: false };
+                    }
+                    return (
+                      <div key={p.id}>
+                        <p className="text-[13px] font-bold" style={{ color: INK }}>
+                          {p.kind === 'everyone' ? '🍸' : p.kind === 'first_n' ? '⚡' : '✶'} {p.title}
                         </p>
-                      )}
-                    </div>
-                  ))}
+                        {p.description && <p className="text-[11px]" style={{ color: DIM }}>{p.description}</p>}
+                        <p className="font-mono text-[11px] mt-0.5" style={{ color: status.on ? LIME : DIM }}>{status.text}</p>
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="font-mono text-[10px] mt-2.5" style={{ color: DIM }}>Complete every quest to be in the draw.</p>
               </div>
             )}
 

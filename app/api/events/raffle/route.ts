@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
     const [prize] = await db.select().from(eventPrizes)
       .where(and(eq(eventPrizes.id, prizeId), eq(eventPrizes.eventId, eventId))).limit(1);
     if (!prize) return NextResponse.json({ error: 'Prize not found' }, { status: 404 });
+    if (prize.kind !== 'raffle') {
+      return NextResponse.json({ error: 'Only raffle prizes are drawn — this one goes by check-in' }, { status: 400 });
+    }
 
     const { total, entries } = await getEventQuestProgress(eventId);
     if (total === 0) return NextResponse.json({ error: 'This event has no active quests' }, { status: 400 });
