@@ -30,6 +30,7 @@ export const users = pgTable('users', {
   pronouns: text('pronouns'),         // Optional free-text e.g. 'she/her', 'they/them'
   customLinks: jsonb('custom_links'), // Array of {label, url} pairs for arbitrary user links
   published: boolean('published').notNull().default(true), // admin can hide a profile from Discover
+  profileNudgeSentAt: timestamp('profile_nudge_sent_at'), // one-per-user "finish your passport" email ledger (lib/notify/profileNudge.ts)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
