@@ -473,6 +473,70 @@ export const tvContent = pgTable('tv_content', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+/* ════════════════════════════════════════════════════════════════════
+ * IN PROCESS — build-in-public roadmaps (Latashá's mockup, Turn 2)
+ *
+ * A world can run an ERA ("ORBIT ONE — debut album era") made of ordered
+ * MILESTONES with statuses; a passport can carry personal LIFE CHAPTERS
+ * that interleave with world eras on the profile's In Process tab.
+ * Funding fields (goal/raised cents) exist on milestones for the future
+ * milestone-funding phase but are NOT surfaced anywhere in the UI yet.
+ * Date fields are display labels ("MAR 2026", "JUL–OCT 2026") like
+ * events' text dates — this is editorial storytelling, not scheduling.
+ * ──────────────────────────────────────────────────────────────────── */
+export const worldEras = pgTable('world_eras', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),           // "ORBIT ONE"
+  description: text('description'),         // "debut album era"
+  startLabel: text('start_label'),           // "MAR 2026"
+  endLabel: text('end_label'),               // "FEB 2027"
+  status: text('status').notNull().default('active'), // 'active' | 'complete' | 'archived'
+  // Link to the era's home on In Process (inprocess.fun) — the source of
+  // the build-in-public process log.
+  inProcessUrl: text('in_process_url'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('world_eras_world_id_idx').on(t.worldId),
+]);
+
+export const eraMilestones = pgTable('era_milestones', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),           // "Album Production"
+  description: text('description'),
+  dateLabel: text('date_label'),             // "MAR–JUN 2026"
+  status: text('status').notNull().default('upcoming'), // 'done' | 'now' | 'upcoming' | 'paused'
+  imageUrl: text('image_url'),
+  // Future funding phase — never rendered yet. Integer cents per house rule.
+  goalCents: integer('goal_cents'),
+  raisedCents: integer('raised_cents'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('era_milestones_era_id_idx').on(t.eraId),
+]);
+
+// Personal roadmap entries on the passport ("Move the studio to LA",
+// "Rest era — 6 weeks offline"). status 'witness' = the mockup's
+// "not seeking funds · just witness it".
+export const lifeChapters = pgTable('life_chapters', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  dateLabel: text('date_label'),             // "AUG '26", "FALL '26"
+  status: text('status').notNull().default('planned'), // 'in_motion' | 'planned' | 'complete' | 'witness'
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('life_chapters_user_id_idx').on(t.userId),
+]);
+
 // World projects - items that appear as labels on a world's globe
 export const worldProjects = pgTable('world_projects', {
   id: uuid('id').defaultRandom().primaryKey(),

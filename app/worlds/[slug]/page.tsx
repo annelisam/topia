@@ -13,6 +13,7 @@ import OverviewLayer, { type SocialLinks, type ActivityItem } from '../../compon
 import ProjectsLayer, { type ProjectItem } from '../../components/world/ProjectsLayer';
 import EventsLayer, { type WorldEvent } from '../../components/world/EventsLayer';
 import ToolsLayer from '../../components/world/ToolsLayer';
+import InProcessLayer, { type EraView } from '../../components/world/InProcessLayer';
 import ArchitectsLayer from '../../components/world/ArchitectsLayer';
 import { type ToolMiniData } from '../../resources/tools/ToolMiniCard';
 import { useRecordWorldView } from '../../dashboard/_components/RecentlyViewedWorlds';
@@ -67,6 +68,7 @@ interface WorldDetail {
 const SECTIONS = [
   { id: 'projects',   label: 'PROJECTS' },
   { id: 'overview',   label: 'OVERVIEW' },
+  { id: 'inprocess',  label: 'IN PROCESS' },
   { id: 'architects', label: 'ARCHITECTS' },
   { id: 'events',     label: 'EVENTS' },
   { id: 'tools',      label: 'TOOLS' },
@@ -179,6 +181,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const [world, setWorld] = useState<WorldDetail | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
+  const [eras, setEras] = useState<EraView[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [allTools, setAllTools] = useState<ToolMiniData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,6 +237,10 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     fetch(`/api/events?worldId=${world.id}`)
       .then((r) => r.json())
       .then((data) => setWorldEvents(data.events || []))
+      .catch(console.error);
+    fetch(`/api/worlds/eras?worldId=${world.id}`)
+      .then((r) => r.json())
+      .then((data) => setEras(data.eras || []))
       .catch(console.error);
     fetch(`/api/worlds/announcements?worldId=${world.id}`)
       .then((r) => r.json())
@@ -368,10 +375,18 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     ? new Date(world.dateAdded).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
     : null;
 
-  // Overview + Projects + Architects + Tools always show; Events hides when empty.
+  // Overview + Projects + Architects + Tools always show; Events hides when
+  // empty; In Process hides until the world has a visible era (builders keep
+  // it so they can find the editor).
+  const hasVisibleEras = eras.some((e) => e.status !== 'archived');
   const visibleSections = useMemo(
-    () => SECTIONS.filter((s) => s.id !== 'events' || worldEvents.length > 0),
-    [worldEvents.length],
+    () => SECTIONS.filter((s) => {
+      if (s.id === 'events') return worldEvents.length > 0;
+      if (s.id === 'inprocess') return hasVisibleEras || !!isWorldBuilder;
+      return true;
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [worldEvents.length, hasVisibleEras, isWorldBuilder],
   );
 
   // Per-tab counts so visitors know what's behind a tab before clicking.
@@ -381,6 +396,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
     architects: crewCount,
     events: worldEvents.length,
     tools: toolsList.length,
+    inprocess: eras.filter((e) => e.status !== 'archived').reduce((n, e) => n + e.milestones.length, 0),
   };
 
   // The nearest upcoming event stays pinned in the rail from every tab.
@@ -452,6 +468,7 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} ghosts={world?.pendingGhosts ?? []} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;
       case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
+      case 'inprocess':  return <InProcessLayer config={config} eras={eras} slug={slug} canEdit={!!isWorldBuilder} />;
       default:
         return (
           <OverviewLayer
