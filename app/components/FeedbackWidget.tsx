@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { OPEN_FEEDBACK_EVENT } from '../../lib/openFeedback';
 
 const CATEGORIES = [
   { key: 'bug', label: 'Bug' },
@@ -13,7 +14,7 @@ const CATEGORIES = [
 // slide-in drawer. Logged-in only. Submissions become labelled GitHub issues
 // via /api/feedback.
 export default function FeedbackWidget() {
-  const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const { ready, authenticated, user, getAccessToken, login } = usePrivy();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('bug');
   const [message, setMessage] = useState('');
@@ -28,6 +29,18 @@ export default function FeedbackWidget() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [open]);
+
+  // Let any surface (e.g. the /home welcome popup's "share feedback" button)
+  // pop the drawer. Logged-out callers get the login modal instead —
+  // feedback stays signed-in only.
+  useEffect(() => {
+    const handler = () => {
+      if (authenticated) setOpen(true);
+      else if (ready) login();
+    };
+    window.addEventListener(OPEN_FEEDBACK_EVENT, handler);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, handler);
+  }, [authenticated, ready, login]);
 
   if (!ready || !authenticated) return null; // feedback is for signed-in users
 
