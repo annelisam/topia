@@ -36,11 +36,15 @@ function Node({ state }: { state: 'done' | 'now' | 'future' }) {
   return <span className="w-3.5 h-3.5 rounded-full shrink-0 z-[1] border-2 border-ink/25 bg-[var(--page-bg)]" />;
 }
 
-/* ── Milestone add/edit modal ──────────────────────────────────────── */
-function MilestoneModal({ eraId, existing, nextIndex, privyId, onClose, onChanged }: {
-  eraId: string; existing?: EraMilestoneView; nextIndex?: number; privyId: string;
-  onClose: () => void; onChanged: () => void;
+/* ── Milestone modal ───────────────────────────────────────────────
+ * Opens in a read view (everyone sees the full milestone); builders
+ * flip to the edit form with an explicit ✎ Edit. Creating a new
+ * milestone goes straight to the form. */
+function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, onClose, onChanged }: {
+  eraId: string; existing?: EraMilestoneView; index?: number; nextIndex?: number; privyId: string;
+  canEdit: boolean; onClose: () => void; onChanged: () => void;
 }) {
+  const [mode, setMode] = useState<'view' | 'edit'>(existing ? 'view' : 'edit');
   const [draft, setDraft] = useState({
     title: existing?.title ?? '',
     description: existing?.description ?? '',
@@ -79,6 +83,37 @@ function MilestoneModal({ eraId, existing, nextIndex, privyId, onClose, onChange
     onClose();
   };
 
+  if (mode === 'view' && existing) {
+    const m = existing;
+    const accent = m.status === 'done' || m.status === 'now';
+    return (
+      <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
+        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: accent ? ORANGE : 'color-mix(in srgb, var(--page-text) 45%, transparent)' }}>
+              {typeof index === 'number' && `M${String(index + 1).padStart(2, '0')} · `}{STATUS_META[m.status] ?? m.status.toUpperCase()}
+            </p>
+            <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
+          </div>
+          <h4 className="font-basement font-black text-[22px] uppercase leading-tight text-ink mt-2">{m.title}</h4>
+          {(eraDateRange(m) ?? m.dateLabel) && (
+            <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45 mt-1.5">{eraDateRange(m) ?? m.dateLabel}</p>
+          )}
+          {m.imageUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={m.imageUrl} alt="" className="w-full max-h-[280px] object-cover rounded-sm mt-3" />
+          )}
+          {m.description && <p className="font-mono text-[13px] text-ink/70 leading-relaxed mt-3">{m.description}</p>}
+          {canEdit && (
+            <div className="mt-4 pt-3 border-t border-ink/[0.08]">
+              <button onClick={() => setMode('edit')} className={btnGhost}>✎ Edit milestone</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -115,6 +150,7 @@ function MilestoneModal({ eraId, existing, nextIndex, privyId, onClose, onChange
             <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
               {saving ? 'Saving…' : existing ? 'Save' : 'Add milestone'}
             </button>
+            {existing && <button onClick={() => setMode('view')} className={btnGhost}>Cancel</button>}
             {existing && (
               confirmingDelete
                 ? <button onClick={remove} className="font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer border-none font-bold" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Really delete?</button>
@@ -440,7 +476,7 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
   canEdit: boolean; canMint: boolean; onChanged: () => void; hideProjectChip?: boolean;
 }) {
   const [editingEra, setEditingEra] = useState(false);
-  const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView } | null>(null);
+  const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView; index?: number } | null>(null);
   const [composing, setComposing] = useState(false);
 
   const nowIndex = era.milestones.findIndex((m) => m.status === 'now');
@@ -510,8 +546,8 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
                 </div>
                 {/* card */}
                 <button
-                  onClick={canEdit ? () => setMilestoneModal({ existing: m }) : undefined}
-                  className={`block w-full text-left mt-2 rounded-sm px-3.5 py-3 bg-transparent ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+                  onClick={() => setMilestoneModal({ existing: m, index: i })}
+                  className="block w-full text-left mt-2 rounded-sm px-3.5 py-3 bg-transparent cursor-pointer transition-colors hover:bg-ink/[0.04]"
                   style={{
                     border: `${isNow ? 2 : 1}px solid ${isNow ? ORANGE : 'color-mix(in srgb, var(--page-text) 10%, transparent)'}`,
                     opacity: m.status === 'paused' ? 0.55 : 1,
@@ -529,7 +565,6 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
                     <img src={m.imageUrl} alt="" className="w-full h-[96px] object-cover rounded-sm mt-2" loading="lazy" />
                   )}
                   {m.description && <p className="font-mono text-[11px] text-ink/50 mt-2 line-clamp-3">{m.description}</p>}
-                  {canEdit && <p className="font-mono text-[9px] uppercase tracking-[1px] text-ink/25 mt-2">✎ tap to edit</p>}
                 </button>
               </div>
             );
@@ -568,8 +603,10 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
         <MilestoneModal
           eraId={era.id}
           existing={milestoneModal.existing}
+          index={milestoneModal.index}
           nextIndex={era.milestones.length}
           privyId={privyId}
+          canEdit={canEdit}
           onClose={() => setMilestoneModal(null)}
           onChanged={onChanged}
         />
