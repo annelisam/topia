@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import WorldGlobe from '../WorldGlobe';
+import ProjectThumb from '../ProjectThumb';
 import { getEmbedUrl, markdownComponents } from '../ProjectContent';
 import { faviconUrl } from '../../resources/tools/favicon';
 import { WorldConfig } from './worldConfig';
@@ -151,12 +152,11 @@ function ProjectPanel({
             <div className="w-full overflow-hidden border-b border-ink/[0.06]" style={{ aspectRatio: embed.vertical ? '9/16' : '16/9', maxHeight: embed.vertical ? '380px' : undefined }}>
               <iframe src={embed.src} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ border: 'none' }} title={project.name} />
             </div>
-          ) : project.imageUrl ? (
+          ) : (
             <div className="w-full max-h-[300px] overflow-hidden border-b border-ink/[0.06]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
+              <ProjectThumb imageUrl={project.imageUrl} name={project.name} alt={project.name} fallbackClassName="aspect-[16/6]" initialClassName="text-[clamp(28px,6vw,44px)]" />
             </div>
-          ) : null}
+          )}
 
           <div className="p-5 sm:p-6">
             {/* Designation + declaration */}
@@ -366,10 +366,7 @@ export default function ProjectsLayer({
               >
                 <span className="font-mono text-[9px] text-ink/30 tabular-nums shrink-0 w-5">{String(i + 1).padStart(2, '0')}</span>
                 <span className="w-10 h-7 rounded border border-ink/10 overflow-hidden shrink-0 bg-ink/[0.04]">
-                  {proj.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={proj.imageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : null}
+                  <ProjectThumb imageUrl={proj.imageUrl} name={proj.name} initialClassName="text-[9px]" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="font-mono text-[12px] font-bold uppercase block truncate transition-colors" style={{ color: isSelected || activeSlug === proj.slug ? config.hex : 'var(--page-text)' }}>{proj.name}</span>
@@ -404,14 +401,13 @@ export default function ProjectsLayer({
                 style={{ borderColor: isSelected ? config.hex : 'color-mix(in srgb, var(--page-text) 8%, transparent)' }}
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-ink/[0.04]">
-                  {proj.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={proj.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-basement font-black text-[clamp(28px,6vw,44px)] uppercase text-ink/10">{proj.name[0]}</span>
-                    </div>
-                  )}
+                  <ProjectThumb
+                    imageUrl={proj.imageUrl}
+                    name={proj.name}
+                    imgClassName="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    fallbackClassName="absolute inset-0"
+                    initialClassName="text-[clamp(28px,6vw,44px)]"
+                  />
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.78), transparent 55%)' }} />
                   {proj.tags && proj.tags[0] && <span className="absolute bottom-2.5 left-3 font-mono text-[9px] uppercase tracking-[2px] text-bone/70">{proj.tags[0]}</span>}
                   {isSelected && <span className="absolute top-2.5 right-2.5 font-mono text-[8px] uppercase tracking-wider rounded-sm px-2 py-0.5 backdrop-blur-sm" style={{ backgroundColor: config.hex, color: '#0a0a0a' }}>viewing</span>}

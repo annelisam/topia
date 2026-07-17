@@ -44,8 +44,35 @@ export async function fetchOgImage(siteUrl: string): Promise<string | null> {
 
     // Resolve relative og:image paths against the page; only keep http(s).
     const resolved = new URL(meta[1].replace(/&amp;/g, '&'), target).toString();
-    return /^https?:\/\//.test(resolved) ? resolved.slice(0, 2000) : null;
+    if (!/^https?:\/\//.test(resolved)) return null;
+    const url = resolved.slice(0, 2000);
+    return (await looksLikeImage(url)) ? url : null;
   } catch {
     return null;
+  }
+}
+
+// Sites ship stale og:image tags pointing at 404s; storing one gives every
+// card a broken thumbnail. Reject only on a definitive bad answer (error
+// status or non-image content-type) — a host that blocks HEAD or times out
+// gets the benefit of the doubt, since the client falls back gracefully.
+async function looksLikeImage(url: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: { 'User-Agent': 'TopiaBot/1.0 (+https://topia.vision)' },
+    });
+    if (res.status === 405 || res.status === 501) return true; // HEAD unsupported
+    if (!res.ok) return false;
+    const type = res.headers.get('content-type');
+    return !type || type.startsWith('image/');
+  } catch {
+    return true;
+  } finally {
+    clearTimeout(timer);
   }
 }
