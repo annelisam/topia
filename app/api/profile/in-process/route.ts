@@ -30,6 +30,10 @@ export async function GET(request: Request) {
           id: worldEras.id,
           title: worldEras.title,
           description: worldEras.description,
+          startDate: worldEras.startDate,
+          endDate: worldEras.endDate,
+          startPrecision: worldEras.startPrecision,
+          endPrecision: worldEras.endPrecision,
           startLabel: worldEras.startLabel,
           endLabel: worldEras.endLabel,
           status: worldEras.status,
@@ -56,6 +60,10 @@ export async function GET(request: Request) {
           eraId: e.id,
           title: e.title,
           description: e.description,
+          startDate: e.startDate,
+          endDate: e.endDate,
+          startPrecision: e.startPrecision,
+          endPrecision: e.endPrecision,
           startLabel: e.startLabel,
           endLabel: e.endLabel,
           status: e.status,
@@ -68,9 +76,11 @@ export async function GET(request: Request) {
       });
     }
 
+    // No CDN caching — a stale cached response made just-added chapters
+    // vanish from the owner's editor for 60s in production.
     return NextResponse.json(
       { chapters, worldEras: worldEntries },
-      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
+      { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
     console.error('[in-process] GET failed:', error);

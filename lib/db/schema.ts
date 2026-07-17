@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, boolean, integer, index, uniqueIndex, date } from 'drizzle-orm/pg-core';
 
 // Users table - auth via Privy (email, phone, Google, Coinbase wallet)
 export const users = pgTable('users', {
@@ -489,8 +489,17 @@ export const worldEras = pgTable('world_eras', {
   worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),           // "ORBIT ONE"
   description: text('description'),         // "debut album era"
-  startLabel: text('start_label'),           // "MAR 2026"
-  endLabel: text('end_label'),               // "FEB 2027"
+  // Real dates with chooseable precision: exact day ("MAR 3, 2026"),
+  // month+year ("MAR 2026"), or year only ("2026"). Dates are stored
+  // normalized (month → 1st, year → Jan 1) and the precision drives the
+  // rendering (lib/eraDates.ts). Legacy free-text labels below remain a
+  // read fallback for rows created before the date columns existed.
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  startPrecision: text('start_precision'), // 'day' | 'month' | 'year' (null = month)
+  endPrecision: text('end_precision'),
+  startLabel: text('start_label'),           // legacy display label
+  endLabel: text('end_label'),               // legacy display label
   status: text('status').notNull().default('active'), // 'active' | 'complete' | 'archived'
   // Link to the era's home on In Process (inprocess.fun) — the source of
   // the build-in-public process log.
@@ -534,6 +543,32 @@ export const inProcessAccounts = pgTable('in_process_accounts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// Native process-log posts on an era — build-in-public updates (image +
+// words) that live on Topia. Posting is Topia-first: syncing the same post
+// to In Process (minting it onchain) is optional per post; when it happens,
+// minted_url records the collect link.
+// Post kinds mirror In Process's create flow (the era is the "collection"):
+//   moment  — media-first (an image + a few words)
+//   thought — just words
+//   link    — any URL from the internet
+//   embed   — a player URL (YouTube/SoundCloud/etc.); stored as a URL, never
+//             raw HTML — embed code is an XSS grenade.
+export const eraProcessPosts = pgTable('era_process_posts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
+  authorUserId: uuid('author_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  kind: text('kind').notNull().default('moment'), // 'moment' | 'thought' | 'link' | 'embed'
+  title: text('title').notNull(),
+  body: text('body'),
+  imageUrl: text('image_url'),
+  linkUrl: text('link_url'),       // link/embed target
+  mintedUrl: text('minted_url'),   // In Process collect URL when the post was also minted
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('era_process_posts_era_id_idx').on(t.eraId),
+]);
 
 // Personal roadmap entries on the passport ("Move the studio to LA",
 // "Rest era — 6 weeks offline"). status 'witness' = the mockup's

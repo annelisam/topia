@@ -6,6 +6,9 @@ import { usePrivy } from '@privy-io/react-auth';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { useWorldDashboard } from '../layout';
+import { eraDateRange } from '../../../../../lib/eraDates';
+import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
+import { POST_KINDS, postKindGlyph, linkThumbnail, type PostKind } from '../../../../../lib/processPosts';
 
 /* In Process editor — the world's build-in-public roadmap: one or more ERAS
  * ("ORBIT ONE — debut album era"), each a stack of MILESTONES with statuses.
@@ -13,7 +16,77 @@ import { useWorldDashboard } from '../layout';
  * labels, not schedules. */
 
 interface Milestone { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
-interface Era { id: string; title: string; description: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; }
+interface ProcessPost { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
+interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
+
+type Precision = 'day' | 'month' | 'year';
+
+// Normalize a stored YYYY-MM-DD to the chosen precision (month → 1st,
+// year → Jan 1) so the DB always holds a valid full date.
+function normalizeDate(v: string, p: Precision): string {
+  if (!v) return '';
+  const [y, m] = v.split('-');
+  if (p === 'year') return `${y}-01-01`;
+  if (p === 'month') return `${y}-${m || '01'}-01`;
+  return v;
+}
+
+/* One era date: how precise? (exact day / month / just a year) + the
+ * matching input. Value is always propagated as a normalized full date. */
+function EraDateField({ label, value, precision, onChange }: {
+  label: string;
+  value: string; // '' or YYYY-MM-DD
+  precision: Precision;
+  onChange: (next: { value: string; precision: Precision }) => void;
+}) {
+  const [yearText, setYearText] = useState(value ? value.slice(0, 4) : '');
+
+  const setP = (p: Precision) => onChange({ value: normalizeDate(value, p), precision: p });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">{label}</label>
+        <select
+          value={precision}
+          onChange={(e) => setP(e.target.value as Precision)}
+          className="font-mono text-[10px] uppercase tracking-[1px] text-ink/50 bg-transparent border border-ink/10 rounded-sm px-1.5 py-0.5 cursor-pointer outline-none"
+        >
+          <option value="day">Exact date</option>
+          <option value="month">Month + year</option>
+          <option value="year">Year only</option>
+        </select>
+      </div>
+      {precision === 'year' ? (
+        <input
+          inputMode="numeric"
+          value={yearText}
+          onChange={(e) => {
+            const t = e.target.value.replace(/\D/g, '').slice(0, 4);
+            setYearText(t);
+            onChange({ value: /^\d{4}$/.test(t) ? `${t}-01-01` : '', precision });
+          }}
+          placeholder="2026"
+          className={inputCls}
+        />
+      ) : precision === 'month' ? (
+        <input
+          type="month"
+          value={value ? value.slice(0, 7) : ''}
+          onChange={(e) => onChange({ value: e.target.value ? `${e.target.value}-01` : '', precision })}
+          className={inputCls}
+        />
+      ) : (
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange({ value: e.target.value, precision })}
+          className={inputCls}
+        />
+      )}
+    </div>
+  );
+}
 
 const inputCls = 'w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1';
@@ -35,6 +108,49 @@ const ERA_STATUSES = [
 
 // A milestone worth minting: prefill for the moment composer.
 export interface MintDraft { title: string; text: string; imageUrl: string; eraId: string }
+
+/* Shared image picker — real file upload through the blob pipeline (same as
+ * project covers), with preview and remove. Used by milestones, process-log
+ * posts, and the mint composer. */
+function ImageField({ value, onChange, label = 'Image (optional)' }: {
+  value: string; onChange: (url: string) => void; label?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setError('');
+    try {
+      onChange(await resizeAndUploadImage(file, 1280));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally { setUploading(false); }
+  };
+
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className={`${btnGhost} inline-block`} style={{ cursor: 'pointer' }}>
+          {uploading ? 'Uploading…' : value ? '↺ Replace image' : '+ Upload image'}
+          <input type="file" accept="image/*" onChange={upload} className="hidden" />
+        </label>
+        {value && (
+          <span className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={value} alt="" className="h-12 w-12 object-cover rounded-sm border border-ink/10" />
+            <button onClick={() => onChange('')} aria-label="Remove image" className="font-mono text-[10px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>
+              Remove
+            </button>
+          </span>
+        )}
+      </div>
+      {error && <p className="font-mono text-[11px] mt-1" style={{ color: '#FF5C34' }}>{error}</p>}
+    </div>
+  );
+}
 
 export default function WorldInProcessPage() {
   const { world, privyId, isBuilder } = useWorldDashboard();
@@ -143,7 +259,13 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
   onDelete: (kind: 'era' | 'milestone', id: string, title: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ title: era.title, description: era.description ?? '', startLabel: era.startLabel ?? '', endLabel: era.endLabel ?? '', status: era.status, inProcessUrl: era.inProcessUrl ?? '' });
+  const [draft, setDraft] = useState({
+    title: era.title, description: era.description ?? '',
+    startDate: era.startDate ?? '', endDate: era.endDate ?? '',
+    startPrecision: (era.startPrecision ?? 'month') as Precision,
+    endPrecision: (era.endPrecision ?? 'month') as Precision,
+    status: era.status, inProcessUrl: era.inProcessUrl ?? '',
+  });
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<string | null>(null);
@@ -182,7 +304,7 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/35">
-              Era · {era.status}{era.startLabel || era.endLabel ? ` · ${[era.startLabel, era.endLabel].filter(Boolean).join(' — ')}` : ''}
+              Era · {era.status}{eraDateRange(era) ? ` · ${eraDateRange(era)}` : ''}
             </p>
             <h3 className="font-mono text-[15px] font-bold uppercase text-ink mt-0.5">{era.title}</h3>
             {era.description && <p className="font-mono text-[11px] text-ink/50 mt-0.5">{era.description}</p>}
@@ -210,15 +332,11 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
               <label className={labelCls}>One-line description</label>
               <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="debut album era" className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelCls}>Starts (label)</label>
-                <input value={draft.startLabel} onChange={(e) => setDraft({ ...draft, startLabel: e.target.value })} placeholder="MAR 2026" className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Ends (label)</label>
-                <input value={draft.endLabel} onChange={(e) => setDraft({ ...draft, endLabel: e.target.value })} placeholder="FEB 2027" className={inputCls} />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+                onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+              <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+                onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
             </div>
             <div>
               <label className={labelCls}>Status</label>
@@ -234,6 +352,9 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
           </div>
         )}
       </div>
+
+      {/* Process log — Topia-first posts; optional mint-through */}
+      <ProcessLogPanel era={era} privyId={privyId} isBuilder={isBuilder} canMint={canMint} onChanged={onChanged} onError={onError} />
 
       {/* Milestones */}
       <div className="bg-[var(--page-bg)] p-4">
@@ -367,10 +488,7 @@ function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError, o
           </select>
         </div>
       </div>
-      <div>
-        <label className={labelCls}>Image URL (optional)</label>
-        <input value={draft.imageUrl} onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })} placeholder="https://…" className={inputCls} />
-      </div>
+      <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
       <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
         {saving ? 'Saving…' : existing ? 'Save milestone' : 'Add milestone'}
       </button>
@@ -383,7 +501,11 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
   worldId: string; privyId: string; onCreated: () => void; onError: (e: string) => void; hasEras: boolean;
 }) {
   const [open, setOpen] = useState(!hasEras);
-  const [draft, setDraft] = useState({ title: '', description: '', startLabel: '', endLabel: '', inProcessUrl: '' });
+  const [draft, setDraft] = useState({
+    title: '', description: '', startDate: '', endDate: '',
+    startPrecision: 'month' as Precision, endPrecision: 'month' as Precision,
+    inProcessUrl: '',
+  });
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -395,7 +517,7 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
         body: JSON.stringify({ privyId, worldId, ...draft }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); onError(d.error || 'Could not create the era.'); return; }
-      setDraft({ title: '', description: '', startLabel: '', endLabel: '', inProcessUrl: '' });
+      setDraft({ title: '', description: '', startDate: '', endDate: '', startPrecision: 'month', endPrecision: 'month', inProcessUrl: '' });
       setOpen(false);
       onCreated();
     } finally { setSaving(false); }
@@ -419,15 +541,11 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
           <label className={labelCls}>One-line description</label>
           <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="debut album era" className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className={labelCls}>Starts (label)</label>
-            <input value={draft.startLabel} onChange={(e) => setDraft({ ...draft, startLabel: e.target.value })} placeholder="MAR 2026" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Ends (label)</label>
-            <input value={draft.endLabel} onChange={(e) => setDraft({ ...draft, endLabel: e.target.value })} placeholder="FEB 2027" className={inputCls} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+            onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+          <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+            onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
         </div>
         <div>
           <label className={labelCls}>In Process link (optional — syncs your process log)</label>
@@ -504,7 +622,7 @@ function MintMomentModal({ draft, privyId, onClose, onMinted }: {
           <div className="space-y-2">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Moment title" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="What happened? (optional)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Image URL (optional — mirrored to Arweave)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
+            <ImageField value={imageUrl} onChange={setImageUrl} label="Image (optional — mirrored to Arweave)" />
             <p className="font-mono text-[10px] text-ink/40 leading-relaxed">
               ⚠ Minting is permanent: this becomes an onchain token on Base with media stored on
               Arweave. It can be hidden on In Process, but never deleted.
@@ -519,6 +637,165 @@ function MintMomentModal({ draft, privyId, onClose, onMinted }: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Process log panel — native build-in-public posts ──────────────────
+ * A post is Topia-first: it always lives here and shows on the world page's
+ * process log immediately. "Also mint on In Process" is optional per post,
+ * for builders who've connected their account. */
+function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError }: {
+  era: Era; privyId: string; isBuilder: boolean; canMint: boolean;
+  onChanged: () => void; onError: (e: string) => void;
+}) {
+  const { getAccessToken } = usePrivy();
+  const [adding, setAdding] = useState(false);
+  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', mint: false };
+  const [draft, setDraft] = useState(blank);
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState('');
+
+  const needsLink = draft.kind === 'link' || draft.kind === 'embed';
+  // Links auto-title from the site name; everything else needs words.
+  const ready = needsLink ? !!draft.linkUrl.trim() : !!draft.title.trim();
+
+  const post = async () => {
+    if (!ready) return;
+    setSaving(true); onError(''); setNote('');
+    try {
+      const accessToken = draft.mint ? await getAccessToken().catch(() => null) : null;
+      const res = await fetch('/api/worlds/eras/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId, accessToken, eraId: era.id,
+          kind: draft.kind,
+          title: draft.title.trim() || undefined,
+          body: draft.body.trim() || undefined,
+          imageUrl: draft.imageUrl.trim() || undefined,
+          linkUrl: draft.linkUrl.trim() || undefined,
+          mintToInProcess: draft.mint,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { onError(d.error || 'Could not add the post.'); return; }
+      setNote(d.mintWarning || (d.mintedUrl ? '✓ Posted + minted on In Process' : '✓ Posted'));
+      setDraft(blank);
+      setAdding(false);
+      onChanged();
+    } finally { setSaving(false); }
+  };
+
+  const remove = async (postId: string) => {
+    await fetch(`/api/worlds/eras/posts?postId=${postId}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  return (
+    <div className="bg-[var(--page-bg)] px-4 pt-4 pb-1 border-b border-ink/[0.06]">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">Process log · {era.posts.length}</span>
+        {isBuilder && <button onClick={() => setAdding((a) => !a)} className={btnGhost}>{adding ? 'Cancel' : '+ Post an update'}</button>}
+      </div>
+
+      {note && <p className="font-mono text-[11px] mb-2" style={{ color: 'var(--accent-ink, #4f6b00)' }}>{note}</p>}
+
+      {adding && (
+        <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mb-3 space-y-2.5">
+          {/* Type picker — In Process's create flow, with the era as the collection */}
+          <div className="flex gap-1.5 flex-wrap">
+            {POST_KINDS.map((k) => (
+              <button
+                key={k.id}
+                onClick={() => setDraft({ ...draft, kind: k.id })}
+                className={`font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1.5 rounded-sm cursor-pointer transition ${
+                  draft.kind === k.id
+                    ? 'bg-lime text-obsidian font-bold border-none'
+                    : 'bg-transparent text-ink/55 border border-ink/15 hover:border-ink/40'
+                }`}
+              >
+                {k.glyph} {k.label}
+              </button>
+            ))}
+          </div>
+          <p className="font-mono text-[10px] text-ink/35">
+            {POST_KINDS.find((k) => k.id === draft.kind)?.hint} · posts to “{era.title}”
+          </p>
+
+          {draft.kind === 'moment' && (
+            <>
+              <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} label="Image" />
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
+            </>
+          )}
+          {draft.kind === 'thought' && (
+            <>
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="this is the time when…" className={inputCls} />
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={4} placeholder="Write it out" className={inputCls} />
+            </>
+          )}
+          {(draft.kind === 'link' || draft.kind === 'embed') && (
+            <>
+              <input
+                value={draft.linkUrl}
+                onChange={(e) => setDraft({ ...draft, linkUrl: e.target.value })}
+                placeholder={draft.kind === 'link' ? 'Paste any link from the internet' : 'Paste a YouTube / SoundCloud / Spotify link'}
+                className={inputCls}
+              />
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Title (optional — uses the site name)" className={inputCls} />
+            </>
+          )}
+
+          {canMint && (
+            <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
+              <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
+              ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
+            </label>
+          )}
+          <button onClick={post} disabled={saving || !ready} className={btnLime}>
+            {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post'}
+          </button>
+        </div>
+      )}
+
+      {era.posts.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin' }}>
+          {era.posts.map((p) => (
+            <div key={p.id} className="shrink-0 w-[150px] border border-ink/[0.08] rounded-sm overflow-hidden relative group">
+              {(p.imageUrl || linkThumbnail(p.linkUrl)) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={(p.imageUrl || linkThumbnail(p.linkUrl))!} alt="" className="w-full h-[84px] object-cover" loading="lazy" />
+              ) : p.kind === 'thought' && p.body ? (
+                <div className="w-full h-[84px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
+                  <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{p.body}</p>
+                </div>
+              ) : (
+                <div className="w-full h-[84px] flex items-center justify-center bg-ink/[0.04]">
+                  <span className="font-mono text-[16px] text-ink/25">{postKindGlyph(p.kind)}</span>
+                </div>
+              )}
+              <div className="px-2 py-1.5">
+                <p className="font-mono text-[10px] font-bold text-ink truncate">{postKindGlyph(p.kind)} {p.title}</p>
+                <p className="font-mono text-[9px] text-ink/40">
+                  {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {p.linkUrl && <a href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 no-underline text-ink/50">↗</a>}
+                  {p.mintedUrl && <a href={p.mintedUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 no-underline" style={{ color: '#FF5C34' }}>⛓ minted</a>}
+                </p>
+              </div>
+              {isBuilder && (
+                <button
+                  onClick={() => remove(p.id)}
+                  aria-label="Delete post"
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-obsidian/70 text-bone border-none cursor-pointer text-[11px] leading-none sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
