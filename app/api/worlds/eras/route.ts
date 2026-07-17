@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldEras, eraMilestones, eraProcessPosts, worldMembers, users } from '@/lib/db/schema';
+import { worldEras, eraMilestones, eraProcessPosts, worldMembers, worldProjects, users } from '@/lib/db/schema';
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 import { cleanDate, cleanPrecision } from '@/lib/eraDates';
 
@@ -23,10 +23,20 @@ async function verifyWorldBuilder(privyId: string, worldId: string) {
   return membership ? user.id : null;
 }
 
-async function erasWithMilestones(worldId: string) {
-  const eras = await db.select().from(worldEras)
-    .where(eq(worldEras.worldId, worldId))
-    .orderBy(asc(worldEras.sortOrder), asc(worldEras.createdAt));
+async function erasWithMilestones(worldId: string, projectId?: string | null) {
+  const eras = await db
+    .select({
+      era: worldEras,
+      projectName: worldProjects.name,
+      projectSlug: worldProjects.slug,
+    })
+    .from(worldEras)
+    .leftJoin(worldProjects, eq(worldProjects.id, worldEras.projectId))
+    .where(projectId
+      ? and(eq(worldEras.worldId, worldId), eq(worldEras.projectId, projectId))
+      : eq(worldEras.worldId, worldId))
+    .orderBy(asc(worldEras.sortOrder), asc(worldEras.createdAt))
+    .then((rows) => rows.map((r) => ({ ...r.era, projectName: r.projectName, projectSlug: r.projectSlug })));
   if (eras.length === 0) return [];
   const eraIds = eras.map((e) => e.id);
   const [milestones, posts] = await Promise.all([
@@ -62,9 +72,10 @@ async function erasWithMilestones(worldId: string) {
 // are low-traffic; correctness wins.
 export async function GET(request: Request) {
   try {
-    const worldId = new URL(request.url).searchParams.get('worldId');
+    const sp = new URL(request.url).searchParams;
+    const worldId = sp.get('worldId');
     if (!worldId) return NextResponse.json({ error: 'Missing worldId' }, { status: 400 });
-    const eras = await erasWithMilestones(worldId);
+    const eras = await erasWithMilestones(worldId, sp.get('projectId'));
     return NextResponse.json({ eras }, { headers: NO_STORE });
   } catch (error) {
     console.error('[eras] GET failed:', error);
@@ -75,9 +86,15 @@ export async function GET(request: Request) {
 // POST /api/worlds/eras — create an era (builders).
 export async function POST(request: Request) {
   try {
-    const { privyId, worldId, title, description, startDate, endDate, startPrecision, endPrecision, startLabel, endLabel, status, inProcessUrl } = await request.json();
+    const { privyId, worldId, projectId, title, description, startDate, endDate, startPrecision, endPrecision, startLabel, endLabel, status, inProcessUrl } = await request.json();
     if (!worldId || !privyId || !title?.trim()) {
       return NextResponse.json({ error: 'worldId and title are required' }, { status: 400 });
+    }
+    // A roadmap belongs to one of THIS world's projects.
+    if (projectId) {
+      const [project] = await db.select({ id: worldProjects.id }).from(worldProjects)
+        .where(and(eq(worldProjects.id, projectId), eq(worldProjects.worldId, worldId))).limit(1);
+      if (!project) return NextResponse.json({ error: 'That project is not part of this world' }, { status: 400 });
     }
     const cleanStatus = String(status || 'active');
     if (!ERA_STATUSES.has(cleanStatus)) {
@@ -88,6 +105,7 @@ export async function POST(request: Request) {
 
     const [era] = await db.insert(worldEras).values({
       worldId,
+      projectId: projectId || null,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
       startDate: cleanDate(startDate) ?? null,

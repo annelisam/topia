@@ -487,6 +487,10 @@ export const tvContent = pgTable('tv_content', {
 export const worldEras = pgTable('world_eras', {
   id: uuid('id').defaultRandom().primaryKey(),
   worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  // The roadmap belongs to a PROJECT ("each project has its own roadmap") —
+  // ORBIT ONE the era is ORBIT ONE the project. Null = a legacy world-wide
+  // roadmap from before this linkage existed.
+  projectId: uuid('project_id').references(() => worldProjects.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),           // "ORBIT ONE"
   description: text('description'),         // "debut album era"
   // Real dates with chooseable precision: exact day ("MAR 3, 2026"),
