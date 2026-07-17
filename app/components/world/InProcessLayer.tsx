@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { WorldConfig } from './worldConfig';
 import { eraDateRange } from '../../../lib/eraDates';
+import { postKindGlyph, linkThumbnail } from '../../../lib/processPosts';
 
 /* The world page's IN PROCESS tab — Latashá's Turn-2 roadmap, minus funding:
  * era header → horizontal milestone rail with statuses → process log strip
@@ -11,12 +12,12 @@ import { eraDateRange } from '../../../lib/eraDates';
  * In Process accent throughout, matching the mockup. */
 
 export interface EraMilestoneView { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
-export interface EraPostView { id: string; title: string; body: string | null; imageUrl: string | null; mintedUrl: string | null; createdAt: string; }
+export interface EraPostView { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
 export interface EraView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
 interface Moment { id: string; name: string | null; imageUrl: string | null; mime: string | null; createdAt: string | null; collectUrl: string | null; }
 
 // Native Topia posts + synced In Process moments, one strip, newest first.
-interface LogEntry { id: string; title: string; imageUrl: string | null; date: string | null; href: string | null; minted: boolean; audio?: boolean }
+interface LogEntry { id: string; title: string; imageUrl: string | null; body: string | null; date: string | null; href: string | null; minted: boolean; glyph: string }
 
 const ORANGE = 'var(--orange, #FF5C34)';
 
@@ -44,10 +45,28 @@ function ProcessLog({ posts, inProcessUrl }: { posts: EraPostView[]; inProcessUr
   // minted appears once (the moment with the same collect URL is dropped).
   const mintedUrls = new Set(posts.map((p) => p.mintedUrl).filter(Boolean));
   const entries: LogEntry[] = [
-    ...posts.map((p) => ({ id: `p-${p.id}`, title: p.title, imageUrl: p.imageUrl, date: p.createdAt, href: p.mintedUrl, minted: !!p.mintedUrl })),
+    ...posts.map((p) => ({
+      id: `p-${p.id}`,
+      title: p.title,
+      imageUrl: p.imageUrl ?? linkThumbnail(p.linkUrl),
+      body: p.kind === 'thought' ? p.body : null,
+      date: p.createdAt,
+      href: p.linkUrl ?? p.mintedUrl,
+      minted: !!p.mintedUrl,
+      glyph: postKindGlyph(p.kind),
+    })),
     ...moments
       .filter((m) => !m.collectUrl || !mintedUrls.has(m.collectUrl))
-      .map((m) => ({ id: `m-${m.id}`, title: m.name || 'Moment', imageUrl: m.imageUrl, date: m.createdAt, href: m.collectUrl, minted: true, audio: m.mime?.startsWith('audio') ?? false })),
+      .map((m) => ({
+        id: `m-${m.id}`,
+        title: m.name || 'Moment',
+        imageUrl: m.imageUrl,
+        body: null,
+        date: m.createdAt,
+        href: m.collectUrl,
+        minted: true,
+        glyph: m.mime?.startsWith('audio') ? '♫' : '✦',
+      })),
   ]
     .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
     .slice(0, 14);
@@ -73,13 +92,17 @@ function ProcessLog({ posts, inProcessUrl }: { posts: EraPostView[]; inProcessUr
               {e.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
+              ) : e.body ? (
+                <div className="w-full h-[88px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
+                  <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{e.body}</p>
+                </div>
               ) : (
                 <div className="w-full h-[88px] flex items-center justify-center bg-ink/[0.04]">
-                  <span className="font-mono text-[16px] text-ink/25">{e.audio ? '♫' : '✦'}</span>
+                  <span className="font-mono text-[16px] text-ink/25">{e.glyph}</span>
                 </div>
               )}
               <div className="px-2 py-1.5">
-                <p className="font-mono text-[10px] font-bold text-ink truncate">{e.title}</p>
+                <p className="font-mono text-[10px] font-bold text-ink truncate">{e.glyph} {e.title}</p>
                 <p className="font-mono text-[9px] text-ink/40">
                   {e.date && new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   {e.minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}

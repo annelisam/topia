@@ -7,6 +7,19 @@ import { isInProcessWriteConfigured, decryptApiKey, mintMoment } from '@/lib/inP
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const BUILDER_ROLES = ['owner', 'world_builder'];
+const POST_KINDS = new Set(['moment', 'thought', 'link', 'embed']);
+
+function cleanUrl(v: unknown): string | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  const withProto = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  try {
+    const u = new URL(withProto);
+    return /^https?:$/.test(u.protocol) ? u.toString().slice(0, 2000) : null;
+  } catch {
+    return null;
+  }
+}
 
 async function authorizeEra(privyId: string, eraId: string) {
   const [era] = await db.select({ id: worldEras.id, worldId: worldEras.worldId, inProcessUrl: worldEras.inProcessUrl })
@@ -33,8 +46,18 @@ async function authorizeEra(privyId: string, eraId: string) {
 // the post — it saves with a warning instead.
 export async function POST(request: Request) {
   try {
-    const { privyId, eraId, title, body, imageUrl, mintToInProcess, accessToken } = await request.json();
-    if (!privyId || !eraId || !title?.trim()) {
+    const { privyId, eraId, kind, title, body, imageUrl, linkUrl, mintToInProcess, accessToken } = await request.json();
+    const cleanKind = String(kind || 'moment');
+    if (!POST_KINDS.has(cleanKind)) {
+      return NextResponse.json({ error: 'kind must be moment, thought, link, or embed' }, { status: 400 });
+    }
+    const cleanLink = cleanUrl(linkUrl);
+    if ((cleanKind === 'link' || cleanKind === 'embed') && !cleanLink) {
+      return NextResponse.json({ error: 'A valid URL is required for a link or embed' }, { status: 400 });
+    }
+    // Links can auto-title from their host; everything else needs words.
+    const cleanTitle = String(title ?? '').trim() || (cleanLink ? new URL(cleanLink).hostname.replace(/^www\./, '') : '');
+    if (!privyId || !eraId || !cleanTitle) {
       return NextResponse.json({ error: 'eraId and title are required' }, { status: 400 });
     }
     const auth = await authorizeEra(privyId, eraId);
@@ -63,11 +86,13 @@ export async function POST(request: Request) {
         if (!account || !apiKey) {
           mintWarning = 'Posted on Topia — connect In Process in your profile to mint moments';
         } else {
+          // Link/embed posts mint as writing moments carrying the URL.
+          const mintText = [body ? String(body).trim() : '', cleanLink ?? ''].filter(Boolean).join('\n') || null;
           const result = await mintMoment({
             apiKey,
             artistAddress: account.artistAddress,
-            title: String(title).trim().slice(0, 200),
-            text: body ? String(body).trim().slice(0, 4000) : null,
+            title: cleanTitle.slice(0, 200),
+            text: mintText?.slice(0, 4000) ?? null,
             imageUrl: imageUrl ? String(imageUrl) : null,
           });
           if (result.ok) {
@@ -89,9 +114,11 @@ export async function POST(request: Request) {
     const [post] = await db.insert(eraProcessPosts).values({
       eraId,
       authorUserId: auth.userId,
-      title: String(title).trim().slice(0, 200),
+      kind: cleanKind,
+      title: cleanTitle.slice(0, 200),
       body: body ? String(body).trim().slice(0, 4000) : null,
       imageUrl: imageUrl ? String(imageUrl) : null,
+      linkUrl: cleanLink,
       mintedUrl,
     }).returning();
 

@@ -8,6 +8,7 @@ import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { useWorldDashboard } from '../layout';
 import { eraDateRange } from '../../../../../lib/eraDates';
 import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
+import { POST_KINDS, postKindGlyph, linkThumbnail, type PostKind } from '../../../../../lib/processPosts';
 
 /* In Process editor — the world's build-in-public roadmap: one or more ERAS
  * ("ORBIT ONE — debut album era"), each a stack of MILESTONES with statuses.
@@ -15,7 +16,7 @@ import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
  * labels, not schedules. */
 
 interface Milestone { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
-interface ProcessPost { id: string; title: string; body: string | null; imageUrl: string | null; mintedUrl: string | null; createdAt: string; }
+interface ProcessPost { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
 interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
 
 type Precision = 'day' | 'month' | 'year';
@@ -650,12 +651,17 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
 }) {
   const { getAccessToken } = usePrivy();
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ title: '', body: '', imageUrl: '', mint: false });
+  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', mint: false };
+  const [draft, setDraft] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
 
+  const needsLink = draft.kind === 'link' || draft.kind === 'embed';
+  // Links auto-title from the site name; everything else needs words.
+  const ready = needsLink ? !!draft.linkUrl.trim() : !!draft.title.trim();
+
   const post = async () => {
-    if (!draft.title.trim()) return;
+    if (!ready) return;
     setSaving(true); onError(''); setNote('');
     try {
       const accessToken = draft.mint ? await getAccessToken().catch(() => null) : null;
@@ -663,16 +669,18 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           privyId, accessToken, eraId: era.id,
-          title: draft.title.trim(),
+          kind: draft.kind,
+          title: draft.title.trim() || undefined,
           body: draft.body.trim() || undefined,
           imageUrl: draft.imageUrl.trim() || undefined,
+          linkUrl: draft.linkUrl.trim() || undefined,
           mintToInProcess: draft.mint,
         }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { onError(d.error || 'Could not add the post.'); return; }
       setNote(d.mintWarning || (d.mintedUrl ? '✓ Posted + minted on In Process' : '✓ Posted'));
-      setDraft({ title: '', body: '', imageUrl: '', mint: false });
+      setDraft(blank);
       setAdding(false);
       onChanged();
     } finally { setSaving(false); }
@@ -693,18 +701,60 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
       {note && <p className="font-mono text-[11px] mb-2" style={{ color: 'var(--accent-ink, #4f6b00)' }}>{note}</p>}
 
       {adding && (
-        <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mb-3 space-y-2">
-          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
-          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
-          <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} label="Image (optional)" />
+        <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mb-3 space-y-2.5">
+          {/* Type picker — In Process's create flow, with the era as the collection */}
+          <div className="flex gap-1.5 flex-wrap">
+            {POST_KINDS.map((k) => (
+              <button
+                key={k.id}
+                onClick={() => setDraft({ ...draft, kind: k.id })}
+                className={`font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1.5 rounded-sm cursor-pointer transition ${
+                  draft.kind === k.id
+                    ? 'bg-lime text-obsidian font-bold border-none'
+                    : 'bg-transparent text-ink/55 border border-ink/15 hover:border-ink/40'
+                }`}
+              >
+                {k.glyph} {k.label}
+              </button>
+            ))}
+          </div>
+          <p className="font-mono text-[10px] text-ink/35">
+            {POST_KINDS.find((k) => k.id === draft.kind)?.hint} · posts to “{era.title}”
+          </p>
+
+          {draft.kind === 'moment' && (
+            <>
+              <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} label="Image" />
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
+            </>
+          )}
+          {draft.kind === 'thought' && (
+            <>
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="this is the time when…" className={inputCls} />
+              <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={4} placeholder="Write it out" className={inputCls} />
+            </>
+          )}
+          {(draft.kind === 'link' || draft.kind === 'embed') && (
+            <>
+              <input
+                value={draft.linkUrl}
+                onChange={(e) => setDraft({ ...draft, linkUrl: e.target.value })}
+                placeholder={draft.kind === 'link' ? 'Paste any link from the internet' : 'Paste a YouTube / SoundCloud / Spotify link'}
+                className={inputCls}
+              />
+              <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Title (optional — uses the site name)" className={inputCls} />
+            </>
+          )}
+
           {canMint && (
             <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
               <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
               ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
             </label>
           )}
-          <button onClick={post} disabled={saving || !draft.title.trim()} className={btnLime}>
-            {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post update'}
+          <button onClick={post} disabled={saving || !ready} className={btnLime}>
+            {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post'}
           </button>
         </div>
       )}
@@ -713,18 +763,23 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
         <div className="flex gap-2 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin' }}>
           {era.posts.map((p) => (
             <div key={p.id} className="shrink-0 w-[150px] border border-ink/[0.08] rounded-sm overflow-hidden relative group">
-              {p.imageUrl ? (
+              {(p.imageUrl || linkThumbnail(p.linkUrl)) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={p.imageUrl} alt="" className="w-full h-[84px] object-cover" loading="lazy" />
+                <img src={(p.imageUrl || linkThumbnail(p.linkUrl))!} alt="" className="w-full h-[84px] object-cover" loading="lazy" />
+              ) : p.kind === 'thought' && p.body ? (
+                <div className="w-full h-[84px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
+                  <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{p.body}</p>
+                </div>
               ) : (
                 <div className="w-full h-[84px] flex items-center justify-center bg-ink/[0.04]">
-                  <span className="font-mono text-[16px] text-ink/25">✦</span>
+                  <span className="font-mono text-[16px] text-ink/25">{postKindGlyph(p.kind)}</span>
                 </div>
               )}
               <div className="px-2 py-1.5">
-                <p className="font-mono text-[10px] font-bold text-ink truncate">{p.title}</p>
+                <p className="font-mono text-[10px] font-bold text-ink truncate">{postKindGlyph(p.kind)} {p.title}</p>
                 <p className="font-mono text-[9px] text-ink/40">
                   {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {p.linkUrl && <a href={p.linkUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 no-underline text-ink/50">↗</a>}
                   {p.mintedUrl && <a href={p.mintedUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 no-underline" style={{ color: '#FF5C34' }}>⛓ minted</a>}
                 </p>
               </div>

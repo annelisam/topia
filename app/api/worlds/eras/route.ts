@@ -51,9 +51,11 @@ async function erasWithMilestones(worldId: string) {
     db.select({
       id: eraProcessPosts.id,
       eraId: eraProcessPosts.eraId,
+      kind: eraProcessPosts.kind,
       title: eraProcessPosts.title,
       body: eraProcessPosts.body,
       imageUrl: eraProcessPosts.imageUrl,
+      linkUrl: eraProcessPosts.linkUrl,
       mintedUrl: eraProcessPosts.mintedUrl,
       createdAt: eraProcessPosts.createdAt,
     }).from(eraProcessPosts)

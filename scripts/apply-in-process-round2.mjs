@@ -46,6 +46,11 @@ await sql`
 `;
 await sql`CREATE INDEX IF NOT EXISTS "era_process_posts_era_id_idx" ON "era_process_posts" ("era_id")`;
 
+// Post kinds (moment | thought | link | embed) + link target — mirrors the
+// In Process create flow, with the era as the "collection".
+await sql`ALTER TABLE "era_process_posts" ADD COLUMN IF NOT EXISTS "kind" text DEFAULT 'moment' NOT NULL`;
+await sql`ALTER TABLE "era_process_posts" ADD COLUMN IF NOT EXISTS "link_url" text`;
+
 const eras = await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'world_eras' AND column_name IN ('start_date','end_date')`;
 const posts = await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'era_process_posts' ORDER BY ordinal_position`;
 console.log('world_eras date cols:', eras.map((c) => c.column_name).join(', '));

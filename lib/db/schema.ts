@@ -548,13 +548,21 @@ export const inProcessAccounts = pgTable('in_process_accounts', {
 // words) that live on Topia. Posting is Topia-first: syncing the same post
 // to In Process (minting it onchain) is optional per post; when it happens,
 // minted_url records the collect link.
+// Post kinds mirror In Process's create flow (the era is the "collection"):
+//   moment  — media-first (an image + a few words)
+//   thought — just words
+//   link    — any URL from the internet
+//   embed   — a player URL (YouTube/SoundCloud/etc.); stored as a URL, never
+//             raw HTML — embed code is an XSS grenade.
 export const eraProcessPosts = pgTable('era_process_posts', {
   id: uuid('id').defaultRandom().primaryKey(),
   eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
   authorUserId: uuid('author_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  kind: text('kind').notNull().default('moment'), // 'moment' | 'thought' | 'link' | 'embed'
   title: text('title').notNull(),
   body: text('body'),
   imageUrl: text('image_url'),
+  linkUrl: text('link_url'),       // link/embed target
   mintedUrl: text('minted_url'),   // In Process collect URL when the post was also minted
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
