@@ -46,6 +46,7 @@ async function erasWithMilestones(worldId: string, projectId?: string | null) {
     db.select({
       id: eraProcessPosts.id,
       eraId: eraProcessPosts.eraId,
+      milestoneId: eraProcessPosts.milestoneId,
       kind: eraProcessPosts.kind,
       title: eraProcessPosts.title,
       body: eraProcessPosts.body,

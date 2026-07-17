@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldEras, eraProcessPosts, inProcessAccounts, worldMembers, users } from '@/lib/db/schema';
+import { worldEras, eraMilestones, eraProcessPosts, inProcessAccounts, worldMembers, users } from '@/lib/db/schema';
 import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { verifyPrivyIdentity } from '@/lib/auth/privyServer';
 import { isInProcessWriteConfigured, decryptApiKey, mintMoment } from '@/lib/inProcessAccount';
@@ -46,7 +46,7 @@ async function authorizeEra(privyId: string, eraId: string) {
 // the post — it saves with a warning instead.
 export async function POST(request: Request) {
   try {
-    const { privyId, eraId, kind, title, body, imageUrl, linkUrl, mintToInProcess, accessToken } = await request.json();
+    const { privyId, eraId, milestoneId, kind, title, body, imageUrl, linkUrl, mintToInProcess, accessToken } = await request.json();
     const cleanKind = String(kind || 'moment');
     if (!POST_KINDS.has(cleanKind)) {
       return NextResponse.json({ error: 'kind must be moment, thought, link, or embed' }, { status: 400 });
@@ -62,6 +62,15 @@ export async function POST(request: Request) {
     }
     const auth = await authorizeEra(privyId, eraId);
     if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    // Optional milestone attachment — must be a milestone of THIS era.
+    let cleanMilestoneId: string | null = null;
+    if (milestoneId) {
+      const [ms] = await db.select({ id: eraMilestones.id }).from(eraMilestones)
+        .where(and(eq(eraMilestones.id, String(milestoneId)), eq(eraMilestones.eraId, eraId))).limit(1);
+      if (!ms) return NextResponse.json({ error: 'That milestone is not part of this roadmap' }, { status: 400 });
+      cleanMilestoneId = ms.id;
+    }
 
     let mintedUrl: string | null = null;
     let mintWarning: string | null = null;
@@ -113,6 +122,7 @@ export async function POST(request: Request) {
 
     const [post] = await db.insert(eraProcessPosts).values({
       eraId,
+      milestoneId: cleanMilestoneId,
       authorUserId: auth.userId,
       kind: cleanKind,
       title: cleanTitle.slice(0, 200),

@@ -468,9 +468,25 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
   const mrzLine1 = `W<TOPIA<${(world?.title || slug || '').replace(/[.\s]/g, '<').toUpperCase().padEnd(20, '<')}<<<<<<<<<`;
   const mrzLine2 = `${(world?.id || '').slice(0, 10).padEnd(10, '<')}<<${(established || '').replace(/\s/g, '').padEnd(6, '<')}<<${(world?.category || 'GEN').substring(0, 3).toUpperCase()}<${(slug || '').padEnd(14, '<')}<<`;
 
+  // Per-project roadmap pulse for the projects tab — first visible era wins
+  // (builders' archived eras shouldn't leak a preview to viewers).
+  const roadmapSummaries: Record<string, import('../../components/world/ProjectsLayer').RoadmapSummary> = {};
+  for (const era of eras) {
+    if (!era.projectId || era.status === 'archived' || roadmapSummaries[era.projectId]) continue;
+    if (era.milestones.length === 0) continue;
+    const nowMs = era.milestones.find((m) => m.status === 'now');
+    roadmapSummaries[era.projectId] = {
+      eraTitle: era.title,
+      total: era.milestones.length,
+      done: era.milestones.filter((m) => m.status === 'done').length,
+      nowTitle: nowMs?.title ?? null,
+      nodes: era.milestones.map((m) => (m.status === 'done' ? 'done' : m.status === 'now' ? 'now' : 'future')),
+    };
+  }
+
   function renderSection() {
     switch (activeSection) {
-      case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} worldId={world?.id ?? ''} allTools={allTools} />;
+      case 'projects':   return <ProjectsLayer config={config} projects={projects} slug={slug} worldId={world?.id ?? ''} allTools={allTools} roadmaps={roadmapSummaries} />;
       case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} ghosts={world?.pendingGhosts ?? []} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;
       case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;

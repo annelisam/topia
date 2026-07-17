@@ -21,7 +21,16 @@ import { EraDateField, ImageField, inputCls, labelCls, btnLime, btnGhost, MILEST
  * here on the world page — no dashboard round-trip. */
 
 export interface EraMilestoneView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
-export interface EraPostView { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
+export interface EraPostView { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; milestoneId?: string | null; createdAt: string; }
+
+/* One process-log card's data, whether it's a native post or a synced
+ * In Process moment — what the PostModal renders. */
+interface LogEntry {
+  id: string; postId: string | null; kind: string | null; glyph: string;
+  title: string; body: string | null; imageUrl: string | null;
+  date: string | null; linkUrl: string | null; mintedUrl: string | null;
+  milestoneId: string | null;
+}
 export interface EraView { id: string; title: string; description: string | null; projectId?: string | null; projectName?: string | null; projectSlug?: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
 export interface ProjectOption { id: string; name: string; slug: string; }
 interface Moment { id: string; name: string | null; imageUrl: string | null; mime: string | null; createdAt: string | null; collectUrl: string | null; }
@@ -40,9 +49,9 @@ function Node({ state }: { state: 'done' | 'now' | 'future' }) {
  * Opens in a read view (everyone sees the full milestone); builders
  * flip to the edit form with an explicit ✎ Edit. Creating a new
  * milestone goes straight to the form. */
-function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, onClose, onChanged }: {
+function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, posts = [], onClose, onChanged }: {
   eraId: string; existing?: EraMilestoneView; index?: number; nextIndex?: number; privyId: string;
-  canEdit: boolean; onClose: () => void; onChanged: () => void;
+  canEdit: boolean; posts?: EraPostView[]; onClose: () => void; onChanged: () => void;
 }) {
   const [mode, setMode] = useState<'view' | 'edit'>(existing ? 'view' : 'edit');
   const [draft, setDraft] = useState({
@@ -86,6 +95,7 @@ function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, o
   if (mode === 'view' && existing) {
     const m = existing;
     const accent = m.status === 'done' || m.status === 'now';
+    const updates = posts.filter((p) => p.milestoneId === m.id).slice(0, 6);
     return (
       <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
         <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -104,6 +114,17 @@ function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, o
             <img src={m.imageUrl} alt="" className="w-full max-h-[280px] object-cover rounded-sm mt-3" />
           )}
           {m.description && <p className="font-mono text-[13px] text-ink/70 leading-relaxed mt-3">{m.description}</p>}
+          {updates.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-ink/[0.08]">
+              <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1.5">From the process log</p>
+              {updates.map((p) => (
+                <p key={p.id} className="font-mono text-[11px] text-ink/65 py-1 truncate">
+                  {postKindGlyph(p.kind)} {p.title}
+                  <span className="text-ink/35 ml-2">{new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                </p>
+              ))}
+            </div>
+          )}
           {canEdit && (
             <div className="mt-4 pt-3 border-t border-ink/[0.08]">
               <button onClick={() => setMode('edit')} className={btnGhost}>✎ Edit milestone</button>
@@ -275,7 +296,7 @@ function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
   era: EraView; privyId: string; canMint: boolean; onClose: () => void; onChanged: () => void;
 }) {
   const { getAccessToken } = usePrivy();
-  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', mint: false };
+  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', milestoneId: '', mint: false };
   const [draft, setDraft] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -297,6 +318,7 @@ function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
           body: draft.body.trim() || undefined,
           imageUrl: draft.imageUrl.trim() || undefined,
           linkUrl: draft.linkUrl.trim() || undefined,
+          milestoneId: draft.milestoneId || undefined,
           mintToInProcess: draft.mint,
         }),
       });
@@ -345,6 +367,22 @@ function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
         </>
       )}
 
+      {era.milestones.length > 0 && (
+        <div>
+          <label className={labelCls}>Ties to a milestone (optional)</label>
+          <select
+            value={draft.milestoneId}
+            onChange={(e) => setDraft({ ...draft, milestoneId: e.target.value })}
+            className={`${inputCls} appearance-none cursor-pointer`}
+          >
+            <option value="">Whole roadmap — no specific milestone</option>
+            {era.milestones.map((m, i) => (
+              <option key={m.id} value={m.id}>M{String(i + 1).padStart(2, '0')} · {m.title}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {canMint && (
         <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
           <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
@@ -362,11 +400,87 @@ function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
   );
 }
 
+/* ── Post detail modal ─────────────────────────────────────────────
+ * Every process-log card opens here first — links and collect pages
+ * are an explicit button inside, never a surprise navigation. */
+function PostModal({ entry, milestones, canEdit, onDelete, onClose }: {
+  entry: LogEntry; milestones: EraMilestoneView[]; canEdit: boolean;
+  onDelete: (postId: string) => Promise<void>; onClose: () => void;
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const msIndex = entry.milestoneId ? milestones.findIndex((m) => m.id === entry.milestoneId) : -1;
+  const milestone = msIndex >= 0 ? milestones[msIndex] : null;
+  const minted = !!entry.mintedUrl;
+  const kindLabel = entry.kind
+    ? POST_KINDS.find((k) => k.id === entry.kind)?.label ?? entry.kind
+    : 'In Process moment';
+  const linkHost = entry.linkUrl ? (() => { try { return new URL(entry.linkUrl!).hostname.replace(/^www\./, ''); } catch { return null; } })() : null;
+
+  const remove = async () => {
+    if (!entry.postId) return;
+    setDeleting(true);
+    try { await onDelete(entry.postId); onClose(); } finally { setDeleting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] text-ink/50">
+            {entry.glyph} {kindLabel}
+            {minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓ minted</span>}
+          </p>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
+        </div>
+        <h4 className="font-basement font-black text-[20px] uppercase leading-tight text-ink mt-2">{entry.title}</h4>
+        {entry.date && (
+          <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45 mt-1">
+            {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
+        )}
+        {milestone && (
+          <p className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm mt-2 border" style={{ color: ORANGE, borderColor: ORANGE }}>
+            M{String(msIndex + 1).padStart(2, '0')} · {milestone.title}
+          </p>
+        )}
+        {entry.imageUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={entry.imageUrl} alt="" className="w-full max-h-[280px] object-cover rounded-sm mt-3" />
+        )}
+        {entry.body && <p className="font-mono text-[13px] text-ink/70 leading-relaxed mt-3 whitespace-pre-wrap">{entry.body}</p>}
+
+        {(entry.linkUrl || entry.mintedUrl || (canEdit && entry.postId)) && (
+          <div className="flex items-center gap-3 flex-wrap mt-4 pt-3 border-t border-ink/[0.08]">
+            {entry.linkUrl && (
+              <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer" className={`${btnLime} no-underline inline-block`}>
+                Open {linkHost ?? 'link'} ↗
+              </a>
+            )}
+            {entry.mintedUrl && (
+              <a href={entry.mintedUrl} target="_blank" rel="noopener noreferrer" className={`${entry.linkUrl ? btnGhost : btnLime} no-underline inline-block`}>
+                Collect on In Process ↗
+              </a>
+            )}
+            {canEdit && entry.postId && (
+              confirmingDelete
+                ? <button onClick={remove} disabled={deleting} className="font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer border-none font-bold" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>{deleting ? 'Deleting…' : 'Really delete?'}</button>
+                : <button onClick={() => setConfirmingDelete(true)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Delete</button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Process log strip (native posts + synced moments) ─────────────── */
 function ProcessLog({ era, privyId, canEdit, onChanged }: {
   era: EraView; privyId: string; canEdit: boolean; onChanged: () => void;
 }) {
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [viewing, setViewing] = useState<LogEntry | null>(null);
 
   useEffect(() => {
     if (!era.inProcessUrl) return;
@@ -379,20 +493,22 @@ function ProcessLog({ era, privyId, canEdit, onChanged }: {
   }, [era.inProcessUrl]);
 
   const mintedUrls = new Set(era.posts.map((p) => p.mintedUrl).filter(Boolean));
-  const entries = [
+  const entries: LogEntry[] = [
     ...era.posts.map((p) => ({
-      id: `p-${p.id}`, postId: p.id, title: p.title,
+      id: `p-${p.id}`, postId: p.id, kind: p.kind as string | null, title: p.title,
       imageUrl: p.imageUrl ?? linkThumbnail(p.linkUrl),
-      body: p.kind === 'thought' ? p.body : null,
-      date: p.createdAt as string | null, href: p.linkUrl ?? p.mintedUrl, minted: !!p.mintedUrl,
+      body: p.body,
+      date: p.createdAt as string | null, linkUrl: p.linkUrl, mintedUrl: p.mintedUrl,
+      milestoneId: p.milestoneId ?? null,
       glyph: postKindGlyph(p.kind),
     })),
     ...moments
       .filter((m) => !m.collectUrl || !mintedUrls.has(m.collectUrl))
       .map((m) => ({
-        id: `m-${m.id}`, postId: null as string | null, title: m.name || 'Moment',
+        id: `m-${m.id}`, postId: null as string | null, kind: null as string | null, title: m.name || 'Moment',
         imageUrl: m.imageUrl, body: null as string | null,
-        date: m.createdAt, href: m.collectUrl, minted: true,
+        date: m.createdAt, linkUrl: null as string | null, mintedUrl: m.collectUrl,
+        milestoneId: null as string | null,
         glyph: m.mime?.startsWith('audio') ? '♫' : '✦',
       })),
   ]
@@ -423,11 +539,16 @@ function ProcessLog({ era, privyId, canEdit, onChanged }: {
       ) : (
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
           {entries.map((e) => {
-            const face = (
-              <>
+            const msIndex = e.milestoneId ? era.milestones.findIndex((m) => m.id === e.milestoneId) : -1;
+            return (
+              <button
+                key={e.id}
+                onClick={() => setViewing(e)}
+                className="shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden bg-transparent p-0 text-left cursor-pointer hover:border-ink/30 transition"
+              >
                 {e.imageUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
+                  <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover block" loading="lazy" />
                 ) : e.body ? (
                   <div className="w-full h-[88px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
                     <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{e.body}</p>
@@ -441,30 +562,24 @@ function ProcessLog({ era, privyId, canEdit, onChanged }: {
                   <p className="font-mono text-[10px] font-bold text-ink truncate">{e.glyph} {e.title}</p>
                   <p className="font-mono text-[9px] text-ink/40">
                     {e.date && new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    {e.minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}
+                    {msIndex >= 0 && <span className="ml-1.5 font-bold" style={{ color: ORANGE }}>M{String(msIndex + 1).padStart(2, '0')}</span>}
+                    {!!e.mintedUrl && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}
                   </p>
                 </div>
-              </>
-            );
-            const cls = 'shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden no-underline hover:border-ink/30 transition relative group';
-            return (
-              <div key={e.id} className={cls}>
-                {e.href
-                  ? <a href={e.href} target="_blank" rel="noopener noreferrer" className="no-underline block">{face}</a>
-                  : face}
-                {canEdit && e.postId && (
-                  <button
-                    onClick={() => removePost(e.postId!)}
-                    aria-label="Delete post"
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-obsidian/70 text-bone border-none cursor-pointer text-[11px] leading-none sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
+              </button>
             );
           })}
         </div>
+      )}
+
+      {viewing && (
+        <PostModal
+          entry={viewing}
+          milestones={era.milestones}
+          canEdit={canEdit}
+          onDelete={removePost}
+          onClose={() => setViewing(null)}
+        />
       )}
     </div>
   );
@@ -607,6 +722,7 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
           nextIndex={era.milestones.length}
           privyId={privyId}
           canEdit={canEdit}
+          posts={era.posts}
           onClose={() => setMilestoneModal(null)}
           onChanged={onChanged}
         />
