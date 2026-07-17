@@ -11,7 +11,7 @@ import { postKindGlyph, linkThumbnail } from '../../../lib/processPosts';
  * synced (read-only) from the era's inprocess.world timeline. Orange is the
  * In Process accent throughout, matching the mockup. */
 
-export interface EraMilestoneView { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
+export interface EraMilestoneView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
 export interface EraPostView { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
 export interface EraView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
 interface Moment { id: string; name: string | null; imageUrl: string | null; mime: string | null; createdAt: string | null; collectUrl: string | null; }
@@ -194,7 +194,9 @@ export default function InProcessLayer({
                         M{String(i + 1).padStart(2, '0')} · {meta.label}
                       </p>
                       <p className="font-mono text-[14px] font-bold text-ink leading-tight mt-1.5">{m.title}</p>
-                      {m.dateLabel && <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 mt-1">{m.dateLabel}</p>}
+                      {(eraDateRange(m) ?? m.dateLabel) && (
+                        <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 mt-1">{eraDateRange(m) ?? m.dateLabel}</p>
+                      )}
                       {m.imageUrl && (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={m.imageUrl} alt="" className="w-full h-[88px] object-cover rounded-sm mt-2" loading="lazy" />

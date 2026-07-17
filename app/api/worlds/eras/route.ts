@@ -2,25 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worldEras, eraMilestones, eraProcessPosts, worldMembers, users } from '@/lib/db/schema';
 import { eq, and, asc, desc, inArray } from 'drizzle-orm';
+import { cleanDate, cleanPrecision } from '@/lib/eraDates';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const ERA_STATUSES = new Set(['active', 'complete', 'archived']);
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const PRECISIONS = new Set(['day', 'month', 'year']);
-
-// Date fields arrive normalized as YYYY-MM-DD (the editor pads month → 1st,
-// year → Jan 1); '' clears.
-function cleanDate(v: unknown): string | null | undefined {
-  if (v === undefined) return undefined;
-  if (!v) return null;
-  return DATE_RE.test(String(v)) ? String(v) : null;
-}
-
-function cleanPrecision(v: unknown): string | null | undefined {
-  if (v === undefined) return undefined;
-  if (!v) return null;
-  return PRECISIONS.has(String(v)) ? String(v) : null;
-}
 
 // Same builder bar as world projects: owners and world_builders write,
 // collaborators and the public read.

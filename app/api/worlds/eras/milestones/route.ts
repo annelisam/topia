@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { worldEras, eraMilestones, worldMembers, users } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
+import { cleanDate, cleanPrecision } from '@/lib/eraDates';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const MILESTONE_STATUSES = new Set(['done', 'now', 'upcoming', 'paused']);
@@ -27,7 +28,7 @@ async function authorizeEra(privyId: string, eraId: string) {
 // POST /api/worlds/eras/milestones — add a milestone (builders).
 export async function POST(request: Request) {
   try {
-    const { privyId, eraId, title, description, dateLabel, status, imageUrl, sortOrder } = await request.json();
+    const { privyId, eraId, title, description, startDate, endDate, startPrecision, endPrecision, dateLabel, status, imageUrl, sortOrder } = await request.json();
     if (!privyId || !eraId || !title?.trim()) {
       return NextResponse.json({ error: 'eraId and title are required' }, { status: 400 });
     }
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
       eraId,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
+      startDate: cleanDate(startDate) ?? null,
+      endDate: cleanDate(endDate) ?? null,
+      startPrecision: cleanPrecision(startPrecision) ?? null,
+      endPrecision: cleanPrecision(endPrecision) ?? null,
       dateLabel: dateLabel ? String(dateLabel).trim() : null,
       status: cleanStatus,
       imageUrl: imageUrl ? String(imageUrl) : null,
@@ -72,9 +77,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'status must be done, now, upcoming, or paused' }, { status: 400 });
     }
 
+    const startDate = cleanDate(fields.startDate);
+    const endDate = cleanDate(fields.endDate);
+    const startPrecision = cleanPrecision(fields.startPrecision);
+    const endPrecision = cleanPrecision(fields.endPrecision);
     await db.update(eraMilestones).set({
       ...(fields.title !== undefined ? { title: String(fields.title).trim() } : {}),
       ...(fields.description !== undefined ? { description: fields.description ? String(fields.description).trim() : null } : {}),
+      ...(startDate !== undefined ? { startDate } : {}),
+      ...(endDate !== undefined ? { endDate } : {}),
+      ...(startPrecision !== undefined ? { startPrecision } : {}),
+      ...(endPrecision !== undefined ? { endPrecision } : {}),
       ...(fields.dateLabel !== undefined ? { dateLabel: fields.dateLabel ? String(fields.dateLabel).trim() : null } : {}),
       ...(fields.status !== undefined ? { status: String(fields.status) } : {}),
       ...(fields.imageUrl !== undefined ? { imageUrl: fields.imageUrl ? String(fields.imageUrl) : null } : {}),

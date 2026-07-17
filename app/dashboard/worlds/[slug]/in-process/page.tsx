@@ -15,7 +15,7 @@ import { POST_KINDS, postKindGlyph, linkThumbnail, type PostKind } from '../../.
  * No funding fields anywhere (that's a future phase); dates are display
  * labels, not schedules. */
 
-interface Milestone { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
+interface Milestone { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
 interface ProcessPost { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
 interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
 
@@ -385,7 +385,7 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
                     <p className="font-mono text-[13px] font-bold text-ink truncate">{m.title}</p>
                     <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40">
                       {m.status === 'done' ? 'Done ✓' : m.status === 'now' ? 'In motion · now' : m.status}
-                      {m.dateLabel ? ` · ${m.dateLabel}` : ''}
+                      {(eraDateRange(m) ?? m.dateLabel) ? ` · ${eraDateRange(m) ?? m.dateLabel}` : ''}
                     </p>
                   </div>
                   {isBuilder && (
@@ -441,7 +441,10 @@ function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError, o
   const [draft, setDraft] = useState({
     title: existing?.title ?? '',
     description: existing?.description ?? '',
-    dateLabel: existing?.dateLabel ?? '',
+    startDate: existing?.startDate ?? '',
+    endDate: existing?.endDate ?? '',
+    startPrecision: (existing?.startPrecision ?? 'month') as Precision,
+    endPrecision: (existing?.endPrecision ?? 'month') as Precision,
     status: existing?.status ?? 'upcoming',
     imageUrl: existing?.imageUrl ?? '',
   });
@@ -476,17 +479,17 @@ function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError, o
         <label className={labelCls}>Description (optional)</label>
         <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="What this stage is" className={inputCls} />
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className={labelCls}>When (label)</label>
-          <input value={draft.dateLabel} onChange={(e) => setDraft({ ...draft, dateLabel: e.target.value })} placeholder="MAR–JUN 2026" className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>Status</label>
-          <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={`${inputCls} appearance-none cursor-pointer`}>
-            {MILESTONE_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+          onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+        <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+          onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
+      </div>
+      <div>
+        <label className={labelCls}>Status</label>
+        <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={`${inputCls} appearance-none cursor-pointer`}>
+          {MILESTONE_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
       </div>
       <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
       <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>

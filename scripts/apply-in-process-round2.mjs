@@ -19,6 +19,12 @@ await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "end_date" date`;
 await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "start_precision" text`;
 await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "end_precision" text`;
 
+// Milestones get the same real-date treatment as eras.
+await sql`ALTER TABLE "era_milestones" ADD COLUMN IF NOT EXISTS "start_date" date`;
+await sql`ALTER TABLE "era_milestones" ADD COLUMN IF NOT EXISTS "end_date" date`;
+await sql`ALTER TABLE "era_milestones" ADD COLUMN IF NOT EXISTS "start_precision" text`;
+await sql`ALTER TABLE "era_milestones" ADD COLUMN IF NOT EXISTS "end_precision" text`;
+
 await sql`
   CREATE TABLE IF NOT EXISTS "era_process_posts" (
     "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

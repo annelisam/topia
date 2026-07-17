@@ -516,7 +516,13 @@ export const eraMilestones = pgTable('era_milestones', {
   eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),           // "Album Production"
   description: text('description'),
-  dateLabel: text('date_label'),             // "MAR–JUN 2026"
+  // Real dates with precision, same as eras ("MAR 2026 — JUN 2026",
+  // "MAR 3, 2026", "2026"). dateLabel below is the legacy free-text fallback.
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  startPrecision: text('start_precision'), // 'day' | 'month' | 'year' (null = month)
+  endPrecision: text('end_precision'),
+  dateLabel: text('date_label'),             // legacy "MAR–JUN 2026"
   status: text('status').notNull().default('upcoming'), // 'done' | 'now' | 'upcoming' | 'paused'
   imageUrl: text('image_url'),
   // Future funding phase — never rendered yet. Integer cents per house rule.
