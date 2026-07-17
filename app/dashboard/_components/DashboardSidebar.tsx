@@ -48,10 +48,10 @@ export default function DashboardSidebar() {
 
   const worldSubItems = (slug: string) => [
     { label: 'Overview', href: `/dashboard/worlds/${slug}` },
-    { label: 'Details', href: `/dashboard/worlds/${slug}/details` },
-    { label: 'Projects', href: `/dashboard/worlds/${slug}/projects` },
-    { label: 'In Process', href: `/dashboard/worlds/${slug}/in-process` },
-    { label: 'Members', href: `/dashboard/worlds/${slug}/members` },
+    { label: 'Details', href: `/dashboard/worlds/${slug}/details`, tourId: 'tour-hq-details' },
+    { label: 'Projects', href: `/dashboard/worlds/${slug}/projects`, tourId: 'tour-hq-projects' },
+    { label: 'In Process', href: `/dashboard/worlds/${slug}/in-process`, tourId: 'tour-hq-inprocess' },
+    { label: 'Members', href: `/dashboard/worlds/${slug}/members`, tourId: 'tour-hq-members' },
   ];
 
   const personalItems = [
@@ -161,6 +161,7 @@ export default function DashboardSidebar() {
       {navItems.map((item) => (
         <Link
           key={item.href}
+          id={(item as { tourId?: string }).tourId}
           href={item.href}
           className={`flex items-center gap-2 px-2 py-1.5 rounded-sm transition-colors mb-0.5 no-underline ${
             isActive(item.href) ? 'bg-lime text-obsidian font-bold' : 'text-ink/60 hover:text-ink hover:bg-ink/[0.04]'

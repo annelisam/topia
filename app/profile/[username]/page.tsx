@@ -23,6 +23,18 @@ import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
 import ProfileInProcessLayer, { type LifeChapterView, type WorldEraEntry } from '../../components/profile/InProcessLayer';
 import ToolkitLayer from '../../components/profile/ToolkitLayer';
+import Tour, { type TourStep } from '../../components/Tour';
+
+// First-visit walkthrough of your own profile — once per account.
+const PROFILE_TOUR: TourStep[] = [
+  { title: 'This is your profile', body: 'Your passport on Topia — identity, stamps, worlds, and your story in motion. It grows every time you show up: events, quests, worlds. Quick look around?', nextLabel: 'Show me around →', skipLabel: 'Skip — I’ll explore' },
+  { target: 'tour-prof-card', title: 'Flip it to connect', body: 'Card opens your Topia card — the back is your QR, the fastest way to connect with someone IRL at an event. It’s also one tap away in the nav, anywhere on Topia.', place: 'below' },
+  { target: 'tour-prof-stamps', title: 'Proof you were there', body: 'Visa stamps land as you move through Topia — attend an event, finish a quest, build a world, sign a guestbook. The rest are still waiting for you.', place: 'below' },
+  { target: 'tour-prof-tab-events', title: 'Where you’ve shown up', body: 'Every event you host or attend collects here — and going to one is how most stamps get earned.', place: 'below' },
+  { target: 'tour-prof-tab-inprocess', title: 'Your story in motion', body: 'The build-in-public timeline, but for you: life chapters you set yourself, plus the roadmaps of every world you build — all in one place.', place: 'below' },
+  { target: 'tour-prof-tab-toolkit', title: 'What you build with', body: 'The tools behind your work — pull them from Topia’s tools directory so other creators can see your stack and discover new ones through you.', place: 'below' },
+  { target: 'tour-prof-edit', title: 'Finish the picture', body: 'Edit is where your photo, declaration, and links live — plus notifications and “Sign in with In•Process” for onchain minting. That’s the tour — go get stamped. ✦', place: 'below', nextLabel: 'Done' },
+];
 
 interface PublicProfile {
   id: string;
@@ -481,6 +493,7 @@ export default function PublicProfilePage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 md:shrink-0">
                           <button
+                            id="tour-prof-card"
                             onClick={() => setCardOpen(true)}
                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           >
@@ -496,7 +509,7 @@ export default function PublicProfilePage() {
                             className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 cursor-pointer bg-transparent"
                           />
                           {isOwnProfile && (
-                            <Link href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
+                            <Link id="tour-prof-edit" href="/profile" className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/60 transition-colors border border-ink/[0.08] rounded-sm px-2 py-0.5 no-underline">
                               Edit
                             </Link>
                           )}
@@ -569,6 +582,7 @@ export default function PublicProfilePage() {
                     return (
                       <button
                         key={s.id}
+                        id={`tour-prof-tab-${s.id}`}
                         onClick={() => setActiveSection(s.id)}
                         className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 transition-all rounded-sm whitespace-nowrap cursor-pointer ${isActive ? `${config.bg} ${config.textOn} font-bold` : 'text-ink/50 hover:text-ink/50 bg-transparent'}`}
                       >
@@ -637,6 +651,8 @@ export default function PublicProfilePage() {
           onClose={() => setFollowModal(null)}
         />
       )}
+
+      <Tour tourKey="profile" privyId={user?.id ?? ''} enabled={isOwnProfile && !!profile} steps={PROFILE_TOUR} />
     </div>
   );
 }
