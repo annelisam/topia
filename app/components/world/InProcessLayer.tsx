@@ -969,6 +969,27 @@ export default function InProcessLayer({
 
   const startCreate = useCallback(() => setCreating(true), []);
 
+  // With several projects carrying roadmaps, the tab becomes a switcher:
+  // one project's full roadmap at a time instead of an endless stack.
+  // Single-roadmap worlds see no pills — nothing changes for them.
+  const [pickedGroup, setPickedGroup] = useState<string | null>(null);
+  const groupOrder: string[] = [];
+  const byGroup: Record<string, EraView[]> = {};
+  for (const e of visible) {
+    const k = e.projectId ?? '__world__';
+    if (!byGroup[k]) { byGroup[k] = []; groupOrder.push(k); }
+    byGroup[k].push(e);
+  }
+  const hasSwitcher = !projectScope && groupOrder.length > 1;
+  // Default to whichever project is actively in motion.
+  const defaultGroup = groupOrder.find((k) =>
+    byGroup[k].some((e) => e.status === 'active' && e.milestones.some((m) => m.status === 'now'))
+  ) ?? groupOrder[0];
+  const currentGroup = pickedGroup && byGroup[pickedGroup] ? pickedGroup : defaultGroup;
+  const shownEras = hasSwitcher ? byGroup[currentGroup] : visible;
+  const groupLabel = (k: string) => (k === '__world__' ? 'This world' : byGroup[k][0].projectName ?? byGroup[k][0].title);
+  const groupInMotion = (k: string) => byGroup[k].some((e) => e.status === 'active' && e.milestones.some((m) => m.status === 'now'));
+
   if (visible.length === 0 && !creating) {
     return (
       <div className="bg-[var(--page-bg)] p-4">
@@ -992,7 +1013,34 @@ export default function InProcessLayer({
 
   return (
     <div className="bg-[var(--page-bg)] p-4 flex flex-col gap-10">
-      <Masthead canEdit={canEdit} canMint={canMint} />
+      <div className="flex flex-col gap-0">
+        <Masthead canEdit={canEdit} canMint={canMint} />
+        {hasSwitcher && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-3.5">
+            <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/35 mr-1.5">Roadmaps</span>
+            {groupOrder.map((k) => {
+              const active = k === currentGroup;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setPickedGroup(k)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] px-2.5 py-1.5 rounded-full cursor-pointer transition ${
+                    active
+                      ? 'bg-lime text-obsidian font-bold border-none'
+                      : 'bg-transparent text-ink/55 border border-ink/15 hover:border-ink/40 hover:text-ink/80'
+                  }`}
+                >
+                  {groupLabel(k)}
+                  {groupInMotion(k) && (
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: active ? '#1a1a1a' : ORANGE }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {creating && (
         <EraForm
           worldId={worldId}
@@ -1002,7 +1050,7 @@ export default function InProcessLayer({
           onChanged={onChanged}
         />
       )}
-      {visible.map((era) => (
+      {shownEras.map((era) => (
         <EraSection
           key={era.id}
           era={era}
