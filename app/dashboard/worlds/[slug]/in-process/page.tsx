@@ -6,6 +6,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { useWorldDashboard } from '../layout';
+import { eraDateRange } from '../../../../../lib/eraDates';
+import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
 
 /* In Process editor — the world's build-in-public roadmap: one or more ERAS
  * ("ORBIT ONE — debut album era"), each a stack of MILESTONES with statuses.
@@ -13,7 +15,8 @@ import { useWorldDashboard } from '../layout';
  * labels, not schedules. */
 
 interface Milestone { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
-interface Era { id: string; title: string; description: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; }
+interface ProcessPost { id: string; title: string; body: string | null; imageUrl: string | null; mintedUrl: string | null; createdAt: string; }
+interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
 
 const inputCls = 'w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1';
@@ -143,7 +146,7 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
   onDelete: (kind: 'era' | 'milestone', id: string, title: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ title: era.title, description: era.description ?? '', startLabel: era.startLabel ?? '', endLabel: era.endLabel ?? '', status: era.status, inProcessUrl: era.inProcessUrl ?? '' });
+  const [draft, setDraft] = useState({ title: era.title, description: era.description ?? '', startDate: era.startDate ?? '', endDate: era.endDate ?? '', status: era.status, inProcessUrl: era.inProcessUrl ?? '' });
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<string | null>(null);
@@ -182,7 +185,7 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/35">
-              Era · {era.status}{era.startLabel || era.endLabel ? ` · ${[era.startLabel, era.endLabel].filter(Boolean).join(' — ')}` : ''}
+              Era · {era.status}{eraDateRange(era) ? ` · ${eraDateRange(era)}` : ''}
             </p>
             <h3 className="font-mono text-[15px] font-bold uppercase text-ink mt-0.5">{era.title}</h3>
             {era.description && <p className="font-mono text-[11px] text-ink/50 mt-0.5">{era.description}</p>}
@@ -212,12 +215,12 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className={labelCls}>Starts (label)</label>
-                <input value={draft.startLabel} onChange={(e) => setDraft({ ...draft, startLabel: e.target.value })} placeholder="MAR 2026" className={inputCls} />
+                <label className={labelCls}>Starts</label>
+                <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Ends (label)</label>
-                <input value={draft.endLabel} onChange={(e) => setDraft({ ...draft, endLabel: e.target.value })} placeholder="FEB 2027" className={inputCls} />
+                <label className={labelCls}>Ends</label>
+                <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className={inputCls} />
               </div>
             </div>
             <div>
@@ -234,6 +237,9 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
           </div>
         )}
       </div>
+
+      {/* Process log — Topia-first posts; optional mint-through */}
+      <ProcessLogPanel era={era} privyId={privyId} isBuilder={isBuilder} canMint={canMint} onChanged={onChanged} onError={onError} />
 
       {/* Milestones */}
       <div className="bg-[var(--page-bg)] p-4">
@@ -383,7 +389,7 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
   worldId: string; privyId: string; onCreated: () => void; onError: (e: string) => void; hasEras: boolean;
 }) {
   const [open, setOpen] = useState(!hasEras);
-  const [draft, setDraft] = useState({ title: '', description: '', startLabel: '', endLabel: '', inProcessUrl: '' });
+  const [draft, setDraft] = useState({ title: '', description: '', startDate: '', endDate: '', inProcessUrl: '' });
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -395,7 +401,7 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
         body: JSON.stringify({ privyId, worldId, ...draft }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); onError(d.error || 'Could not create the era.'); return; }
-      setDraft({ title: '', description: '', startLabel: '', endLabel: '', inProcessUrl: '' });
+      setDraft({ title: '', description: '', startDate: '', endDate: '', inProcessUrl: '' });
       setOpen(false);
       onCreated();
     } finally { setSaving(false); }
@@ -421,12 +427,12 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={labelCls}>Starts (label)</label>
-            <input value={draft.startLabel} onChange={(e) => setDraft({ ...draft, startLabel: e.target.value })} placeholder="MAR 2026" className={inputCls} />
+            <label className={labelCls}>Starts</label>
+            <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Ends (label)</label>
-            <input value={draft.endLabel} onChange={(e) => setDraft({ ...draft, endLabel: e.target.value })} placeholder="FEB 2027" className={inputCls} />
+            <label className={labelCls}>Ends</label>
+            <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className={inputCls} />
           </div>
         </div>
         <div>
@@ -519,6 +525,134 @@ function MintMomentModal({ draft, privyId, onClose, onMinted }: {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Process log panel — native build-in-public posts ──────────────────
+ * A post is Topia-first: it always lives here and shows on the world page's
+ * process log immediately. "Also mint on In Process" is optional per post,
+ * for builders who've connected their account. */
+function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError }: {
+  era: Era; privyId: string; isBuilder: boolean; canMint: boolean;
+  onChanged: () => void; onError: (e: string) => void;
+}) {
+  const { getAccessToken } = usePrivy();
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ title: '', body: '', imageUrl: '', mint: false });
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState('');
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); onError('');
+    try {
+      setDraft((d) => ({ ...d, imageUrl: '' }));
+      const url = await resizeAndUploadImage(file, 1280);
+      setDraft((d) => ({ ...d, imageUrl: url }));
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally { setUploading(false); }
+  };
+
+  const post = async () => {
+    if (!draft.title.trim()) return;
+    setSaving(true); onError(''); setNote('');
+    try {
+      const accessToken = draft.mint ? await getAccessToken().catch(() => null) : null;
+      const res = await fetch('/api/worlds/eras/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId, accessToken, eraId: era.id,
+          title: draft.title.trim(),
+          body: draft.body.trim() || undefined,
+          imageUrl: draft.imageUrl.trim() || undefined,
+          mintToInProcess: draft.mint,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { onError(d.error || 'Could not add the post.'); return; }
+      setNote(d.mintWarning || (d.mintedUrl ? '✓ Posted + minted on In Process' : '✓ Posted'));
+      setDraft({ title: '', body: '', imageUrl: '', mint: false });
+      setAdding(false);
+      onChanged();
+    } finally { setSaving(false); }
+  };
+
+  const remove = async (postId: string) => {
+    await fetch(`/api/worlds/eras/posts?postId=${postId}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  return (
+    <div className="bg-[var(--page-bg)] px-4 pt-4 pb-1 border-b border-ink/[0.06]">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-mono text-[11px] uppercase tracking-[2px] text-ink/40">Process log · {era.posts.length}</span>
+        {isBuilder && <button onClick={() => setAdding((a) => !a)} className={btnGhost}>{adding ? 'Cancel' : '+ Post an update'}</button>}
+      </div>
+
+      {note && <p className="font-mono text-[11px] mb-2" style={{ color: 'var(--accent-ink, #4f6b00)' }}>{note}</p>}
+
+      {adding && (
+        <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mb-3 space-y-2">
+          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className={`${btnGhost} inline-block`} style={{ cursor: 'pointer' }}>
+              {uploading ? 'Uploading…' : draft.imageUrl ? '↺ Replace image' : '+ Image'}
+              <input type="file" accept="image/*" onChange={upload} className="hidden" />
+            </label>
+            {draft.imageUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={draft.imageUrl} alt="" className="h-12 w-12 object-cover rounded-sm border border-ink/10" />
+            )}
+            {canMint && (
+              <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
+                <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
+                ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
+              </label>
+            )}
+          </div>
+          <button onClick={post} disabled={saving || uploading || !draft.title.trim()} className={btnLime}>
+            {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post update'}
+          </button>
+        </div>
+      )}
+
+      {era.posts.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin' }}>
+          {era.posts.map((p) => (
+            <div key={p.id} className="shrink-0 w-[150px] border border-ink/[0.08] rounded-sm overflow-hidden relative group">
+              {p.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={p.imageUrl} alt="" className="w-full h-[84px] object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-[84px] flex items-center justify-center bg-ink/[0.04]">
+                  <span className="font-mono text-[16px] text-ink/25">✦</span>
+                </div>
+              )}
+              <div className="px-2 py-1.5">
+                <p className="font-mono text-[10px] font-bold text-ink truncate">{p.title}</p>
+                <p className="font-mono text-[9px] text-ink/40">
+                  {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {p.mintedUrl && <a href={p.mintedUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 no-underline" style={{ color: '#FF5C34' }}>⛓ minted</a>}
+                </p>
+              </div>
+              {isBuilder && (
+                <button
+                  onClick={() => remove(p.id)}
+                  aria-label="Delete post"
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-obsidian/70 text-bone border-none cursor-pointer text-[11px] leading-none sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

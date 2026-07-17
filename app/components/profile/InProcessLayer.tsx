@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import { eraDateRange } from '../../../lib/eraDates';
 
 /* Passport "LIFE // IN PROCESS" tab — Latashá's mockup 2b, minus funding:
  * one vertical roadmap interleaving the eras of worlds this person builds
@@ -10,7 +11,7 @@ import { usePrivy } from '@privy-io/react-auth';
  * "witness" status keeps her language: not seeking anything — just witness it. */
 
 export interface LifeChapterView { id: string; title: string; subtitle: string | null; dateLabel: string | null; status: string; sortOrder: number | null; }
-export interface WorldEraEntry { eraId: string; title: string; description: string | null; startLabel: string | null; endLabel: string | null; status: string; worldTitle: string; worldSlug: string; milestoneCount: number; nowCount: number; doneCount: number; }
+export interface WorldEraEntry { eraId: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startLabel: string | null; endLabel: string | null; status: string; worldTitle: string; worldSlug: string; milestoneCount: number; nowCount: number; doneCount: number; }
 
 const ORANGE = 'var(--orange, #FF5C34)';
 
@@ -156,7 +157,7 @@ export default function InProcessLayer({
             <div key={e.eraId} className="flex gap-4 py-4 border-b border-ink/[0.06]">
               <div className="w-[74px] shrink-0 text-right">
                 <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/45 leading-snug">
-                  {[e.startLabel, e.endLabel].filter(Boolean).join(' — ') || '—'}
+                  {eraDateRange(e) || '—'}
                 </p>
               </div>
               <div className="min-w-0 flex-1">

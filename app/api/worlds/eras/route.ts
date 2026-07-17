@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { worldEras, eraMilestones, worldMembers, users } from '@/lib/db/schema';
-import { eq, and, asc, inArray } from 'drizzle-orm';
+import { worldEras, eraMilestones, eraProcessPosts, worldMembers, users } from '@/lib/db/schema';
+import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const ERA_STATUSES = new Set(['active', 'complete', 'archived']);
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Date fields arrive as YYYY-MM-DD from <input type="date">; '' clears.
+function cleanDate(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (!v) return null;
+  return DATE_RE.test(String(v)) ? String(v) : null;
+}
 
 // Same builder bar as world projects: owners and world_builders write,
 // collaborators and the public read.
@@ -27,27 +35,42 @@ async function erasWithMilestones(worldId: string) {
     .where(eq(worldEras.worldId, worldId))
     .orderBy(asc(worldEras.sortOrder), asc(worldEras.createdAt));
   if (eras.length === 0) return [];
-  const milestones = await db.select().from(eraMilestones)
-    .where(inArray(eraMilestones.eraId, eras.map((e) => e.id)))
-    .orderBy(asc(eraMilestones.sortOrder), asc(eraMilestones.createdAt));
+  const eraIds = eras.map((e) => e.id);
+  const [milestones, posts] = await Promise.all([
+    db.select().from(eraMilestones)
+      .where(inArray(eraMilestones.eraId, eraIds))
+      .orderBy(asc(eraMilestones.sortOrder), asc(eraMilestones.createdAt)),
+    db.select({
+      id: eraProcessPosts.id,
+      eraId: eraProcessPosts.eraId,
+      title: eraProcessPosts.title,
+      body: eraProcessPosts.body,
+      imageUrl: eraProcessPosts.imageUrl,
+      mintedUrl: eraProcessPosts.mintedUrl,
+      createdAt: eraProcessPosts.createdAt,
+    }).from(eraProcessPosts)
+      .where(inArray(eraProcessPosts.eraId, eraIds))
+      .orderBy(desc(eraProcessPosts.createdAt)),
+  ]);
   return eras.map((e) => ({
     ...e,
     // goal/raised stay server-side until the funding phase ships.
     milestones: milestones.filter((m) => m.eraId === e.id)
       .map(({ goalCents: _g, raisedCents: _r, ...m }) => m),
+    posts: posts.filter((p) => p.eraId === e.id).slice(0, 24),
   }));
 }
 
 // GET /api/worlds/eras?worldId=X — the world's In Process roadmap (public).
+// Deliberately NO CDN caching: a cached s-maxage response made freshly
+// created eras "disappear" from the editor for 60s in production. Roadmaps
+// are low-traffic; correctness wins.
 export async function GET(request: Request) {
   try {
     const worldId = new URL(request.url).searchParams.get('worldId');
     if (!worldId) return NextResponse.json({ error: 'Missing worldId' }, { status: 400 });
     const eras = await erasWithMilestones(worldId);
-    return NextResponse.json(
-      { eras },
-      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
-    );
+    return NextResponse.json({ eras }, { headers: NO_STORE });
   } catch (error) {
     console.error('[eras] GET failed:', error);
     return NextResponse.json({ error: 'Failed to load roadmap' }, { status: 500 });
@@ -57,7 +80,7 @@ export async function GET(request: Request) {
 // POST /api/worlds/eras — create an era (builders).
 export async function POST(request: Request) {
   try {
-    const { privyId, worldId, title, description, startLabel, endLabel, status, inProcessUrl } = await request.json();
+    const { privyId, worldId, title, description, startDate, endDate, startLabel, endLabel, status, inProcessUrl } = await request.json();
     if (!worldId || !privyId || !title?.trim()) {
       return NextResponse.json({ error: 'worldId and title are required' }, { status: 400 });
     }
@@ -72,12 +95,14 @@ export async function POST(request: Request) {
       worldId,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
+      startDate: cleanDate(startDate) ?? null,
+      endDate: cleanDate(endDate) ?? null,
       startLabel: startLabel ? String(startLabel).trim() : null,
       endLabel: endLabel ? String(endLabel).trim() : null,
       status: cleanStatus,
       inProcessUrl: inProcessUrl ? String(inProcessUrl).trim() : null,
     }).returning();
-    return NextResponse.json({ era: { ...era, milestones: [] } }, { headers: NO_STORE });
+    return NextResponse.json({ era: { ...era, milestones: [], posts: [] } }, { headers: NO_STORE });
   } catch (error) {
     console.error('[eras] POST failed:', error);
     return NextResponse.json({ error: 'Failed to create era' }, { status: 500 });
@@ -99,9 +124,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'status must be active, complete, or archived' }, { status: 400 });
     }
 
+    const startDate = cleanDate(fields.startDate);
+    const endDate = cleanDate(fields.endDate);
     await db.update(worldEras).set({
       ...(fields.title !== undefined ? { title: String(fields.title).trim() } : {}),
       ...(fields.description !== undefined ? { description: fields.description ? String(fields.description).trim() : null } : {}),
+      ...(startDate !== undefined ? { startDate } : {}),
+      ...(endDate !== undefined ? { endDate } : {}),
       ...(fields.startLabel !== undefined ? { startLabel: fields.startLabel ? String(fields.startLabel).trim() : null } : {}),
       ...(fields.endLabel !== undefined ? { endLabel: fields.endLabel ? String(fields.endLabel).trim() : null } : {}),
       ...(fields.status !== undefined ? { status: String(fields.status) } : {}),

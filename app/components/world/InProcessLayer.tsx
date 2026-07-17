@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { WorldConfig } from './worldConfig';
+import { eraDateRange } from '../../../lib/eraDates';
 
 /* The world page's IN PROCESS tab — Latashá's Turn-2 roadmap, minus funding:
  * era header → horizontal milestone rail with statuses → process log strip
@@ -10,8 +11,12 @@ import { WorldConfig } from './worldConfig';
  * In Process accent throughout, matching the mockup. */
 
 export interface EraMilestoneView { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
-export interface EraView { id: string; title: string; description: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; }
+export interface EraPostView { id: string; title: string; body: string | null; imageUrl: string | null; mintedUrl: string | null; createdAt: string; }
+export interface EraView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
 interface Moment { id: string; name: string | null; imageUrl: string | null; mime: string | null; createdAt: string | null; collectUrl: string | null; }
+
+// Native Topia posts + synced In Process moments, one strip, newest first.
+interface LogEntry { id: string; title: string; imageUrl: string | null; date: string | null; href: string | null; minted: boolean; audio?: boolean }
 
 const ORANGE = 'var(--orange, #FF5C34)';
 
@@ -22,57 +27,73 @@ const STATUS_META: Record<string, { label: string; on: boolean }> = {
   paused: { label: 'PAUSED', on: false },
 };
 
-function ProcessLog({ inProcessUrl }: { inProcessUrl: string }) {
-  const [moments, setMoments] = useState<Moment[] | null>(null);
+function ProcessLog({ posts, inProcessUrl }: { posts: EraPostView[]; inProcessUrl: string | null }) {
+  const [moments, setMoments] = useState<Moment[]>([]);
 
   useEffect(() => {
+    if (!inProcessUrl) return;
     let cancelled = false;
     fetch(`/api/in-process/timeline?artist=${encodeURIComponent(inProcessUrl)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled) setMoments(d?.moments ?? []); })
-      .catch(() => { if (!cancelled) setMoments([]); });
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [inProcessUrl]);
 
-  // Nothing to show (still loading, no address, or upstream down) — the
-  // roadmap stands on its own; the log is a bonus.
-  if (!moments || moments.length === 0) return null;
+  // Merge native posts + synced moments, newest first. A post that was ALSO
+  // minted appears once (the moment with the same collect URL is dropped).
+  const mintedUrls = new Set(posts.map((p) => p.mintedUrl).filter(Boolean));
+  const entries: LogEntry[] = [
+    ...posts.map((p) => ({ id: `p-${p.id}`, title: p.title, imageUrl: p.imageUrl, date: p.createdAt, href: p.mintedUrl, minted: !!p.mintedUrl })),
+    ...moments
+      .filter((m) => !m.collectUrl || !mintedUrls.has(m.collectUrl))
+      .map((m) => ({ id: `m-${m.id}`, title: m.name || 'Moment', imageUrl: m.imageUrl, date: m.createdAt, href: m.collectUrl, minted: true, audio: m.mime?.startsWith('audio') ?? false })),
+  ]
+    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    .slice(0, 14);
+
+  if (entries.length === 0) return null;
 
   return (
     <div className="mt-5">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">Process log · synced from In Process</span>
-        <a href={inProcessUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[1px] no-underline" style={{ color: ORANGE }}>
-          Full timeline ↗
-        </a>
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
+          Process log{inProcessUrl ? ' · synced with In Process' : ''}
+        </span>
+        {inProcessUrl && (
+          <a href={inProcessUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[1px] no-underline" style={{ color: ORANGE }}>
+            Full timeline ↗
+          </a>
+        )}
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-        {moments.map((m) => (
-          <a
-            key={m.id}
-            href={m.collectUrl ?? inProcessUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden no-underline hover:border-ink/30 transition"
-          >
-            {m.imageUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={m.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-[88px] flex items-center justify-center bg-ink/[0.04]">
-                <span className="font-mono text-[16px] text-ink/25">{m.mime?.startsWith('audio') ? '♫' : '✦'}</span>
-              </div>
-            )}
-            <div className="px-2 py-1.5">
-              <p className="font-mono text-[10px] font-bold text-ink truncate">{m.name || 'Moment'}</p>
-              {m.createdAt && (
-                <p className="font-mono text-[9px] text-ink/40">
-                  {new Date(m.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </p>
+        {entries.map((e) => {
+          const card = (
+            <>
+              {e.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-[88px] flex items-center justify-center bg-ink/[0.04]">
+                  <span className="font-mono text-[16px] text-ink/25">{e.audio ? '♫' : '✦'}</span>
+                </div>
               )}
-            </div>
-          </a>
-        ))}
+              <div className="px-2 py-1.5">
+                <p className="font-mono text-[10px] font-bold text-ink truncate">{e.title}</p>
+                <p className="font-mono text-[9px] text-ink/40">
+                  {e.date && new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {e.minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}
+                </p>
+              </div>
+            </>
+          );
+          const cls = 'shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden no-underline hover:border-ink/30 transition';
+          return e.href ? (
+            <a key={e.id} href={e.href} target="_blank" rel="noopener noreferrer" className={cls}>{card}</a>
+          ) : (
+            <div key={e.id} className={cls}>{card}</div>
+          );
+        })}
       </div>
     </div>
   );
@@ -119,9 +140,9 @@ export default function InProcessLayer({
                 {era.description && <p className="font-mono text-[12px] text-ink/55 mt-1">{era.description}</p>}
               </div>
               <div className="text-right shrink-0">
-                {(era.startLabel || era.endLabel) && (
+                {eraDateRange(era) && (
                   <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45">
-                    {[era.startLabel, era.endLabel].filter(Boolean).join(' — ')}
+                    {eraDateRange(era)}
                   </p>
                 )}
                 {era.status === 'active' && era.milestones.some((m) => m.status === 'now') && (
@@ -162,7 +183,7 @@ export default function InProcessLayer({
               </div>
             )}
 
-            {era.inProcessUrl && <ProcessLog inProcessUrl={era.inProcessUrl} />}
+            <ProcessLog posts={era.posts ?? []} inProcessUrl={era.inProcessUrl} />
           </div>
         );
       })}
