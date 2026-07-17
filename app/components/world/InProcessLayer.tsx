@@ -185,12 +185,16 @@ function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, p
 }
 
 /* ── Era (roadmap) create/edit form ────────────────────────────────── */
+const NEW_PROJECT = '__new__';
+
 function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
   worldId: string; projects: ProjectOption[]; existing?: EraView; privyId: string;
   onClose: () => void; onChanged: () => void;
 }) {
   const [draft, setDraft] = useState({
-    projectId: existing?.projectId ?? '',
+    // Roadmaps belong to projects — creating one defaults to the first
+    // project, or straight into "make a new project" when there are none.
+    projectId: existing ? (existing.projectId ?? '') : (projects[0]?.id ?? NEW_PROJECT),
     title: existing?.title ?? '',
     description: existing?.description ?? '',
     startDate: existing?.startDate ?? '',
@@ -200,27 +204,48 @@ function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
     status: existing?.status ?? 'active',
     inProcessUrl: existing?.inProcessUrl ?? '',
   });
+  const [newProjectName, setNewProjectName] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState('');
 
+  const makingProject = draft.projectId === NEW_PROJECT;
+
   const pickProject = (projectId: string) => {
     const p = projects.find((x) => x.id === projectId);
     // Prefill the roadmap title with the project name until the builder types their own.
-    const titleUntouched = !draft.title.trim() || projects.some((x) => x.name === draft.title);
+    const titleUntouched = !draft.title.trim() || projects.some((x) => x.name === draft.title) || draft.title === newProjectName;
     setDraft({ ...draft, projectId, title: titleUntouched && p ? p.name : draft.title });
   };
 
+  const typeNewProjectName = (name: string) => {
+    const titleUntouched = !draft.title.trim() || projects.some((x) => x.name === draft.title) || draft.title === newProjectName;
+    setNewProjectName(name);
+    if (titleUntouched) setDraft({ ...draft, title: name });
+  };
+
   const save = async () => {
-    if (!draft.title.trim()) return;
+    if (!draft.title.trim() || (makingProject && !newProjectName.trim())) return;
     setSaving(true); setError('');
     try {
+      // Project-first: a brand-new project is created right here, then the
+      // roadmap attaches to it — no dashboard round-trip.
+      let projectId: string | null = draft.projectId || null;
+      if (makingProject) {
+        const pRes = await fetch('/api/worlds/projects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ privyId, worldId, name: newProjectName.trim() }),
+        });
+        const pData = await pRes.json().catch(() => ({}));
+        if (!pRes.ok || !pData.project?.id) { setError(pData.error || 'Could not create the project.'); return; }
+        projectId = pData.project.id;
+      }
       const res = await fetch('/api/worlds/eras', {
         method: existing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(existing
-          ? { privyId, eraId: existing.id, ...draft, projectId: draft.projectId || null }
-          : { privyId, worldId, ...draft, projectId: draft.projectId || null }),
+          ? { privyId, eraId: existing.id, ...draft, projectId }
+          : { privyId, worldId, ...draft, projectId }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || 'Could not save.'); return; }
       onChanged();
@@ -242,11 +267,24 @@ function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
       </p>
       <div>
         <label className={labelCls}>Which project is this the roadmap for?</label>
-        <select value={draft.projectId} onChange={(e) => pickProject(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`}>
-          <option value="">The world itself (no single project)</option>
+        <p className="font-mono text-[10px] text-ink/40 mb-1.5 -mt-0.5">
+          Roadmaps belong to projects — pick one, or spin up a new project right here.
+        </p>
+        <select value={draft.projectId} onChange={(e) => e.target.value === NEW_PROJECT ? setDraft({ ...draft, projectId: NEW_PROJECT }) : pickProject(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <option value={NEW_PROJECT}>+ New project…</option>
+          <option value="">No project — a world-wide roadmap</option>
         </select>
       </div>
+      {makingProject && (
+        <div className="border-l-2 pl-3" style={{ borderColor: ORANGE }}>
+          <label className={labelCls}>Name the new project</label>
+          <input value={newProjectName} onChange={(e) => typeNewProjectName(e.target.value)} placeholder="e.g. Debut Album, Short Film, Community Zine" className={inputCls} autoFocus={!projects.length} />
+          <p className="font-mono text-[10px] text-ink/40 mt-1">
+            It&apos;s created with this roadmap and appears under Projects — add images and details anytime from the project page.
+          </p>
+        </div>
+      )}
       <div>
         <label className={labelCls}>Roadmap title</label>
         <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="ORBIT ONE" className={inputCls} />
@@ -272,13 +310,16 @@ function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
         </div>
       )}
       <div>
-        <label className={labelCls}>In Process link (optional — syncs your inprocess.world timeline)</label>
+        <label className={labelCls}>Already on In Process? (optional)</label>
         <input value={draft.inProcessUrl} onChange={(e) => setDraft({ ...draft, inProcessUrl: e.target.value })} placeholder="https://inprocess.world/0x…" className={inputCls} />
+        <p className="font-mono text-[10px] text-ink/40 mt-1">
+          Paste your inprocess.world artist link and the moments you mint there show up in this process log automatically.
+        </p>
       </div>
       {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
-          {saving ? 'Saving…' : existing ? 'Save' : 'Create roadmap'}
+        <button onClick={save} disabled={saving || !draft.title.trim() || (makingProject && !newProjectName.trim())} className={btnLime}>
+          {saving ? 'Saving…' : existing ? 'Save' : makingProject ? 'Create project + roadmap' : 'Create roadmap'}
         </button>
         <button onClick={onClose} className={btnGhost}>Cancel</button>
         {existing && (
@@ -287,6 +328,64 @@ function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
             : <button onClick={() => setConfirmingDelete(true)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Delete roadmap</button>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Plain-language explainer ──────────────────────────────────────
+ * "What is In Process?" — one collapsible card that a first-time visitor
+ * or a brand-new builder can read and fully get the integration. */
+function HowThisWorks({ canEdit }: { canEdit: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-ink/[0.08] rounded-lg">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-transparent border-none cursor-pointer text-left"
+      >
+        <span className="font-mono text-[11px] font-bold uppercase tracking-[2px] text-ink/60">
+          ⓘ How this works — what is In Process?
+        </span>
+        <span className="font-mono text-[13px] text-ink/40">{open ? '−' : '+'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mb-1" style={{ color: ORANGE }}>1 · The roadmap lives on Topia</p>
+            <p className="font-mono text-[12px] text-ink/65 leading-relaxed">
+              Each project tells its story as milestones — done ✓, in motion now, up next — plus a process log of
+              updates (images, thoughts, links). Everything here is Topia-native: no other account needed.
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mb-1" style={{ color: ORANGE }}>2 · In Process is an optional companion</p>
+            <p className="font-mono text-[12px] text-ink/65 leading-relaxed">
+              <a href="https://inprocess.world" target="_blank" rel="noopener noreferrer" className="underline text-ink">In Process</a> is
+              an onchain journal for creatives: you publish (&ldquo;mint&rdquo;) moments of your process permanently,
+              and supporters can collect them. A <span style={{ color: ORANGE }}>⛓</span> on a card here means that
+              update is minted — open the card to collect it there.
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mb-1" style={{ color: ORANGE }}>3 · How they connect</p>
+            <p className="font-mono text-[12px] text-ink/65 leading-relaxed">
+              {canEdit ? (
+                <>
+                  Two directions, both optional. <strong>Mint from Topia:</strong> connect once in your{' '}
+                  <Link href="/profile" className="underline text-ink">profile</Link> (&ldquo;Sign in with In•Process&rdquo;) and
+                  every update you post here gets a ⛓ mint checkbox. <strong>Sync to Topia:</strong> paste your
+                  inprocess.world link on a roadmap and moments you mint over there appear in this log automatically.
+                </>
+              ) : (
+                <>
+                  Builders can post updates straight from Topia and optionally mint them onchain, or sync in the
+                  moments they already mint on inprocess.world — the log shows both in one place.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -383,11 +482,15 @@ function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
         </div>
       )}
 
-      {canMint && (
+      {canMint ? (
         <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
           <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
           ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
         </label>
+      ) : (
+        <p className="font-mono text-[10px] text-ink/35">
+          This posts to Topia. Want it minted onchain too? <Link href="/profile" className="underline text-ink/60">Connect In Process in your profile</Link> and a ⛓ mint option appears here.
+        </p>
       )}
       {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
       <div className="flex items-center gap-3">
@@ -772,9 +875,13 @@ export default function InProcessLayer({
         {canEdit && (
           <>
             <p className="font-mono text-[11px] text-ink/40 max-w-sm">
-              A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done, what&apos;s in motion, what&apos;s next.
+              A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done,
+              what&apos;s in motion, what&apos;s next. {!projectScope && 'No project yet? You can make one as you go.'}
             </p>
             <button onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
+            <div className="w-full max-w-md text-left mt-4">
+              <HowThisWorks canEdit={canEdit} />
+            </div>
           </>
         )}
       </div>
@@ -809,6 +916,7 @@ export default function InProcessLayer({
       {canEdit && !creating && visible.length > 0 && !projectScope && (
         <button onClick={startCreate} className={`${btnGhost} self-start`}>+ Roadmap for another project</button>
       )}
+      <HowThisWorks canEdit={canEdit} />
     </div>
   );
 }
