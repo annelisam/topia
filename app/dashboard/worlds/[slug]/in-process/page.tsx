@@ -108,6 +108,49 @@ const ERA_STATUSES = [
 // A milestone worth minting: prefill for the moment composer.
 export interface MintDraft { title: string; text: string; imageUrl: string; eraId: string }
 
+/* Shared image picker — real file upload through the blob pipeline (same as
+ * project covers), with preview and remove. Used by milestones, process-log
+ * posts, and the mint composer. */
+function ImageField({ value, onChange, label = 'Image (optional)' }: {
+  value: string; onChange: (url: string) => void; label?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setError('');
+    try {
+      onChange(await resizeAndUploadImage(file, 1280));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally { setUploading(false); }
+  };
+
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className={`${btnGhost} inline-block`} style={{ cursor: 'pointer' }}>
+          {uploading ? 'Uploading…' : value ? '↺ Replace image' : '+ Upload image'}
+          <input type="file" accept="image/*" onChange={upload} className="hidden" />
+        </label>
+        {value && (
+          <span className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={value} alt="" className="h-12 w-12 object-cover rounded-sm border border-ink/10" />
+            <button onClick={() => onChange('')} aria-label="Remove image" className="font-mono text-[10px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>
+              Remove
+            </button>
+          </span>
+        )}
+      </div>
+      {error && <p className="font-mono text-[11px] mt-1" style={{ color: '#FF5C34' }}>{error}</p>}
+    </div>
+  );
+}
+
 export default function WorldInProcessPage() {
   const { world, privyId, isBuilder } = useWorldDashboard();
   const [eras, setEras] = useState<Era[] | null>(null);
@@ -444,10 +487,7 @@ function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError, o
           </select>
         </div>
       </div>
-      <div>
-        <label className={labelCls}>Image URL (optional)</label>
-        <input value={draft.imageUrl} onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })} placeholder="https://…" className={inputCls} />
-      </div>
+      <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
       <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
         {saving ? 'Saving…' : existing ? 'Save milestone' : 'Add milestone'}
       </button>
@@ -581,7 +621,7 @@ function MintMomentModal({ draft, privyId, onClose, onMinted }: {
           <div className="space-y-2">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Moment title" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="What happened? (optional)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Image URL (optional — mirrored to Arweave)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
+            <ImageField value={imageUrl} onChange={setImageUrl} label="Image (optional — mirrored to Arweave)" />
             <p className="font-mono text-[10px] text-ink/40 leading-relaxed">
               ⚠ Minting is permanent: this becomes an onchain token on Base with media stored on
               Arweave. It can be hidden on In Process, but never deleted.
@@ -611,22 +651,8 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
   const { getAccessToken } = usePrivy();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', body: '', imageUrl: '', mint: false });
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
-
-  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true); onError('');
-    try {
-      setDraft((d) => ({ ...d, imageUrl: '' }));
-      const url = await resizeAndUploadImage(file, 1280);
-      setDraft((d) => ({ ...d, imageUrl: url }));
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Image upload failed');
-    } finally { setUploading(false); }
-  };
 
   const post = async () => {
     if (!draft.title.trim()) return;
@@ -670,23 +696,14 @@ function ProcessLogPanel({ era, privyId, isBuilder, canMint, onChanged, onError 
         <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mb-3 space-y-2">
           <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
           <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
-          <div className="flex items-center gap-3 flex-wrap">
-            <label className={`${btnGhost} inline-block`} style={{ cursor: 'pointer' }}>
-              {uploading ? 'Uploading…' : draft.imageUrl ? '↺ Replace image' : '+ Image'}
-              <input type="file" accept="image/*" onChange={upload} className="hidden" />
+          <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} label="Image (optional)" />
+          {canMint && (
+            <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
+              <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
+              ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
             </label>
-            {draft.imageUrl && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={draft.imageUrl} alt="" className="h-12 w-12 object-cover rounded-sm border border-ink/10" />
-            )}
-            {canMint && (
-              <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
-                <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
-                ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
-              </label>
-            )}
-          </div>
-          <button onClick={post} disabled={saving || uploading || !draft.title.trim()} className={btnLime}>
+          )}
+          <button onClick={post} disabled={saving || !draft.title.trim()} className={btnLime}>
             {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post update'}
           </button>
         </div>
