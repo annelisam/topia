@@ -50,6 +50,7 @@ export default function DashboardSidebar() {
     { label: 'Overview', href: `/dashboard/worlds/${slug}` },
     { label: 'Details', href: `/dashboard/worlds/${slug}/details` },
     { label: 'Projects', href: `/dashboard/worlds/${slug}/projects` },
+    { label: 'In Process', href: `/dashboard/worlds/${slug}/in-process` },
     { label: 'Members', href: `/dashboard/worlds/${slug}/members` },
   ];
 

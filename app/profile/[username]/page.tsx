@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -21,6 +21,7 @@ import IdentityLayer, { type Stamp } from '../../components/profile/IdentityLaye
 import EventsLayer from '../../components/profile/EventsLayer';
 import WorldsLayer from '../../components/profile/WorldsLayer';
 import GuestbookLayer from '../../components/profile/GuestbookLayer';
+import ProfileInProcessLayer, { type LifeChapterView, type WorldEraEntry } from '../../components/profile/InProcessLayer';
 import ToolkitLayer from '../../components/profile/ToolkitLayer';
 
 interface PublicProfile {
@@ -56,6 +57,7 @@ const SECTIONS = [
   { id: 'identity', label: 'PASSPORT' },
   { id: 'events',   label: 'EVENTS' },
   { id: 'worlds',   label: 'WORLDS' },
+  { id: 'inprocess',label: 'IN PROCESS' },
   { id: 'toolkit',  label: 'TOOLKIT' },
   { id: 'guestbook',label: 'GUESTBOOK' },
 ] as const;
@@ -118,6 +120,22 @@ export default function PublicProfilePage() {
     });
   }, [profile?.id]);
 
+  // Life // In Process: personal chapters + eras of worlds they build in.
+  const [lifeChapters, setLifeChapters] = useState<LifeChapterView[]>([]);
+  const [profileEras, setProfileEras] = useState<WorldEraEntry[]>([]);
+  const loadInProcess = useCallback(() => {
+    if (!username) return;
+    fetch(`/api/profile/in-process?username=${encodeURIComponent(username)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setLifeChapters(d.chapters ?? []);
+        setProfileEras(d.worldEras ?? []);
+      })
+      .catch(() => {});
+  }, [username]);
+  useEffect(() => { loadInProcess(); }, [loadInProcess]);
+
   const sortedWorlds = useMemo(() => {
     return [...worldMemberships].sort((a, b) => {
       const priority = (r: string) => r === 'owner' ? 0 : r === 'world_builder' ? 1 : 2;
@@ -127,8 +145,14 @@ export default function PublicProfilePage() {
 
   const roleTags = profile?.roleTags ? profile.roleTags.split(',').map((s) => s.trim()).filter(Boolean) : [];
   const hasOwnedWorlds = sortedWorlds.some((w) => w.role === 'owner' || w.role === 'world_builder');
-  // Hide the Worlds tab entirely when this person isn't part of any world.
-  const visibleSections = SECTIONS.filter((s) => s.id !== 'worlds' || sortedWorlds.length > 0);
+  // Hide the Worlds tab entirely when this person isn't part of any world;
+  // In Process shows when there's a roadmap to see (owners always see it,
+  // so they can start one).
+  const visibleSections = SECTIONS.filter((s) => {
+    if (s.id === 'worlds') return sortedWorlds.length > 0;
+    if (s.id === 'inprocess') return lifeChapters.length > 0 || profileEras.length > 0 || isOwnProfile;
+    return true;
+  });
   const path = resolvePath(profile?.path, roleTags, hasOwnedWorlds);
   const config = PATH_CONFIG[path];
 
@@ -247,6 +271,7 @@ export default function PublicProfilePage() {
       case 'events':    return <EventsLayer config={config} hosted={hostedEvents} attended={attendedEvents} />;
       case 'worlds':    return <WorldsLayer config={config} isWorldBuilder={path === 'worldbuilder'} worlds={sortedWorlds} isOwnProfile={isOwnProfile} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
       case 'toolkit':   return <ToolkitLayer config={config} tools={tools} username={profile?.username ?? username} />;
+      case 'inprocess': return <ProfileInProcessLayer chapters={lifeChapters} worldEras={profileEras} isOwnProfile={isOwnProfile} onChanged={loadInProcess} />;
       case 'guestbook': return <GuestbookLayer config={config} profileUsername={username} />;
       default:          return <IdentityLayer config={config} sectionLabel={sectionLabel} items={endorsedItems} stamps={stamps} showEndorsed={false} editable={isOwnProfile} storageKey={username} ownerName={profile?.username ? `@${profile.username}` : (profile?.name || '')} />;
     }
