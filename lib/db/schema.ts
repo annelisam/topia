@@ -520,6 +520,21 @@ export const eraMilestones = pgTable('era_milestones', {
   index('era_milestones_era_id_idx').on(t.eraId),
 ]);
 
+// A user's connected In Process (inprocess.world) account: their artist
+// wallet address + an artist API key minted through their "Sign in with
+// In•Process" OTP flow. The key can post moments AS the artist, so it is
+// stored AES-256-GCM encrypted (lib/inProcessAccount.ts) and never leaves
+// the server. One connection per user.
+export const inProcessAccounts = pgTable('in_process_accounts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
+  artistAddress: text('artist_address').notNull(),   // their In Process identity (0x…)
+  apiKeyEncrypted: text('api_key_encrypted').notNull(), // iv:tag:ciphertext, base64 parts
+  keyName: text('key_name'),                          // the name we minted the key under
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Personal roadmap entries on the passport ("Move the studio to LA",
 // "Rest era — 6 weeks offline"). status 'witness' = the mockup's
 // "not seeking funds · just witness it".

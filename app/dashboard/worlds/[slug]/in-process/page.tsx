@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { useWorldDashboard } from '../layout';
@@ -31,11 +33,25 @@ const ERA_STATUSES = [
   { value: 'archived', label: 'Archived — hidden everywhere' },
 ];
 
+// A milestone worth minting: prefill for the moment composer.
+export interface MintDraft { title: string; text: string; imageUrl: string; eraId: string }
+
 export default function WorldInProcessPage() {
   const { world, privyId, isBuilder } = useWorldDashboard();
   const [eras, setEras] = useState<Era[] | null>(null);
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ kind: 'era' | 'milestone'; id: string; title: string } | null>(null);
+
+  // In Process connection state drives the ⛓ Moment buttons.
+  const [ipConnected, setIpConnected] = useState<boolean | null>(null);
+  const [mintDraft, setMintDraft] = useState<MintDraft | null>(null);
+  useEffect(() => {
+    if (!privyId) return;
+    fetch(`/api/in-process/connect?privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setIpConnected(!!(d?.configured && d?.connected)))
+      .catch(() => setIpConnected(false));
+  }, [privyId]);
 
   const load = useCallback(() => {
     if (!world?.id) return;
@@ -68,12 +84,20 @@ export default function WorldInProcessPage() {
       ) : (
         <>
           {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
+          {isBuilder && ipConnected === false && (
+            <p className="font-mono text-[11px] text-ink/40 mb-4">
+              ⛓ Want your milestones minted as onchain moments?{' '}
+              <Link href="/profile" className="underline text-ink/60">Connect In Process in your profile settings</Link>.
+            </p>
+          )}
           {eras.map((era) => (
             <EraEditor
               key={era.id}
               era={era}
               privyId={privyId}
               isBuilder={isBuilder}
+              canMint={!!ipConnected}
+              onMint={setMintDraft}
               onChanged={load}
               onError={setError}
               onDelete={(kind, id, title) => setConfirmDelete({ kind, id, title })}
@@ -84,6 +108,10 @@ export default function WorldInProcessPage() {
             <p className="font-mono text-[12px] text-ink/40">No roadmap yet.</p>
           )}
         </>
+      )}
+
+      {mintDraft && (
+        <MintMomentModal draft={mintDraft} privyId={privyId} onClose={() => setMintDraft(null)} onMinted={load} />
       )}
 
       {confirmDelete && (
@@ -108,8 +136,9 @@ export default function WorldInProcessPage() {
 }
 
 /* ── Era block: header fields + milestone list ─────────────────────── */
-function EraEditor({ era, privyId, isBuilder, onChanged, onError, onDelete }: {
+function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onError, onDelete }: {
   era: Era; privyId: string; isBuilder: boolean;
+  canMint: boolean; onMint: (d: MintDraft) => void;
   onChanged: () => void; onError: (e: string) => void;
   onDelete: (kind: 'era' | 'milestone', id: string, title: string) => void;
 }) {
@@ -240,6 +269,16 @@ function EraEditor({ era, privyId, isBuilder, onChanged, onError, onDelete }: {
                   </div>
                   {isBuilder && (
                     <span className="flex items-center gap-2 shrink-0">
+                      {canMint && (
+                        <button
+                          onClick={() => onMint({ title: m.title, text: m.description ?? '', imageUrl: m.imageUrl ?? '', eraId: era.id })}
+                          className={linkBtn}
+                          style={{ color: '#FF5C34' }}
+                          title="Mint this as an In Process moment"
+                        >
+                          ⛓ Moment
+                        </button>
+                      )}
                       <button onClick={() => move(m, -1)} disabled={i === 0} aria-label="Move up" className="w-6 h-6 rounded-sm border border-ink/15 cursor-pointer bg-transparent font-mono text-[11px] text-ink disabled:opacity-25">↑</button>
                       <button onClick={() => move(m, 1)} disabled={i === era.milestones.length - 1} aria-label="Move down" className="w-6 h-6 rounded-sm border border-ink/15 cursor-pointer bg-transparent font-mono text-[11px] text-ink disabled:opacity-25">↓</button>
                       <button onClick={() => setEditingMilestone(editingMilestone === m.id ? null : m.id)} className={linkBtn} style={{ color: 'var(--foreground, #1a1a1a)' }}>
@@ -257,6 +296,9 @@ function EraEditor({ era, privyId, isBuilder, onChanged, onError, onDelete }: {
                       existing={m}
                       onDone={() => { setEditingMilestone(null); onChanged(); }}
                       onError={onError}
+                      // Flipping a milestone to DONE is the natural moment to
+                      // mint — offer the composer right after the save lands.
+                      onDoneTransition={canMint ? (d) => onMint({ title: d.title, text: d.text, imageUrl: d.imageUrl, eraId: era.id }) : undefined}
                     />
                   </div>
                 )}
@@ -270,9 +312,10 @@ function EraEditor({ era, privyId, isBuilder, onChanged, onError, onDelete }: {
 }
 
 /* ── Milestone add/edit form ───────────────────────────────────────── */
-function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError }: {
+function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError, onDoneTransition }: {
   privyId: string; eraId: string; existing?: Milestone; nextIndex?: number;
   onDone: () => void; onError: (e: string) => void;
+  onDoneTransition?: (d: { title: string; text: string; imageUrl: string }) => void;
 }) {
   const [draft, setDraft] = useState({
     title: existing?.title ?? '',
@@ -296,6 +339,9 @@ function MilestoneForm({ privyId, eraId, existing, nextIndex, onDone, onError }:
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); onError(d.error || 'Could not save the milestone.'); return; }
       onDone();
+      if (onDoneTransition && existing && existing.status !== 'done' && draft.status === 'done') {
+        onDoneTransition({ title: draft.title.trim(), text: draft.description.trim(), imageUrl: draft.imageUrl.trim() });
+      }
     } finally { setSaving(false); }
   };
 
@@ -391,6 +437,87 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
           <button onClick={create} disabled={saving || !draft.title.trim()} className={btnLime}>{saving ? 'Creating…' : 'Create era'}</button>
           {hasEras && <button onClick={() => setOpen(false)} className={btnGhost}>Cancel</button>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Mint-as-moment composer ───────────────────────────────────────────
+ * Cross-posts a milestone (or update) to the builder's connected In Process
+ * timeline. Minting is PERMANENT — onchain on Base, media on Arweave — so
+ * the modal says exactly that and nothing mints without this explicit step. */
+function MintMomentModal({ draft, privyId, onClose, onMinted }: {
+  draft: MintDraft; privyId: string; onClose: () => void; onMinted: () => void;
+}) {
+  const { getAccessToken } = usePrivy();
+  const [title, setTitle] = useState(draft.title);
+  const [text, setText] = useState(draft.text);
+  const [imageUrl, setImageUrl] = useState(draft.imageUrl);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [minted, setMinted] = useState<{ collectUrl: string } | null>(null);
+
+  const mint = async () => {
+    if (!title.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const accessToken = await getAccessToken().catch(() => null);
+      const res = await fetch('/api/in-process/moments', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId, accessToken,
+          title: title.trim(),
+          text: text.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
+          eraId: draft.eraId,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || 'Mint failed — nothing was posted.'); return; }
+      setMinted({ collectUrl: d.collectUrl });
+      onMinted();
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: '#FF5C34' }}>⛓ Mint an In Process moment</p>
+            <p className="font-mono text-[11px] text-ink/45 mt-1">Posts to your onchain timeline on inprocess.world.</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
+        </div>
+
+        {minted ? (
+          <div className="py-2">
+            <p className="font-mono text-[13px] font-bold text-ink mb-2">✓ Minted</p>
+            <p className="font-mono text-[11px] text-ink/50 mb-4">
+              It's on your timeline now — the world page's process log picks it up within a few minutes.
+            </p>
+            <a href={minted.collectUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] uppercase tracking-[2px] bg-lime text-obsidian font-bold px-3 py-2 rounded-sm no-underline">
+              View on In Process ↗
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Moment title" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="What happened? (optional)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
+            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Image URL (optional — mirrored to Arweave)" className="w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[16px] sm:text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40" />
+            <p className="font-mono text-[10px] text-ink/40 leading-relaxed">
+              ⚠ Minting is permanent: this becomes an onchain token on Base with media stored on
+              Arweave. It can be hidden on In Process, but never deleted.
+            </p>
+            {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
+            <div className="flex items-center gap-3">
+              <button onClick={mint} disabled={busy || !title.trim()} className={btnLime}>
+                {busy ? 'Minting onchain…' : '⛓ Mint moment'}
+              </button>
+              <button onClick={onClose} className={btnGhost}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

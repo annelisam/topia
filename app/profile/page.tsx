@@ -12,6 +12,7 @@ import SocialConnect, { ENABLED_SOCIAL_PROVIDERS, type SocialProvider } from '..
 import { PATH_CONFIG, type UserPath } from '../components/profile/pathConfig';
 import ProfilePreviewCard from './_components/ProfilePreviewCard';
 import NotificationPrefs from './_components/NotificationPrefs';
+import InProcessConnectCard from '../components/InProcessConnectCard';
 import HandleChangeModal from './_components/HandleChangeModal';
 import { resizeAndUploadAvatar } from '../../lib/uploadImage';
 import RoleTagPicker from '../components/RoleTagPicker';
@@ -716,6 +717,11 @@ export default function ProfilePage() {
           {/* ─── 7. NOTIFICATIONS ─── */}
           <Section label="Notifications" sub="what we email you">
             <NotificationPrefs />
+          </Section>
+
+          {/* ─── 7b. IN PROCESS ─── */}
+          <Section label="In Process" sub="your onchain timeline · inprocess.world">
+            <InProcessConnectCard />
           </Section>
 
           {/* ─── 8. PREVIEW + EXTRAS ─── */}
