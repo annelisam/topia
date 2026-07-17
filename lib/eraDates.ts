@@ -9,6 +9,23 @@
 
 export type DatePrecision = 'day' | 'month' | 'year';
 
+// Server-side intake validators shared by the eras and milestones routes.
+// undefined = field absent (leave untouched), null = clear.
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PRECISIONS = new Set(['day', 'month', 'year']);
+
+export function cleanDate(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (!v) return null;
+  return DATE_RE.test(String(v)) ? String(v) : null;
+}
+
+export function cleanPrecision(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (!v) return null;
+  return PRECISIONS.has(String(v)) ? String(v) : null;
+}
+
 export function formatEraDate(d: string | null | undefined, precision?: string | null): string | null {
   if (!d) return null;
   const dt = new Date(`${d}T00:00:00`);

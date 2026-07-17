@@ -1,220 +1,660 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import { WorldConfig } from './worldConfig';
 import { eraDateRange } from '../../../lib/eraDates';
-import { postKindGlyph, linkThumbnail } from '../../../lib/processPosts';
+import { POST_KINDS, postKindGlyph, linkThumbnail, type PostKind } from '../../../lib/processPosts';
+import { EraDateField, ImageField, inputCls, labelCls, btnLime, btnGhost, MILESTONE_STATUSES, type Precision } from './InProcessFields';
 
-/* The world page's IN PROCESS tab — Latashá's Turn-2 roadmap, minus funding:
- * era header → horizontal milestone rail with statuses → process log strip
- * synced (read-only) from the era's inprocess.world timeline. Orange is the
- * In Process accent throughout, matching the mockup. */
+/* The IN PROCESS roadmap — Latashá's Turn-2 mockup, minus funding.
+ *
+ * Structure follows her model: each PROJECT carries its own roadmap (the
+ * "era" — ORBIT ONE the era IS ORBIT ONE the project), drawn as a horizontal
+ * node timeline: filled orange nodes for DONE, a ring on NOW with its card
+ * highlighted, hollow nodes ahead. A process log of typed posts (moment /
+ * thought / link / embed) runs underneath, merged with the moments synced
+ * from inprocess.world.
+ *
+ * This component is ALSO the editor: builders add and edit everything right
+ * here on the world page — no dashboard round-trip. */
 
-export interface EraMilestoneView { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
+export interface EraMilestoneView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; dateLabel: string | null; status: string; imageUrl: string | null; }
 export interface EraPostView { id: string; kind: string; title: string; body: string | null; imageUrl: string | null; linkUrl: string | null; mintedUrl: string | null; createdAt: string; }
-export interface EraView { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
+export interface EraView { id: string; title: string; description: string | null; projectId?: string | null; projectName?: string | null; projectSlug?: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: EraMilestoneView[]; posts: EraPostView[]; }
+export interface ProjectOption { id: string; name: string; slug: string; }
 interface Moment { id: string; name: string | null; imageUrl: string | null; mime: string | null; createdAt: string | null; collectUrl: string | null; }
 
-// Native Topia posts + synced In Process moments, one strip, newest first.
-interface LogEntry { id: string; title: string; imageUrl: string | null; body: string | null; date: string | null; href: string | null; minted: boolean; glyph: string }
-
 const ORANGE = 'var(--orange, #FF5C34)';
+const STATUS_META: Record<string, string> = { done: 'DONE ✓', now: 'NOW', upcoming: 'UPCOMING', paused: 'PAUSED' };
 
-const STATUS_META: Record<string, { label: string; on: boolean }> = {
-  done: { label: 'DONE ✓', on: true },
-  now: { label: 'NOW', on: true },
-  upcoming: { label: 'UPCOMING', on: false },
-  paused: { label: 'PAUSED', on: false },
-};
+/* ── Timeline node ─────────────────────────────────────────────────── */
+function Node({ state }: { state: 'done' | 'now' | 'future' }) {
+  if (state === 'done') return <span className="w-3.5 h-3.5 rounded-full shrink-0 z-[1]" style={{ backgroundColor: ORANGE }} />;
+  if (state === 'now') return <span className="w-4 h-4 rounded-full shrink-0 z-[1] border-[3px] bg-[var(--page-bg)]" style={{ borderColor: ORANGE }} />;
+  return <span className="w-3.5 h-3.5 rounded-full shrink-0 z-[1] border-2 border-ink/25 bg-[var(--page-bg)]" />;
+}
 
-function ProcessLog({ posts, inProcessUrl }: { posts: EraPostView[]; inProcessUrl: string | null }) {
+/* ── Milestone add/edit modal ──────────────────────────────────────── */
+function MilestoneModal({ eraId, existing, nextIndex, privyId, onClose, onChanged }: {
+  eraId: string; existing?: EraMilestoneView; nextIndex?: number; privyId: string;
+  onClose: () => void; onChanged: () => void;
+}) {
+  const [draft, setDraft] = useState({
+    title: existing?.title ?? '',
+    description: existing?.description ?? '',
+    startDate: existing?.startDate ?? '',
+    endDate: existing?.endDate ?? '',
+    startPrecision: (existing?.startPrecision ?? 'month') as Precision,
+    endPrecision: (existing?.endPrecision ?? 'month') as Precision,
+    status: existing?.status ?? 'upcoming',
+    imageUrl: existing?.imageUrl ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = async () => {
+    if (!draft.title.trim()) return;
+    setSaving(true); setError('');
+    try {
+      const res = await fetch('/api/worlds/eras/milestones', {
+        method: existing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(existing
+          ? { privyId, milestoneId: existing.id, ...draft }
+          : { privyId, eraId, ...draft, sortOrder: nextIndex ?? 0 }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || 'Could not save.'); return; }
+      onChanged();
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  const remove = async () => {
+    if (!existing) return;
+    await fetch(`/api/worlds/eras/milestones?milestoneId=${existing.id}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    onChanged();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] text-ink/50">
+            {existing ? 'Edit milestone' : 'New milestone'}
+          </p>
+          <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
+        </div>
+        <div className="space-y-2.5">
+          <div>
+            <label className={labelCls}>What&apos;s the milestone?</label>
+            <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Album Production" className={inputCls} autoFocus />
+          </div>
+          <div>
+            <label className={labelCls}>One line about it (optional)</label>
+            <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="What this stage is" className={inputCls} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+              onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+            <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+              onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
+          </div>
+          <div>
+            <label className={labelCls}>Where is it?</label>
+            <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={`${inputCls} appearance-none cursor-pointer`}>
+              {MILESTONE_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
+          {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
+          <div className="flex items-center gap-3 flex-wrap pt-1">
+            <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
+              {saving ? 'Saving…' : existing ? 'Save' : 'Add milestone'}
+            </button>
+            {existing && (
+              confirmingDelete
+                ? <button onClick={remove} className="font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer border-none font-bold" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Really delete?</button>
+                : <button onClick={() => setConfirmingDelete(true)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Delete</button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Era (roadmap) create/edit form ────────────────────────────────── */
+function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
+  worldId: string; projects: ProjectOption[]; existing?: EraView; privyId: string;
+  onClose: () => void; onChanged: () => void;
+}) {
+  const [draft, setDraft] = useState({
+    projectId: existing?.projectId ?? '',
+    title: existing?.title ?? '',
+    description: existing?.description ?? '',
+    startDate: existing?.startDate ?? '',
+    endDate: existing?.endDate ?? '',
+    startPrecision: (existing?.startPrecision ?? 'month') as Precision,
+    endPrecision: (existing?.endPrecision ?? 'month') as Precision,
+    status: existing?.status ?? 'active',
+    inProcessUrl: existing?.inProcessUrl ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [error, setError] = useState('');
+
+  const pickProject = (projectId: string) => {
+    const p = projects.find((x) => x.id === projectId);
+    // Prefill the roadmap title with the project name until the builder types their own.
+    const titleUntouched = !draft.title.trim() || projects.some((x) => x.name === draft.title);
+    setDraft({ ...draft, projectId, title: titleUntouched && p ? p.name : draft.title });
+  };
+
+  const save = async () => {
+    if (!draft.title.trim()) return;
+    setSaving(true); setError('');
+    try {
+      const res = await fetch('/api/worlds/eras', {
+        method: existing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(existing
+          ? { privyId, eraId: existing.id, ...draft, projectId: draft.projectId || null }
+          : { privyId, worldId, ...draft, projectId: draft.projectId || null }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || 'Could not save.'); return; }
+      onChanged();
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  const remove = async () => {
+    if (!existing) return;
+    await fetch(`/api/worlds/eras?eraId=${existing.id}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    onChanged();
+    onClose();
+  };
+
+  return (
+    <div className="border-2 border-dashed border-ink/15 rounded-lg p-4 space-y-2.5">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] text-ink/50">
+        {existing ? 'Edit roadmap' : 'Start a roadmap'}
+      </p>
+      <div>
+        <label className={labelCls}>Which project is this the roadmap for?</label>
+        <select value={draft.projectId} onChange={(e) => pickProject(e.target.value)} className={`${inputCls} appearance-none cursor-pointer`}>
+          <option value="">The world itself (no single project)</option>
+          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Roadmap title</label>
+        <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="ORBIT ONE" className={inputCls} />
+      </div>
+      <div>
+        <label className={labelCls}>One-liner (optional)</label>
+        <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="debut album era" className={inputCls} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+          onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+        <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+          onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
+      </div>
+      {existing && (
+        <div>
+          <label className={labelCls}>Status</label>
+          <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={`${inputCls} appearance-none cursor-pointer`}>
+            <option value="active">Active — shown on the world page</option>
+            <option value="complete">Complete — shown as a past era</option>
+            <option value="archived">Archived — hidden from visitors</option>
+          </select>
+        </div>
+      )}
+      <div>
+        <label className={labelCls}>In Process link (optional — syncs your inprocess.world timeline)</label>
+        <input value={draft.inProcessUrl} onChange={(e) => setDraft({ ...draft, inProcessUrl: e.target.value })} placeholder="https://inprocess.world/0x…" className={inputCls} />
+      </div>
+      {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
+          {saving ? 'Saving…' : existing ? 'Save' : 'Create roadmap'}
+        </button>
+        <button onClick={onClose} className={btnGhost}>Cancel</button>
+        {existing && (
+          confirmingDelete
+            ? <button onClick={remove} className="font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer border-none font-bold" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Really delete everything?</button>
+            : <button onClick={() => setConfirmingDelete(true)} className="font-mono text-[11px] uppercase underline cursor-pointer bg-transparent border-none" style={{ color: '#FF5C34' }}>Delete roadmap</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Typed post composer (moment / thought / link / embed) ─────────── */
+function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
+  era: EraView; privyId: string; canMint: boolean; onClose: () => void; onChanged: () => void;
+}) {
+  const { getAccessToken } = usePrivy();
+  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', mint: false };
+  const [draft, setDraft] = useState(blank);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const needsLink = draft.kind === 'link' || draft.kind === 'embed';
+  const ready = needsLink ? !!draft.linkUrl.trim() : !!draft.title.trim();
+
+  const post = async () => {
+    if (!ready) return;
+    setSaving(true); setError('');
+    try {
+      const accessToken = draft.mint ? await getAccessToken().catch(() => null) : null;
+      const res = await fetch('/api/worlds/eras/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyId, accessToken, eraId: era.id,
+          kind: draft.kind,
+          title: draft.title.trim() || undefined,
+          body: draft.body.trim() || undefined,
+          imageUrl: draft.imageUrl.trim() || undefined,
+          linkUrl: draft.linkUrl.trim() || undefined,
+          mintToInProcess: draft.mint,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || 'Could not post.'); return; }
+      onChanged();
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="border-2 border-dashed border-ink/15 rounded-sm p-3 mt-3 space-y-2.5">
+      <div className="flex gap-1.5 flex-wrap">
+        {POST_KINDS.map((k) => (
+          <button
+            key={k.id}
+            onClick={() => setDraft({ ...draft, kind: k.id })}
+            className={`font-mono text-[11px] uppercase tracking-[1px] px-2.5 py-1.5 rounded-sm cursor-pointer transition ${
+              draft.kind === k.id ? 'bg-lime text-obsidian font-bold border-none' : 'bg-transparent text-ink/55 border border-ink/15 hover:border-ink/40'
+            }`}
+          >
+            {k.glyph} {k.label}
+          </button>
+        ))}
+      </div>
+      <p className="font-mono text-[10px] text-ink/35">{POST_KINDS.find((k) => k.id === draft.kind)?.hint} · posts to “{era.title}”</p>
+
+      {draft.kind === 'moment' && (
+        <>
+          <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} label="Image" />
+          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What happened? (e.g. Mix 01 done)" className={inputCls} />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={2} placeholder="A few words of process (optional)" className={inputCls} />
+        </>
+      )}
+      {draft.kind === 'thought' && (
+        <>
+          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="this is the time when…" className={inputCls} />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={4} placeholder="Write it out" className={inputCls} />
+        </>
+      )}
+      {needsLink && (
+        <>
+          <input value={draft.linkUrl} onChange={(e) => setDraft({ ...draft, linkUrl: e.target.value })}
+            placeholder={draft.kind === 'link' ? 'Paste any link from the internet' : 'Paste a YouTube / SoundCloud / Spotify link'} className={inputCls} />
+          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Title (optional — uses the site name)" className={inputCls} />
+        </>
+      )}
+
+      {canMint && (
+        <label className="flex items-center gap-2 font-mono text-[11px] text-ink/60 cursor-pointer">
+          <input type="checkbox" checked={draft.mint} onChange={(e) => setDraft({ ...draft, mint: e.target.checked })} className="cursor-pointer" />
+          ⛓ Also mint on In Process <span className="text-ink/35">(permanent, onchain)</span>
+        </label>
+      )}
+      {error && <p className="font-mono text-[11px]" style={{ color: '#FF5C34' }}>{error}</p>}
+      <div className="flex items-center gap-3">
+        <button onClick={post} disabled={saving || !ready} className={btnLime}>
+          {saving ? (draft.mint ? 'Posting + minting…' : 'Posting…') : 'Post'}
+        </button>
+        <button onClick={onClose} className={btnGhost}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Process log strip (native posts + synced moments) ─────────────── */
+function ProcessLog({ era, privyId, canEdit, onChanged }: {
+  era: EraView; privyId: string; canEdit: boolean; onChanged: () => void;
+}) {
   const [moments, setMoments] = useState<Moment[]>([]);
 
   useEffect(() => {
-    if (!inProcessUrl) return;
+    if (!era.inProcessUrl) return;
     let cancelled = false;
-    fetch(`/api/in-process/timeline?artist=${encodeURIComponent(inProcessUrl)}`)
+    fetch(`/api/in-process/timeline?artist=${encodeURIComponent(era.inProcessUrl)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled) setMoments(d?.moments ?? []); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [inProcessUrl]);
+  }, [era.inProcessUrl]);
 
-  // Merge native posts + synced moments, newest first. A post that was ALSO
-  // minted appears once (the moment with the same collect URL is dropped).
-  const mintedUrls = new Set(posts.map((p) => p.mintedUrl).filter(Boolean));
-  const entries: LogEntry[] = [
-    ...posts.map((p) => ({
-      id: `p-${p.id}`,
-      title: p.title,
+  const mintedUrls = new Set(era.posts.map((p) => p.mintedUrl).filter(Boolean));
+  const entries = [
+    ...era.posts.map((p) => ({
+      id: `p-${p.id}`, postId: p.id, title: p.title,
       imageUrl: p.imageUrl ?? linkThumbnail(p.linkUrl),
       body: p.kind === 'thought' ? p.body : null,
-      date: p.createdAt,
-      href: p.linkUrl ?? p.mintedUrl,
-      minted: !!p.mintedUrl,
+      date: p.createdAt as string | null, href: p.linkUrl ?? p.mintedUrl, minted: !!p.mintedUrl,
       glyph: postKindGlyph(p.kind),
     })),
     ...moments
       .filter((m) => !m.collectUrl || !mintedUrls.has(m.collectUrl))
       .map((m) => ({
-        id: `m-${m.id}`,
-        title: m.name || 'Moment',
-        imageUrl: m.imageUrl,
-        body: null,
-        date: m.createdAt,
-        href: m.collectUrl,
-        minted: true,
+        id: `m-${m.id}`, postId: null as string | null, title: m.name || 'Moment',
+        imageUrl: m.imageUrl, body: null as string | null,
+        date: m.createdAt, href: m.collectUrl, minted: true,
         glyph: m.mime?.startsWith('audio') ? '♫' : '✦',
       })),
   ]
     .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
     .slice(0, 14);
 
-  if (entries.length === 0) return null;
+  const removePost = async (postId: string) => {
+    await fetch(`/api/worlds/eras/posts?postId=${postId}&privyId=${encodeURIComponent(privyId)}`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  if (entries.length === 0 && !canEdit) return null;
 
   return (
     <div className="mt-5">
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
-          Process log{inProcessUrl ? ' · synced with In Process' : ''}
+          Process log{era.inProcessUrl ? ' · synced with In Process' : ''}
         </span>
-        {inProcessUrl && (
-          <a href={inProcessUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[1px] no-underline" style={{ color: ORANGE }}>
+        {era.inProcessUrl && (
+          <a href={era.inProcessUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[1px] no-underline" style={{ color: ORANGE }}>
             Full timeline ↗
           </a>
         )}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-        {entries.map((e) => {
-          const card = (
-            <>
-              {e.imageUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
-              ) : e.body ? (
-                <div className="w-full h-[88px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
-                  <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{e.body}</p>
+      {entries.length === 0 ? (
+        <p className="font-mono text-[11px] text-ink/35">Nothing logged yet — post the first update below.</p>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          {entries.map((e) => {
+            const face = (
+              <>
+                {e.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={e.imageUrl} alt="" className="w-full h-[88px] object-cover" loading="lazy" />
+                ) : e.body ? (
+                  <div className="w-full h-[88px] px-2 py-1.5 bg-ink/[0.03] overflow-hidden">
+                    <p className="font-mono text-[9px] leading-snug text-ink/55 line-clamp-5">{e.body}</p>
+                  </div>
+                ) : (
+                  <div className="w-full h-[88px] flex items-center justify-center bg-ink/[0.04]">
+                    <span className="font-mono text-[16px] text-ink/25">{e.glyph}</span>
+                  </div>
+                )}
+                <div className="px-2 py-1.5">
+                  <p className="font-mono text-[10px] font-bold text-ink truncate">{e.glyph} {e.title}</p>
+                  <p className="font-mono text-[9px] text-ink/40">
+                    {e.date && new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {e.minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}
+                  </p>
                 </div>
-              ) : (
-                <div className="w-full h-[88px] flex items-center justify-center bg-ink/[0.04]">
-                  <span className="font-mono text-[16px] text-ink/25">{e.glyph}</span>
-                </div>
-              )}
-              <div className="px-2 py-1.5">
-                <p className="font-mono text-[10px] font-bold text-ink truncate">{e.glyph} {e.title}</p>
-                <p className="font-mono text-[9px] text-ink/40">
-                  {e.date && new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  {e.minted && <span className="ml-1.5" style={{ color: ORANGE }}>⛓</span>}
-                </p>
+              </>
+            );
+            const cls = 'shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden no-underline hover:border-ink/30 transition relative group';
+            return (
+              <div key={e.id} className={cls}>
+                {e.href
+                  ? <a href={e.href} target="_blank" rel="noopener noreferrer" className="no-underline block">{face}</a>
+                  : face}
+                {canEdit && e.postId && (
+                  <button
+                    onClick={() => removePost(e.postId!)}
+                    aria-label="Delete post"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-obsidian/70 text-bone border-none cursor-pointer text-[11px] leading-none sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
-            </>
-          );
-          const cls = 'shrink-0 w-[132px] border border-ink/[0.08] rounded-sm overflow-hidden no-underline hover:border-ink/30 transition';
-          return e.href ? (
-            <a key={e.id} href={e.href} target="_blank" rel="noopener noreferrer" className={cls}>{card}</a>
-          ) : (
-            <div key={e.id} className={cls}>{card}</div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-export default function InProcessLayer({
-  eras, slug, canEdit,
-}: {
-  config: WorldConfig;
-  eras: EraView[];
-  slug: string;
-  canEdit: boolean;
+/* ── One era section: header + node timeline + log ─────────────────── */
+function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMint, onChanged, hideProjectChip }: {
+  era: EraView; worldId: string; worldSlug: string; projects: ProjectOption[]; privyId: string;
+  canEdit: boolean; canMint: boolean; onChanged: () => void; hideProjectChip?: boolean;
 }) {
-  const visible = eras.filter((e) => e.status !== 'archived');
+  const [editingEra, setEditingEra] = useState(false);
+  const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView } | null>(null);
+  const [composing, setComposing] = useState(false);
 
-  if (visible.length === 0) {
+  const nowIndex = era.milestones.findIndex((m) => m.status === 'now');
+  const lastDone = era.milestones.reduce((acc, m, i) => (m.status === 'done' ? i : acc), -1);
+  const litThrough = nowIndex >= 0 ? nowIndex : lastDone; // connector lights up to here
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
+            In Process // {era.status === 'complete' ? 'Past era' : 'Roadmap'}
+            {era.status === 'archived' && <span style={{ color: ORANGE }}> · archived (only builders see this)</span>}
+          </p>
+          {!hideProjectChip && era.projectName && era.projectSlug && (
+            <Link
+              href={`/worlds/${worldSlug}/projects/${era.projectSlug}`}
+              className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm no-underline mt-1"
+              style={{ backgroundColor: ORANGE, color: '#fff' }}
+            >
+              Project · {era.projectName}
+            </Link>
+          )}
+          <h3 className="font-basement font-black text-[clamp(20px,3vw,30px)] uppercase leading-none text-ink mt-1">
+            {era.title}
+          </h3>
+          {era.description && <p className="font-mono text-[12px] text-ink/55 mt-1">{era.description}</p>}
+        </div>
+        <div className="text-right shrink-0">
+          {eraDateRange(era) && (
+            <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45">{eraDateRange(era)}</p>
+          )}
+          {era.status === 'active' && nowIndex >= 0 && (
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5" style={{ color: ORANGE }}>● In motion</p>
+          )}
+          {canEdit && (
+            <button onClick={() => setEditingEra((e) => !e)} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/50 mt-1">
+              {editingEra ? 'Close' : '✎ Edit'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editingEra && (
+        <div className="mt-3">
+          <EraForm worldId={worldId} projects={projects} existing={era} privyId={privyId}
+            onClose={() => setEditingEra(false)} onChanged={onChanged} />
+        </div>
+      )}
+
+      {/* Node timeline — the mockup's connected dots + cards */}
+      <div className="overflow-x-auto mt-5 pb-1" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex min-w-max">
+          {era.milestones.map((m, i) => {
+            const isNow = m.status === 'now';
+            const nodeState = m.status === 'done' ? 'done' : isNow ? 'now' : 'future';
+            const lit = i <= litThrough;
+            return (
+              <div key={m.id} className="w-[236px] shrink-0 pr-3">
+                {/* node + connector */}
+                <div className="relative h-5 flex items-center">
+                  <Node state={nodeState} />
+                  {i < era.milestones.length - 1 && (
+                    <span className="absolute top-1/2 -translate-y-1/2 h-[2px]" style={{ left: 18, right: -12, backgroundColor: lit && i < litThrough + (nowIndex >= 0 ? 0 : 1) ? ORANGE : 'color-mix(in srgb, var(--page-text) 14%, transparent)' }} />
+                  )}
+                </div>
+                {/* card */}
+                <button
+                  onClick={canEdit ? () => setMilestoneModal({ existing: m }) : undefined}
+                  className={`block w-full text-left mt-2 rounded-sm px-3.5 py-3 bg-transparent ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+                  style={{
+                    border: `${isNow ? 2 : 1}px solid ${isNow ? ORANGE : 'color-mix(in srgb, var(--page-text) 10%, transparent)'}`,
+                    opacity: m.status === 'paused' ? 0.55 : 1,
+                  }}
+                >
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[2px]" style={{ color: m.status === 'done' || isNow ? ORANGE : 'color-mix(in srgb, var(--page-text) 40%, transparent)' }}>
+                    M{String(i + 1).padStart(2, '0')} · {STATUS_META[m.status] ?? m.status.toUpperCase()}
+                  </p>
+                  <p className="font-mono text-[14px] font-bold text-ink leading-tight mt-1.5">{m.title}</p>
+                  {(eraDateRange(m) ?? m.dateLabel) && (
+                    <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 mt-1">{eraDateRange(m) ?? m.dateLabel}</p>
+                  )}
+                  {isNow && m.imageUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={m.imageUrl} alt="" className="w-full h-[96px] object-cover rounded-sm mt-2" loading="lazy" />
+                  )}
+                  {m.description && <p className="font-mono text-[11px] text-ink/50 mt-2 line-clamp-3">{m.description}</p>}
+                  {canEdit && <p className="font-mono text-[9px] uppercase tracking-[1px] text-ink/25 mt-2">✎ tap to edit</p>}
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Add-milestone ghost card */}
+          {canEdit && (
+            <div className="w-[180px] shrink-0">
+              <div className="relative h-5 flex items-center">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-dashed border-ink/25 shrink-0" />
+              </div>
+              <button
+                onClick={() => setMilestoneModal({})}
+                className="w-full mt-2 rounded-sm border-2 border-dashed border-ink/20 px-3.5 py-6 bg-transparent cursor-pointer font-mono text-[11px] uppercase tracking-[1px] text-ink/45 hover:border-ink/40 hover:text-ink/70 transition"
+              >
+                + Milestone
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {era.milestones.length === 0 && !canEdit && (
+        <p className="font-mono text-[11px] text-ink/35 mt-2">No milestones yet.</p>
+      )}
+
+      <ProcessLog era={era} privyId={privyId} canEdit={canEdit} onChanged={onChanged} />
+
+      {canEdit && !composing && (
+        <button onClick={() => setComposing(true)} className={`${btnGhost} mt-3`}>+ Post an update</button>
+      )}
+      {composing && (
+        <PostComposer era={era} privyId={privyId} canMint={canMint} onClose={() => setComposing(false)} onChanged={onChanged} />
+      )}
+
+      {milestoneModal && (
+        <MilestoneModal
+          eraId={era.id}
+          existing={milestoneModal.existing}
+          nextIndex={era.milestones.length}
+          privyId={privyId}
+          onClose={() => setMilestoneModal(null)}
+          onChanged={onChanged}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── The layer ─────────────────────────────────────────────────────── */
+export default function InProcessLayer({
+  eras, worldId, slug: _slug, projects, canEdit, onChanged, projectScope,
+}: {
+  config?: WorldConfig;
+  eras: EraView[];
+  worldId: string;
+  slug: string;
+  projects: ProjectOption[];
+  canEdit: boolean;
+  onChanged: () => void;
+  /** When set, this renders on a project page: only that project's roadmap,
+   * no project chips, and new roadmaps are created pre-linked. */
+  projectScope?: string;
+}) {
+  const { user } = usePrivy();
+  const privyId = user?.id ?? '';
+  const [creating, setCreating] = useState(false);
+  const [canMint, setCanMint] = useState(false);
+
+  useEffect(() => {
+    if (!canEdit || !privyId) return;
+    fetch(`/api/in-process/connect?privyId=${encodeURIComponent(privyId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCanMint(!!(d?.configured && d?.connected)))
+      .catch(() => {});
+  }, [canEdit, privyId]);
+
+  const scoped = projectScope ? eras.filter((e) => e.projectId === projectScope) : eras;
+  const visible = scoped.filter((e) => e.status !== 'archived' || canEdit);
+  const creatableProjects = projectScope ? projects.filter((p) => p.id === projectScope) : projects;
+
+  const startCreate = useCallback(() => setCreating(true), []);
+
+  if (visible.length === 0 && !creating) {
     return (
-      <div className="bg-[var(--page-bg)] flex flex-col items-center justify-center gap-3 py-14">
+      <div className="bg-[var(--page-bg)] flex flex-col items-center justify-center gap-3 py-14 px-4 text-center">
         <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No roadmap yet</span>
         {canEdit && (
-          <Link href={`/dashboard/worlds/${slug}/in-process`} className="font-mono text-[10px] uppercase tracking-wider text-ink/50 hover:text-ink/70 transition-colors border border-ink/[0.12] rounded-sm px-2.5 py-1 no-underline">
-            + Start an era
-          </Link>
+          <>
+            <p className="font-mono text-[11px] text-ink/40 max-w-sm">
+              A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done, what&apos;s in motion, what&apos;s next.
+            </p>
+            <button onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
+          </>
         )}
       </div>
     );
   }
 
   return (
-    <div className="bg-[var(--page-bg)] p-4 flex flex-col gap-8">
-      {visible.map((era) => {
-        const nowIndex = era.milestones.findIndex((m) => m.status === 'now');
-        return (
-          <div key={era.id}>
-            {/* Era header */}
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <div className="min-w-0">
-                <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
-                  In Process // {era.status === 'complete' ? 'Past era' : 'Roadmap'}
-                </p>
-                <h3 className="font-basement font-black text-[clamp(20px,3vw,30px)] uppercase leading-none text-ink mt-1">
-                  {era.title}
-                </h3>
-                {era.description && <p className="font-mono text-[12px] text-ink/55 mt-1">{era.description}</p>}
-              </div>
-              <div className="text-right shrink-0">
-                {eraDateRange(era) && (
-                  <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45">
-                    {eraDateRange(era)}
-                  </p>
-                )}
-                {era.status === 'active' && era.milestones.some((m) => m.status === 'now') && (
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5" style={{ color: ORANGE }}>● In motion</p>
-                )}
-              </div>
-            </div>
-
-            {/* Milestone rail — horizontal scroll; the page never scrolls sideways */}
-            {era.milestones.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto mt-4 pb-1" style={{ scrollbarWidth: 'thin' }}>
-                {era.milestones.map((m, i) => {
-                  const meta = STATUS_META[m.status] ?? STATUS_META.upcoming;
-                  const isNow = m.status === 'now';
-                  return (
-                    <div
-                      key={m.id}
-                      className="shrink-0 w-[218px] rounded-sm border px-3.5 py-3"
-                      style={{
-                        borderColor: isNow ? ORANGE : 'color-mix(in srgb, var(--page-text) 10%, transparent)',
-                        borderWidth: isNow ? 2 : 1,
-                        opacity: m.status === 'paused' ? 0.55 : nowIndex >= 0 && i > nowIndex && m.status === 'upcoming' ? 0.75 : 1,
-                      }}
-                    >
-                      <p className="font-mono text-[9px] font-bold uppercase tracking-[2px]" style={{ color: meta.on ? ORANGE : 'color-mix(in srgb, var(--page-text) 40%, transparent)' }}>
-                        M{String(i + 1).padStart(2, '0')} · {meta.label}
-                      </p>
-                      <p className="font-mono text-[14px] font-bold text-ink leading-tight mt-1.5">{m.title}</p>
-                      {m.dateLabel && <p className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 mt-1">{m.dateLabel}</p>}
-                      {m.imageUrl && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={m.imageUrl} alt="" className="w-full h-[88px] object-cover rounded-sm mt-2" loading="lazy" />
-                      )}
-                      {m.description && <p className="font-mono text-[11px] text-ink/50 mt-2 line-clamp-3">{m.description}</p>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <ProcessLog posts={era.posts ?? []} inProcessUrl={era.inProcessUrl} />
-          </div>
-        );
-      })}
-
-      {canEdit && (
-        <Link href={`/dashboard/worlds/${slug}/in-process`} className="font-mono text-[10px] uppercase tracking-wider text-ink/45 hover:text-ink/70 transition-colors no-underline self-start">
-          ✎ Edit roadmap
-        </Link>
+    <div className="bg-[var(--page-bg)] p-4 flex flex-col gap-10">
+      {creating && (
+        <EraForm
+          worldId={worldId}
+          projects={creatableProjects}
+          privyId={privyId}
+          onClose={() => setCreating(false)}
+          onChanged={onChanged}
+        />
+      )}
+      {visible.map((era) => (
+        <EraSection
+          key={era.id}
+          era={era}
+          worldId={worldId}
+          worldSlug={_slug}
+          projects={projects}
+          privyId={privyId}
+          canEdit={canEdit}
+          canMint={canMint}
+          onChanged={onChanged}
+          hideProjectChip={!!projectScope}
+        />
+      ))}
+      {canEdit && !creating && visible.length > 0 && !projectScope && (
+        <button onClick={startCreate} className={`${btnGhost} self-start`}>+ Roadmap for another project</button>
       )}
     </div>
   );

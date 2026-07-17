@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, use } from 'react';
+import { useState, useEffect, useMemo, useCallback, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
@@ -9,8 +9,10 @@ import remarkGfm from 'remark-gfm';
 import PageShell from '../../../../components/PageShell';
 import LoadingBar from '../../../../components/LoadingBar';
 import ShareButton from '../../../../components/ShareButton';
+import ProjectThumb from '../../../../components/ProjectThumb';
 import { getEmbedUrl, markdownComponents } from '../../../../components/ProjectContent';
 import { getWorldConfig } from '../../../../components/world/worldConfig';
+import InProcessLayer, { type EraView } from '../../../../components/world/InProcessLayer';
 import { faviconUrl } from '../../../../resources/tools/favicon';
 
 /* ── Types ────────────────────────────────────────────────────── */
@@ -69,6 +71,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [siblings, setSiblings] = useState<ProjectDetail[]>([]);
   const [registryTools, setRegistryTools] = useState<RegistryTool[]>([]);
+  const [projectEras, setProjectEras] = useState<EraView[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -106,6 +109,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
   useEffect(() => {
     fetch('/api/tools').then((r) => r.json()).then((d) => setRegistryTools(d.tools || [])).catch(() => {});
   }, []);
+
+  // This project's own roadmap (In Process section below the notes).
+  const loadProjectEras = useCallback(() => {
+    if (!world?.id || !project?.id) return;
+    fetch(`/api/worlds/eras?worldId=${world.id}&projectId=${project.id}`)
+      .then((r) => r.json())
+      .then((d) => setProjectEras(d.eras ?? []))
+      .catch(() => {});
+  }, [world?.id, project?.id]);
+  useEffect(() => { loadProjectEras(); }, [loadProjectEras]);
 
   useEffect(() => {
     if (!authenticated || !user?.id) { setCurrentUserId(null); return; }
@@ -228,10 +241,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                           aria-current={isCurrent ? 'page' : undefined}
                         >
                           <span className="w-8 h-6 rounded border border-ink/10 overflow-hidden shrink-0 bg-ink/[0.04]">
-                            {p.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                            ) : null}
+                            <ProjectThumb imageUrl={p.imageUrl} name={p.name} initialClassName="text-[8px]" />
                           </span>
                           <span className="min-w-0">
                             <span className={`font-mono text-[11px] font-bold uppercase block truncate ${isCurrent ? 'text-ink' : 'text-ink/55'}`}>{p.name}</span>
@@ -329,12 +339,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       title={project.name}
                     />
                   </div>
-                ) : project.imageUrl ? (
+                ) : (
                   <div className="mx-5 md:mx-7 mt-5 rounded-lg overflow-hidden border border-ink/[0.08] max-h-[440px]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
+                    <ProjectThumb imageUrl={project.imageUrl} name={project.name} alt={project.name} fallbackClassName="aspect-[16/5]" initialClassName="text-[clamp(32px,6vw,52px)]" />
                   </div>
-                ) : null}
+                )}
 
                 {/* Body: prose + side column */}
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_240px] gap-7 px-5 md:px-7 py-6 flex-1">
@@ -422,6 +431,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                   </aside>
                 </div>
 
+                {/* In Process — this project's own roadmap + process log */}
+                {(projectEras.length > 0 || isBuilder) && (
+                  <div className="border-t border-ink/[0.06]">
+                    <InProcessLayer
+                      eras={projectEras}
+                      worldId={world.id}
+                      slug={world.slug}
+                      projects={[{ id: project.id, name: project.name, slug: project.slug }]}
+                      canEdit={isBuilder}
+                      onChanged={loadProjectEras}
+                      projectScope={project.id}
+                    />
+                  </div>
+                )}
+
                 {/* Orbit navigation */}
                 {(prevProject || nextProject) && (
                   <div className="grid grid-cols-2 border-t border-ink/[0.08]">
@@ -448,10 +472,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
                       {otherProjects.map((p) => (
                         <Link key={p.id} href={`/worlds/${world.slug}/projects/${p.slug}`} className="w-[150px] shrink-0 border border-ink/[0.08] rounded-md overflow-hidden no-underline bg-ink/[0.02] hover:border-ink/25 transition-colors">
                           <span className="block h-[62px] bg-ink/[0.04] overflow-hidden">
-                            {p.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                            ) : null}
+                            <ProjectThumb imageUrl={p.imageUrl} name={p.name} initialClassName="text-[16px]" />
                           </span>
                           <span className="font-mono text-[10px] font-bold uppercase text-ink block truncate px-2.5 py-2">{p.name}</span>
                         </Link>

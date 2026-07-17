@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo, useRef } from 'react';
+import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../../components/PageShell';
@@ -219,6 +219,14 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .catch(console.error);
   }, []);
 
+  const loadEras = useCallback(() => {
+    if (!world?.id) return;
+    fetch(`/api/worlds/eras?worldId=${world.id}`)
+      .then((r) => r.json())
+      .then((data) => setEras(data.eras || []))
+      .catch(console.error);
+  }, [world?.id]);
+
   useEffect(() => {
     if (!world?.id) return;
     fetch(`/api/worlds/projects?worldId=${world.id}`)
@@ -238,14 +246,12 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       .then((r) => r.json())
       .then((data) => setWorldEvents(data.events || []))
       .catch(console.error);
-    fetch(`/api/worlds/eras?worldId=${world.id}`)
-      .then((r) => r.json())
-      .then((data) => setEras(data.eras || []))
-      .catch(console.error);
+    loadEras();
     fetch(`/api/worlds/announcements?worldId=${world.id}`)
       .then((r) => r.json())
       .then((data) => setAnnouncements(data.announcements || []))
       .catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world?.id]);
 
   useEffect(() => {
@@ -468,7 +474,17 @@ export default function WorldPage({ params }: { params: Promise<{ slug: string }
       case 'architects': return <ArchitectsLayer config={config} builders={worldBuilders} collaborators={collaboratorMembers} ghosts={world?.pendingGhosts ?? []} />;
       case 'events':     return <EventsLayer config={config} events={worldEvents} />;
       case 'tools':      return <ToolsLayer config={config} toolNames={toolsList} allTools={allTools} canEdit={!!isWorldBuilder} editHref={`/dashboard/worlds/${slug}/details`} />;
-      case 'inprocess':  return <InProcessLayer config={config} eras={eras} slug={slug} canEdit={!!isWorldBuilder} />;
+      case 'inprocess':  return (
+        <InProcessLayer
+          config={config}
+          eras={eras}
+          worldId={world?.id ?? ''}
+          slug={slug}
+          projects={projects.map((p) => ({ id: p.id, name: p.name, slug: p.slug }))}
+          canEdit={!!isWorldBuilder}
+          onChanged={loadEras}
+        />
+      );
       default:
         return (
           <OverviewLayer

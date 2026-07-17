@@ -487,6 +487,10 @@ export const tvContent = pgTable('tv_content', {
 export const worldEras = pgTable('world_eras', {
   id: uuid('id').defaultRandom().primaryKey(),
   worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
+  // The roadmap belongs to a PROJECT ("each project has its own roadmap") —
+  // ORBIT ONE the era is ORBIT ONE the project. Null = a legacy world-wide
+  // roadmap from before this linkage existed.
+  projectId: uuid('project_id').references(() => worldProjects.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),           // "ORBIT ONE"
   description: text('description'),         // "debut album era"
   // Real dates with chooseable precision: exact day ("MAR 3, 2026"),
@@ -516,7 +520,13 @@ export const eraMilestones = pgTable('era_milestones', {
   eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),           // "Album Production"
   description: text('description'),
-  dateLabel: text('date_label'),             // "MAR–JUN 2026"
+  // Real dates with precision, same as eras ("MAR 2026 — JUN 2026",
+  // "MAR 3, 2026", "2026"). dateLabel below is the legacy free-text fallback.
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  startPrecision: text('start_precision'), // 'day' | 'month' | 'year' (null = month)
+  endPrecision: text('end_precision'),
+  dateLabel: text('date_label'),             // legacy "MAR–JUN 2026"
   status: text('status').notNull().default('upcoming'), // 'done' | 'now' | 'upcoming' | 'paused'
   imageUrl: text('image_url'),
   // Future funding phase — never rendered yet. Integer cents per house rule.

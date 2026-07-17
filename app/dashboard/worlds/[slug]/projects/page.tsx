@@ -5,6 +5,7 @@ import { ProjectEditor } from '../../../_components/ProjectEditor';
 import { ProjectItem } from '../../../_components/types';
 import { ReadOnlyBanner } from '../../../_components/ReadOnlyBanner';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
+import ProjectThumb from '../../../../components/ProjectThumb';
 import { useWorldDashboard } from '../layout';
 
 export default function WorldProjectsPage() {
@@ -66,16 +67,9 @@ export default function WorldProjectsPage() {
             return (
               <div key={p.id} className="border border-ink/[0.08] rounded-lg overflow-hidden bg-[var(--page-bg)] group relative">
                 {/* Image */}
-                {p.imageUrl ? (
-                  <div className="w-full h-32 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.imageUrl} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-full h-20 flex items-center justify-center bg-ink/[0.03]">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink/15"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  </div>
-                )}
+                <div className="w-full h-32 overflow-hidden">
+                  <ProjectThumb imageUrl={p.imageUrl} name={p.name} initialClassName="text-[28px]" />
+                </div>
                 {/* Info */}
                 <div className="p-3">
                   <h4 className="font-mono text-[13px] font-bold uppercase text-ink truncate mb-0.5">{p.name}</h4>
