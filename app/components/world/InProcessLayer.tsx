@@ -39,21 +39,67 @@ const ORANGE = 'var(--orange, #FF5C34)';
 const STATUS_META: Record<string, string> = { done: 'DONE ✓', now: 'NOW', upcoming: 'UPCOMING', paused: 'PAUSED' };
 
 /* ── Timeline node ─────────────────────────────────────────────────── */
-function Node({ state }: { state: 'done' | 'now' | 'future' }) {
-  if (state === 'done') return <span className="w-3.5 h-3.5 rounded-full shrink-0 z-[1]" style={{ backgroundColor: ORANGE }} />;
-  if (state === 'now') return <span className="w-4 h-4 rounded-full shrink-0 z-[1] border-[3px] bg-[var(--page-bg)]" style={{ borderColor: ORANGE }} />;
-  return <span className="w-3.5 h-3.5 rounded-full shrink-0 z-[1] border-2 border-ink/25 bg-[var(--page-bg)]" />;
+function Node({ state, small }: { state: 'done' | 'now' | 'future'; small?: boolean }) {
+  const s = small ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5';
+  const sNow = small ? 'w-3 h-3 border-2' : 'w-4 h-4 border-[3px]';
+  if (state === 'done') return <span className={`${s} rounded-full shrink-0 z-[1]`} style={{ backgroundColor: ORANGE }} />;
+  if (state === 'now') return <span className={`${sNow} rounded-full shrink-0 z-[1] bg-[var(--page-bg)]`} style={{ borderColor: ORANGE, borderStyle: 'solid' }} />;
+  return <span className={`${s} rounded-full shrink-0 z-[1] border-2 border-ink/25 bg-[var(--page-bg)]`} />;
 }
 
-/* ── Milestone modal ───────────────────────────────────────────────
- * Opens in a read view (everyone sees the full milestone); builders
- * flip to the edit form with an explicit ✎ Edit. Creating a new
- * milestone goes straight to the form. */
-function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, posts = [], onClose, onChanged }: {
-  eraId: string; existing?: EraMilestoneView; index?: number; nextIndex?: number; privyId: string;
-  canEdit: boolean; posts?: EraPostView[]; onClose: () => void; onChanged: () => void;
+/* ── Masthead ──────────────────────────────────────────────────────
+ * One branded header for the whole section. A first-time visitor
+ * should get the entire system from this alone: what they're looking
+ * at, what the node states mean, what ⛓ means, and that In Process
+ * (inprocess.world) is the onchain side of it. */
+function Masthead({ canEdit, canMint }: { canEdit: boolean; canMint: boolean }) {
+  return (
+    <div className="border-b-2 pb-4" style={{ borderColor: ORANGE }}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="font-basement font-black text-[clamp(18px,2.6vw,24px)] uppercase leading-none text-ink">
+          In<span style={{ color: ORANGE }}>•</span>Process
+        </h2>
+        <a
+          href="https://inprocess.world"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-[9px] uppercase tracking-[2px] no-underline text-ink/40 hover:text-ink/70 transition-colors"
+        >
+          an inprocess.world integration ↗
+        </a>
+      </div>
+      <p className="font-mono text-[12px] text-ink/55 mt-1.5 max-w-2xl">
+        Build in public. Each project&apos;s journey, told as a roadmap of milestones and a live log of the
+        process — tap any milestone to see the updates behind it.
+      </p>
+
+      {/* Legend — the timeline reads itself */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3.5">
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="done" small /> Done</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="now" small /> In motion</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="future" small /> Up next</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px]" style={{ color: ORANGE }}>⛓ Minted onchain — collectible</span>
+      </div>
+
+      {canEdit && (
+        <p className="font-mono text-[10px] text-ink/40 mt-3">
+          {canMint
+            ? <>⛓ Minting is on — any update you post can also publish to your In Process timeline.</>
+            : <>Want your updates minted onchain too? <Link href="/profile" className="underline text-ink/60">Connect In Process in your profile</Link>.</>}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Milestone add/edit modal (builders only) ──────────────────────
+ * Reading a milestone happens inline on the timeline — selecting a
+ * card opens its detail panel and filters the log. This modal is
+ * purely the form. */
+function MilestoneModal({ eraId, existing, nextIndex, privyId, onClose, onChanged }: {
+  eraId: string; existing?: EraMilestoneView; nextIndex?: number; privyId: string;
+  onClose: () => void; onChanged: () => void;
 }) {
-  const [mode, setMode] = useState<'view' | 'edit'>(existing ? 'view' : 'edit');
   const [draft, setDraft] = useState({
     title: existing?.title ?? '',
     description: existing?.description ?? '',
@@ -92,49 +138,6 @@ function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, p
     onClose();
   };
 
-  if (mode === 'view' && existing) {
-    const m = existing;
-    const accent = m.status === 'done' || m.status === 'now';
-    const updates = posts.filter((p) => p.milestoneId === m.id).slice(0, 6);
-    return (
-      <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
-        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-start justify-between gap-3">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: accent ? ORANGE : 'color-mix(in srgb, var(--page-text) 45%, transparent)' }}>
-              {typeof index === 'number' && `M${String(index + 1).padStart(2, '0')} · `}{STATUS_META[m.status] ?? m.status.toUpperCase()}
-            </p>
-            <button onClick={onClose} aria-label="Close" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
-          </div>
-          <h4 className="font-basement font-black text-[22px] uppercase leading-tight text-ink mt-2">{m.title}</h4>
-          {(eraDateRange(m) ?? m.dateLabel) && (
-            <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45 mt-1.5">{eraDateRange(m) ?? m.dateLabel}</p>
-          )}
-          {m.imageUrl && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={m.imageUrl} alt="" className="w-full max-h-[280px] object-cover rounded-sm mt-3" />
-          )}
-          {m.description && <p className="font-mono text-[13px] text-ink/70 leading-relaxed mt-3">{m.description}</p>}
-          {updates.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-ink/[0.08]">
-              <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1.5">From the process log</p>
-              {updates.map((p) => (
-                <p key={p.id} className="font-mono text-[11px] text-ink/65 py-1 truncate">
-                  {postKindGlyph(p.kind)} {p.title}
-                  <span className="text-ink/35 ml-2">{new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                </p>
-              ))}
-            </div>
-          )}
-          {canEdit && (
-            <div className="mt-4 pt-3 border-t border-ink/[0.08]">
-              <button onClick={() => setMode('edit')} className={btnGhost}>✎ Edit milestone</button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 bg-[var(--page-bg)] border border-ink/[0.1] max-h-[88lvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -171,7 +174,7 @@ function MilestoneModal({ eraId, existing, index, nextIndex, privyId, canEdit, p
             <button onClick={save} disabled={saving || !draft.title.trim()} className={btnLime}>
               {saving ? 'Saving…' : existing ? 'Save' : 'Add milestone'}
             </button>
-            {existing && <button onClick={() => setMode('view')} className={btnGhost}>Cancel</button>}
+            <button onClick={onClose} className={btnGhost}>Cancel</button>
             {existing && (
               confirmingDelete
                 ? <button onClick={remove} className="font-mono text-[11px] uppercase tracking-[1px] px-3 py-1.5 rounded-sm cursor-pointer border-none font-bold" style={{ backgroundColor: '#FF5C34', color: '#fff' }}>Really delete?</button>
@@ -391,11 +394,12 @@ function HowThisWorks({ canEdit }: { canEdit: boolean }) {
 }
 
 /* ── Typed post composer (moment / thought / link / embed) ─────────── */
-function PostComposer({ era, privyId, canMint, onClose, onChanged }: {
-  era: EraView; privyId: string; canMint: boolean; onClose: () => void; onChanged: () => void;
+function PostComposer({ era, privyId, canMint, initialMilestoneId = '', onClose, onChanged }: {
+  era: EraView; privyId: string; canMint: boolean; initialMilestoneId?: string;
+  onClose: () => void; onChanged: () => void;
 }) {
   const { getAccessToken } = usePrivy();
-  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', milestoneId: '', mint: false };
+  const blank = { kind: 'moment' as PostKind, title: '', body: '', imageUrl: '', linkUrl: '', milestoneId: initialMilestoneId, mint: false };
   const [draft, setDraft] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -579,8 +583,11 @@ function PostModal({ entry, milestones, canEdit, onDelete, onClose }: {
 }
 
 /* ── Process log strip (native posts + synced moments) ─────────────── */
-function ProcessLog({ era, privyId, canEdit, onChanged }: {
+function ProcessLog({ era, privyId, canEdit, onChanged, filter, onClearFilter }: {
   era: EraView; privyId: string; canEdit: boolean; onChanged: () => void;
+  /** Set when a milestone is selected on the timeline — the log shows only its updates. */
+  filter?: { id: string; index: number; title: string } | null;
+  onClearFilter?: () => void;
 }) {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [viewing, setViewing] = useState<LogEntry | null>(null);
@@ -623,25 +630,46 @@ function ProcessLog({ era, privyId, canEdit, onChanged }: {
     onChanged();
   };
 
-  if (entries.length === 0 && !canEdit) return null;
+  // A selected milestone narrows the strip to its updates.
+  const shown = filter ? entries.filter((e) => e.milestoneId === filter.id) : entries;
+
+  if (entries.length === 0 && !canEdit && !filter) return null;
 
   return (
     <div className="mt-5">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
-          Process log{era.inProcessUrl ? ' · synced with In Process' : ''}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <span className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40 inline-flex items-center gap-2 flex-wrap">
+          Process log{!filter && era.inProcessUrl ? ' · synced with In Process' : ''}
+          {filter && (
+            <button
+              onClick={onClearFilter}
+              className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none"
+              style={{ backgroundColor: ORANGE, color: '#fff' }}
+              title="Show all updates"
+            >
+              M{String(filter.index + 1).padStart(2, '0')} · {filter.title} ✕
+            </button>
+          )}
         </span>
-        {era.inProcessUrl && (
+        {filter ? (
+          <button onClick={onClearFilter} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/45">
+            Show all ({entries.length})
+          </button>
+        ) : era.inProcessUrl ? (
           <a href={era.inProcessUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[1px] no-underline" style={{ color: ORANGE }}>
             Full timeline ↗
           </a>
-        )}
+        ) : null}
       </div>
-      {entries.length === 0 ? (
-        <p className="font-mono text-[11px] text-ink/35">Nothing logged yet — post the first update below.</p>
+      {shown.length === 0 ? (
+        <p className="font-mono text-[11px] text-ink/35">
+          {filter
+            ? <>No updates tied to this milestone yet{canEdit ? ' — post one below and it files here.' : '.'}</>
+            : <>Nothing logged yet — post the first update below.</>}
+        </p>
       ) : (
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-          {entries.map((e) => {
+          {shown.map((e) => {
             const msIndex = e.milestoneId ? era.milestones.findIndex((m) => m.id === e.milestoneId) : -1;
             return (
               <button
@@ -688,32 +716,73 @@ function ProcessLog({ era, privyId, canEdit, onChanged }: {
   );
 }
 
+/* ── Inline milestone detail — appears under the timeline when a node
+ * card is selected; the process log below filters to match. ─────────── */
+function MilestoneDetail({ m, index, updateCount, canEdit, onEdit, onClose }: {
+  m: EraMilestoneView; index: number; updateCount: number; canEdit: boolean;
+  onEdit: () => void; onClose: () => void;
+}) {
+  const accent = m.status === 'done' || m.status === 'now';
+  return (
+    <div className="mt-3 rounded-lg border-l-[3px] border border-ink/[0.1] p-4" style={{ borderLeftColor: ORANGE }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: accent ? ORANGE : 'color-mix(in srgb, var(--page-text) 45%, transparent)' }}>
+            M{String(index + 1).padStart(2, '0')} · {STATUS_META[m.status] ?? m.status.toUpperCase()}
+          </p>
+          <h4 className="font-basement font-black text-[18px] uppercase leading-tight text-ink mt-1">{m.title}</h4>
+          {(eraDateRange(m) ?? m.dateLabel) && (
+            <p className="font-mono text-[11px] uppercase tracking-[1px] text-ink/45 mt-1">{eraDateRange(m) ?? m.dateLabel}</p>
+          )}
+        </div>
+        <button onClick={onClose} aria-label="Close milestone" className="bg-transparent border-none cursor-pointer text-[18px] leading-none p-0 text-ink/50">×</button>
+      </div>
+      <div className="flex flex-wrap gap-4 mt-2 items-start">
+        {m.imageUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={m.imageUrl} alt="" className="w-full sm:w-[220px] max-h-[160px] object-cover rounded-sm" />
+        )}
+        {m.description && <p className="font-mono text-[12.5px] text-ink/70 leading-relaxed flex-1 min-w-[200px]">{m.description}</p>}
+      </div>
+      <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-ink/[0.06]">
+        <span className="font-mono text-[10px] uppercase tracking-[1px] text-ink/45">
+          {updateCount > 0 ? <>↓ {updateCount} update{updateCount === 1 ? '' : 's'} in the log below</> : 'No updates logged for this yet'}
+        </span>
+        {canEdit && (
+          <button onClick={onEdit} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/50">✎ Edit</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── One era section: header + node timeline + log ─────────────────── */
 function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMint, onChanged, hideProjectChip }: {
   era: EraView; worldId: string; worldSlug: string; projects: ProjectOption[]; privyId: string;
   canEdit: boolean; canMint: boolean; onChanged: () => void; hideProjectChip?: boolean;
 }) {
   const [editingEra, setEditingEra] = useState(false);
-  const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView; index?: number } | null>(null);
+  const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView } | null>(null);
+  const [selectedMsId, setSelectedMsId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
 
   const nowIndex = era.milestones.findIndex((m) => m.status === 'now');
   const lastDone = era.milestones.reduce((acc, m, i) => (m.status === 'done' ? i : acc), -1);
   const litThrough = nowIndex >= 0 ? nowIndex : lastDone; // connector lights up to here
 
+  const selectedIndex = selectedMsId ? era.milestones.findIndex((m) => m.id === selectedMsId) : -1;
+  const selectedMs = selectedIndex >= 0 ? era.milestones[selectedIndex] : null;
+  const selectedUpdateCount = selectedMs ? era.posts.filter((p) => p.milestoneId === selectedMs.id).length : 0;
+
   return (
     <div>
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">
-            In Process // {era.status === 'complete' ? 'Past era' : 'Roadmap'}
-            {era.status === 'archived' && <span style={{ color: ORANGE }}> · archived (only builders see this)</span>}
-          </p>
           {!hideProjectChip && era.projectName && era.projectSlug && (
             <Link
               href={`/worlds/${worldSlug}/projects/${era.projectSlug}`}
-              className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm no-underline mt-1"
+              className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm no-underline"
               style={{ backgroundColor: ORANGE, color: '#fff' }}
             >
               Project · {era.projectName}
@@ -730,6 +799,12 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
           )}
           {era.status === 'active' && nowIndex >= 0 && (
             <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5" style={{ color: ORANGE }}>● In motion</p>
+          )}
+          {era.status === 'complete' && (
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5 text-ink/40">✓ Past era</p>
+          )}
+          {era.status === 'archived' && (
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5" style={{ color: ORANGE }}>Archived — only builders see this</p>
           )}
           {canEdit && (
             <button onClick={() => setEditingEra((e) => !e)} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/50 mt-1">
@@ -762,12 +837,14 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
                     <span className="absolute top-1/2 -translate-y-1/2 h-[2px]" style={{ left: 18, right: -12, backgroundColor: lit && i < litThrough + (nowIndex >= 0 ? 0 : 1) ? ORANGE : 'color-mix(in srgb, var(--page-text) 14%, transparent)' }} />
                   )}
                 </div>
-                {/* card */}
+                {/* card — tap to select: detail opens below, log filters to it */}
                 <button
-                  onClick={() => setMilestoneModal({ existing: m, index: i })}
-                  className="block w-full text-left mt-2 rounded-sm px-3.5 py-3 bg-transparent cursor-pointer transition-colors hover:bg-ink/[0.04]"
+                  onClick={() => setSelectedMsId((prev) => (prev === m.id ? null : m.id))}
+                  aria-pressed={selectedMsId === m.id}
+                  className="block w-full text-left mt-2 rounded-sm px-3.5 py-3 cursor-pointer transition-colors hover:bg-ink/[0.04]"
                   style={{
-                    border: `${isNow ? 2 : 1}px solid ${isNow ? ORANGE : 'color-mix(in srgb, var(--page-text) 10%, transparent)'}`,
+                    border: `${isNow || selectedMsId === m.id ? 2 : 1}px solid ${isNow || selectedMsId === m.id ? ORANGE : 'color-mix(in srgb, var(--page-text) 10%, transparent)'}`,
+                    backgroundColor: selectedMsId === m.id ? 'color-mix(in srgb, #FF5C34 9%, transparent)' : 'transparent',
                     opacity: m.status === 'paused' ? 0.55 : 1,
                   }}
                 >
@@ -808,24 +885,48 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
         <p className="font-mono text-[11px] text-ink/35 mt-2">No milestones yet.</p>
       )}
 
-      <ProcessLog era={era} privyId={privyId} canEdit={canEdit} onChanged={onChanged} />
+      {selectedMs && (
+        <MilestoneDetail
+          m={selectedMs}
+          index={selectedIndex}
+          updateCount={selectedUpdateCount}
+          canEdit={canEdit}
+          onEdit={() => setMilestoneModal({ existing: selectedMs })}
+          onClose={() => setSelectedMsId(null)}
+        />
+      )}
+
+      <ProcessLog
+        era={era}
+        privyId={privyId}
+        canEdit={canEdit}
+        onChanged={onChanged}
+        filter={selectedMs ? { id: selectedMs.id, index: selectedIndex, title: selectedMs.title } : null}
+        onClearFilter={() => setSelectedMsId(null)}
+      />
 
       {canEdit && !composing && (
-        <button onClick={() => setComposing(true)} className={`${btnGhost} mt-3`}>+ Post an update</button>
+        <button onClick={() => setComposing(true)} className={`${btnGhost} mt-3`}>
+          + Post an update{selectedMs ? ` to M${String(selectedIndex + 1).padStart(2, '0')}` : ''}
+        </button>
       )}
       {composing && (
-        <PostComposer era={era} privyId={privyId} canMint={canMint} onClose={() => setComposing(false)} onChanged={onChanged} />
+        <PostComposer
+          era={era}
+          privyId={privyId}
+          canMint={canMint}
+          initialMilestoneId={selectedMs?.id ?? ''}
+          onClose={() => setComposing(false)}
+          onChanged={onChanged}
+        />
       )}
 
       {milestoneModal && (
         <MilestoneModal
           eraId={era.id}
           existing={milestoneModal.existing}
-          index={milestoneModal.index}
           nextIndex={era.milestones.length}
           privyId={privyId}
-          canEdit={canEdit}
-          posts={era.posts}
           onClose={() => setMilestoneModal(null)}
           onChanged={onChanged}
         />
@@ -870,26 +971,28 @@ export default function InProcessLayer({
 
   if (visible.length === 0 && !creating) {
     return (
-      <div className="bg-[var(--page-bg)] flex flex-col items-center justify-center gap-3 py-14 px-4 text-center">
-        <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No roadmap yet</span>
-        {canEdit && (
-          <>
-            <p className="font-mono text-[11px] text-ink/40 max-w-sm">
-              A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done,
-              what&apos;s in motion, what&apos;s next. {!projectScope && 'No project yet? You can make one as you go.'}
-            </p>
-            <button onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
-            <div className="w-full max-w-md text-left mt-4">
-              <HowThisWorks canEdit={canEdit} />
-            </div>
-          </>
-        )}
+      <div className="bg-[var(--page-bg)] p-4">
+        <Masthead canEdit={canEdit} canMint={canMint} />
+        <div className="flex flex-col items-center justify-center gap-3 py-12 px-4 text-center">
+          <span className="font-mono text-[11px] text-ink/30 uppercase tracking-wider">No roadmap yet</span>
+          {canEdit && (
+            <>
+              <p className="font-mono text-[11px] text-ink/40 max-w-sm">
+                A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done,
+                what&apos;s in motion, what&apos;s next. {!projectScope && 'No project yet? You can make one as you go.'}
+              </p>
+              <button onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
+            </>
+          )}
+        </div>
+        <HowThisWorks canEdit={canEdit} />
       </div>
     );
   }
 
   return (
     <div className="bg-[var(--page-bg)] p-4 flex flex-col gap-10">
+      <Masthead canEdit={canEdit} canMint={canMint} />
       {creating && (
         <EraForm
           worldId={worldId}
