@@ -12,9 +12,12 @@ try {
 
 const sql = neon(process.env.DATABASE_URL || process.env.POSTGRES_URL);
 
-// Round 2: real era dates + native process-log posts.
+// Round 2: real era dates (with precision: day | month | year) + native
+// process-log posts.
 await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "start_date" date`;
 await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "end_date" date`;
+await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "start_precision" text`;
+await sql`ALTER TABLE "world_eras" ADD COLUMN IF NOT EXISTS "end_precision" text`;
 
 await sql`
   CREATE TABLE IF NOT EXISTS "era_process_posts" (

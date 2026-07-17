@@ -16,7 +16,76 @@ import { resizeAndUploadImage } from '../../../../../lib/uploadImage';
 
 interface Milestone { id: string; title: string; description: string | null; dateLabel: string | null; status: string; imageUrl: string | null; sortOrder: number | null; }
 interface ProcessPost { id: string; title: string; body: string | null; imageUrl: string | null; mintedUrl: string | null; createdAt: string; }
-interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
+interface Era { id: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; inProcessUrl: string | null; milestones: Milestone[]; posts: ProcessPost[]; }
+
+type Precision = 'day' | 'month' | 'year';
+
+// Normalize a stored YYYY-MM-DD to the chosen precision (month → 1st,
+// year → Jan 1) so the DB always holds a valid full date.
+function normalizeDate(v: string, p: Precision): string {
+  if (!v) return '';
+  const [y, m] = v.split('-');
+  if (p === 'year') return `${y}-01-01`;
+  if (p === 'month') return `${y}-${m || '01'}-01`;
+  return v;
+}
+
+/* One era date: how precise? (exact day / month / just a year) + the
+ * matching input. Value is always propagated as a normalized full date. */
+function EraDateField({ label, value, precision, onChange }: {
+  label: string;
+  value: string; // '' or YYYY-MM-DD
+  precision: Precision;
+  onChange: (next: { value: string; precision: Precision }) => void;
+}) {
+  const [yearText, setYearText] = useState(value ? value.slice(0, 4) : '');
+
+  const setP = (p: Precision) => onChange({ value: normalizeDate(value, p), precision: p });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="font-mono text-[10px] uppercase tracking-[2px] text-ink/40">{label}</label>
+        <select
+          value={precision}
+          onChange={(e) => setP(e.target.value as Precision)}
+          className="font-mono text-[10px] uppercase tracking-[1px] text-ink/50 bg-transparent border border-ink/10 rounded-sm px-1.5 py-0.5 cursor-pointer outline-none"
+        >
+          <option value="day">Exact date</option>
+          <option value="month">Month + year</option>
+          <option value="year">Year only</option>
+        </select>
+      </div>
+      {precision === 'year' ? (
+        <input
+          inputMode="numeric"
+          value={yearText}
+          onChange={(e) => {
+            const t = e.target.value.replace(/\D/g, '').slice(0, 4);
+            setYearText(t);
+            onChange({ value: /^\d{4}$/.test(t) ? `${t}-01-01` : '', precision });
+          }}
+          placeholder="2026"
+          className={inputCls}
+        />
+      ) : precision === 'month' ? (
+        <input
+          type="month"
+          value={value ? value.slice(0, 7) : ''}
+          onChange={(e) => onChange({ value: e.target.value ? `${e.target.value}-01` : '', precision })}
+          className={inputCls}
+        />
+      ) : (
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChange({ value: e.target.value, precision })}
+          className={inputCls}
+        />
+      )}
+    </div>
+  );
+}
 
 const inputCls = 'w-full border border-ink/15 bg-transparent px-3 py-2 font-mono text-[13px] rounded-sm outline-none text-ink placeholder:text-ink/30 focus:border-ink/40';
 const labelCls = 'block font-mono text-[10px] uppercase tracking-[2px] text-ink/40 mb-1';
@@ -146,7 +215,13 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
   onDelete: (kind: 'era' | 'milestone', id: string, title: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ title: era.title, description: era.description ?? '', startDate: era.startDate ?? '', endDate: era.endDate ?? '', status: era.status, inProcessUrl: era.inProcessUrl ?? '' });
+  const [draft, setDraft] = useState({
+    title: era.title, description: era.description ?? '',
+    startDate: era.startDate ?? '', endDate: era.endDate ?? '',
+    startPrecision: (era.startPrecision ?? 'month') as Precision,
+    endPrecision: (era.endPrecision ?? 'month') as Precision,
+    status: era.status, inProcessUrl: era.inProcessUrl ?? '',
+  });
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<string | null>(null);
@@ -213,15 +288,11 @@ function EraEditor({ era, privyId, isBuilder, canMint, onMint, onChanged, onErro
               <label className={labelCls}>One-line description</label>
               <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="debut album era" className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelCls}>Starts</label>
-                <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Ends</label>
-                <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className={inputCls} />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+                onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+              <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+                onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
             </div>
             <div>
               <label className={labelCls}>Status</label>
@@ -389,7 +460,11 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
   worldId: string; privyId: string; onCreated: () => void; onError: (e: string) => void; hasEras: boolean;
 }) {
   const [open, setOpen] = useState(!hasEras);
-  const [draft, setDraft] = useState({ title: '', description: '', startDate: '', endDate: '', inProcessUrl: '' });
+  const [draft, setDraft] = useState({
+    title: '', description: '', startDate: '', endDate: '',
+    startPrecision: 'month' as Precision, endPrecision: 'month' as Precision,
+    inProcessUrl: '',
+  });
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -401,7 +476,7 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
         body: JSON.stringify({ privyId, worldId, ...draft }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); onError(d.error || 'Could not create the era.'); return; }
-      setDraft({ title: '', description: '', startDate: '', endDate: '', inProcessUrl: '' });
+      setDraft({ title: '', description: '', startDate: '', endDate: '', startPrecision: 'month', endPrecision: 'month', inProcessUrl: '' });
       setOpen(false);
       onCreated();
     } finally { setSaving(false); }
@@ -425,15 +500,11 @@ function NewEraForm({ worldId, privyId, onCreated, onError, hasEras }: {
           <label className={labelCls}>One-line description</label>
           <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="debut album era" className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className={labelCls}>Starts</label>
-            <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Ends</label>
-            <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className={inputCls} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <EraDateField label="Starts" value={draft.startDate} precision={draft.startPrecision}
+            onChange={(n) => setDraft({ ...draft, startDate: n.value, startPrecision: n.precision })} />
+          <EraDateField label="Ends (optional)" value={draft.endDate} precision={draft.endPrecision}
+            onChange={(n) => setDraft({ ...draft, endDate: n.value, endPrecision: n.precision })} />
         </div>
         <div>
           <label className={labelCls}>In Process link (optional — syncs your process log)</label>

@@ -6,12 +6,20 @@ import { eq, and, asc, desc, inArray } from 'drizzle-orm';
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const ERA_STATUSES = new Set(['active', 'complete', 'archived']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PRECISIONS = new Set(['day', 'month', 'year']);
 
-// Date fields arrive as YYYY-MM-DD from <input type="date">; '' clears.
+// Date fields arrive normalized as YYYY-MM-DD (the editor pads month → 1st,
+// year → Jan 1); '' clears.
 function cleanDate(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   if (!v) return null;
   return DATE_RE.test(String(v)) ? String(v) : null;
+}
+
+function cleanPrecision(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (!v) return null;
+  return PRECISIONS.has(String(v)) ? String(v) : null;
 }
 
 // Same builder bar as world projects: owners and world_builders write,
@@ -80,7 +88,7 @@ export async function GET(request: Request) {
 // POST /api/worlds/eras — create an era (builders).
 export async function POST(request: Request) {
   try {
-    const { privyId, worldId, title, description, startDate, endDate, startLabel, endLabel, status, inProcessUrl } = await request.json();
+    const { privyId, worldId, title, description, startDate, endDate, startPrecision, endPrecision, startLabel, endLabel, status, inProcessUrl } = await request.json();
     if (!worldId || !privyId || !title?.trim()) {
       return NextResponse.json({ error: 'worldId and title are required' }, { status: 400 });
     }
@@ -97,6 +105,8 @@ export async function POST(request: Request) {
       description: description ? String(description).trim() : null,
       startDate: cleanDate(startDate) ?? null,
       endDate: cleanDate(endDate) ?? null,
+      startPrecision: cleanPrecision(startPrecision) ?? null,
+      endPrecision: cleanPrecision(endPrecision) ?? null,
       startLabel: startLabel ? String(startLabel).trim() : null,
       endLabel: endLabel ? String(endLabel).trim() : null,
       status: cleanStatus,
@@ -126,11 +136,15 @@ export async function PUT(request: Request) {
 
     const startDate = cleanDate(fields.startDate);
     const endDate = cleanDate(fields.endDate);
+    const startPrecision = cleanPrecision(fields.startPrecision);
+    const endPrecision = cleanPrecision(fields.endPrecision);
     await db.update(worldEras).set({
       ...(fields.title !== undefined ? { title: String(fields.title).trim() } : {}),
       ...(fields.description !== undefined ? { description: fields.description ? String(fields.description).trim() : null } : {}),
       ...(startDate !== undefined ? { startDate } : {}),
       ...(endDate !== undefined ? { endDate } : {}),
+      ...(startPrecision !== undefined ? { startPrecision } : {}),
+      ...(endPrecision !== undefined ? { endPrecision } : {}),
       ...(fields.startLabel !== undefined ? { startLabel: fields.startLabel ? String(fields.startLabel).trim() : null } : {}),
       ...(fields.endLabel !== undefined ? { endLabel: fields.endLabel ? String(fields.endLabel).trim() : null } : {}),
       ...(fields.status !== undefined ? { status: String(fields.status) } : {}),

@@ -489,11 +489,15 @@ export const worldEras = pgTable('world_eras', {
   worldId: uuid('world_id').references(() => worlds.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),           // "ORBIT ONE"
   description: text('description'),         // "debut album era"
-  // Real dates (date pickers in the editor); rendered as "MAR 2026 — FEB
-  // 2027". The legacy free-text labels below remain as a read fallback for
-  // rows created before the date columns existed.
+  // Real dates with chooseable precision: exact day ("MAR 3, 2026"),
+  // month+year ("MAR 2026"), or year only ("2026"). Dates are stored
+  // normalized (month → 1st, year → Jan 1) and the precision drives the
+  // rendering (lib/eraDates.ts). Legacy free-text labels below remain a
+  // read fallback for rows created before the date columns existed.
   startDate: date('start_date'),
   endDate: date('end_date'),
+  startPrecision: text('start_precision'), // 'day' | 'month' | 'year' (null = month)
+  endPrecision: text('end_precision'),
   startLabel: text('start_label'),           // legacy display label
   endLabel: text('end_label'),               // legacy display label
   status: text('status').notNull().default('active'), // 'active' | 'complete' | 'archived'

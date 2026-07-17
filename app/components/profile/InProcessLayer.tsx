@@ -11,7 +11,7 @@ import { eraDateRange } from '../../../lib/eraDates';
  * "witness" status keeps her language: not seeking anything — just witness it. */
 
 export interface LifeChapterView { id: string; title: string; subtitle: string | null; dateLabel: string | null; status: string; sortOrder: number | null; }
-export interface WorldEraEntry { eraId: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startLabel: string | null; endLabel: string | null; status: string; worldTitle: string; worldSlug: string; milestoneCount: number; nowCount: number; doneCount: number; }
+export interface WorldEraEntry { eraId: string; title: string; description: string | null; startDate: string | null; endDate: string | null; startPrecision: string | null; endPrecision: string | null; startLabel: string | null; endLabel: string | null; status: string; worldTitle: string; worldSlug: string; milestoneCount: number; nowCount: number; doneCount: number; }
 
 const ORANGE = 'var(--orange, #FF5C34)';
 
