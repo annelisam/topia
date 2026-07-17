@@ -54,7 +54,7 @@ function Node({ state, small }: { state: 'done' | 'now' | 'future'; small?: bool
  * (inprocess.world) is the onchain side of it. */
 function Masthead({ canEdit, canMint }: { canEdit: boolean; canMint: boolean }) {
   return (
-    <div className="border-b-2 pb-4" style={{ borderColor: ORANGE }}>
+    <div className="border-b pb-4" style={{ borderColor: 'color-mix(in srgb, #FF5C34 55%, transparent)' }}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="font-basement font-black text-[clamp(18px,2.6vw,24px)] uppercase leading-none text-ink">
           In<span style={{ color: ORANGE }}>•</span>Process
@@ -643,8 +643,8 @@ function ProcessLog({ era, privyId, canEdit, onChanged, filter, onClearFilter }:
           {filter && (
             <button
               onClick={onClearFilter}
-              className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border-none"
-              style={{ backgroundColor: ORANGE, color: '#fff' }}
+              className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm cursor-pointer border bg-transparent hover:opacity-75 transition-opacity"
+              style={{ color: ORANGE, borderColor: 'color-mix(in srgb, #FF5C34 55%, transparent)' }}
               title="Show all updates"
             >
               M{String(filter.index + 1).padStart(2, '0')} · {filter.title} ✕
@@ -724,7 +724,7 @@ function MilestoneDetail({ m, index, updateCount, canEdit, onEdit, onClose }: {
 }) {
   const accent = m.status === 'done' || m.status === 'now';
   return (
-    <div className="mt-3 rounded-lg border-l-[3px] border border-ink/[0.1] p-4" style={{ borderLeftColor: ORANGE }}>
+    <div className="mt-3 rounded-lg border-l-[3px] border border-ink/[0.1] p-4" style={{ borderLeftColor: 'color-mix(in srgb, #FF5C34 70%, transparent)' }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[2px]" style={{ color: accent ? ORANGE : 'color-mix(in srgb, var(--page-text) 45%, transparent)' }}>
@@ -782,8 +782,8 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
           {!hideProjectChip && era.projectName && era.projectSlug && (
             <Link
               href={`/worlds/${worldSlug}/projects/${era.projectSlug}`}
-              className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm no-underline"
-              style={{ backgroundColor: ORANGE, color: '#fff' }}
+              className="inline-block font-mono text-[9px] font-bold uppercase tracking-[2px] px-2 py-0.5 rounded-sm no-underline border hover:opacity-75 transition-opacity"
+              style={{ color: ORANGE, borderColor: 'color-mix(in srgb, #FF5C34 55%, transparent)' }}
             >
               Project · {era.projectName}
             </Link>
