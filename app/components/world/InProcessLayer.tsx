@@ -806,11 +806,22 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
           {era.status === 'archived' && (
             <p className="font-mono text-[10px] font-bold uppercase tracking-[2px] mt-0.5" style={{ color: ORANGE }}>Archived — only builders see this</p>
           )}
-          {canEdit && (
-            <button onClick={() => setEditingEra((e) => !e)} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/50 mt-1">
-              {editingEra ? 'Close' : '✎ Edit'}
-            </button>
-          )}
+          <span className="inline-flex items-center gap-3 mt-1">
+            {!hideProjectChip && era.projectSlug && (
+              <Link
+                href={`/worlds/${worldSlug}/projects/${era.projectSlug}`}
+                className="font-mono text-[10px] uppercase tracking-[1px] no-underline hover:opacity-75 transition-opacity"
+                style={{ color: ORANGE }}
+              >
+                View full project ↗
+              </Link>
+            )}
+            {canEdit && (
+              <button onClick={() => setEditingEra((e) => !e)} className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/50">
+                {editingEra ? 'Close' : '✎ Edit'}
+              </button>
+            )}
+          </span>
         </div>
       </div>
 
