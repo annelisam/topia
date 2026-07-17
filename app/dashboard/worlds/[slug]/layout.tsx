@@ -5,7 +5,17 @@ import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LoadingBar from '../../../components/LoadingBar';
+import Tour, { type TourStep } from '../../../components/Tour';
 import { WorldData, ToolOption, PendingInvite, ProjectItem } from '../../_components/types';
+
+// First-visit walkthrough of a world's HQ — once per account, builders only.
+const HQ_TOUR: TourStep[] = [
+  { title: 'Your world’s HQ', body: 'Everything about your world is managed from here — identity, projects, the build-in-public layer, and your crew. Quick tour?', nextLabel: 'Show me around →', skipLabel: 'Skip — I’ll explore' },
+  { target: 'tour-hq-details', title: 'Identity lives here', body: 'Name, declaration, cover imagery, links, category — and the live/archive switch. This is what visitors meet first.', place: 'right' },
+  { target: 'tour-hq-projects', title: 'The work itself', body: 'Each project gets its own page in your world’s orbit — with credits, links, media, and its own roadmap.', place: 'right' },
+  { target: 'tour-hq-inprocess', title: 'Build in public', body: 'Roadmaps + a process log for every project, synced with inprocess.world if you connect. Same editor as your world page’s In Process tab.', place: 'right' },
+  { target: 'tour-hq-members', title: 'Bring your crew', body: 'Invite collaborators as architects — they can build projects, post process updates, and shape the world with you. Done — go build. ✦', place: 'right', nextLabel: 'Done' },
+];
 
 /* ── Context ─────────────────────────────────────────────────── */
 
@@ -215,6 +225,8 @@ export default function WorldDashboardLayout({
         </div>
       </div>
       {children}
+
+      <Tour tourKey="world-hq" privyId={user!.id} enabled={isBuilder} steps={HQ_TOUR} />
     </WorldDashboardContext.Provider>
   );
 }

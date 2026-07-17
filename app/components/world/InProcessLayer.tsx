@@ -7,6 +7,17 @@ import { WorldConfig } from './worldConfig';
 import { eraDateRange } from '../../../lib/eraDates';
 import { POST_KINDS, postKindGlyph, linkThumbnail, type PostKind } from '../../../lib/processPosts';
 import { EraDateField, ImageField, inputCls, labelCls, btnLime, btnGhost, MILESTONE_STATUSES, type Precision } from './InProcessFields';
+import Tour, { replayTour, type TourStep } from '../Tour';
+
+// First-visit walkthrough — once per account, builders only. Steps whose
+// anchor isn't on the page (empty state, no switcher) skip automatically.
+const IP_TOUR: TourStep[] = [
+  { title: 'Welcome to In•Process', body: 'This is where your world builds in public. Every project tells its story as a roadmap, and every step of the process gets logged — right here. Powered by an integration with inprocess.world. Want the 30-second tour?', nextLabel: 'Show me around →', skipLabel: 'Skip — I’ll explore' },
+  { target: 'tour-ip-timeline', title: 'Milestones tell the story', body: 'They move from ● done to ◉ in motion to ○ up next. Tap any milestone to open its details — the log below filters to everything that happened during it.', place: 'above' },
+  { target: 'tour-ip-log', title: 'Post as you go', body: 'Drop a moment with an image, a thought, a link, or an embed. Tie each update to a milestone so the story stays connected — visitors tap a card to read it in full.', place: 'above' },
+  { target: 'tour-ip-legend', title: '⛓ Publish onchain — optional', body: 'Connect In Process once in your profile and any update can also be minted — published permanently, collectible by your supporters. The ⛓ marks minted moments.', place: 'below' },
+  { target: ['tour-ip-pills', 'tour-ip-add', 'tour-ip-start'], title: 'One roadmap per project', body: 'Switch between project roadmaps here, or start a new one — no project yet? You can create one as you go. That’s it. Build loud. ✦', place: 'below', nextLabel: 'Done' },
+];
 
 /* The IN PROCESS roadmap — Latashá's Turn-2 mockup, minus funding.
  *
@@ -74,7 +85,7 @@ function Masthead({ canEdit, canMint }: { canEdit: boolean; canMint: boolean }) 
       </p>
 
       {/* Legend — the timeline reads itself */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3.5">
+      <div id="tour-ip-legend" className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3.5">
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="done" small /> Done</span>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="now" small /> In motion</span>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] text-ink/55"><Node state="future" small /> Up next</span>
@@ -340,6 +351,14 @@ function EraForm({ worldId, projects, existing, privyId, onClose, onChanged }: {
  * or a brand-new builder can read and fully get the integration. */
 function HowThisWorks({ canEdit }: { canEdit: boolean }) {
   const [open, setOpen] = useState(false);
+  const replay = canEdit ? (
+    <button
+      onClick={() => replayTour('inprocess')}
+      className="font-mono text-[10px] uppercase tracking-[1px] underline cursor-pointer bg-transparent border-none text-ink/45 hover:text-ink/70 transition-colors"
+    >
+      ↻ Replay the walkthrough
+    </button>
+  ) : null;
   return (
     <div className="border border-ink/[0.08] rounded-lg">
       <button
@@ -387,6 +406,7 @@ function HowThisWorks({ canEdit }: { canEdit: boolean }) {
               )}
             </p>
           </div>
+          {replay}
         </div>
       )}
     </div>
@@ -757,9 +777,11 @@ function MilestoneDetail({ m, index, updateCount, canEdit, onEdit, onClose }: {
 }
 
 /* ── One era section: header + node timeline + log ─────────────────── */
-function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMint, onChanged, hideProjectChip }: {
+function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMint, onChanged, hideProjectChip, tourAnchor }: {
   era: EraView; worldId: string; worldSlug: string; projects: ProjectOption[]; privyId: string;
   canEdit: boolean; canMint: boolean; onChanged: () => void; hideProjectChip?: boolean;
+  /** First rendered era carries the walkthrough's spotlight anchors. */
+  tourAnchor?: boolean;
 }) {
   const [editingEra, setEditingEra] = useState(false);
   const [milestoneModal, setMilestoneModal] = useState<{ existing?: EraMilestoneView } | null>(null);
@@ -833,7 +855,7 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
       )}
 
       {/* Node timeline — the mockup's connected dots + cards */}
-      <div className="overflow-x-auto mt-5 pb-1" style={{ scrollbarWidth: 'thin' }}>
+      <div id={tourAnchor ? 'tour-ip-timeline' : undefined} className="overflow-x-auto mt-5 pb-1" style={{ scrollbarWidth: 'thin' }}>
         <div className="flex min-w-max">
           {era.milestones.map((m, i) => {
             const isNow = m.status === 'now';
@@ -907,14 +929,16 @@ function EraSection({ era, worldId, worldSlug, projects, privyId, canEdit, canMi
         />
       )}
 
-      <ProcessLog
-        era={era}
-        privyId={privyId}
-        canEdit={canEdit}
-        onChanged={onChanged}
-        filter={selectedMs ? { id: selectedMs.id, index: selectedIndex, title: selectedMs.title } : null}
-        onClearFilter={() => setSelectedMsId(null)}
-      />
+      <div id={tourAnchor ? 'tour-ip-log' : undefined}>
+        <ProcessLog
+          era={era}
+          privyId={privyId}
+          canEdit={canEdit}
+          onChanged={onChanged}
+          filter={selectedMs ? { id: selectedMs.id, index: selectedIndex, title: selectedMs.title } : null}
+          onClearFilter={() => setSelectedMsId(null)}
+        />
+      </div>
 
       {canEdit && !composing && (
         <button onClick={() => setComposing(true)} className={`${btnGhost} mt-3`}>
@@ -1013,11 +1037,12 @@ export default function InProcessLayer({
                 A roadmap tells the story of {projectScope ? 'this project' : 'a project'} in milestones — what&apos;s done,
                 what&apos;s in motion, what&apos;s next. {!projectScope && 'No project yet? You can make one as you go.'}
               </p>
-              <button onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
+              <button id="tour-ip-start" onClick={startCreate} className={btnLime}>+ Start a roadmap</button>
             </>
           )}
         </div>
         <HowThisWorks canEdit={canEdit} />
+        <Tour tourKey="inprocess" privyId={privyId} enabled={canEdit} steps={IP_TOUR} />
       </div>
     );
   }
@@ -1027,7 +1052,7 @@ export default function InProcessLayer({
       <div className="flex flex-col gap-0">
         <Masthead canEdit={canEdit} canMint={canMint} />
         {hasSwitcher && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-3.5">
+          <div id="tour-ip-pills" className="flex flex-wrap items-center gap-1.5 pt-3.5">
             <span className="font-mono text-[9px] uppercase tracking-[2px] text-ink/35 mr-1.5">Roadmaps</span>
             {groupOrder.map((k) => {
               const active = k === currentGroup;
@@ -1061,8 +1086,9 @@ export default function InProcessLayer({
           onChanged={onChanged}
         />
       )}
-      {shownEras.map((era) => (
+      {shownEras.map((era, eraIdx) => (
         <EraSection
+          tourAnchor={eraIdx === 0}
           key={era.id}
           era={era}
           worldId={worldId}
@@ -1076,9 +1102,10 @@ export default function InProcessLayer({
         />
       ))}
       {canEdit && !creating && visible.length > 0 && !projectScope && (
-        <button onClick={startCreate} className={`${btnGhost} self-start`}>+ Roadmap for another project</button>
+        <button id="tour-ip-add" onClick={startCreate} className={`${btnGhost} self-start`}>+ Roadmap for another project</button>
       )}
       <HowThisWorks canEdit={canEdit} />
+      <Tour tourKey="inprocess" privyId={privyId} enabled={canEdit} steps={IP_TOUR} />
     </div>
   );
 }
