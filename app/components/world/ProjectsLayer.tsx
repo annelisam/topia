@@ -32,6 +32,37 @@ export interface PanelTool {
   category?: string | null;
 }
 
+/* Per-project In Process summary — computed by the world page from the eras
+ * it already loads, so the projects tab can hint at each roadmap. */
+export interface RoadmapSummary {
+  eraTitle: string;
+  total: number;
+  done: number;
+  nowTitle: string | null;
+  nodes: ('done' | 'now' | 'future')[]; // one per milestone, in timeline order
+}
+
+const ROADMAP_ORANGE = 'var(--orange, #FF5C34)';
+
+/* Tiny node strip mirroring the In Process timeline: filled done, ring now,
+ * hollow upcoming. Caps at 8 dots so long roadmaps stay legible. */
+function MiniRoadmap({ summary }: { summary: RoadmapSummary }) {
+  const dots = summary.nodes.slice(0, 8);
+  return (
+    <span className="inline-flex items-center gap-[3px]" title={`${summary.eraTitle} · ${summary.done}/${summary.total} milestones done`}>
+      {dots.map((d, i) =>
+        d === 'done' ? (
+          <span key={i} className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: ROADMAP_ORANGE }} />
+        ) : d === 'now' ? (
+          <span key={i} className="w-[8px] h-[8px] rounded-full shrink-0 border-2 bg-transparent" style={{ borderColor: ROADMAP_ORANGE }} />
+        ) : (
+          <span key={i} className="w-[7px] h-[7px] rounded-full shrink-0 border border-ink/25 bg-transparent" />
+        )
+      )}
+    </span>
+  );
+}
+
 interface Credit {
   userId: string;
   role: string | null;
@@ -53,6 +84,7 @@ function ProjectPanel({
   worldId,
   allTools,
   fullHref,
+  roadmap,
   onClose,
 }: {
   project: ProjectItem;
@@ -60,6 +92,7 @@ function ProjectPanel({
   worldId: string;
   allTools: PanelTool[];
   fullHref: string;
+  roadmap?: RoadmapSummary;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -186,6 +219,23 @@ function ProjectPanel({
               )}
             </div>
 
+            {/* Roadmap — the project's In Process pulse; full timeline lives on the file page */}
+            {roadmap && (
+              <Link href={`${fullHref}#roadmap`} className="block py-3 border-b border-ink/[0.05] no-underline group/rm">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[2px] text-ink/50 block mb-1.5">in process // roadmap</span>
+                <span className="flex items-center gap-2.5 flex-wrap">
+                  <MiniRoadmap summary={roadmap} />
+                  <span className="font-mono text-[11px] text-ink/70">
+                    {roadmap.done}/{roadmap.total} milestones
+                    {roadmap.nowTitle && (
+                      <span style={{ color: ROADMAP_ORANGE }}> · now: {roadmap.nowTitle}</span>
+                    )}
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-[1px] text-ink/40 group-hover/rm:text-ink/70 transition-colors">View →</span>
+                </span>
+              </Link>
+            )}
+
             {/* Credits */}
             {credits.length > 0 && (
               <div className="py-3 border-b border-ink/[0.05]">
@@ -290,12 +340,14 @@ export default function ProjectsLayer({
   slug,
   worldId,
   allTools = [],
+  roadmaps = {},
 }: {
   config: WorldConfig;
   projects: ProjectItem[];
   slug: string;
   worldId: string;
   allTools?: PanelTool[];
+  roadmaps?: Record<string, RoadmapSummary>;
 }) {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -372,6 +424,7 @@ export default function ProjectsLayer({
                   <span className="font-mono text-[12px] font-bold uppercase block truncate transition-colors" style={{ color: isSelected || activeSlug === proj.slug ? config.hex : 'var(--page-text)' }}>{proj.name}</span>
                   {proj.description && <span className="font-mono text-[10.5px] text-ink/40 block truncate">{proj.description}</span>}
                 </span>
+                {roadmaps[proj.id] && <span className="hidden sm:inline-flex shrink-0"><MiniRoadmap summary={roadmaps[proj.id]} /></span>}
                 {firstTag && <span className="hidden sm:inline font-mono text-[9px] uppercase tracking-[1px] border border-ink/[0.1] rounded-[3px] px-1.5 py-0.5 text-ink/45 shrink-0">{firstTag}</span>}
                 {logged && <span className="hidden md:inline font-mono text-[9.5px] uppercase tracking-wider text-ink/30 shrink-0">{logged}</span>}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink/25 group-hover:text-ink/60 transition-colors"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>
@@ -412,9 +465,21 @@ export default function ProjectsLayer({
                   {proj.tags && proj.tags[0] && <span className="absolute bottom-2.5 left-3 font-mono text-[9px] uppercase tracking-[2px] text-bone/70">{proj.tags[0]}</span>}
                   {isSelected && <span className="absolute top-2.5 right-2.5 font-mono text-[8px] uppercase tracking-wider rounded-sm px-2 py-0.5 backdrop-blur-sm" style={{ backgroundColor: config.hex, color: '#0a0a0a' }}>viewing</span>}
                 </div>
-                <div className="p-3 flex items-center justify-between gap-2">
-                  <span className="font-mono text-[13px] font-bold uppercase truncate transition-colors" style={{ color: isSelected || activeSlug === proj.slug ? config.hex : 'var(--page-text)' }}>{proj.name}</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink/30 group-hover:text-ink/60 transition-colors"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>
+                <div className="p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[13px] font-bold uppercase truncate transition-colors" style={{ color: isSelected || activeSlug === proj.slug ? config.hex : 'var(--page-text)' }}>{proj.name}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink/30 group-hover:text-ink/60 transition-colors"><line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" /></svg>
+                  </div>
+                  {roadmaps[proj.id] && (
+                    <div className="flex items-center gap-2 mt-1.5 min-w-0">
+                      <MiniRoadmap summary={roadmaps[proj.id]} />
+                      <span className="font-mono text-[9.5px] uppercase tracking-[1px] truncate" style={{ color: ROADMAP_ORANGE }}>
+                        {roadmaps[proj.id].nowTitle
+                          ? `now: ${roadmaps[proj.id].nowTitle}`
+                          : `${roadmaps[proj.id].done}/${roadmaps[proj.id].total} done`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -429,6 +494,7 @@ export default function ProjectsLayer({
           worldId={worldId}
           allTools={allTools}
           fullHref={`/worlds/${slug}/projects/${selectedProject.slug}`}
+          roadmap={roadmaps[selectedProject.id]}
           onClose={() => setSelectedProject(null)}
         />
       )}

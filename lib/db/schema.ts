@@ -567,6 +567,7 @@ export const inProcessAccounts = pgTable('in_process_accounts', {
 export const eraProcessPosts = pgTable('era_process_posts', {
   id: uuid('id').defaultRandom().primaryKey(),
   eraId: uuid('era_id').references(() => worldEras.id, { onDelete: 'cascade' }).notNull(),
+  milestoneId: uuid('milestone_id').references(() => eraMilestones.id, { onDelete: 'set null' }), // optional: ties the update to a timeline node
   authorUserId: uuid('author_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   kind: text('kind').notNull().default('moment'), // 'moment' | 'thought' | 'link' | 'embed'
   title: text('title').notNull(),
@@ -578,6 +579,7 @@ export const eraProcessPosts = pgTable('era_process_posts', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('era_process_posts_era_id_idx').on(t.eraId),
+  index('era_process_posts_milestone_id_idx').on(t.milestoneId),
 ]);
 
 // Personal roadmap entries on the passport ("Move the studio to LA",

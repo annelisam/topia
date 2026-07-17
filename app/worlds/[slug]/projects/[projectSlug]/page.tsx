@@ -433,7 +433,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ slug: 
 
                 {/* In Process — this project's own roadmap + process log */}
                 {(projectEras.length > 0 || isBuilder) && (
-                  <div className="border-t border-ink/[0.06]">
+                  <div id="roadmap" className="border-t border-ink/[0.06] scroll-mt-[var(--nav-height,64px)]">
                     <InProcessLayer
                       eras={projectEras}
                       worldId={world.id}
