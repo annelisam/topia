@@ -4,28 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { useBadges } from './BadgesProvider';
-
-interface NotificationMetadata {
-  worldTitle?: string;
-  worldSlug?: string;
-  role?: string;
-  invitationId?: string;
-  eventId?: string;
-  eventName?: string;
-  eventSlug?: string;
-  kind?: string;
-}
-
-interface Notification {
-  id: string;
-  type: string;
-  read: boolean;
-  createdAt: string;
-  actorName: string | null;
-  actorUsername: string | null;
-  actorAvatarUrl: string | null;
-  metadata?: NotificationMetadata | null;
-}
+import type { NotificationRow as Notification } from '@/lib/notifications/types';
 
 export default function NotificationBell() {
   const { authenticated, user } = usePrivy();
@@ -254,17 +233,23 @@ export default function NotificationBell() {
                 <>
                   {/* Actor avatar */}
                   <div
-                    className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border"
+                    className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border relative"
                     style={{ borderColor: 'var(--border-color)' }}
                   >
-                    {n.actorAvatarUrl ? (
-                      <img src={n.actorAvatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
-                        <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
-                          {n.actorName?.[0]?.toUpperCase() ?? '?'}
-                        </span>
-                      </div>
+                    {/* Initial sits underneath, so a broken/deleted blob URL
+                        degrades to it instead of an empty circle. */}
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)' }}>
+                      <span className="font-mono text-[13px]" style={{ color: 'var(--foreground)', opacity: 0.3 }}>
+                        {n.actorName?.[0]?.toUpperCase() ?? '?'}
+                      </span>
+                    </div>
+                    {n.actorAvatarUrl && (
+                      <img
+                        src={n.actorAvatarUrl}
+                        alt=""
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        className="relative w-full h-full object-cover"
+                      />
                     )}
                   </div>
 
