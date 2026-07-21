@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { notifications, users } from '@/lib/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
+import type { NotificationRow } from '@/lib/notifications/types';
 
 // GET – fetch notifications for current user
 export async function GET(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         actorId: notifications.actorId,
         actorName: users.name,
         actorUsername: users.username,
-        actorAvatar: users.avatarUrl,
+        actorAvatarUrl: users.avatarUrl,
         metadata: notifications.metadata,
       })
       .from(notifications)
@@ -34,7 +35,21 @@ export async function GET(request: NextRequest) {
 
     const unreadCount = results.filter((n) => !n.read).length;
 
-    return NextResponse.json({ notifications: results, unreadCount });
+    const payload: NotificationRow[] = results.map((n) => ({
+      id: n.id,
+      type: n.type,
+      read: n.read,
+      createdAt: n.createdAt.toISOString(),
+      actorName: n.actorName,
+      actorUsername: n.actorUsername,
+      actorAvatarUrl: n.actorAvatarUrl,
+      metadata: n.metadata as NotificationRow['metadata'],
+    }));
+
+    return NextResponse.json(
+      { notifications: payload, unreadCount },
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    );
   } catch (error) {
     console.error('Notifications GET error:', error);
     return NextResponse.json({ notifications: [], unreadCount: 0 });
