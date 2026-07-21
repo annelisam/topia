@@ -13,16 +13,15 @@ interface TeamMember {
   tags: string[];
 }
 
-const TEAM_META: Record<string, { title: string }> = {
-  callmelatasha: { title: 'CEO' },
-  annelisa: { title: 'Chief Technology Officer' },
-  jada: { title: 'Chief Marketing Officer' },
-  artbyjah: { title: 'Chief Creative Officer' },
-  d: { title: 'Community Lead / Executive' },
-  cxy: { title: 'Executive Producer' },
-};
-
-const TEAM_ORDER = ['callmelatasha', 'annelisa', 'jada', 'artbyjah', 'd', 'cxy'];
+// Roster, order and titles all come from /api/team (keyed by user id in
+// lib/team.ts) — never re-list usernames here, they change.
+interface TeamRow {
+  username: string;
+  name: string | null;
+  avatarUrl: string | null;
+  roleTags: string | null;
+  title: string;
+}
 
 export default function AboutPage() {
   const [screen, setScreen] = useState(0);
@@ -53,27 +52,15 @@ export default function AboutPage() {
         const res = await fetch('/api/team');
         if (!res.ok) return;
         const data = await res.json();
-        const byUsername = new Map<string, { name: string | null; avatarUrl: string | null; roleTags: string | null }>();
-        for (const row of data.team) {
-          byUsername.set(row.username, row);
-        }
-        const ordered: TeamMember[] = TEAM_ORDER
-          .map((username) => {
-            const row = byUsername.get(username);
-            const meta = TEAM_META[username];
-            if (!meta) return null;
-            const tags = row?.roleTags
-              ? row.roleTags.split(',').map((t: string) => t.trim().replace(/-/g, ' ')).filter(Boolean).slice(0, 3)
-              : [];
-            return {
-              username,
-              name: row?.name ?? username,
-              title: meta.title,
-              avatarUrl: row?.avatarUrl ?? null,
-              tags,
-            };
-          })
-          .filter(Boolean) as TeamMember[];
+        const ordered: TeamMember[] = (data.team as TeamRow[]).map((row) => ({
+          username: row.username,
+          name: row.name ?? row.username,
+          title: row.title,
+          avatarUrl: row.avatarUrl,
+          tags: row.roleTags
+            ? row.roleTags.split(',').map((t) => t.trim().replace(/-/g, ' ')).filter(Boolean).slice(0, 3)
+            : [],
+        }));
         setTeam(ordered);
       } catch { /* silent */ }
     })();
@@ -213,20 +200,22 @@ export default function AboutPage() {
                     >
                       <div className="border border-obsidian/10 rounded-xl overflow-hidden bg-white/60 backdrop-blur-sm transition-shadow hover:shadow-lg">
                         <div className="aspect-square bg-obsidian/5 relative overflow-hidden">
-                          {m.avatarUrl ? (
+                          {/* Initial sits underneath, so a broken/deleted blob
+                              URL degrades to it instead of an empty square. */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="font-basement text-5xl text-obsidian/15">
+                              {(m.name ?? m.username)[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          {m.avatarUrl && (
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={m.avatarUrl}
                               alt={m.name ?? m.username}
                               loading="lazy"
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              className="relative w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="font-basement text-5xl text-obsidian/15">
-                                {(m.name ?? m.username)[0]?.toUpperCase()}
-                              </span>
-                            </div>
                           )}
                         </div>
                         <div className="p-4">
