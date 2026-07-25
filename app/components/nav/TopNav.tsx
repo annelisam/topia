@@ -7,6 +7,7 @@ import LoginButton from '../LoginButton';
 import NotificationBell from '../NotificationBell';
 import MessagesNavIcon from '../MessagesNavIcon';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { useLiveEvent } from '../../hooks/useLiveEvent';
 
 type NavItem = {
   label: string;
@@ -38,10 +39,14 @@ const STATIC_LINKS = [
 
 export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { profile } = useUserProfile();
+  const { profile, authenticated, ready } = useUserProfile();
   const pathname = usePathname();
   // Passport routes to the viewer's own profile (their passport).
   const passportHref = profile?.username ? `/profile/${profile.username}` : '/profile';
+  // Desktop's live-event door — same lookup as the mobile chip. Hidden while
+  // already in Event Mode (it would link to itself).
+  const liveEvent = useLiveEvent(authenticated ? profile?.privyId : undefined, ready);
+  const showLiveChip = !!liveEvent && !pathname.endsWith('/live');
 
   // Current-page marker: exact match or a sub-route of the item.
   const isActive = (href?: string) =>
@@ -66,6 +71,24 @@ export default function TopNav({ onOpenMessages }: { onOpenMessages: () => void 
 
       {/* Right side */}
       <div className="flex items-center gap-4">
+        {showLiveChip && liveEvent && (
+          <Link
+            href={`/events/${liveEvent.slug}/live`}
+            className="live-chip-glow flex items-center gap-2 rounded-full border pl-3 pr-3.5 py-1.5 no-underline max-w-[280px]"
+            style={{ borderColor: 'var(--orange, #FF5C34)', backgroundColor: 'color-mix(in srgb, var(--orange, #FF5C34) 8%, transparent)' }}
+          >
+            <span className="relative flex w-2 h-2 shrink-0">
+              <span className="live-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
+              <span className="relative inline-flex rounded-full w-2 h-2" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
+            </span>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] truncate" style={{ color: 'var(--page-text)' }}>
+              <span style={{ color: 'var(--orange, #FF5C34)' }}>Live</span> · {liveEvent.eventName}
+            </span>
+            <span className="font-mono text-[10px] font-bold shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>
+              {liveEvent.involvement === 'none' ? 'Join →' : 'Enter →'}
+            </span>
+          </Link>
+        )}
         {/* Menu dropdown */}
         <div className="relative">
           <button

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 import SentientText from '../../components/ui/SentientText';
 import LoadingBar from '../../components/LoadingBar';
@@ -229,7 +230,8 @@ function isVideoUrl(url: string): boolean {
 /* ── Main Client Component ────────────────────────────────────── */
 
 export default function EventDetailClient({ slug }: { slug: string }) {
-  const { user: privyUser, authenticated, login } = usePrivy();
+  const { user: privyUser, authenticated, ready, login } = usePrivy();
+  const router = useRouter();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState(false);
@@ -262,6 +264,37 @@ export default function EventDetailClient({ slug }: { slug: string }) {
       if (n) { setComposerNotice(n); sessionStorage.removeItem('eventComposerNotice'); }
     } catch {}
   }, []);
+  // Deep link from Event Mode / the live takeover: ?rsvp=1 lands the visitor
+  // straight in the registration flow (via login first if needed) instead of
+  // making them find the RSVP button again. Consumed once, then stripped.
+  const [rsvpIntent, setRsvpIntent] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (!sp.get('rsvp')) return;
+    // Arrived from Event Mode (or the live takeover) — after the RSVP lands,
+    // send them back there instead of the event-page celebration, closing the
+    // "RSVP, then come right back" loop. Session-stored so it survives a
+    // login redirect mid-flow.
+    if (sp.get('from') === 'live') {
+      try { sessionStorage.setItem('topia_rsvp_return', slug); } catch {}
+    }
+    sp.delete('rsvp');
+    sp.delete('from');
+    const qs = sp.toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    setRsvpIntent(true);
+  }, [slug]);
+  useEffect(() => {
+    // Signed-out + rsvp intent → open Privy login now; the pending-RSVP key
+    // resumes the flow after they're in (same path as tapping the button).
+    if (!rsvpIntent || !ready || authenticated || !event || event.rsvpClosed) return;
+    setRsvpIntent(false);
+    try { sessionStorage.setItem(PENDING_KEY, slug); } catch {}
+    login();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rsvpIntent, ready, authenticated, event]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const fromUrl = new URLSearchParams(window.location.search).get('invite');
@@ -361,9 +394,16 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   };
 
   // "Done" tapped on the success step — close the form and, for confirmed
-  // "going", reveal the card celebration.
+  // "going", reveal the card celebration. Guests who came from Event Mode
+  // go straight back there instead (it shows the right state for any status).
   const handleRsvpFinish = (status: string) => {
     setRsvpFormOpen(false);
+    let returnToLive = false;
+    try {
+      returnToLive = sessionStorage.getItem('topia_rsvp_return') === slug;
+      if (returnToLive) sessionStorage.removeItem('topia_rsvp_return');
+    } catch {}
+    if (returnToLive) { router.push(`/events/${slug}/live`); return; }
     if (status === 'going') setShowRsvpModal(true);
     else setPendingNotice(true);
   };
@@ -377,11 +417,12 @@ export default function EventDetailClient({ slug }: { slug: string }) {
     if (statusViewer !== privyUser.id) return;
     let intent: string | null = null;
     try { intent = sessionStorage.getItem(PENDING_KEY); } catch {}
-    if (intent === slug || inviteToken) {
+    if (intent === slug || inviteToken || rsvpIntent) {
       try { sessionStorage.removeItem(PENDING_KEY); } catch {}
+      setRsvpIntent(false);
       setRsvpFormOpen(true);
     }
-  }, [event, privyUser?.id, slug, inviteToken, statusViewer]);
+  }, [event, privyUser?.id, slug, inviteToken, statusViewer, rsvpIntent]);
 
   // "Save" — toggles the event slug in users.savedEventSlugs CSV so the user
   // can bookmark it (shows under the "Saved" tab on /events). Commenting is

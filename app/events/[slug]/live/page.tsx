@@ -66,6 +66,46 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// The journey tracker — always visible, always answering "where am I and
+// what's next?" in one glance: RSVP → Check in → Play.
+function Stepper({ current }: { current: 1 | 2 | 3 }) {
+  const steps = ['RSVP', 'Check in', 'Play'];
+  return (
+    <div className="flex items-center" aria-label={`Step ${current} of 3: ${steps[current - 1]}`}>
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const done = n < current;
+        const active = n === current;
+        return (
+          <div key={label} className={`flex items-center ${i > 0 ? 'flex-1' : ''}`}>
+            {i > 0 && (
+              <span className="flex-1 h-px mx-2" style={{ backgroundColor: done || active ? LIME : LINE }} />
+            )}
+            <span className="flex items-center gap-1.5">
+              <span className="relative flex w-[22px] h-[22px] shrink-0">
+                {active && <span className="live-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: 'rgba(228,254,82,0.5)' }} />}
+                <span
+                  className="relative w-[22px] h-[22px] rounded-full flex items-center justify-center font-mono text-[10px] font-bold"
+                  style={done
+                    ? { backgroundColor: LIME, color: '#1a1a1a' }
+                    : active
+                    ? { border: `1.5px solid ${LIME}`, color: LIME }
+                    : { border: `1px solid ${LINE}`, color: DIM }}
+                >
+                  {done ? '✓' : n}
+                </span>
+              </span>
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: done || active ? LIME : DIM }}>
+                {label}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function isToday(dateIso: string | null): boolean {
   if (!dateIso) return false;
   const now = new Date();
@@ -298,6 +338,13 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
   const live = isToday(event?.dateIso ?? null);
   const nextQuest = questState?.quests.find((q) => !q.completed) ?? null;
+  // Where the viewer stands on the RSVP → Check in → Play journey. Hosts
+  // skip the RSVP beat — their next move is the door, same as the on-list.
+  const doorStep: 1 | 2 | 3 =
+    !authenticated ? 1
+    : me?.checkedIn ? 3
+    : (me?.onList || event?.isHost || event?.isManager) ? 2
+    : 1;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1a1a', color: INK }}>
@@ -313,8 +360,12 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
             ← Event page
           </Link>
           {live && (
-            <span className="font-mono text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full" style={{ backgroundColor: ORANGE, color: '#fff' }}>
-              ● LIVE
+            <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full" style={{ backgroundColor: ORANGE, color: '#fff' }}>
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="live-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: '#fff' }} />
+                <span className="relative inline-flex rounded-full w-1.5 h-1.5" style={{ backgroundColor: '#fff' }} />
+              </span>
+              LIVE
             </span>
           )}
         </div>
@@ -325,7 +376,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           <p className="font-mono text-[12px]" style={{ color: DIM }}>Event not found.</p>
         ) : (
           <>
-            <div>
+            <div className="live-enter" style={{ '--d': '0ms' } as React.CSSProperties}>
               <p style={meta}>Event mode</p>
               {/* .heading-display's -4px tracking is tuned for hero sizes —
                   at this scale it mashes glyphs together, so override it. */}
@@ -346,28 +397,40 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </p>
             </div>
 
+            {/* Journey tracker — the same three beats every guest moves
+                through tonight, so "where am I?" is answered before the
+                door card even loads. */}
+            <div className="live-enter" style={{ ...card, paddingTop: 12, paddingBottom: 12, '--d': '90ms' } as React.CSSProperties}>
+              <Stepper current={doorStep} />
+            </div>
+
             {/* Door state — the hero card. Always answers ONE question:
                 "what do I do right now?" — log in, RSVP, get checked in,
                 or go play. Each state carries its own CTA. */}
+            <div className="live-enter" style={{ '--d': '160ms' } as React.CSSProperties}>
             {!authenticated ? (
               <div style={{ ...card, borderColor: LIME }}>
-                <p style={{ ...meta, color: LIME }}>Step 1 · Log in</p>
+                <p style={{ ...meta, color: LIME }}>Step 1 · Log in & RSVP</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  Everything here — check-in, quests, meeting people — hangs off your Topia account. New? Signing up takes a minute.
+                  Everything tonight — your entry pass, quests, meeting people — hangs off your Topia account. New? Signing up takes a minute.
                 </p>
                 <button
                   onClick={login}
-                  className="font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full cursor-pointer border-none mt-3"
+                  className="w-full font-mono text-[12px] font-bold uppercase tracking-widest px-4 py-3 rounded-full cursor-pointer border-none mt-3 takeover-cta"
                   style={{ backgroundColor: LIME, color: '#1a1a1a' }}
                 >
                   Log in or sign up →
                 </button>
               </div>
-            ) : me?.checkedIn ? (
+            ) : !me ? (
+              <div style={card}>
+                <p style={meta}>Checking your pass…</p>
+              </div>
+            ) : me.checkedIn ? (
               <div style={{ ...card, borderColor: LIME, backgroundColor: 'rgba(228,254,82,0.08)' }}>
-                <p style={{ ...meta, color: LIME }}>✓ You're checked in</p>
+                <p style={{ ...meta, color: LIME }}>✓ You're in — go play</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  Since {me.checkedInAt ? new Date(me.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'just now'}
+                  Checked in since {me.checkedInAt ? new Date(me.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'just now'}
                   {questState && questState.total > 0 ? ' — every quest is unlocked.' : " — you're all set."}
                 </p>
                 {nextQuest && (
@@ -376,28 +439,61 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                   </p>
                 )}
               </div>
-            ) : me?.onList ? (
+            ) : me.onList ? (
               <div style={{ ...card, borderColor: ORANGE }}>
                 <p style={{ ...meta, color: ORANGE }}>Step 2 · Check in at the door</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  You're on the list. Show your Topia code (below) to a host at the door — check-in unlocks the in-person quests.
+                  You're on the list. Show your Topia code to a host at the door — check-in unlocks the in-person quests{prizes.length > 0 ? ' and tonight’s prizes' : ''}.
+                </p>
+                <button
+                  onClick={() => scrollTo(qrCardRef)}
+                  className="w-full font-mono text-[12px] font-bold uppercase tracking-widest px-4 py-3 rounded-full cursor-pointer border-none mt-3"
+                  style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                >
+                  Show my pass ↓
+                </button>
+              </div>
+            ) : me.rsvpStatus === 'pending' ? (
+              <div style={{ ...card, borderColor: ORANGE }}>
+                <p style={{ ...meta, color: ORANGE }}>Request sent — waiting on the host</p>
+                <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                  The host reviews requests before confirming. The moment you're approved, this screen flips to your entry pass — check back or watch your email.
+                </p>
+              </div>
+            ) : me.rsvpStatus === 'waitlisted' ? (
+              <div style={{ ...card, borderColor: ORANGE }}>
+                <p style={{ ...meta, color: ORANGE }}>You're on the waitlist</p>
+                <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                  The event is at capacity right now. Spots are promoted in join order — if one opens, you're in automatically and this screen becomes your entry pass.
+                </p>
+              </div>
+            ) : (event.isHost || event.isManager) ? (
+              <div style={{ ...card, borderColor: LIME }}>
+                <p style={{ ...meta, color: LIME }}>You're hosting tonight</p>
+                <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                  Get checked in at the door like everyone else to play along, or jump straight into the host tools below.
                 </p>
               </div>
             ) : (
-              <div style={{ ...card, borderColor: ORANGE }}>
-                <p style={{ ...meta, color: ORANGE }}>Step 1 · RSVP</p>
+              <div style={{ ...card, borderColor: ORANGE, backgroundColor: 'rgba(255,92,52,0.06)' }}>
+                <p style={{ ...meta, color: ORANGE }}>Step 1 · RSVP — you're not on the list yet</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                  You're not on the guest list yet — RSVP first, then come back here.
+                  {guestCount > 0 ? `${guestCount} ${guestCount === 1 ? 'person is' : 'people are'} already going. ` : ''}
+                  RSVP takes about a minute, then you land right back here with your entry pass.
                 </p>
                 <Link
-                  href={`/events/${slug}`}
-                  className="inline-block font-mono text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full no-underline mt-3"
+                  href={`/events/${slug}?rsvp=1&from=live`}
+                  className="block text-center font-mono text-[12px] font-bold uppercase tracking-widest px-4 py-3 rounded-full no-underline mt-3 takeover-cta"
                   style={{ backgroundColor: LIME, color: '#1a1a1a' }}
                 >
-                  RSVP on the event page →
+                  RSVP now →
                 </Link>
+                <p className="font-mono text-[10px] uppercase tracking-widest mt-2.5 text-center" style={{ color: DIM }}>
+                  Just browsing? Tonight's quests, prizes &amp; the room are below ↓
+                </p>
               </div>
             )}
+            </div>
 
             {/* Host tools — pinned high; a manager is usually working the
                 door, not playing the game */}
