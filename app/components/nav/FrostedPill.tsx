@@ -8,46 +8,12 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { isCoreProfileComplete } from '../../../lib/profile/completeness';
 import AddToHomeScreenSheet from '../AddToHomeScreenSheet';
 import TopiaMark from './TopiaMark';
+import { useLiveEvent } from '../../hooks/useLiveEvent';
 
 interface FrostedPillProps {
   onMenuToggle: () => void;
   onOpenMessages: () => void;
   onOpenCard: () => void;
-}
-
-interface LiveEvent { slug: string; eventName: string; checkedIn: boolean; isHost: boolean }
-
-// One live-now lookup per minute across all FrostedPill mounts (the nav
-// remounts on every route change — don't re-hit the API each time).
-let liveCache: { at: number; date: string; privyId: string; event: LiveEvent | null } | null = null;
-
-function localDate(): string {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-}
-
-function useLiveEvent(privyId: string | undefined): LiveEvent | null {
-  const [live, setLive] = useState<LiveEvent | null>(() =>
-    liveCache && liveCache.privyId === privyId ? liveCache.event : null);
-  useEffect(() => {
-    if (!privyId) { setLive(null); return; }
-    const date = localDate();
-    if (liveCache && liveCache.privyId === privyId && liveCache.date === date && Date.now() - liveCache.at < 60_000) {
-      setLive(liveCache.event);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/events/live-now?privyId=${encodeURIComponent(privyId)}&date=${date}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const event = (d?.event as LiveEvent | undefined) ?? null;
-        liveCache = { at: Date.now(), date, privyId, event };
-        if (!cancelled) setLive(event);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [privyId]);
-  return live;
 }
 
 // The mobile nav: a detached frosted-glass pill floating above the bottom
@@ -58,8 +24,11 @@ function useLiveEvent(privyId: string | undefined): LiveEvent | null {
 export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }: FrostedPillProps) {
   const pathname = usePathname();
   const messagesBadge = useMessagesBadge();
-  const { profile, authenticated } = useUserProfile();
-  const liveEvent = useLiveEvent(authenticated ? profile?.privyId : undefined);
+  const { profile, authenticated, ready } = useUserProfile();
+  // Everyone sees the live chip — signed-out and not-yet-RSVP'd viewers
+  // included (their tap lands on Event Mode's RSVP path). Wait for auth to
+  // settle so an RSVP'd user isn't briefly fetched as a stranger.
+  const liveEvent = useLiveEvent(authenticated ? profile?.privyId : undefined, ready);
   // Hide the chip while already in Event Mode — it would link to itself.
   const showLiveChip = !!liveEvent && !pathname.endsWith('/live');
 
@@ -78,7 +47,12 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
   useEffect(() => {
     if (!authenticated || installState === 'hidden') return;
     try { if (localStorage.getItem('topia:a2hs-sheet-seen')) return; } catch { return; }
-    const t = setTimeout(() => setInstallSheetOpen(true), 1500);
+    const t = setTimeout(() => {
+      // The live-event takeover pops at ~900ms — one takeover at a time, so
+      // check its flag at fire time; the sheet gets its moment next visit.
+      try { if (sessionStorage.getItem('topia:live-takeover-shown')) return; } catch { /* private mode */ }
+      setInstallSheetOpen(true);
+    }, 1500);
     return () => clearTimeout(t);
   }, [authenticated, installState]);
   const closeInstallSheet = () => {
@@ -138,23 +112,28 @@ export default function FrostedPill({ onMenuToggle, onOpenMessages, onOpenCard }
       className="fixed left-0 right-0 z-[1000] md:hidden flex flex-col items-center gap-2 pointer-events-none"
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)' }}
     >
-      {/* Live-event quick access — one tap from anywhere into Event Mode
-          when an event you're part of is happening today */}
+      {/* Live-event quick access — one tap from anywhere into Event Mode when
+          an event is happening today. Not-yet-RSVP'd viewers get the same
+          door (Event Mode opens on its RSVP step for them). */}
       {showLiveChip && liveEvent && (
         <Link
           href={`/events/${liveEvent.slug}/live`}
-          className="pointer-events-auto flex items-center gap-2 rounded-full border pl-3.5 pr-4 py-2 no-underline backdrop-blur-xl max-w-[88vw]"
+          className="live-chip-glow pointer-events-auto flex items-center gap-2.5 rounded-full border pl-4 pr-4 py-2.5 no-underline backdrop-blur-xl max-w-[88vw]"
           style={{
-            backgroundColor: 'color-mix(in srgb, var(--page-bg) 85%, transparent)',
-            borderColor: 'color-mix(in srgb, var(--orange, #FF5C34) 55%, transparent)',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
+            backgroundColor: 'color-mix(in srgb, var(--page-bg) 88%, transparent)',
+            borderColor: 'var(--orange, #FF5C34)',
           }}
         >
-          <span className="w-2 h-2 rounded-full animate-pulse shrink-0" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
-          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] truncate" style={{ color: 'var(--page-text)' }}>
-            Live · {liveEvent.eventName}
+          <span className="relative flex w-2.5 h-2.5 shrink-0">
+            <span className="live-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
+            <span className="relative inline-flex rounded-full w-2.5 h-2.5" style={{ backgroundColor: 'var(--orange, #FF5C34)' }} />
           </span>
-          <span className="font-mono text-[11px] shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>→</span>
+          <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] truncate" style={{ color: 'var(--page-text)' }}>
+            <span style={{ color: 'var(--orange, #FF5C34)' }}>Live</span> · {liveEvent.eventName}
+          </span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] shrink-0" style={{ color: 'var(--orange, #FF5C34)' }}>
+            {liveEvent.involvement === 'none' ? 'Join →' : 'Enter →'}
+          </span>
         </Link>
       )}
 
