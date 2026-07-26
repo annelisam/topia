@@ -9,6 +9,7 @@ import { useToast } from '../components/Toast';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventSourceBadge from './EventSourceBadge';
 import EventCover from './EventCover';
+import { eventLocalToday, eventLocalDayPlus } from '../../lib/events/localDay';
 
 interface EventHost {
   userId: string;
@@ -184,8 +185,11 @@ export default function EventsPageClient({
 
   /* ── Derived list: filter by tab, search ────────────────────── */
 
-  const today = new Date().toISOString().slice(0, 10);
-  const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // Device-local event day (not UTC) — keeps tonight's event under
+  // "Upcoming" for its whole night instead of sliding into "Past" at
+  // UTC midnight (8pm ET) or at 00:00 local while it's still running.
+  const today = eventLocalToday();
+  const weekFromNow = eventLocalDayPlus(7);
 
   const filtered = useMemo(() => {
     let list = events;

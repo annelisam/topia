@@ -11,6 +11,7 @@ import NewsletterSignup from '../components/NewsletterSignup';
 import GlitchType from '../components/ui/GlitchType';
 import { isRealPhoto } from '../../lib/avatar';
 import { openFeedbackWidget } from '../../lib/openFeedback';
+import { eventLocalToday } from '../../lib/events/localDay';
 
 interface Episode {
   id: string;
@@ -444,7 +445,9 @@ export default function HomeClient({
   // shuffled per visit so Discover stays fresh; real-photo guard for cache.
   const [episodes] = useState<Episode[]>(initialEpisodes);
   const [events] = useState<EventItem[]>(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    // Device-local event day (not UTC): tonight's event must stay in this
+    // list for the whole night, not vanish at UTC midnight.
+    const today = eventLocalToday();
     const upcoming = initialEvents.filter((e) => !e.dateIso || e.dateIso >= today);
     return (upcoming.length ? upcoming : initialEvents).slice(0, 7);
   });

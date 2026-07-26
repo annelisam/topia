@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { eventLocalToday } from '@/lib/events/localDay';
 
 export interface OverviewStats {
   followers: number;
@@ -101,7 +102,7 @@ export function DashboardOverviewProvider({ children }: { children: ReactNode })
     if (!authenticated || !user?.id) { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/dashboard/overview?privyId=${encodeURIComponent(user.id)}`)
+    fetch(`/api/dashboard/overview?privyId=${encodeURIComponent(user.id)}&date=${eventLocalToday()}`)
       .then((r) => r.json())
       .then((json: OverviewData) => {
         if (cancelled) return;

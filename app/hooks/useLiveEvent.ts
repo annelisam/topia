@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { eventLocalToday } from '@/lib/events/localDay';
 
 export type LiveInvolvement = 'checkedin' | 'host' | 'going' | 'none';
 
@@ -20,9 +21,10 @@ export interface LiveEvent {
 // viewer so a login mid-session refetches with their involvement.
 let liveCache: { at: number; date: string; key: string; event: LiveEvent | null } | null = null;
 
+// Device-local event day (late-night grace included) — NOT the raw calendar
+// date. Kept as the one date every live-event consumer sends/keys on.
 export function localDate(): string {
-  const n = new Date();
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  return eventLocalToday();
 }
 
 // Today's live event for this viewer — works logged-out too (involvement
