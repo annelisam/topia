@@ -149,6 +149,12 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) =>
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Once the event has genuinely ended, this page becomes the recap: the
+  // night's final quest tally, the winners, and everyone you met stay
+  // reachable — only the "do this now" machinery (RSVP, door pass, scans,
+  // install prompts, live polling) stands down.
+  const over = isEventOver(event);
+
   // The viewer's personal connect QR — a host scans it at the door to check
   // them in; other guests scan it to connect. Cached-first (the code is
   // permanent) so the pass renders instantly after the first visit ever.
@@ -179,11 +185,11 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   // visitors, and the lime banner below re-opens it on demand.
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
   useEffect(() => {
-    if (!authenticated || standalone) return;
+    if (!authenticated || standalone || over) return;
     try { if (localStorage.getItem('topia:a2hs-event-seen')) return; } catch { return; }
     const t = setTimeout(() => setInstallSheetOpen(true), 1800);
     return () => clearTimeout(t);
-  }, [authenticated, standalone]);
+  }, [authenticated, standalone, over]);
   const closeInstallSheet = useCallback(() => {
     setInstallSheetOpen(false);
     try { localStorage.setItem('topia:a2hs-event-seen', '1'); } catch { /* private mode */ }
@@ -220,9 +226,10 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
   useEffect(() => {
     loadMe();
+    if (over) return; // recap view — nothing at the door left to poll for
     const t = setInterval(loadMe, 15000);
     return () => clearInterval(t);
-  }, [loadMe]);
+  }, [loadMe, over]);
 
   // People met at this event (via QR connects).
   const loadPeople = useCallback(() => {
@@ -259,9 +266,10 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
   // complete server-side, so the checklist ticks itself without a reload.
   useEffect(() => {
     loadQuests();
+    if (over) return; // final tally is final — no need to keep polling
     const t = setInterval(loadQuests, 20000);
     return () => clearInterval(t);
-  }, [loadQuests]);
+  }, [loadQuests, over]);
 
   // Start (or reopen) a DM with someone met tonight — powers the "DM someone
   // you met" quest without leaving Event Mode.
@@ -360,7 +368,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
           <Link href={`/events/${slug}`} className="font-mono text-[11px] uppercase tracking-widest no-underline" style={{ color: DIM }}>
             ← Event page
           </Link>
-          {live && (
+          {live ? (
             <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full" style={{ backgroundColor: ORANGE, color: '#fff' }}>
               <span className="relative flex w-1.5 h-1.5">
                 <span className="live-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: '#fff' }} />
@@ -368,7 +376,11 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               </span>
               LIVE
             </span>
-          )}
+          ) : over ? (
+            <span className="font-mono text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full" style={{ border: `1px solid ${LINE}`, color: DIM }}>
+              WRAPPED
+            </span>
+          ) : null}
         </div>
 
         {loading || !ready ? (
@@ -400,16 +412,56 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
 
             {/* Journey tracker — the same three beats every guest moves
                 through tonight, so "where am I?" is answered before the
-                door card even loads. */}
-            <div className="live-enter" style={{ ...card, paddingTop: 12, paddingBottom: 12, '--d': '90ms' } as React.CSSProperties}>
-              <Stepper current={doorStep} />
-            </div>
+                door card even loads. Retired once the night is wrapped. */}
+            {!over && (
+              <div className="live-enter" style={{ ...card, paddingTop: 12, paddingBottom: 12, '--d': '90ms' } as React.CSSProperties}>
+                <Stepper current={doorStep} />
+              </div>
+            )}
 
             {/* Door state — the hero card. Always answers ONE question:
                 "what do I do right now?" — log in, RSVP, get checked in,
-                or go play. Each state carries its own CTA. */}
+                or go play. After the event it flips to the recap intro:
+                the night is over, but what happened is preserved below. */}
             <div className="live-enter" style={{ '--d': '160ms' } as React.CSSProperties}>
-            {!authenticated ? (
+            {over ? (
+              authenticated ? (
+                <div style={{ ...card, borderColor: LINE }}>
+                  <p style={meta}>✦ That's a wrap</p>
+                  <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                    {event.eventName} has ended — but the night is saved right here: your quest run, the winners, and everyone you met.
+                  </p>
+                  {questState && questState.total > 0 && (
+                    <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>
+                      {questState.completedCount}/{questState.total} quests completed{questState.inRaffle ? ' — you made the raffle' : ''}
+                    </p>
+                  )}
+                  {people.length > 0 && (
+                    <button
+                      onClick={() => scrollTo(peopleRef)}
+                      className="w-full font-mono text-[12px] font-bold uppercase tracking-widest px-4 py-3 rounded-full cursor-pointer border-none mt-3"
+                      style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                    >
+                      Follow up with the {people.length === 1 ? 'person' : `${people.length} people`} you met ↓
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={card}>
+                  <p style={meta}>This event has ended</p>
+                  <p className="text-[13px] mt-1.5" style={{ color: INK }}>
+                    Event Mode is where guests played the night&apos;s quests and met each other. If you were there, log in to see your recap.
+                  </p>
+                  <button
+                    onClick={login}
+                    className="w-full font-mono text-[12px] font-bold uppercase tracking-widest px-4 py-3 rounded-full cursor-pointer border-none mt-3"
+                    style={{ backgroundColor: LIME, color: '#1a1a1a' }}
+                  >
+                    Log in →
+                  </button>
+                </div>
+              )
+            ) : !authenticated ? (
               <div style={{ ...card, borderColor: LIME }}>
                 <p style={{ ...meta, color: LIME }}>Step 1 · Log in & RSVP</p>
                 <p className="text-[13px] mt-1.5" style={{ color: INK }}>
@@ -513,8 +565,9 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
             )}
 
             {/* Personal QR — the door scans it to check you in; other guests
-                scan it to connect with you */}
-            {authenticated && qrDataUrl && (
+                scan it to connect with you. No door and no room to work once
+                the night is wrapped. */}
+            {authenticated && qrDataUrl && !over && (
               <>
                 <SectionLabel>Your pass</SectionLabel>
                 <div ref={qrCardRef} style={card}>
@@ -567,7 +620,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                       </button>
                     )}
                   </span>
-                  {me?.checkedIn && questState.quests.some((q) => q.verifyMethod === 'qr' && !q.completed) && (
+                  {me?.checkedIn && !over && questState.quests.some((q) => q.verifyMethod === 'qr' && !q.completed) && (
                     <button
                       onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }}
                       className="font-mono text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full cursor-pointer border-none"
@@ -581,7 +634,11 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                   <div className="h-full rounded-full transition-all" style={{ width: `${(questState.completedCount / questState.total) * 100}%`, backgroundColor: LIME }} />
                 </div>
                 {questState.inRaffle ? (
-                  <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>🎉 All quests complete — you're in the raffle</p>
+                  <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>🎉 All quests complete — you{over ? ' were' : "'re"} in the raffle</p>
+                ) : over ? (
+                  <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>
+                    Final tally — thanks for playing
+                  </p>
                 ) : (
                   <p className="font-mono text-[11px] mt-1.5" style={{ color: DIM }}>
                     Finish all {questState.total} to enter the raffle{me?.checkedIn ? '' : ' — check-in unlocks the in-person ones'}
@@ -589,7 +646,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                 )}
 
                 {/* One-time explainer for people on their first quest run */}
-                {!introDismissed && !questState.inRaffle && (
+                {!introDismissed && !questState.inRaffle && !over && (
                   <div className="rounded-xl px-3 py-2.5 mt-3" style={{ border: `1px dashed rgba(228,254,82,0.4)`, backgroundColor: 'rgba(228,254,82,0.04)' }}>
                     <p style={{ ...meta, color: LIME }}>First time? Here's the game</p>
                     <div className="mt-1.5 flex flex-col gap-1">
@@ -629,7 +686,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                             {q.description && <span className="block text-[11px] mt-0.5" style={{ color: DIM }}>{q.description}</span>}
                             {!q.completed && (
                               <span className="block font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: DIM }}>
-                                {locked ? '🔒 Unlocks at check-in' : describeQuestRule(q.verifyMethod, q.rule)}
+                                {over ? 'Not completed' : locked ? '🔒 Unlocks at check-in' : describeQuestRule(q.verifyMethod, q.rule)}
                               </span>
                             )}
                           </span>
@@ -644,7 +701,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                             </span>
                           </div>
                         )}
-                        {!q.completed && !locked && (
+                        {!q.completed && !locked && !over && (
                           <div className="mt-2 flex" style={{ marginLeft: 34 }}>
                             {q.verifyMethod === 'qr' ? (
                               <button onClick={() => { setQuestScanStatus(null); setQuestScanOpen(true); }} className={`${actionBtn} border-none`} style={{ backgroundColor: LIME, color: '#1a1a1a' }}>
@@ -750,7 +807,9 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
               <div ref={peopleRef} style={card}>
                 <p style={meta}>People you met {people.length > 0 ? `· ${people.length}` : ''}</p>
                 {people.length === 0 ? (
-                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>No one yet — trade a scan with someone you meet and they'll show up here.</p>
+                  <p className="text-[12px] mt-1.5" style={{ color: DIM }}>
+                    {over ? 'No connections were recorded at this event.' : "No one yet — trade a scan with someone you meet and they'll show up here."}
+                  </p>
                 ) : (
                   <div className="mt-2 flex flex-col gap-0.5">
                     {people.slice(0, 12).map((p) => (
@@ -793,7 +852,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                   {guestCount > 8 && <span className="font-mono text-[11px] ml-2" style={{ color: DIM }}>+{guestCount - 8}</span>}
                 </div>
               )}
-              {authenticated && questState?.quests.some((q) => q.rule?.kind === 'follows') && guests.some((g) => g.username) && (
+              {authenticated && !over && questState?.quests.some((q) => q.rule?.kind === 'follows') && guests.some((g) => g.username) && (
                 <>
                   <div className="mt-3 flex flex-col gap-0.5">
                     {guests.filter((g) => g.username).slice(0, 12).map((g, i) => (
@@ -815,8 +874,9 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
             </div>
 
             {/* Add-to-home-screen — a standout lime banner that opens the
-                full how-to sheet; hidden once installed or dismissed */}
-            {!standalone && !installDismissed && (
+                full how-to sheet; hidden once installed or dismissed, and
+                pointless after the night is wrapped */}
+            {!standalone && !installDismissed && !over && (
               <div className="rounded-2xl px-4 py-3.5" style={{ backgroundColor: LIME }}>
                 <div className="flex items-start justify-between gap-3">
                   <button
