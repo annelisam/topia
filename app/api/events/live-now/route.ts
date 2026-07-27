@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { db, users, events, eventRsvps, eventHosts, eventCheckins } from '@/lib/db';
+import { parseClockTime } from '@/lib/events/localDay';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,6 +15,19 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // going. Viewers with no involvement (not RSVP'd, or logged out — privyId is
 // optional) still get today's event back with involvement 'none', so the UI
 // can pull them toward RSVPing instead of hiding the event from them.
+//
+// When several events share the day, native TOPIA events (created on the
+// platform, externalSource null) outrank imported Luma/Partiful/etc. shares —
+// both inside each involvement tier and in the no-involvement fallback. The
+// old fallback was `todays[0]` in arbitrary DB order, which let a shared
+// external listing steal the LIVE chip/takeover from a Topia event happening
+// the same night.
+
+/** "9:00 PM" → minutes since midnight, for a stable earliest-first ordering.
+ * Unparseable/missing times sort last. */
+const startMinutes = (t: string | null): number =>
+  parseClockTime(t) ?? Number.MAX_SAFE_INTEGER;
+
 export async function GET(request: NextRequest) {
   try {
     const sp = request.nextUrl.searchParams;
@@ -22,10 +36,17 @@ export async function GET(request: NextRequest) {
     if (!DATE_RE.test(date)) return NextResponse.json({ error: 'date must be YYYY-MM-DD' }, { status: 400 });
 
     const todays = await db
-      .select({ id: events.id, slug: events.slug, eventName: events.eventName, startTime: events.startTime, city: events.city })
+      .select({ id: events.id, slug: events.slug, eventName: events.eventName, startTime: events.startTime, city: events.city, externalSource: events.externalSource })
       .from(events)
       .where(and(eq(events.dateIso, date), eq(events.published, true)));
     if (todays.length === 0) return NextResponse.json({ event: null }, { headers: NO_STORE });
+
+    // TOPIA events first, then earliest start, then slug as a final
+    // deterministic tie-break (never let the pick flip between requests).
+    todays.sort((a, b) =>
+      Number(!!a.externalSource) - Number(!!b.externalSource) ||
+      startMinutes(a.startTime) - startMinutes(b.startTime) ||
+      a.slug.localeCompare(b.slug));
 
     const ids = todays.map((e) => e.id);
 

@@ -19,6 +19,7 @@ const TicketPurchase = dynamic(() => import('./TicketPurchase'), { ssr: false })
 import CommentSection from '../../components/CommentSection';
 import EventGallery from '../../components/EventGallery';
 import { PAYMENTS_ENABLED } from '../../../lib/featureFlags';
+import { isEventOver } from '../../../lib/events/localDay';
 import { CheckIcon, ShareIcon } from '../../components/ui/Icons';
 import { shortenPath } from '../../../lib/shortlink';
 const ShareModal = dynamic(() => import('../../components/ShareModal'), { ssr: false });
@@ -484,7 +485,9 @@ export default function EventDetailClient({ slug }: { slug: string }) {
   const location = event.address || event.city || '';
   const hasCalendarData = !!event.date;
   const tzLabel = formatTimezone(event.timezone);
-  const isPast = event.dateIso ? event.dateIso < new Date().toISOString().slice(0, 10) : false;
+  // End-time aware, in the event's own timezone — a UTC date comparison here
+  // once declared a live event "ended" at 8pm ET and hid Event Mode (quests).
+  const isPast = isEventOver(event);
 
   // Luma-style mini calendar tile values, derived from the ISO date.
   const evDate = event.dateIso ? new Date(event.dateIso + 'T00:00:00') : null;

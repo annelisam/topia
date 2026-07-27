@@ -174,6 +174,18 @@ export async function getEventsOverview({
     isSaved: mySavedSlugs.has(e.slug),
   }));
 
+  // Within a day, native TOPIA events lead — imported Luma/Partiful shares
+  // sit below them instead of landing wherever DB order dropped them.
+  // Undated events keep sorting last (matching Postgres ASC NULLS LAST).
+  enriched.sort((a, b) => {
+    if (a.dateIso !== b.dateIso) {
+      if (!a.dateIso) return 1;
+      if (!b.dateIso) return -1;
+      return a.dateIso.localeCompare(b.dateIso);
+    }
+    return Number(!!a.externalSource) - Number(!!b.externalSource);
+  });
+
   const cities = Array.from(new Set(cityRows.map((c) => c.city).filter((c): c is string => Boolean(c)))).sort();
 
   return {

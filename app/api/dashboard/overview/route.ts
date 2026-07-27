@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
       .limit(1);
     if (!user) return NextResponse.json(empty());
 
-    const todayIso = new Date().toISOString().slice(0, 10);
+    // The client sends its device-local day (?date=YYYY-MM-DD) — the server's
+    // UTC clock says "tomorrow" from 8pm ET onward, which used to drop
+    // tonight's event from the upcoming list mid-evening.
+    const clientDate = request.nextUrl.searchParams.get('date') ?? '';
+    const todayIso = /^\d{4}-\d{2}-\d{2}$/.test(clientDate)
+      ? clientDate
+      : new Date().toISOString().slice(0, 10);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const inviters = alias(users, 'inviters');
     const actors   = alias(users, 'actors');

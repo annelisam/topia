@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import QrScannerOverlay from '../../../components/QrScannerOverlay';
 import AddToHomeScreenSheet from '../../../components/AddToHomeScreenSheet';
 import { describeQuestRule } from '../../../../lib/events/questTypes';
+import { isEventToday, isEventOver } from '../../../../lib/events/localDay';
 import { getConnectPath } from '../../../../lib/connect/clientCode';
 
 // The site-wide messages UI, mounted locally so the "DM someone you met"
@@ -30,6 +31,7 @@ interface LiveEvent {
   dateIso: string | null;
   startTime: string | null;
   endTime: string | null;
+  timezone: string | null;
   city: string | null;
   address: string | null;
   isHost: boolean;
@@ -106,12 +108,11 @@ function Stepper({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
-function isToday(dateIso: string | null): boolean {
-  if (!dateIso) return false;
-  const now = new Date();
-  const local = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  return dateIso.slice(0, 10) === local;
-}
+// Shared event-day helpers: device-local with the late-night grace, so the
+// LIVE badge doesn't die at midnight while the party is still going — but
+// does turn off once the event has genuinely ended (endTime + buffer).
+const isLiveNow = (ev: LiveEvent | null) =>
+  !!ev && isEventToday(ev.dateIso) && !isEventOver(ev);
 
 export default function EventLivePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -336,7 +337,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
     }
   }, [privyId, event?.id, loadPeople, loadQuests]);
 
-  const live = isToday(event?.dateIso ?? null);
+  const live = isLiveNow(event);
   const nextQuest = questState?.quests.find((q) => !q.completed) ?? null;
   // Where the viewer stands on the RSVP → Check in → Play journey. Hosts
   // skip the RSVP beat — their next move is the door, same as the on-list.

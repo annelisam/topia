@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.privyId, privyId)).limit(1);
     if (!user) return NextResponse.json({ events: [] });
 
-    const todayIso = new Date().toISOString().slice(0, 10);
+    // Client-supplied device-local day; the server's UTC clock flips to
+    // "tomorrow" at 8pm ET and would hide tonight's event.
+    const clientDate = request.nextUrl.searchParams.get('date') ?? '';
+    const todayIso = /^\d{4}-\d{2}-\d{2}$/.test(clientDate)
+      ? clientDate
+      : new Date().toISOString().slice(0, 10);
 
     // Events I host (via eventHosts table OR created_by)
     const hosting = await db
