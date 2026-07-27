@@ -15,6 +15,10 @@ import { getConnectPath } from '../../../../lib/connect/clientCode';
 // quest can open a thread without leaving Event Mode (this page has no
 // Navigation, which normally hosts the modal).
 const MessagesModal = dynamic(() => import('../../../components/MessagesModal'), { ssr: false });
+// The event-page photo album, resurfaced on the recap so the night's photos
+// live next to the quest tally and the people you met. Loaded on demand —
+// it's only rendered once the event is over.
+const EventGallery = dynamic(() => import('../../../components/EventGallery'), { ssr: false });
 
 /* Event Mode — the in-the-room hub for a live event. Deliberately committed
  * to a single dark look (obsidian ground, lime accents) regardless of the
@@ -429,7 +433,7 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                 <div style={{ ...card, borderColor: LINE }}>
                   <p style={meta}>✦ That's a wrap</p>
                   <p className="text-[13px] mt-1.5" style={{ color: INK }}>
-                    {event.eventName} has ended — but the night is saved right here: your quest run, the winners, and everyone you met.
+                    {event.eventName} has ended — but the night is saved right here: the photos, your quest run, the winners, and everyone you met.
                   </p>
                   {questState && questState.total > 0 && (
                     <p className="font-mono text-[11px] font-bold mt-1.5" style={{ color: LIME }}>
@@ -561,6 +565,28 @@ export default function EventLivePage({ params }: { params: Promise<{ slug: stri
                   <span className="font-mono text-[11px] uppercase tracking-widest font-bold" style={{ color: LIME }}>Quests, prizes & raffle</span>
                   <span style={{ color: LIME }}>→</span>
                 </Link>
+              </div>
+            )}
+
+            {/* The album — the night's photos, resurfaced on the recap where
+                the memories live. Guests who were on the list can keep adding
+                shots (the gallery API decides who can contribute). Event Mode
+                is hard-committed dark, so locally re-point the theme vars the
+                site-themed gallery component reads. */}
+            {over && (
+              <div
+                className="-mb-6"
+                style={{
+                  '--background': '#1a1a1a',
+                  '--foreground': INK,
+                  '--border-color': LINE,
+                  '--text-muted': DIM,
+                  '--surface-hover': 'rgba(245,240,232,0.08)',
+                } as React.CSSProperties}
+              >
+                {/* Renders its own "Album · N" header, and nothing at all when
+                    there are no photos and the viewer can't contribute. */}
+                <EventGallery slug={slug} isHost={!!(event.isHost || event.isManager)} privyId={privyId ?? null} />
               </div>
             )}
 
