@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { db, users, events, eventRsvps, eventHosts, eventCheckins } from '@/lib/db';
+import { parseClockTime } from '@/lib/events/localDay';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -24,13 +25,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** "9:00 PM" → minutes since midnight, for a stable earliest-first ordering.
  * Unparseable/missing times sort last. */
-function startMinutes(t: string | null): number {
-  const m = (t ?? '').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-  if (!m) return Number.MAX_SAFE_INTEGER;
-  let h = Number(m[1]) % 12;
-  if ((m[3] ?? '').toLowerCase() === 'pm') h += 12;
-  return h * 60 + Number(m[2] ?? 0);
-}
+const startMinutes = (t: string | null): number =>
+  parseClockTime(t) ?? Number.MAX_SAFE_INTEGER;
 
 export async function GET(request: NextRequest) {
   try {

@@ -9,7 +9,7 @@ import { useToast } from '../components/Toast';
 import { CheckIcon, StarIcon } from '../components/ui/Icons';
 import EventSourceBadge from './EventSourceBadge';
 import EventCover from './EventCover';
-import { eventLocalToday, eventLocalDayPlus } from '../../lib/events/localDay';
+import { eventLocalDayPlus, isEventOver } from '../../lib/events/localDay';
 
 interface EventHost {
   userId: string;
@@ -185,10 +185,9 @@ export default function EventsPageClient({
 
   /* ── Derived list: filter by tab, search ────────────────────── */
 
-  // Device-local event day (not UTC) — keeps tonight's event under
-  // "Upcoming" for its whole night instead of sliding into "Past" at
-  // UTC midnight (8pm ET) or at 00:00 local while it's still running.
-  const today = eventLocalToday();
+  // End-time-aware "over" (event's own timezone, overrun buffer) — tonight's
+  // event stays under "Upcoming" for its whole night instead of sliding into
+  // "Past" at UTC midnight (8pm ET) or at 00:00 while it's still running.
   const weekFromNow = eventLocalDayPlus(7);
 
   const filtered = useMemo(() => {
@@ -202,9 +201,9 @@ export default function EventsPageClient({
       );
     }
     switch (tab) {
-      case 'upcoming': list = list.filter((e) => !e.dateIso || e.dateIso >= today); break;
-      case 'thisWeek': list = list.filter((e) => e.dateIso && e.dateIso >= today && e.dateIso <= weekFromNow); break;
-      case 'past':     list = list.filter((e) => e.dateIso && e.dateIso < today); break;
+      case 'upcoming': list = list.filter((e) => !e.dateIso || !isEventOver(e)); break;
+      case 'thisWeek': list = list.filter((e) => e.dateIso && !isEventOver(e) && e.dateIso <= weekFromNow); break;
+      case 'past':     list = list.filter((e) => e.dateIso && isEventOver(e)); break;
       case 'saved':    list = list.filter((e) => e.isSaved); break;
       case 'mine':     list = list.filter((e) => e.isGoing || e.isHosting); break;
       case 'all':      break;
@@ -214,27 +213,26 @@ export default function EventsPageClient({
       list = [...list].sort((a, b) => (b.dateIso ?? '').localeCompare(a.dateIso ?? ''));
     }
     return list;
-  }, [events, search, tab, today, weekFromNow]);
+  }, [events, search, tab, weekFromNow]);
 
   // Counts for tab labels
   const counts = useMemo(() => {
     return {
       all: events.length,
-      upcoming: events.filter((e) => !e.dateIso || e.dateIso >= today).length,
-      thisWeek: events.filter((e) => e.dateIso && e.dateIso >= today && e.dateIso <= weekFromNow).length,
-      past: events.filter((e) => e.dateIso && e.dateIso < today).length,
+      upcoming: events.filter((e) => !e.dateIso || !isEventOver(e)).length,
+      thisWeek: events.filter((e) => e.dateIso && !isEventOver(e) && e.dateIso <= weekFromNow).length,
+      past: events.filter((e) => e.dateIso && isEventOver(e)).length,
       saved: events.filter((e) => e.isSaved).length,
       mine: events.filter((e) => e.isGoing || e.isHosting).length,
     };
-  }, [events, today, weekFromNow]);
+  }, [events, weekFromNow]);
 
   // Date grouping
   const grouped = useMemo(() => {
     const groups: { label: string; items: EventCard[] }[] = [];
     let current: { label: string; items: EventCard[] } | null = null;
     for (const ev of filtered) {
-      const isPast = !!(ev.dateIso && ev.dateIso < today);
-      const label = dateGroupKey(ev.dateIso, isPast);
+      const label = dateGroupKey(ev.dateIso, isEventOver(ev));
       if (!current || current.label !== label) {
         current = { label, items: [] };
         groups.push(current);
@@ -242,14 +240,14 @@ export default function EventsPageClient({
       current.items.push(ev);
     }
     return groups;
-  }, [filtered, today]);
+  }, [filtered]);
 
   // Featured: next upcoming events that have a cover image.
   // Grid view shows a compact scroll (6 items); list view shows a 3-up hero.
   const featured = useMemo(() => {
-    const pool = events.filter((e) => e.dateIso && e.dateIso >= today && e.imageUrl);
+    const pool = events.filter((e) => e.dateIso && !isEventOver(e) && e.imageUrl);
     return viewMode === 'grid' ? pool.slice(0, 8) : pool.slice(0, 3);
-  }, [events, today, viewMode]);
+  }, [events, viewMode]);
 
   const showFeatured = !search && !selectedCity && (tab === 'all' || tab === 'upcoming' || tab === 'thisWeek');
 
@@ -421,7 +419,6 @@ export default function EventsPageClient({
                             key={ev.id}
                             event={ev}
                             authenticated={authenticated}
-                            today={today}
                             onOpen={() => router.push(`/events/${ev.slug}`)}
                             onToggleRsvp={() => openEventById(ev.id)}
                             onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
@@ -443,7 +440,6 @@ export default function EventsPageClient({
                             key={ev.id}
                             event={ev}
                             authenticated={authenticated}
-                            today={today}
                             onOpen={() => router.push(`/events/${ev.slug}`)}
                             onToggleRsvp={() => openEventById(ev.id)}
                             onToggleSave={() => toggleSave(ev.slug, !ev.isSaved)}
@@ -483,15 +479,14 @@ export default function EventsPageClient({
 interface RowProps {
   event: EventCard;
   authenticated: boolean;
-  today: string;
   onOpen: () => void;
   onToggleRsvp: () => void;
   onToggleSave: () => void;
   staggerIndex?: number;
 }
 
-function EventRow({ event, authenticated, today, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
-  const isPast = !!(event.dateIso && event.dateIso < today);
+function EventRow({ event, authenticated, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
+  const isPast = isEventOver(event);
   const chip = formatDayChip(event.dateIso);
   const accentLeft = event.isHosting ? 'border-l-lime' : isPast ? 'border-l-orange/50' : 'border-l-bone/15';
 
@@ -865,8 +860,8 @@ function FeaturedRowCompact({
 
 /* ── Grid card ───────────────────────────────────────────────────── */
 
-function EventGridCard({ event, authenticated, today, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
-  const isPast = !!(event.dateIso && event.dateIso < today);
+function EventGridCard({ event, authenticated, onOpen, onToggleRsvp, onToggleSave, staggerIndex = 0 }: RowProps) {
+  const isPast = isEventOver(event);
   const chip = formatDayChip(event.dateIso);
   const accent = event.isHosting ? 'border-[var(--accent)]/40' : isPast ? 'border-orange/30' : 'border-[var(--border-color)]';
 
