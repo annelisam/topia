@@ -642,10 +642,12 @@ export default function EventDetailClient({ slug }: { slug: string }) {
                   Waitlisted
                 </span>
               )}
-              {/* Event Mode — the in-the-room hub (check-in state, quests) */}
-              {!isPast && (event.isHost || event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending' && event.userStatus !== 'waitlisted')) && (
+              {/* Event Mode — the in-the-room hub (check-in state, quests).
+                  After the event it stays reachable as the recap: the final
+                  quest tally, winners, and everyone you met. */}
+              {(event.isHost || event.userStatus === 'going' || (event.userRsvped && event.userStatus !== 'pending' && event.userStatus !== 'waitlisted')) && (
                 <Link href={`/events/${event.slug}/live`} className="inline-block px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-widest font-bold border no-underline hover:opacity-70 transition" style={{ color: 'var(--accent-ink)', borderColor: 'var(--accent-ink)' }}>
-                  ● Event Mode
+                  {isPast ? '○ Event Recap' : '● Event Mode'}
                 </Link>
               )}
               {isPast && (
