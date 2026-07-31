@@ -106,25 +106,27 @@ export default function DoneStep({ config, name, username, avatarUrl, roleTags, 
           )}
 
           {phase >= 4 && (
-            <div
-              className="mt-10 flex items-center justify-center gap-4"
-              style={{ opacity: 0, animation: 'fadeUp 0.7s ease forwards' }}
-            >
-              {username && (
+            <div style={{ opacity: 0, animation: 'fadeUp 0.7s ease forwards' }}>
+              <div className="mt-10 flex items-center justify-center gap-4">
+                {username && (
+                  <Link
+                    href={`/profile/${username}`}
+                    className={`font-mono font-bold text-[13px] md:text-[15px] uppercase tracking-[2px] ${accentBg} ${accentTextOn} px-7 py-3.5 rounded-md no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03]`}
+                    style={{ boxShadow: `0 8px 28px -6px ${accent}99` }}
+                  >
+                    view your profile →
+                  </Link>
+                )}
                 <Link
-                  href={`/profile/${username}`}
-                  className={`font-mono font-bold text-[13px] md:text-[15px] uppercase tracking-[2px] ${accentBg} ${accentTextOn} px-7 py-3.5 rounded-md no-underline transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03]`}
-                  style={{ boxShadow: `0 8px 28px -6px ${accent}99` }}
+                  href="/home"
+                  className="font-mono text-[12px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition-colors no-underline border border-ink/20 hover:border-ink/50 px-4 py-2.5"
                 >
-                  view your profile →
+                  explore topia
                 </Link>
-              )}
-              <Link
-                href="/home"
-                className="font-mono text-[12px] uppercase tracking-[2px] text-ink/50 hover:text-ink transition-colors no-underline border border-ink/20 hover:border-ink/50 px-4 py-2.5"
-              >
-                explore topia
-              </Link>
+              </div>
+              <p className="mt-6 font-mono text-[11px] uppercase tracking-[2px] text-ink/30">
+                add your craft, bio &amp; links anytime from your profile
+              </p>
             </div>
           )}
         </div>

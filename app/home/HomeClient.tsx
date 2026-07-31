@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import PageShell from '../components/PageShell';
 import PassportLoop from '../components/home/PassportLoop';
+import CompleteProfileModal from '../components/home/CompleteProfileModal';
 import BlobImage from '../components/BlobImage';
 import EventCover from '../events/EventCover';
 import NewsletterSignup from '../components/NewsletterSignup';
@@ -58,6 +59,10 @@ interface Profile {
   isWorldBuilder?: boolean;
   createdAt?: string;
 }
+
+// Snooze ledger for the deferred complete-your-profile popup (epoch ms until
+// which it stays hidden). localStorage so it survives across sessions.
+const COMPLETE_PROFILE_SNOOZE_KEY = 'topia:complete-profile-snooze';
 
 // Fisher-Yates shuffle — returns a new randomly-ordered array.
 function shuffle<T>(arr: T[]): T[] {
@@ -455,19 +460,55 @@ export default function HomeClient({
   const [profiles] = useState<Profile[]>(() => shuffle(initialProfiles.filter((p) => isRealPhoto(p.avatarUrl))));
   // null = unknown / logged out; true/false = the viewer's profile completeness.
   const [viewerComplete, setViewerComplete] = useState<boolean | null>(null);
+  // The deferred half of signup: signup itself only asks for name · handle ·
+  // photo, and this popup collects craft tags + bio later. Deliberately NOT
+  // shown right after signup — only to accounts older than a day, and a
+  // dismissal snoozes it for days.
+  const [completeProfileOpen, setCompleteProfileOpen] = useState(false);
+  const [viewerExtras, setViewerExtras] = useState<{ roleTags: string[]; bio: string } | null>(null);
 
   useEffect(() => {
     if (!user?.id) { setViewerComplete(null); return; }
+    let timer: ReturnType<typeof setTimeout> | undefined;
     fetch(`/api/auth/profile?privyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then((d) => {
         const u = d.user;
         // Require a real uploaded photo — an auto-generated fallback avatar
-        // still counts as an incomplete profile (prompts onboarding).
-        setViewerComplete(!!(u && isRealPhoto(u.avatarUrl) && u.name && u.username && u.roleTags));
+        // still counts as an incomplete profile (prompts onboarding). Role
+        // tags moved out of the signup flow, so they no longer gate the
+        // deck's "finish onboarding" CTA — the popup below picks them up.
+        const coreDone = !!(u && isRealPhoto(u.avatarUrl) && u.name && u.username);
+        setViewerComplete(coreDone);
+
+        // Nudge for the deferred extras only when signup is behind them.
+        if (!coreDone || !u) return;
+        const missingExtras = !u.roleTags || !u.bio;
+        const oldEnough = u.createdAt
+          ? Date.now() - new Date(u.createdAt).getTime() > 24 * 60 * 60 * 1000
+          : false;
+        let snoozed = false;
+        try { snoozed = Number(localStorage.getItem(COMPLETE_PROFILE_SNOOZE_KEY) ?? 0) > Date.now(); } catch { /* ignore */ }
+        if (missingExtras && oldEnough && !snoozed) {
+          setViewerExtras({
+            roleTags: u.roleTags ? String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+            bio: u.bio ?? '',
+          });
+          // Let the page land first — the popup easing in beats it slamming open.
+          timer = setTimeout(() => setCompleteProfileOpen(true), 2500);
+        }
       })
       .catch(() => {});
+    return () => clearTimeout(timer);
   }, [user?.id]);
+
+  const closeCompleteProfile = (saved: boolean) => {
+    setCompleteProfileOpen(false);
+    // Saved → long snooze (re-appears only if something is still missing).
+    // Dismissed → short snooze so it stays polite, not naggy.
+    const days = saved ? 14 : 3;
+    try { localStorage.setItem(COMPLETE_PROFILE_SNOOZE_KEY, String(Date.now() + days * 24 * 60 * 60 * 1000)); } catch { /* ignore */ }
+  };
 
   const heroRef = useRef<HTMLElement>(null);
 
@@ -479,6 +520,14 @@ export default function HomeClient({
 
   return (
     <PageShell>
+      {completeProfileOpen && viewerExtras && user?.id && (
+        <CompleteProfileModal
+          privyId={user.id}
+          initialRoleTags={viewerExtras.roleTags}
+          initialBio={viewerExtras.bio}
+          onClose={closeCompleteProfile}
+        />
+      )}
       <div className="home-cursor min-h-screen" style={{ backgroundColor: 'var(--page-bg)' }}>
 
         {/* ── HERO ── */}

@@ -5,12 +5,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PATH_CONFIG, UserPath } from '../components/profile/pathConfig';
 import WelcomeStep from './steps/WelcomeStep';
-import NameStep from './steps/NameStep';
-import UsernameStep from './steps/UsernameStep';
+import IdentityStep from './steps/IdentityStep';
 import AvatarStep from './steps/AvatarStep';
-import RoleTagsStep from './steps/RoleTagsStep';
-import BioSocialsStep from './steps/BioSocialsStep';
-import FollowStep from './steps/FollowStep';
 import DoneStep from './steps/DoneStep';
 import { isRealPhoto } from '../../lib/avatar';
 
@@ -80,29 +76,26 @@ function reducer(state: State, action: Action): State {
 
 /* ── Step manifest ────────────────────────────────────────────── */
 
+// Signup is deliberately minimal: identity (name + handle) and a photo.
+// Everything else — craft tags, bio, socials, follows — is optional and
+// collected later by the complete-your-profile prompt on /home, so a new
+// member (especially one mid-RSVP) is through in seconds.
 const STEPS = [
   'welcome',
-  'name',
-  'username',
+  'identity',
   'avatar',
-  'roles',
-  'bio',
-  'follow',
   'done',
 ] as const;
 
-const TOTAL_STEPS = STEPS.length - 1; // welcome + done are bookends; "progress" runs over input steps
+const TOTAL_STEPS = STEPS.length - 2; // welcome + done are bookends; "progress" runs over input steps
 
 /* ── First-incomplete-step resume logic ───────────────────────── */
 
 function firstIncompleteStep(data: Partial<WizardData>): number {
-  if (!data.name) return 1;
-  if (!data.username) return 2;
+  if (!data.name || !data.username) return 1;
   // An auto-generated fallback avatar (SVG data URL) doesn't count — route them
   // to the avatar step to upload a real photo.
-  if (!isRealPhoto(data.avatarUrl)) return 3;
-  if (!data.roleTags || data.roleTags.length === 0) return 4; // roles
-  // bio + socials + follow are optional — jump to done
+  if (!isRealPhoto(data.avatarUrl)) return 2;
   return STEPS.length - 1;
 }
 
@@ -219,7 +212,7 @@ function OnboardingWizard() {
 
   const current = STEPS[state.step];
   const config = state.data.path ? PATH_CONFIG[state.data.path as UserPath] : null;
-  const stepNumber = state.step; // 0 for welcome, 1-7 input, 8 done
+  const stepNumber = state.step; // 0 welcome · 1 identity · 2 avatar · 3 done
   const inputStepNumber = Math.max(0, Math.min(stepNumber, TOTAL_STEPS));
 
   /* Step routing */
@@ -231,25 +224,16 @@ function OnboardingWizard() {
           name={user?.email?.address ?? user?.google?.name ?? 'creator'}
         />
       )}
-      {current === 'name' && (
-        <NameStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          initialValue={state.data.name}
-          onBack={back}
-          onAdvance={(name) => advance({ name })}
-        />
-      )}
-      {current === 'username' && (
-        <UsernameStep
+      {current === 'identity' && (
+        <IdentityStep
           step={inputStepNumber}
           total={TOTAL_STEPS}
           config={config}
           privyId={user?.id ?? ''}
-          initialValue={state.data.username}
+          initialName={state.data.name}
+          initialUsername={state.data.username}
           onBack={back}
-          onAdvance={(username) => advance({ username })}
+          onAdvance={(patch) => advance(patch)}
         />
       )}
       {current === 'avatar' && (
@@ -261,53 +245,6 @@ function OnboardingWizard() {
           fallbackName={state.data.name || 'You'}
           onBack={back}
           onAdvance={(avatarUrl) => advance({ avatarUrl })}
-        />
-      )}
-      {current === 'roles' && (
-        <RoleTagsStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          initialValue={state.data.roleTags}
-          onBack={back}
-          onAdvance={(roleTags) => advance({ roleTags })}
-        />
-      )}
-      {current === 'bio' && (
-        <BioSocialsStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          initialBio={state.data.bio}
-          initialSocials={{
-            socialWebsite: state.data.socialWebsite,
-            socialTwitter: state.data.socialTwitter,
-            socialInstagram: state.data.socialInstagram,
-            socialSoundcloud: state.data.socialSoundcloud,
-            socialSpotify: state.data.socialSpotify,
-            socialLinkedin: state.data.socialLinkedin,
-            socialSubstack: state.data.socialSubstack,
-            socialFarcaster: state.data.socialFarcaster,
-          }}
-          onBack={back}
-          onAdvance={(patch) => advance(patch)}
-          saveDraft={async (patch) => {
-            // Persist current draft BEFORE the OAuth full-page redirect (social
-            // link verification), so the user's bio/socials aren't lost if the
-            // page reloads mid-flow and resumes from the saved profile.
-            dispatch({ type: 'PATCH', patch });
-            await saveDiff(patch);
-          }}
-        />
-      )}
-      {current === 'follow' && (
-        <FollowStep
-          step={inputStepNumber}
-          total={TOTAL_STEPS}
-          config={config}
-          privyId={user?.id ?? ''}
-          onBack={back}
-          onAdvance={() => dispatch({ type: 'NEXT' })}
         />
       )}
       {current === 'done' && (
