@@ -46,20 +46,11 @@ interface Props {
 
 const inputCls = 'w-full border px-4 py-3 font-mono text-[13px] rounded-xl outline-none transition focus:border-[var(--foreground)]';
 
-// Curated country dialing codes for the phone field.
-const COUNTRY_CODES = ['+1', '+44', '+61', '+33', '+49', '+34', '+39', '+81', '+91', '+52', '+55', '+86', '+27', '+234', '+971', '+972'];
-
-// Split a stored E.164-ish phone into a known dialing code + the rest.
-function splitPhone(full: string | null | undefined): { code: string; rest: string } {
-  if (!full) return { code: '+1', rest: '' };
-  const match = COUNTRY_CODES.filter((c) => full.startsWith(c)).sort((a, b) => b.length - a.length)[0];
-  if (match) return { code: match, rest: full.slice(match.length) };
-  return { code: '+1', rest: full.replace(/^\+/, '') };
-}
-
-// Registration modal: after a visitor verifies with Privy, they confirm their
-// contact details (name auto-filled, email + optional phone) and answer the
-// host's custom questions, then submit.
+// Registration modal: after a visitor verifies with Privy, one quick screen
+// collects everything — name, verified email, a handle + photo (their TOPIA
+// passport) and the host's required questions — then submits. Optional
+// profile extras (craft tags, socials, bio) are deferred to the
+// complete-your-profile prompt on /home so RSVP stays fast.
 export default function RsvpModal({ eventId, slug, eventName, privyId, email, name, inviteToken, approvalRequired, ticketLink, onClose, onRegistered, onDone }: Props) {
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
@@ -74,8 +65,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   // Standard contact fields — auto-filled from the user's profile, editable.
   const [contactName, setContactName] = useState(name ?? '');
   const [contactEmail, setContactEmail] = useState(email ?? '');
-  const [phoneCode, setPhoneCode] = useState('+1');
-  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Profile claim: a username (required) + a photo. The photo is a required
   // *choice*: upload a real one, or explicitly opt for the generated avatar.
@@ -111,13 +100,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   // first. `photoUnlocked` flips once they confirm.
   const [photoUnlocked, setPhotoUnlocked] = useState(false);
   const [confirmPhotoOpen, setConfirmPhotoOpen] = useState(false);
-  // Guard against accidental exits mid-form (steps 1–2). On step 3 the RSVP is
+  // Guard against accidental exits mid-form. On the success screen the RSVP is
   // already saved, so exiting just reveals the passport card.
   const [confirmExit, setConfirmExit] = useState(false);
 
-  // Three-step flow: 1 = basic info, 2 = complete Topia passport, 3 = success
-  // (get tickets · share · done).
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Two-screen flow: one form (everything), then success (tickets · share · done).
+  const [step, setStep] = useState<'form' | 'success'>('form');
   const [resultStatus, setResultStatus] = useState<string>('going');
   const [copied, setCopied] = useState(false);
   const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}` : '';
@@ -133,8 +121,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       if (raw) {
         const d = JSON.parse(raw) as Record<string, unknown>;
         if (typeof d.contactName === 'string' && d.contactName) setContactName((v) => v || (d.contactName as string));
-        if (typeof d.phoneCode === 'string' && d.phoneCode) setPhoneCode(d.phoneCode as string);
-        if (typeof d.phoneNumber === 'string' && d.phoneNumber) setPhoneNumber((v) => v || (d.phoneNumber as string));
         if (typeof d.username === 'string' && d.username) setUsername((v) => v || (d.username as string));
         if (d.answers && typeof d.answers === 'object') setAnswers((a) => ({ ...(d.answers as Record<string, AnswerValue>), ...a }));
         if (d.consent === true) setConsent(true);
@@ -144,11 +130,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    if (!draftRestored.current || step === 3) return;
+    if (!draftRestored.current || step === 'success') return;
     try {
-      sessionStorage.setItem(draftKey, JSON.stringify({ contactName, phoneCode, phoneNumber, username, answers, consent }));
+      sessionStorage.setItem(draftKey, JSON.stringify({ contactName, username, answers, consent }));
     } catch { /* storage full/blocked — non-fatal */ }
-  }, [draftKey, contactName, phoneCode, phoneNumber, username, answers, consent, step]);
+  }, [draftKey, contactName, username, answers, consent, step]);
 
   const copyLink = () => {
     navigator.clipboard.writeText(eventUrl);
@@ -183,9 +169,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     setError('');
   }
 
-  // Privy-verified contact methods are locked (can't be edited); the others
-  // can be verified in-place via Privy, like the profile "connect" rows.
-  const { user, linkEmail, linkPhone, getAccessToken } = usePrivy();
+  // Privy-verified contact methods are locked (can't be edited); email can be
+  // verified in-place via Privy, like the profile "connect" rows. A verified
+  // phone rides along silently on submit — there's no phone field here, the
+  // form stays lean.
+  const { user, linkEmail, getAccessToken } = usePrivy();
   const linked = user?.linkedAccounts ?? [];
   const emailAcct = linked.find((a) => a.type === 'email') as { address: string } | undefined;
   const googleAcct = linked.find((a) => a.type === 'google_oauth') as { email?: string } | undefined;
@@ -193,12 +181,9 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const verifiedEmail = emailAcct?.address || googleAcct?.email || null;
   const verifiedPhone = phoneAcct?.number || null;
 
-  // Force the verified values into the fields (and keep them in sync if the
-  // guest verifies one mid-flow).
+  // Force the verified value into the field (and keep it in sync if the
+  // guest verifies mid-flow).
   useEffect(() => { if (verifiedEmail) setContactEmail(verifiedEmail); }, [verifiedEmail]);
-  useEffect(() => {
-    if (verifiedPhone) { const { code, rest } = splitPhone(verifiedPhone); setPhoneCode(code); setPhoneNumber(rest); }
-  }, [verifiedPhone]);
 
   useEffect(() => {
     fetch(`/api/events/questions?slug=${slug}`)
@@ -230,8 +215,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         if (u.name) setExistingName(true);
         if (u.username) setExistingUsername(true);
         if (isRealPhoto(u.avatarUrl)) setExistingPhoto(true);
-        const { code, rest } = splitPhone(u.phone);
-        if (rest) { setPhoneCode(code); setPhoneNumber(rest); }
         if (u.roleTags) {
           setProfileRoleSlugs(String(u.roleTags).split(',').map((s: string) => s.trim()).filter(Boolean));
         }
@@ -251,10 +234,11 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     fileRef.current?.click();
   };
 
-  // Any exit attempt routes through here. Steps 1–2 confirm first (nothing is
-  // saved yet); step 3's RSVP is already saved, so exiting reveals the card.
+  // Any exit attempt routes through here. The form confirms first (nothing is
+  // saved yet); the success screen's RSVP is already saved, so exiting reveals
+  // the card.
   const handleExit = () => {
-    if (step === 3) { onDone(resultStatus); return; }
+    if (step === 'success') { onDone(resultStatus); return; }
     setConfirmExit(true);
   };
 
@@ -324,32 +308,21 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
     return !!(v && String(v).trim());
   };
 
-  // Step 1 → 2: validate the basic-info fields + consent, then advance.
-  const goToStep2 = () => {
-    setError('');
+  const submit = async () => {
     if (!contactName.trim()) { setError('Please add your name'); return; }
     if (!verifiedEmail) { setError('Please verify your email to register'); return; }
-    const digits = phoneNumber.replace(/\D/g, '');
-    if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); return; }
-    if (!consent) { setError('Please agree to continue'); return; }
-    setStep(2);
-  };
-
-  const submit = async () => {
-    if (!contactName.trim() || !verifiedEmail || !consent) { setError('Please complete the first step'); setStep(1); return; }
     if (!username.trim()) { setError('Pick a handle to claim your TOPIA passport'); return; }
     if (effectiveAvailability === 'invalid') { setError('Handle must be 3–30 chars: lowercase letters, numbers, underscores'); return; }
     if (effectiveAvailability === 'taken') { setError('That handle is taken — try another'); return; }
     if (effectiveAvailability === 'checking') { setError('Hang on — still checking that handle'); return; }
     if (!photoChoice) { setError('Add a profile photo, or choose the generated avatar'); return; }
-    // Phone is optional, but if provided it must look like a real number.
-    const digits = phoneNumber.replace(/\D/g, '');
-    if (digits.length > 0 && digits.length < 7) { setError('Please enter a valid phone number, or leave it blank'); setStep(1); return; }
     for (const q of questions ?? []) {
       if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
     }
-    if (!consent) { setError('Please agree to create a TOPIA profile to continue'); return; }
-    const phone = digits.length ? `${phoneCode}${digits}` : null;
+    if (!consent) { setError('Please agree to continue'); return; }
+    // No phone field — a Privy-verified phone (from login) rides along so the
+    // host still gets it, without a form field slowing the RSVP down.
+    const phone = verifiedPhone ?? null;
     setSubmitting(true);
     setError('');
     try {
@@ -367,25 +340,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
       setResultStatus(status);
       onRegistered(status, data.alreadyRegistered === true);
       try { sessionStorage.removeItem(draftKey); } catch {}
-      setStep(3); // advance to the success step (tickets · share · done)
+      setStep('success'); // tickets · share · done
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register');
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // "Save" on the reopened passport edit — just validates the passport-only
-  // fields and drops back to the read-only summary. Nothing is sent to the
-  // server here; the actual submit still happens from "Complete RSVP".
-  const savePassport = () => {
-    setError('');
-    if (!photoChoice) { setError('Add a profile photo, or choose the generated avatar'); return; }
-    if (rolesQuestion && rolesQuestion.required && !answered(rolesQuestion)) { setError(`Please answer: ${rolesQuestion.label}`); return; }
-    for (const q of socialQuestions) {
-      if (q.required && !answered(q)) { setError(`Please answer: ${q.label}`); return; }
-    }
-    setEditingPassport(false);
   };
 
   const renderField = (q: Question) => {
@@ -463,7 +423,12 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
   const rolesQuestion = (questions ?? []).find((q) => q.type === 'roles') ?? null;
   const socialQuestions = (questions ?? []).filter((q) => q.type === 'instagram' || q.type === 'twitter');
   const otherQuestions = (questions ?? []).filter((q) => q.type !== 'instagram' && q.type !== 'twitter' && q.type !== 'roles');
-  const passportRequiredUnanswered = [rolesQuestion, ...socialQuestions].some((q) => q && q.required && !answered(q));
+  // Only *required* passport-enrichment questions (roles / IG / X) block the
+  // RSVP; optional ones are hidden here and picked up later by the
+  // complete-your-profile prompt, keeping this form as short as possible.
+  const shownRolesQuestion = rolesQuestion?.required ? rolesQuestion : null;
+  const shownSocialQuestions = socialQuestions.filter((q) => q.required);
+  const passportRequiredUnanswered = [shownRolesQuestion, ...shownSocialQuestions].some((q) => q && q.required && !answered(q));
   // Complete + not explicitly reopened → show the read-only summary instead
   // of the form. Anything still missing forces the editable form open.
   const showPassportSummary = existingUsername && !!photoChoice && !passportRequiredUnanswered && !editingPassport;
@@ -475,7 +440,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         <div className="sm:hidden mx-auto mt-2.5 h-1 w-10 rounded-full shrink-0" style={{ backgroundColor: 'var(--foreground)', opacity: 0.2 }} />
         <div className="flex items-start justify-between px-6 pt-3 sm:pt-7 pb-3 shrink-0">
           <p className="font-mono text-[15px] font-bold uppercase tracking-tight" style={{ color: 'var(--foreground)' }}>
-            {step === 3 ? eventName : `Register · ${eventName}`}
+            {step === 'success' ? eventName : `Register · ${eventName}`}
           </p>
           <button onClick={handleExit} className="font-mono text-[18px] opacity-50 hover:opacity-100 bg-transparent border-none cursor-pointer" style={{ color: 'var(--foreground)' }} aria-label="Close">×</button>
         </div>
@@ -486,25 +451,15 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
           <>
             {/* Scrollable body — keeps the footer button pinned (Partiful-style) */}
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pt-1 pb-6">
-            {/* Step progress — basic info · complete passport · you're in */}
-            <div className="flex items-center gap-1.5 mb-3">
-              {[1, 2, 3].map((n) => (
-                <span key={n} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: n <= step ? 'var(--accent)' : 'var(--border-color)' }} />
-              ))}
-            </div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] opacity-40 mb-1" style={{ color: 'var(--foreground)' }}>
-              Step {step} of 3 · {step === 1 ? 'Basic info' : step === 2 ? 'Complete TOPIA passport' : "You're in"}
+            {/* ONE quick form — contact + passport + host questions, then done. */}
+            {step === 'form' && (
+            <>
+            <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
+              {approvalRequired
+                ? "Let's get you on the list — the host reviews requests before confirming."
+                : "Let's get you on the list — this takes less than a minute."}
             </p>
-            {step < 3 && (
-              <p className="font-mono text-[13px] opacity-60 mb-5" style={{ color: 'var(--foreground)' }}>
-                {step === 1
-                  ? (approvalRequired ? "Let's get you on the list — the host reviews requests before confirming." : "Let's get you on the list.")
-                  : 'Build your passport on TOPIA.'}
-              </p>
-            )}
 
-            {/* STEP 1 · basic info — name, email, phone, consent */}
-            {step === 1 && (
             <div className="space-y-5 mb-6">
               <div>
                 <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
@@ -543,50 +498,6 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   </>
                 )}
               </div>
-              <div>
-                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                  Phone<span className="normal-case tracking-normal opacity-50"> (optional)</span>
-                  {verifiedPhone && <span className="inline-flex items-center gap-1 normal-case tracking-normal" style={{ color: '#00b36b', opacity: 1 }}>· verified ✓</span>}
-                </label>
-                {verifiedPhone ? (
-                  <input type="tel" value={`${phoneCode} ${phoneNumber}`} readOnly disabled className={`${inputCls} cursor-not-allowed opacity-80`} style={fieldStyle} />
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      <select value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="border px-3 py-3 font-mono text-[13px] rounded-xl outline-none cursor-pointer shrink-0" style={fieldStyle}>
-                        {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                      <input type="tel" inputMode="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputCls} style={fieldStyle} placeholder="555 123 4567" />
-                    </div>
-                    <button type="button" onClick={() => linkPhone()} className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] underline bg-transparent border-none cursor-pointer p-0" style={{ color: 'var(--accent)' }}>
-                      Verify with Privy →
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Consent: continuing creates a Topia profile + lets us contact them */}
-              <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 shrink-0"
-                  style={{ accentColor: 'var(--foreground)' }}
-                />
-                <span className="font-mono text-[11px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
-                  By continuing, I agree to TOPIA&rsquo;s{' '}
-                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Terms</a>{' '}
-                  and{' '}
-                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Privacy Policy</a>, to creating a TOPIA profile, and to receiving event updates from TOPIA and the host.
-                </span>
-              </label>
-            </div>
-            )}
-
-            {/* STEP 2 · complete Topia passport — photo, handle, what you do, socials */}
-            {step === 2 && (
-            <div className="space-y-5 mb-6">
               {showPassportSummary ? (
                 /* Returning guest — passport already complete. Show it read-only,
                    imported from their profile, with an Edit escape hatch. */
@@ -749,24 +660,25 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                 )}
               </div>
 
-              {/* What you do */}
-              {rolesQuestion && (
+              {/* What you do — only when the host requires it; otherwise the
+                  complete-your-profile prompt collects it later. */}
+              {shownRolesQuestion && (
                 <div>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                    {rolesQuestion.label}{rolesQuestion.required && <span style={{ color: '#FF5C34' }}> *</span>}
+                    {shownRolesQuestion.label}<span style={{ color: '#FF5C34' }}> *</span>
                   </label>
-                  {renderField(rolesQuestion)}
+                  {renderField(shownRolesQuestion)}
                 </div>
               )}
 
-              {/* Socials — Instagram + Twitter side by side */}
-              {socialQuestions.length > 0 && (
+              {/* Socials — only the ones the host requires */}
+              {shownSocialQuestions.length > 0 && (
                 <div>
                   <label className="block font-mono text-[12px] uppercase tracking-[0.12em] mb-1.5 font-bold opacity-60" style={{ color: 'var(--foreground)' }}>
-                    What are your socials?<span className="normal-case tracking-normal opacity-50"> (Optional)</span>
+                    What are your socials?<span style={{ color: '#FF5C34' }}> *</span>
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {socialQuestions.map((q) => <div key={q.id}>{renderField(q)}</div>)}
+                    {shownSocialQuestions.map((q) => <div key={q.id}>{renderField(q)}</div>)}
                   </div>
                 </div>
               )}
@@ -782,11 +694,29 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
                   {renderField(q)}
                 </div>
               ))}
+
+              {/* Consent: registering creates a Topia profile + lets us contact them */}
+              <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 shrink-0"
+                  style={{ accentColor: 'var(--foreground)' }}
+                />
+                <span className="font-mono text-[11px] leading-snug opacity-70" style={{ color: 'var(--foreground)' }}>
+                  By continuing, I agree to TOPIA&rsquo;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Terms</a>{' '}
+                  and{' '}
+                  <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--foreground)' }}>Privacy Policy</a>, to creating a TOPIA profile, and to receiving event updates from TOPIA and the host.
+                </span>
+              </label>
             </div>
+            </>
             )}
 
-            {/* STEP 3 · success — get tickets · share · done */}
-            {step === 3 && (
+            {/* SUCCESS — get tickets · share · done */}
+            {step === 'success' && (
             <div>
               {resultStatus === 'going' ? (
                 <>
@@ -834,47 +764,29 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
             )}
             </div>
 
-            {step < 3 && (
+            {step === 'form' && (
               <div className="shrink-0 px-6 py-4 border-t pb-[max(1rem,env(safe-area-inset-bottom))]" style={{ borderColor: 'var(--border-color)' }}>
                 {error && <p className="font-mono text-[12px] mb-3" style={{ color: '#FF5C34' }}>{error}</p>}
 
-                {/* Footer — Continue (step 1) · Back + Complete RSVP (step 2) */}
-                {step === 1 ? (
-                  <button
-                    onClick={goToStep2}
-                    disabled={!contactName.trim() || !verifiedEmail || !consent}
-                    className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-                  >
-                    {!contactName.trim() ? 'Add your name to continue' : !verifiedEmail ? 'Verify email to continue' : !consent ? 'Agree to continue' : 'Continue →'}
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      onClick={() => { setError(''); setStep(1); }}
-                      className="px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border font-bold transition hover:opacity-80"
-                      style={{ backgroundColor: 'transparent', color: 'var(--foreground)', borderColor: 'var(--border-color)' }}
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      onClick={editingPassport ? savePassport : submit}
-                      disabled={submitting || effectiveAvailability !== 'available' || !photoChoice}
-                      className="flex-1 px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
-                    >
-                      {submitting ? 'Submitting…'
-                        : editingPassport ? 'Save'
-                        : !username ? 'Pick a handle to continue'
-                        : effectiveAvailability === 'invalid' ? 'Handle needs 3+ characters'
-                        : effectiveAvailability === 'checking' ? 'Checking availability…'
-                        : effectiveAvailability === 'taken' ? 'Handle already taken'
-                        : effectiveAvailability !== 'available' ? 'Pick a handle to continue'
-                        : !photoChoice ? 'Choose a profile photo'
-                        : approvalRequired ? 'Send request' : 'Complete RSVP'}
-                    </button>
-                  </div>
-                )}
+                {/* One button — the label doubles as inline guidance on what's missing. */}
+                <button
+                  onClick={submit}
+                  disabled={submitting || !contactName.trim() || !verifiedEmail || effectiveAvailability !== 'available' || !photoChoice || !consent}
+                  className="w-full px-4 py-3 font-mono text-[12px] uppercase tracking-widest rounded-lg cursor-pointer border-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                >
+                  {submitting ? 'Submitting…'
+                    : !contactName.trim() ? 'Add your name to continue'
+                    : !verifiedEmail ? 'Verify email to continue'
+                    : !username ? 'Pick a handle to continue'
+                    : effectiveAvailability === 'invalid' ? 'Handle needs 3+ characters'
+                    : effectiveAvailability === 'checking' ? 'Checking availability…'
+                    : effectiveAvailability === 'taken' ? 'Handle already taken'
+                    : effectiveAvailability !== 'available' ? 'Pick a handle to continue'
+                    : !photoChoice ? 'Choose a profile photo'
+                    : !consent ? 'Agree to continue'
+                    : approvalRequired ? 'Send request' : 'Complete RSVP'}
+                </button>
               </div>
             )}
           </>
@@ -901,7 +813,7 @@ export default function RsvpModal({ eventId, slug, eventName, privyId, email, na
         </div>
       )}
 
-      {/* Confirm before abandoning the form mid-way (steps 1–2) */}
+      {/* Confirm before abandoning the form mid-way */}
       {confirmExit && (
         <div className="absolute inset-0 z-[2200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={(e) => { e.stopPropagation(); setConfirmExit(false); }}>
           <div className="w-full max-w-xs rounded-2xl p-6 border text-center" style={{ backgroundColor: 'var(--background)', borderColor: 'var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
